@@ -228,8 +228,8 @@ Each cycle must maintain the following status block:
 
 ### Current development status
 
-- **Current iteration:** `v1.2.4` start guidance, shield bubble, saloon pulse
-- **Last completed step:** Level-start toast, wider camera view, pulsing saloon, visible shield bubble, gentler conveyors
+- **Current iteration:** `v1.2.4` saloon pulse, floating tips, clearer clouds
+- **Last completed step:** Pulsing saloon goal, HUD trail tips, WAIT! cloud warnings, badge pop, bigger cowboy
 - **Currently in progress:** Ralph polish loop until 17:00 CEST (hard stop; credit % not readable)
 - **Next step:** Keep polishing playability/visuals in the ralph loop until stop time
 - **Completed features:** Long playable 10-level cowboy trail; 3 camps per level; animated cowboy; modes; Xbox-ready input; Chapter 14 QA green
