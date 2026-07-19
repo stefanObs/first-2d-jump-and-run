@@ -580,6 +580,9 @@ func _test_art_and_music() -> Variant:
 	var music: AudioStream = load("res://assets/audio/cheerful_cowboy_trail.wav")
 	if music == null:
 		return "Cheerful trail music did not load."
+	var country: AudioStream = load("res://assets/audio/country_version.mp3")
+	if country == null:
+		return "Country start/finale theme did not load."
 	if AudioServer.get_bus_index(&"Music") < 0:
 		return "Music bus was not created."
 	var level: Variant = _instantiate_level("res://scenes/levels/level_01.tscn")

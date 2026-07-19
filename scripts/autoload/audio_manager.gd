@@ -1,10 +1,17 @@
 extends Node
 
 ## Persistent music player with independent Music and SFX volume buses.
+## Plays the country theme once at boot, then loops the trail tune.
+## The finale theme reuses the country song for the sunset ride.
 
-const MUSIC_PATH := "res://assets/audio/cheerful_cowboy_trail.wav"
+const TRAIL_PATH := "res://assets/audio/cheerful_cowboy_trail.wav"
+const COUNTRY_PATH := "res://assets/audio/country_version.mp3"
 
 var _music_player: AudioStreamPlayer
+var _trail_stream: AudioStream
+var _country_stream: AudioStream
+var _mode: StringName = &"none"
+var _intro_played: bool = false
 
 
 func _ready() -> void:
@@ -12,19 +19,67 @@ func _ready() -> void:
 	_ensure_bus(&"Music")
 	_ensure_bus(&"SFX")
 	_music_player = AudioStreamPlayer.new()
-	_music_player.name = "CheerfulTrailMusic"
+	_music_player.name = "GameMusic"
 	_music_player.bus = &"Music"
 	add_child(_music_player)
-	var stream := load(MUSIC_PATH)
-	if stream is AudioStreamWAV:
-		(stream as AudioStreamWAV).loop_mode = AudioStreamWAV.LOOP_FORWARD
-		(stream as AudioStreamWAV).loop_begin = 0
-		(stream as AudioStreamWAV).loop_end = (stream as AudioStreamWAV).data.size() / 2
-	if stream is AudioStream:
-		_music_player.stream = stream
-		_music_player.play()
+	_trail_stream = load(TRAIL_PATH) as AudioStream
+	_country_stream = load(COUNTRY_PATH) as AudioStream
+	if _trail_stream is AudioStreamWAV:
+		var wav := _trail_stream as AudioStreamWAV
+		wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		wav.loop_begin = 0
+		wav.loop_end = wav.data.size() / 2
+	if _country_stream is AudioStreamMP3:
+		(_country_stream as AudioStreamMP3).loop = false
+	_music_player.finished.connect(_on_music_finished)
 	GameManager.settings_changed.connect(_apply_volumes)
 	_apply_volumes()
+	play_boot_intro()
+
+
+func play_boot_intro() -> void:
+	## Once per launch: country theme, then trail loop.
+	if _intro_played or _country_stream == null:
+		play_trail_music()
+		return
+	_intro_played = true
+	_mode = &"intro"
+	_music_player.stream = _country_stream
+	_music_player.play()
+
+
+func play_trail_music() -> void:
+	if _trail_stream == null:
+		return
+	if _mode == &"trail" and _music_player.playing:
+		return
+	_mode = &"trail"
+	_music_player.stream = _trail_stream
+	_music_player.play()
+
+
+func play_finale_theme() -> void:
+	## Sunset victory ride — country theme once (no loop).
+	if _country_stream == null:
+		return
+	_mode = &"finale"
+	_music_player.stream = _country_stream
+	_music_player.play()
+
+
+func is_finale_playing() -> bool:
+	return _mode == &"finale" and _music_player.playing
+
+
+func ensure_gameplay_music() -> void:
+	## Leave the boot intro early when the player starts a trail.
+	if _mode == &"intro":
+		play_trail_music()
+
+
+func _on_music_finished() -> void:
+	if _mode == &"intro":
+		play_trail_music()
 
 
 func _ensure_bus(bus_name: StringName) -> void:

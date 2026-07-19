@@ -15,6 +15,7 @@ func _ready() -> void:
 
 
 func _run() -> void:
+	AudioManager.play_finale_theme()
 	var view := get_viewport().get_visible_rect().size
 
 	var sky := TextureRect.new()
@@ -130,5 +131,9 @@ func _run() -> void:
 	var ft := create_tween()
 	ft.tween_property(end_fade, "color:a", 1.0, 0.9)
 	await ft.finished
+	# Let the country theme finish if it is still going.
+	while AudioManager.is_finale_playing():
+		await get_tree().process_frame
+	AudioManager.play_trail_music()
 	await get_tree().create_timer(0.35).timeout
 	GameManager.return_to_save_select()

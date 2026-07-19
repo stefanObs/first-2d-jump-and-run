@@ -275,17 +275,17 @@ Each cycle must maintain the following status block:
 ### Current development status
 
 - **Current iteration:** `v1.3.3` hazard variety, bounty bandits, and trail readability
-- **Last completed step:** Local `savegames/` persistence + portable Windows `create_exe` scripts
+- **Last completed step:** Country theme on start screen (once) and sunset finale
 - **Currently in progress:** In-game visual play-test of bosses and polish
 - **Next step:** Play-test bosses, fences, clouds, and flight; then tag `v1.3.3`
 - **Completed features:** Long 10-level cowboy trail; animated nonviolent bandit lasso; seated tied bandits; warning-shot and bounty bandits; carrions and rattlesnakes; animated canyon recovery; reachable hazards; hand-drawn cowboy + world props; looping music; three custom editor slots; mid-trail saves; modes; Xbox-ready input; Stampede Bull / Midnight Coach / Outlaw Kingpin bosses; horizon victory scene
 - **Remaining work:** In-game visual/gameplay play-test; Xbox controller physical verification; supervised child play-tests; additional SFX
-- **Tests last run:** all automated tests passed after savegames folder + create_exe scripts
+- **Tests last run:** all automated tests passed after country theme on start/finale
 - **Known issues or blockers:**
   - Boss arenas and new fence/cloud art still need an in-game visual play-test
   - Xbox controller not physically verified on this machine
 - **Latest iteration tag:** `v1.3.2`
-- **Relevant commit:** `0c11305`
+- **Relevant commit:** (pending push)
 
 
 ### Cycle notes — 2026-07-19 (v1.3.3)
@@ -309,6 +309,7 @@ Each cycle must maintain the following status block:
 - Midnight Coach is an endless rightward chase (stops if you lag a screen; 3/4 player speed with infinite Speed); every boss shares a 5-heart UI and slower heart-loss recovery; every boss starts with a 3-2-1 countdown.
 - Sunset victory rider frames were regenerated with transparent backgrounds (no white patches).
 - Campaign and custom-trail saves live in a gitignored `savegames/` folder (next to the project in development, next to the exe when exported). `create_exe.sh` / `create_exe.bat` build a portable Windows exe.
+- Start screen plays the country theme once, then the looping trail music; the sunset finale plays the country theme again and waits for it to finish.
 - Canyon falls now stay recovering through respawn invulnerability, so holding left/right cannot restart the fall animation immediately.
 - Clouds on Wings routes are purposeful: canyon bridges, stepped climbs to high badges, cactus-clear platforms, and nest landings (some stay solid).
 - Rattlesnakes are larger, cast a ground shadow, and rise much higher when the cowboy approaches.

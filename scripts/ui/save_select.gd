@@ -14,7 +14,10 @@ func _ready() -> void:
 	_hint = get_node_or_null("HintLabel") as Label
 	var builder := get_node_or_null("BuildTrailButton") as Button
 	if builder != null:
-		builder.pressed.connect(GameManager.open_custom_level_hub)
+		builder.pressed.connect(func() -> void:
+			AudioManager.ensure_gameplay_music()
+			GameManager.open_custom_level_hub()
+		)
 	for i in range(3):
 		var card := get_node_or_null("Slots/Slot%d" % (i + 1)) as Button
 		if card != null:
@@ -77,6 +80,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _select_slot(slot_index: int) -> void:
+	AudioManager.ensure_gameplay_music()
 	GameManager.start_or_continue_slot(slot_index)
 
 
