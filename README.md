@@ -226,16 +226,23 @@ Each cycle must maintain the following status block:
 
 ### Current development status
 
-- **Current iteration:** `v1.0.0` planned feature complete release
-- **Last completed step:** Finished milestones 2–8: InputManager and pause/settings menus, mode items and flying, opponents, three save slots, all 10 levels, HUD prompts, and automated coverage
+- **Current iteration:** `v1.0.1` star reachability fixes
+- **Last completed step:** Repositioned unreachable stars, added missing platforms, strengthened springs/Magic Boots, and added reachability tests
 - **Currently in progress:** None
-- **Next step:** Optional post-1.0 extensions from the rated backlog below; supervised child play-testing for fine tuning
-- **Completed features:** 10 gray-box levels; keyboard and Xbox actions with device-aware prompts; checkpoints/hazards/opponents; Wings/Magic Boots/Speed Star/Bubble Shield; 3 save slots; pause/settings; celebration transitions; Linux/Windows launchers
-- **Remaining work:** Optional extensions only; art/audio polish beyond gray-box placeholders; live Xbox controller verification on target PCs; supervised child play-tests
-- **Tests last run:** `godot --headless --path . res://tests/test_runner.tscn` — all 13 tests passed; main scene smoke-launch with `--quit-after 2` succeeded
+- **Next step:** Optional post-1.0 extensions from the rated backlog; supervised child play-testing for fine tuning
+- **Completed features:** 10 gray-box levels with reachable stars; keyboard/Xbox prompts; modes; opponents; 3 save slots; pause/settings; launchers
+- **Remaining work:** Optional extensions; art/audio polish; live Xbox verification; supervised child play-tests
+- **Tests last run:** `godot --headless --path . res://tests/test_runner.tscn` — all 14 tests passed
 - **Known issues or blockers:** Visuals are gray-box placeholders; no bespoke music/SFX assets yet; Xbox controller not physically verified on this machine
-- **Latest iteration tag:** `v1.0.0`
-- **Relevant commit:** `82e3165`
+- **Latest iteration tag:** `v1.0.1`
+- **Relevant commit:** `5ef8416`
+
+### Cycle notes — 2026-07-19 (v1.0.1)
+
+- Fixed stars that sat above normal jump height, especially on levels 3, 5, and 6.
+- Added a star platform on Checkpoint Cave and lowered the Windy Hill platform for Magic Boots.
+- Increased spring bounce and Magic Boots jump multiplier for child-friendly reach.
+- Added `StarReachability` helper and a regression test.
 
 ### Rated possible extensions (post-v1.0.0)
 
