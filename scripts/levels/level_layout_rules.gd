@@ -8,6 +8,16 @@ const ASSISTED_JUMP_HEIGHT := 190.0
 const SPRING_JUMP_HEIGHT := 250.0
 const BASE_HORIZONTAL_GAP := 230.0
 const ASSISTED_HORIZONTAL_GAP := 340.0
+const CACTUS_CANYON_CLEAR_PX := 200.0
+const SPRING_APPROACH_PX := 350.0
+const CARRION_MAX_SCALE := 0.65
+const CARRION_VISUAL_HALF := Vector2(74.0, 46.0)
+const PLAYER_BODY_HEIGHT := 44.0
+const WALK_CLEAR_PX := 28.0
+const FLIGHT_CEILING_Y := -40.0
+const CORRIDOR_GAP_MIN := 50.0
+const CORRIDOR_GAP_MAX := 120.0
+const CORRIDOR_X_OVERLAP := 80.0
 
 
 static func validate_level_node(level: Node) -> PackedStringArray:
@@ -300,40 +310,50 @@ static func _validate_cactus_clear_of_springs(level: Node) -> PackedStringArray:
 
 static func _validate_cactus_clear_of_canyons(level: Node) -> PackedStringArray:
 	var errors: PackedStringArray = []
-	var cacti: Array[Node2D] = []
-	var canyons: Array[Node2D] = []
+	var gaps := _ground_canyon_gaps(level)
+	if gaps.is_empty():
+		return errors
 	var springs: Array[Node2D] = []
+	var cacti: Array[Node2D] = []
 	for node in level.find_children("*", "Area2D", true, false):
-		if node is Hazard:
-			if (node as Hazard).is_cactus():
-				cacti.append(node as Node2D)
-			else:
-				canyons.append(node as Node2D)
+		if node is Hazard and (node as Hazard).is_cactus():
+			cacti.append(node as Node2D)
 		elif node is SpringPad:
 			springs.append(node as Node2D)
 	for cactus in cacti:
-		var cactus_rect := _approx_rect(cactus, Vector2(40, 48))
-		var has_launch_spring := false
-		for spring in springs:
-			var dx := cactus.global_position.x - spring.global_position.x
-			if dx >= 35.0 and dx <= 190.0 and absf(cactus.global_position.y - spring.global_position.y) <= 50.0:
-				has_launch_spring = true
-				break
-		if has_launch_spring:
-			continue
-		for canyon in canyons:
-			var canyon_rect := _approx_rect(canyon, Vector2(160, 56))
-			var clearance := INF
-			if cactus_rect.end.x <= canyon_rect.position.x:
-				clearance = canyon_rect.position.x - cactus_rect.end.x
-			elif cactus_rect.position.x >= canyon_rect.end.x:
-				clearance = cactus_rect.position.x - canyon_rect.end.x
-			if clearance < 130.0:
-				errors.append(
-					"Cactus %s is directly beside canyon %s without a launch spring."
-					% [cactus.name, canyon.name]
-				)
-				break
+		var cx := cactus.global_position.x
+		for gap in gaps:
+			var gap_left := float(gap["left"])
+			var gap_right := float(gap["right"])
+			var side := ""
+			var edge_dist := INF
+			if cx < gap_left:
+				side = "before"
+				edge_dist = gap_left - cx
+			elif cx > gap_right:
+				side = "after"
+				edge_dist = cx - gap_right
+			else:
+				side = "inside"
+				edge_dist = 0.0
+			if edge_dist >= CACTUS_CANYON_CLEAR_PX:
+				continue
+			var spring_ok := false
+			for spring in springs:
+				var sx := spring.global_position.x
+				if side == "before" and gap_left - SPRING_APPROACH_PX <= sx and sx <= gap_left + 40.0:
+					spring_ok = true
+				elif side == "after" and gap_right - 40.0 <= sx and sx <= gap_right + SPRING_APPROACH_PX:
+					spring_ok = true
+				elif side == "inside" and gap_left - 50.0 <= sx and sx <= gap_right + 50.0:
+					spring_ok = true
+			if spring_ok:
+				continue
+			errors.append(
+				"Cactus %s is directly %s canyon gap %.0f..%.0f without a launch spring."
+				% [cactus.name, side, gap_left, gap_right]
+			)
+			break
 	return errors
 
 
@@ -345,25 +365,42 @@ static func _validate_carrion_flight_paths(level: Node) -> PackedStringArray:
 			carrions.append(node as Carrion)
 	if carrions.is_empty():
 		return errors
-	var has_high_blocker := false
+
+	var flight_span_left := INF
+	var flight_span_right := -INF
 	var has_flight_corridor := false
 	for carrion in carrions:
-		has_high_blocker = has_high_blocker or carrion.global_position.y <= 70.0
-		var bird_rect := Rect2(carrion.global_position - Vector2(66, 25), Vector2(132, 50))
+		var sprite := carrion.get_node_or_null("Sprite2D") as Node2D
+		var scale_x := absf(sprite.scale.x) if sprite != null else absf(carrion.scale.x)
+		var scale_y := absf(sprite.scale.y) if sprite != null else absf(carrion.scale.y)
+		if maxf(scale_x, scale_y) > CARRION_MAX_SCALE + 0.001:
+			errors.append("Carrion %s is too large (scale %.2f)." % [carrion.name, maxf(scale_x, scale_y)])
+		var half := Vector2(CARRION_VISUAL_HALF.x * scale_x / 0.58, CARRION_VISUAL_HALF.y * scale_y / 0.58)
+		var bird_rect := Rect2(carrion.global_position - half, half * 2.0)
 		bird_rect.position.x -= carrion.patrol_width
 		bird_rect.size.x += carrion.patrol_width * 2.0
 		bird_rect.position.y -= carrion.bob_height
 		bird_rect.size.y += carrion.bob_height * 2.0
+		var solid_rect := bird_rect.grow(12.0)
+		flight_span_left = minf(flight_span_left, bird_rect.position.x)
+		flight_span_right = maxf(flight_span_right, bird_rect.end.x)
+
 		for body in level.find_children("*", "PhysicsBody2D", true, false):
 			if body is Player or body is Opponent:
 				continue
-			var body_rect := _approx_rect(body as Node2D, Vector2(64, 32))
-			if bird_rect.intersects(body_rect):
+			var body_name := String(body.name)
+			if body_name.begins_with("FlightCeiling") or body_name.begins_with("Ground"):
+				continue
+			var body_rect := _solid_rect_for(body as Node2D)
+			if body_rect.size == Vector2.ZERO:
+				continue
+			if solid_rect.intersects(body_rect):
 				errors.append(
 					"Carrion %s patrols through solid obstacle %s."
 					% [carrion.name, body.name]
 				)
 				break
+
 		var floor_top := INF
 		for body in level.find_children("Ground*", "StaticBody2D", true, false):
 			var surface := _surface_for(body as Node2D)
@@ -374,23 +411,81 @@ static func _validate_carrion_flight_paths(level: Node) -> PackedStringArray:
 				and carrion.global_position.x <= float(surface["right"])
 			):
 				floor_top = minf(floor_top, float(surface["top"]))
-		if floor_top < INF and floor_top - bird_rect.end.y < 90.0:
-			errors.append("Carrion %s flies too low for the cowboy to walk under." % carrion.name)
-	for upper in carrions:
-		for lower in carrions:
-			var vertical_gap := lower.global_position.y - upper.global_position.y
-			if (
-				vertical_gap >= 100.0
-				and vertical_gap <= 170.0
-				and absf(upper.global_position.x - lower.global_position.x) <= 45.0
-			):
+		if floor_top < INF:
+			var max_bottom := floor_top - PLAYER_BODY_HEIGHT - WALK_CLEAR_PX
+			if bird_rect.end.y > max_bottom:
+				errors.append("Carrion %s flies too low for the cowboy to walk under." % carrion.name)
+
+	for left_index in range(carrions.size()):
+		for right_index in range(left_index + 1, carrions.size()):
+			var a := carrions[left_index]
+			var b := carrions[right_index]
+			var a_left := a.global_position.x - a.patrol_width
+			var a_right := a.global_position.x + a.patrol_width
+			var b_left := b.global_position.x - b.patrol_width
+			var b_right := b.global_position.x + b.patrol_width
+			var overlap := minf(a_right, b_right) - maxf(a_left, b_left)
+			if overlap < CORRIDOR_X_OVERLAP:
+				continue
+			var upper: Carrion = a if a.global_position.y < b.global_position.y else b
+			var lower: Carrion = b if upper == a else a
+			var upper_bottom := upper.global_position.y + upper.bob_height + CARRION_VISUAL_HALF.y
+			var lower_top := lower.global_position.y - lower.bob_height - CARRION_VISUAL_HALF.y
+			var gap := lower_top - upper_bottom
+			if gap >= CORRIDOR_GAP_MIN and gap <= CORRIDOR_GAP_MAX:
 				has_flight_corridor = true
+
 	if _has_mode(level, ModeController.Mode.WINGS):
-		if not has_high_blocker:
-			errors.append("Wings route needs a high carrion so the cowboy cannot fly over every hazard.")
+		var ceiling_coverage := 0.0
+		var span := maxf(flight_span_right - flight_span_left, 1.0)
+		for body in level.find_children("*", "StaticBody2D", true, false):
+			if not String(body.name).begins_with("FlightCeiling"):
+				continue
+			var ceiling_rect := _solid_rect_for(body as Node2D)
+			if ceiling_rect.size == Vector2.ZERO:
+				continue
+			if ceiling_rect.position.y > FLIGHT_CEILING_Y:
+				errors.append("Flight ceiling %s is too low to block leaving the window." % body.name)
+				continue
+			var covered := minf(ceiling_rect.end.x, flight_span_right) - maxf(ceiling_rect.position.x, flight_span_left)
+			ceiling_coverage += maxf(covered, 0.0)
+		if ceiling_coverage / span < 0.7:
+			errors.append("Wings route needs FlightCeiling solids covering the carrion flight band.")
 		if not has_flight_corridor:
 			errors.append("Wings route needs a paired carrion corridor to fly between.")
 	return errors
+
+
+static func _ground_canyon_gaps(level: Node) -> Array[Dictionary]:
+	var spans: Array[Dictionary] = []
+	for body in level.find_children("Ground*", "StaticBody2D", true, false):
+		var surface := _surface_for(body as Node2D)
+		if surface.is_empty():
+			continue
+		spans.append(surface)
+	spans.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["left"]) < float(b["left"]))
+	var gaps: Array[Dictionary] = []
+	for index in range(spans.size() - 1):
+		var left_end := float(spans[index]["right"])
+		var right_start := float(spans[index + 1]["left"])
+		if right_start - left_end > 20.0:
+			gaps.append({"left": left_end, "right": right_start})
+	return gaps
+
+
+static func _solid_rect_for(node: Node2D) -> Rect2:
+	var rect := _approx_rect(node, Vector2(64, 32))
+	if node is MovingPlatform:
+		var moving := node as MovingPlatform
+		var min_x := minf(moving.point_a.x, moving.point_b.x)
+		var max_x := maxf(moving.point_a.x, moving.point_b.x)
+		var min_y := minf(moving.point_a.y, moving.point_b.y)
+		var max_y := maxf(moving.point_a.y, moving.point_b.y)
+		rect.position.x += min_x
+		rect.position.y += min_y
+		rect.size.x += max_x - min_x
+		rect.size.y += max_y - min_y
+	return rect
 
 
 static func _validate_mode_item_spacing(level: Node) -> PackedStringArray:
@@ -499,6 +594,16 @@ static func _approx_rect(node: Node2D, fallback_size: Vector2) -> Rect2:
 	elif shape_node != null and shape_node.shape is CircleShape2D:
 		var radius := (shape_node.shape as CircleShape2D).radius * maxf(node.scale.x, node.scale.y)
 		size = Vector2(radius * 2.0, radius * 2.0)
+	elif shape_node != null and shape_node.shape is CapsuleShape2D:
+		var capsule := shape_node.shape as CapsuleShape2D
+		var scale_abs := node.scale.abs()
+		var length := (capsule.height + capsule.radius * 2.0) * scale_abs.y
+		var width := capsule.radius * 2.0 * scale_abs.x
+		# Carrion capsules are rotated 90°, so length becomes horizontal.
+		if absf(shape_node.rotation) > 0.5:
+			size = Vector2(length, width)
+		else:
+			size = Vector2(width, length)
 	var center := node.global_position
 	if shape_node != null:
 		center = shape_node.global_position

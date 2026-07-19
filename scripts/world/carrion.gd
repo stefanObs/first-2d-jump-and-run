@@ -7,7 +7,7 @@ signal hurt_player(player: Player)
 
 @export var patrol_width: float = 150.0
 @export var move_speed: float = 52.0
-@export var bob_height: float = 14.0
+@export var bob_height: float = 18.0
 
 var _origin: Vector2
 var _direction: float = 1.0

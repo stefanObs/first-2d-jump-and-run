@@ -240,20 +240,21 @@ Each cycle must maintain the following status block:
 ### Current development status
 
 - **Current iteration:** `v1.3.3` hazard variety, bounty bandits, and trail readability
-- **Last completed step:** Replaced level-clear wipe with comic horse mount, ride-out, arrival, and dismount animation
+- **Last completed step:** Applied hazard/carrion audit: rim-safe cacti, smaller obstacle-aware carrions, flight ceilings, and stacked Wings corridors
 - **Currently in progress:** In-game visual/gameplay play-test for this feature pass
-- **Next step:** Play-test tied floor pose, cactus spacing, projectile speed, bounty rewards, and boost placement; then tag `v1.3.3`
+- **Next step:** Play-test horse transition, cactus rims, rattlesnakes, carrion corridors, and camp bonus restore; then tag `v1.3.3`
 - **Completed features:** Long 10-level cowboy trail; animated nonviolent bandit lasso; seated tied bandits; warning-shot and bounty bandits; carrions and rattlesnakes; animated canyon recovery; reachable hazards; hand-drawn cowboy + world props; looping music; three custom editor slots; mid-trail saves; modes; Xbox-ready input
 - **Remaining work:** In-game visual/gameplay play-test; Xbox controller physical verification; supervised child play-tests; additional SFX
-- **Tests last run:** all automated tests passed after horse transition and arrival wiring
+- **Tests last run:** all automated tests passed after hazard/carrion audit layout pass
 - **Known issues or blockers:**
   - Latest spring, bandit, camp, carrion, shield, and Rail Yard changes still need an in-game visual play-test
   - Xbox controller not physically verified on this machine
 - **Latest iteration tag:** `v1.3.2`
-- **Relevant commit:** `03fff6b`
+- **Relevant commit:** pending
 
 ### Cycle notes — 2026-07-19 (v1.3.3)
 
+- Hazard/carrion audit: cacti stay ≥200px from canyon rims unless a spring launches across; carrions shrink to ~0.58 scale, reverse before solids, stay high enough to walk under, and Wings routes add FlightCeiling solids plus a stacked fly-between corridor.
 - Level completion now shows a hand-drawn horse arrive, the cowboy mount and ride out, then ride in and dismount at the next level; the badge total stays above the animation.
 - Carrions are smaller and reverse before solid obstacles. Wings routes keep them high enough to walk under, include ceiling blockers, and include paired birds the cowboy must fly between.
 - Cacti may no longer sit directly before or after a canyon unless a nearby spring launches the cowboy over them; affected early-trail placements were moved.

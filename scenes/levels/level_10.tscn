@@ -1,4 +1,4 @@
-[gd_scene load_steps=21 format=3 uid="uid://clevel10"]
+[gd_scene load_steps=24 format=3 uid="uid://clevel10"]
 
 [ext_resource type="Script" path="res://scripts/levels/level_10.gd" id="1_level"]
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2_player"]
@@ -28,6 +28,13 @@ size = Vector2(160, 32)
 
 [sub_resource type="RectangleShape2D" id="BlockWide"]
 size = Vector2(220, 32)
+
+[sub_resource type="RectangleShape2D" id="FlightCeilingShape"]
+size = Vector2(6200, 40)
+
+[sub_resource type="RectangleShape2D" id="FlightCeilingShapeShort"]
+size = Vector2(1400, 36)
+
 
 
 [node name="Level10" type="Node2D"]
@@ -1172,50 +1179,61 @@ scale = Vector2(3.0, 1.4)
 
 
 [node name="Carrion0" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(1900, 105)
-patrol_width = 125.0
+position = Vector2(1900, 85)
+patrol_width = 95.0
 
 
 [node name="Carrion1" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(3700, 80)
-patrol_width = 145.0
+position = Vector2(2850, -15)
+patrol_width = 70.0
 move_speed = 58.0
 
 
 [node name="Carrion2" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(5500, 115)
-patrol_width = 135.0
+position = Vector2(5500, 90)
+patrol_width = 100.0
 move_speed = 62.0
 
 
 [node name="Carrion3" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(1050, 45)
-patrol_width = 105.0
+position = Vector2(980, 45)
+patrol_width = 80.0
 move_speed = 46.0
 
 
 [node name="Carrion4" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(2750, 185)
-patrol_width = 115.0
+position = Vector2(2850, 183)
+patrol_width = 70.0
 move_speed = 50.0
 
 
 [node name="Carrion5" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(4550, 25)
-patrol_width = 130.0
+position = Vector2(4580, 35)
+patrol_width = 80.0
 move_speed = 56.0
 
 
 [node name="Carrion6" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(6350, 70)
-patrol_width = 115.0
+position = Vector2(6120, 150)
+patrol_width = 55.0
 move_speed = 60.0
 
 
-[node name="Carrion7" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(2750, 60)
-patrol_width = 100.0
-move_speed = 48.0
+[node name="FlightCeiling0" type="StaticBody2D" parent="."]
+position = Vector2(3850, -130)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="FlightCeiling0"]
+shape = SubResource("FlightCeilingShape")
+
+[node name="FlightCeiling1" type="StaticBody2D" parent="."]
+position = Vector2(1600, -110)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="FlightCeiling1"]
+shape = SubResource("FlightCeilingShapeShort")
 
 
 [node name="Shield" parent="." instance=ExtResource("10_mode")]
