@@ -31,6 +31,8 @@ func _process(delta: float) -> void:
 	var x := lerpf(1.35, 0.9, t) if t < 0.55 else lerpf(0.9, 1.0, (t - 0.55) / 0.45)
 	_visual.scale = Vector2(_base_scale.x * x, _base_scale.y * y)
 	_visual.modulate = Color(0.55, 1.0, 0.55, 1.0).lerp(Color(1, 1, 1, 1), t)
+	if _label != null:
+		_label.add_theme_font_size_override(&"font_size", int(lerpf(22, 16, t)))
 
 
 func _on_body_entered(body: Node2D) -> void:

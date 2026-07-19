@@ -228,8 +228,8 @@ Each cycle must maintain the following status block:
 
 ### Current development status
 
-- **Current iteration:** `v1.2.9` friendlier gates and spring tips
-- **Last completed step:** Longer open gates with OPEN/HURRY/WAIT labels; first spring teaches Boing!
+- **Current iteration:** `v1.2.9` spring tips and bigger cloud warnings
+- **Last completed step:** First spring bounce toast; louder WAIT! clouds; longer celebrations
 - **Currently in progress:** Ralph polish loop until 17:00 CEST (hard stop; credit % not readable)
 - **Next step:** Keep polishing playability/visuals in the ralph loop until stop time
 - **Completed features:** Long playable 10-level cowboy trail; 3 camps per level; animated cowboy; modes; Xbox-ready input; Chapter 14 QA green
