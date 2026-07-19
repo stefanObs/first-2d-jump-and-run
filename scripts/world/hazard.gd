@@ -15,11 +15,14 @@ func _ready() -> void:
 func _configure_visual() -> void:
 	var sprite := get_node_or_null("Sprite2D") as CanvasItem
 	var pit := get_node_or_null("PitVisual") as CanvasItem
+	var rim := get_node_or_null("PitRim") as CanvasItem
 	var wide := maxf(absf(scale.x), absf(scale.y)) > 1.35
 	if sprite != null:
 		sprite.visible = not wide
 	if pit != null:
 		pit.visible = wide
+	if rim != null:
+		rim.visible = wide
 
 
 func _on_body_entered(body: Node2D) -> void:

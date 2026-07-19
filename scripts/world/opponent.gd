@@ -7,7 +7,7 @@ signal hurt_player(player: Player)
 
 @export var point_a: Vector2 = Vector2(-80, 0)
 @export var point_b: Vector2 = Vector2(80, 0)
-@export var move_speed: float = 60.0
+@export var move_speed: float = 45.0
 @export var vertical_patrol: bool = false
 
 var _origin: Vector2

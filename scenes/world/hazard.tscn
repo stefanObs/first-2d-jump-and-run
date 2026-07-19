@@ -4,7 +4,7 @@
 [ext_resource type="Texture2D" path="res://assets/world/cactus.png" id="2"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_area"]
-size = Vector2(36, 48)
+size = Vector2(40, 52)
 
 [node name="Hazard" type="Area2D"]
 collision_layer = 0
@@ -13,17 +13,26 @@ monitorable = false
 script = ExtResource("1_hazard")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
-position = Vector2(0, -8)
+position = Vector2(0, -10)
+scale = Vector2(1.25, 1.25)
 texture = ExtResource("2")
 
 [node name="PitVisual" type="ColorRect" parent="."]
 visible = false
-offset_left = -64.0
-offset_top = -16.0
-offset_right = 64.0
-offset_bottom = 16.0
-color = Color(0.45, 0.28, 0.12, 1)
+offset_left = -72.0
+offset_top = -22.0
+offset_right = 72.0
+offset_bottom = 22.0
+color = Color(0.35, 0.18, 0.08, 1)
+
+[node name="PitRim" type="ColorRect" parent="."]
+visible = false
+offset_left = -76.0
+offset_top = -26.0
+offset_right = 76.0
+offset_bottom = -14.0
+color = Color(0.75, 0.45, 0.2, 1)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-position = Vector2(0, -8)
+position = Vector2(0, -10)
 shape = SubResource("RectangleShape2D_area")

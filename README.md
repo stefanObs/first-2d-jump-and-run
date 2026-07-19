@@ -228,16 +228,22 @@ Each cycle must maintain the following status block:
 
 ### Current development status
 
-- **Current iteration:** `v1.2.1` child-appeal polish on the long trail
-- **Last completed step:** Bobbing badges/mode items, friendlier outlaws, dessert HUD banners, more forgiving jump feel
+- **Current iteration:** `v1.2.2` clearer trail props and celebrations
+- **Last completed step:** Brighter springs/rafts/wind/clouds/pits, warmer Yeehaw celebration, slower outlaws
 - **Currently in progress:** Ralph polish loop until 17:00 CEST (hard stop; credit % not readable)
 - **Next step:** Keep polishing playability/visuals in the ralph loop until stop time
 - **Completed features:** Long playable 10-level cowboy trail; 3 camps per level; animated cowboy; modes; Xbox-ready input; Chapter 14 QA green
 - **Remaining work:** Music/SFX; richer hand-drawn art; live Xbox verification; supervised child play-tests
 - **Tests last run:** `godot --headless --path . res://tests/test_runner.tscn` — all 16 tests passed
 - **Known issues or blockers:** Placeholder pixel art; no music/SFX yet; Xbox controller not physically verified on this machine
-- **Latest iteration tag:** `v1.2.1`
+- **Latest iteration tag:** `v1.2.2`
 - **Relevant commit:** `c61e413`
+
+### Cycle notes — 2026-07-19 (v1.2.2)
+
+- Springs, rafts, wind, and cloud platforms got clearer kid-readable labels and colors.
+- Canyon pits show a rim; cacti are larger; outlaws patrol slower.
+- Level-clear overlay uses a warm desert celebration wipe.
 
 ### Cycle notes — 2026-07-19 (v1.2.1)
 
