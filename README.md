@@ -228,8 +228,8 @@ Each cycle must maintain the following status block:
 
 ### Current development status
 
-- **Current iteration:** `v1.2.5` longer powers, trail %, clearer dangers
-- **Last completed step:** Longer mode timers, wider camera, dust landings, OUCH/BANDIT labels, badge milestone toasts, trail progress bar
+- **Current iteration:** `v1.2.5` trail progress bar and clearer powers
+- **Last completed step:** Trail % bar, FLY/JUMP/ZOOM/SAFE labels, wing flaps, landing squash
 - **Currently in progress:** Ralph polish loop until 17:00 CEST (hard stop; credit % not readable)
 - **Next step:** Keep polishing playability/visuals in the ralph loop until stop time
 - **Completed features:** Long playable 10-level cowboy trail; 3 camps per level; animated cowboy; modes; Xbox-ready input; Chapter 14 QA green
