@@ -40,9 +40,16 @@ static func build(level: LevelController, data: Dictionary) -> void:
 		)
 		match type_name:
 			"ground":
-				_add_block(level, "Ground%d" % index, position, Vector2(grid, grid), Color(0.86, 0.68, 0.38))
+				_add_block(
+					level,
+					"Ground%d" % index,
+					position,
+					Vector2(grid, grid),
+					Color(0.72, 0.46, 0.22),
+					true
+				)
 			"platform":
-				_add_block(level, "Platform%d" % index, position, Vector2(grid * 2.0, 24), Color(0.62, 0.4, 0.22))
+				_add_block(level, "Platform%d" % index, position, Vector2(grid * 2.0, 24), Color(0.55, 0.32, 0.14))
 			"star":
 				_add_scene(level, STAR, "CustomStar%d" % index, position)
 			"cactus":
@@ -75,7 +82,7 @@ static func _add_background(level: Node, width: float) -> void:
 	background.name = "Background"
 	background.position = Vector2(-200, -300)
 	background.size = Vector2(width + 400, 900)
-	background.color = Color(0.98, 0.74, 0.45)
+	background.color = Color(0.62, 0.84, 0.96)
 	background.z_index = -20
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	level.add_child(background)
@@ -83,7 +90,7 @@ static func _add_background(level: Node, width: float) -> void:
 	sky.name = "SkyBand"
 	sky.position = Vector2(-200, -300)
 	sky.size = Vector2(width + 400, 360)
-	sky.color = Color(0.52, 0.8, 0.98)
+	sky.color = Color(0.42, 0.74, 0.98)
 	sky.z_index = -19
 	sky.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	level.add_child(sky)
@@ -94,7 +101,8 @@ static func _add_block(
 	node_name: String,
 	position: Vector2,
 	size: Vector2,
-	color: Color
+	color: Color,
+	with_grass: bool = false
 ) -> StaticBody2D:
 	var body := StaticBody2D.new()
 	body.name = node_name
@@ -106,6 +114,21 @@ static func _add_block(
 	visual.color = color
 	visual.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	body.add_child(visual)
+	if with_grass:
+		var stripe := ColorRect.new()
+		stripe.name = "TopStripe"
+		stripe.position = Vector2(-size.x * 0.5, -size.y * 0.5)
+		stripe.size = Vector2(size.x, 12.0)
+		stripe.color = Color(0.28, 0.72, 0.22)
+		stripe.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		body.add_child(stripe)
+		var edge := ColorRect.new()
+		edge.name = "DirtEdge"
+		edge.position = Vector2(-size.x * 0.5, size.y * 0.5 - 6.0)
+		edge.size = Vector2(size.x, 6.0)
+		edge.color = Color(0.48, 0.28, 0.12)
+		edge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		body.add_child(edge)
 	var collision := CollisionShape2D.new()
 	collision.name = "CollisionShape2D"
 	var shape := RectangleShape2D.new()
