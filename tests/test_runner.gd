@@ -268,6 +268,21 @@ func _test_save_slots() -> Variant:
 	var reloaded := GameManager.get_slot(0)
 	if int(reloaded.get("current_level", 0)) != 2:
 		return "Save data did not persist."
+	# Older save formats must be rejected.
+	var path_write := FileAccess.open(path, FileAccess.WRITE)
+	if path_write == null:
+		return "Could not rewrite save for version test."
+	path_write.store_string(JSON.stringify({
+		"version": GameManager.SAVE_VERSION - 1,
+		"slots": [{"empty": false, "current_level": 9, "stars": 99}],
+		"settings": {},
+	}, "\t"))
+	path_write = null
+	GameManager.load_from_disk()
+	if not GameManager.is_slot_empty(0):
+		return "Saves from older game versions should be discarded."
+	if int(GameManager.get_slot(0).get("current_level", 0)) == 9:
+		return "Old save progress must not remain after a version bump."
 	GameManager.erase_slot(0)
 	return null
 

@@ -3,7 +3,7 @@ extends RefCounted
 
 ## Versioned local storage for three parent-built trails.
 
-const VERSION := 1
+const VERSION := 2
 const SLOT_COUNT := 3
 const SavePaths := preload("res://scripts/autoload/save_paths.gd")
 
@@ -48,7 +48,12 @@ static func load_level(slot_index: int) -> Dictionary:
 	var parsed: Variant = JSON.parse_string(file.get_as_text())
 	if typeof(parsed) != TYPE_DICTIONARY:
 		return default_level(slot_index)
-	return sanitize(parsed as Dictionary, slot_index)
+	var raw := parsed as Dictionary
+	# Older custom-trail formats are discarded.
+	if int(raw.get("version", 0)) < VERSION:
+		erase(slot_index)
+		return default_level(slot_index)
+	return sanitize(raw, slot_index)
 
 
 static func exists(slot_index: int) -> bool:

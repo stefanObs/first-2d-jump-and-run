@@ -2,6 +2,8 @@
 set -Eeuo pipefail
 
 PROJECT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+STAMP_FILE="$PROJECT_DIR/content_version.txt"
+CACHE_STAMP="$PROJECT_DIR/.godot/cowboy_trail_content_version.txt"
 
 find_godot() {
     if [[ -n "${GODOT_BIN:-}" ]]; then
@@ -35,4 +37,22 @@ find_godot() {
 }
 
 GODOT_EXECUTABLE="$(find_godot)"
+
+need_import=0
+if [[ ! -d "$PROJECT_DIR/.godot" ]]; then
+    need_import=1
+elif [[ ! -f "$STAMP_FILE" || ! -f "$CACHE_STAMP" ]]; then
+    need_import=1
+elif ! cmp -s "$STAMP_FILE" "$CACHE_STAMP"; then
+    need_import=1
+fi
+
+if [[ "$need_import" -eq 1 ]]; then
+    echo "Updating Cowboy Trail to the latest checked-out version..."
+    rm -rf "$PROJECT_DIR/.godot"
+    "$GODOT_EXECUTABLE" --headless --path "$PROJECT_DIR" --import
+    mkdir -p "$PROJECT_DIR/.godot"
+    cp "$STAMP_FILE" "$CACHE_STAMP"
+fi
+
 exec "$GODOT_EXECUTABLE" --path "$PROJECT_DIR" "$@"

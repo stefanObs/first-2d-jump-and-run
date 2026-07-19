@@ -152,8 +152,9 @@ Progress is saved automatically after every level. A parent-accessible hold-to-c
 - **While developing / using Play Cowboy Trail:** `savegames/` sits next to the project files.
 - **Portable Windows exe:** `savegames/` is created next to `CowboyTrail.exe`.
 - The folder is gitignored so each player keeps their own progress.
+- Save files include a format version (`SAVE_VERSION`). Saves from older game versions are discarded and do not load.
 
-Older saves under Godot’s `user://` folder are copied into `savegames/` automatically the first time the game starts.
+Older Godot `user://` files are only copied into `savegames/` if no local save exists yet; if that copy is an outdated format, it is still discarded.
 
 ## Chapter 9: Child-friendly design and accessibility
 
@@ -184,10 +185,10 @@ Godot is well suited to a small 2D game, has a compact scene system, exports to 
 
 The launch scripts locate Godot 4, set the project directory correctly, and forward any additional command-line arguments to Godot.
 
-- **Windows PC (no install needed):** double-click **`Play Cowboy Trail.bat`**. The bundled Godot engine in `godot/` is unpacked automatically on first run, assets are imported once, and the game starts. Nothing has to be installed.
-- **Linux:** run `./run_linux.sh`
+- **Windows PC (no install needed):** double-click **`Play Cowboy Trail.bat`**. The bundled Godot engine in `godot/` is unpacked automatically on first run. After a `git pull` or fresh checkout, the launcher refreshes assets automatically so you always get the latest version. Nothing has to be installed.
+- **Linux:** run `./run_linux.sh` (also refreshes assets when `content_version.txt` changes)
 - **Windows (with your own Godot):** double-click `run_windows.bat` or run it from Command Prompt
-- **Portable Windows exe:** run `./create_exe.sh` (Linux/macOS) or `create_exe.bat` (Windows). The build lands in `dist/windows/CowboyTrail.exe` with the game data embedded. Share that folder; progress appears in `savegames/` beside the exe.
+- **Portable Windows exe:** run `./create_exe.sh` (Linux/macOS) or `create_exe.bat` (Windows). The build lands in `dist/windows/CowboyTrail.exe` with the game data embedded. Share that folder; progress appears in `savegames/` beside the exe. Rebuild the exe after pulling so the portable build matches current sources.
 - **Tests:** `godot --headless --path . res://tests/test_runner.tscn`
 
 For the developer launch scripts (`run_*.bat`/`.sh`), Godot must be on `PATH` or set via `GODOT_BIN`. On Windows, `run_windows.bat` also detects a `Godot_v*-stable_win64.exe` beside the script or in the bundled `godot/` folder. The `Play Cowboy Trail.bat` launcher needs none of this — it uses the bundled engine.
@@ -275,17 +276,17 @@ Each cycle must maintain the following status block:
 ### Current development status
 
 - **Current iteration:** `v1.3.3` hazard variety, bounty bandits, and trail readability
-- **Last completed step:** Coach driver surrender win pose; kingpin tied sprite scaled to match
+- **Last completed step:** Windows launch refreshes on content version; old saves rejected
 - **Currently in progress:** In-game visual play-test of bosses and polish
 - **Next step:** Play-test bosses, fences, clouds, and flight; then tag `v1.3.3`
 - **Completed features:** Long 10-level cowboy trail; animated nonviolent bandit lasso; seated tied bandits; warning-shot and bounty bandits; carrions and rattlesnakes; animated canyon recovery; reachable hazards; hand-drawn cowboy + world props; looping music; three custom editor slots; mid-trail saves; modes; Xbox-ready input; Stampede Bull / Midnight Coach / Outlaw Kingpin bosses; horizon victory scene
 - **Remaining work:** In-game visual/gameplay play-test; Xbox controller physical verification; supervised child play-tests; additional SFX
-- **Tests last run:** all automated tests passed after coach surrender + kingpin tied scale
+- **Tests last run:** all automated tests passed after content-version refresh + save format bump
 - **Known issues or blockers:**
   - Boss arenas and new fence/cloud art still need an in-game visual play-test
   - Xbox controller not physically verified on this machine
 - **Latest iteration tag:** `v1.3.2`
-- **Relevant commit:** `9d67440`
+- **Relevant commit:** (pending push)
 
 
 ### Cycle notes — 2026-07-19 (v1.3.3)
@@ -310,6 +311,7 @@ Each cycle must maintain the following status block:
 - Sunset victory rider frames were regenerated with transparent backgrounds (no white patches).
 - Campaign and custom-trail saves live in a gitignored `savegames/` folder (next to the project in development, next to the exe when exported). `create_exe.sh` / `create_exe.bat` build a portable Windows exe.
 - Start screen plays the country theme once, then the looping trail music; the sunset finale plays the country theme again and waits for it to finish.
+- `content_version.txt` drives launcher refreshes after git pulls; campaign save format is version 4 and older saves are discarded.
 - Canyon falls now stay recovering through respawn invulnerability, so holding left/right cannot restart the fall animation immediately.
 - Clouds on Wings routes are purposeful: canyon bridges, stepped climbs to high badges, cactus-clear platforms, and nest landings (some stay solid).
 - Rattlesnakes are larger, cast a ground shadow, and rise much higher when the cowboy approaches.

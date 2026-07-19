@@ -2,7 +2,7 @@ extends Node
 
 ## Owns save slots, settings, and level progression.
 
-const SAVE_VERSION := 3
+const SAVE_VERSION := 4
 const SLOT_COUNT := 3
 const CUSTOM_LEVEL_STORE := preload("res://scripts/levels/custom_level_store.gd")
 const SavePaths := preload("res://scripts/autoload/save_paths.gd")
@@ -348,7 +348,15 @@ func load_from_disk() -> void:
 	if typeof(parsed) != TYPE_DICTIONARY:
 		_data = _default_data()
 		return
-	_data = _migrate_save(parsed as Dictionary)
+	var raw := parsed as Dictionary
+	var incoming_version := int(raw.get("version", 0))
+	# Older save formats are intentionally incompatible — start fresh.
+	if incoming_version < SAVE_VERSION:
+		_data = _default_data()
+		save_to_disk()
+		saves_changed.emit()
+		return
+	_data = _migrate_save(raw)
 	_ensure_data()
 	saves_changed.emit()
 
@@ -402,6 +410,7 @@ func _empty_slot() -> Dictionary:
 
 
 func _migrate_save(raw: Dictionary) -> Dictionary:
+	## Same SAVE_VERSION only — older files are discarded in load_from_disk.
 	var data := _default_data()
 	if raw.has("settings") and typeof(raw["settings"]) == TYPE_DICTIONARY:
 		var merged: Dictionary = data["settings"]
