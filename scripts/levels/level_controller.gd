@@ -284,6 +284,7 @@ func _update_trail_progress() -> void:
 	var span := maxf(end_x - start_x, 1.0)
 	var ratio := (player.global_position.x - start_x) / span
 	hud.set_trail_progress(ratio)
+	_maybe_progress_toast(ratio)
 
 
 func _animate_sun() -> void:
@@ -294,7 +295,6 @@ func _animate_sun() -> void:
 	tween.set_loops()
 	tween.tween_property(sun, "modulate", Color(1.0, 1.0, 0.85, 1.0), 1.4)
 	tween.tween_property(sun, "modulate", Color(1.0, 0.92, 0.55, 1.0), 1.4)
-	_maybe_progress_toast(ratio)
 
 
 func _maybe_progress_toast(ratio: float) -> void:
