@@ -48,6 +48,12 @@ func _ready() -> void:
 		]
 	)
 	_ensure_action(
+		&"next_boss",
+		[
+			_key(KEY_KP_PERIOD),
+		]
+	)
+	_ensure_action(
 		&"pause",
 		[
 			_key(KEY_ESCAPE),

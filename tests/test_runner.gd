@@ -87,7 +87,7 @@ func _test_consume_clears_state() -> Variant:
 
 func _test_input_bindings_actions() -> Variant:
 	var required: Array[StringName] = [
-		&"move_left", &"move_right", &"jump", &"lasso", &"next_level",
+		&"move_left", &"move_right", &"jump", &"lasso", &"next_level", &"next_boss",
 		&"pause", &"confirm", &"back",
 		&"ui_up", &"ui_down", &"ui_left", &"ui_right",
 	]

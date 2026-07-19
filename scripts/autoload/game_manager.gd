@@ -166,12 +166,29 @@ const BOSS_SCENES := {
 	10: "res://scenes/bosses/boss_outlaw_kingpin.tscn",
 }
 
+const BOSS_ORDER: Array[int] = [3, 7, 10]
+
 
 func try_load_boss_after(level_number: int) -> bool:
 	if not BOSS_SCENES.has(level_number):
 		return false
 	get_tree().change_scene_to_file(str(BOSS_SCENES[level_number]))
 	return true
+
+
+func load_boss_for_level(source_level: int) -> void:
+	if not BOSS_SCENES.has(source_level):
+		return
+	get_tree().change_scene_to_file(str(BOSS_SCENES[source_level]))
+
+
+func load_next_boss(from_source_level: int) -> void:
+	var index := BOSS_ORDER.find(from_source_level)
+	if index < 0:
+		index = 0
+	else:
+		index = (index + 1) % BOSS_ORDER.size()
+	load_boss_for_level(BOSS_ORDER[index])
 
 
 func finish_boss(source_level: int) -> void:

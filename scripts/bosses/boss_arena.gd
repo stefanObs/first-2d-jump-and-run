@@ -9,6 +9,7 @@ extends Node2D
 var player: Player
 var hud: Hud
 var _won: bool = false
+var _next_boss_tap_time_msec: int = -1000
 
 
 func _ready() -> void:
@@ -19,6 +20,23 @@ func _ready() -> void:
 		WildWestTheme.configure_player_camera(self, player)
 	if hud != null:
 		hud.show_toast(boss_title, 2.4)
+
+
+func _process(_delta: float) -> void:
+	if _won:
+		return
+	if Input.is_action_just_pressed(&"next_boss"):
+		_handle_next_boss_tap()
+
+
+func _handle_next_boss_tap() -> void:
+	var now := Time.get_ticks_msec()
+	if now - _next_boss_tap_time_msec <= 450:
+		GameManager.load_next_boss(source_level)
+		return
+	_next_boss_tap_time_msec = now
+	if hud != null:
+		hud.show_toast("Press numpad . again for next boss", 1.0)
 
 
 func report_progress(text: String) -> void:
