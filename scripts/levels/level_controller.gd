@@ -3,6 +3,8 @@ extends Node2D
 
 ## Owns spawn, checkpoints, hazards, goal completion, HUD, and pause.
 
+const BOUNTY_REWARD_EFFECT := preload("res://scripts/world/bounty_reward_effect.gd")
+
 signal level_completed
 signal player_respawned(position: Vector2)
 
@@ -504,6 +506,10 @@ func _on_bounty_caught(opponent: Opponent, amount: int) -> void:
 	if new_badges <= 0:
 		return
 	player.collect_badges(new_badges)
+	var reward_effect := BOUNTY_REWARD_EFFECT.new()
+	reward_effect.name = "BountyRewardEffect"
+	add_child(reward_effect)
+	reward_effect.play(opponent.global_position, player.global_position, new_badges)
 	if hud != null:
 		hud.show_toast("Bounty caught! +%d badges!" % new_badges, 2.2)
 
