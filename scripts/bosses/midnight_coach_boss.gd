@@ -62,10 +62,14 @@ func on_door_lassoed(index: int) -> void:
 		return
 	_doors_done += 1
 	_next_door += 1
-	report_progress("Door %d tied! (%d/3)" % [index + 1, _doors_done])
+	report_progress("Door %d open! (%d/3)" % [index + 1, _doors_done])
 	if index < _doors.size() and _doors[index] != null:
-		_doors[index].set_lasso_active(false)
-		_doors[index].modulate = Color(0.4, 0.85, 0.35, 1)
+		var door := _doors[index]
+		if door.has_method("play_open"):
+			door.call("play_open")
+		else:
+			door.set_lasso_active(false)
+			door.modulate = Color(0.4, 0.85, 0.35, 1)
 	_refresh_door_hints()
 	if _doors_done >= 3:
 		win_boss()
@@ -76,11 +80,11 @@ func _refresh_door_hints() -> void:
 		var door := _doors[i]
 		if door == null:
 			continue
+		if door.has_method("is_open") and bool(door.call("is_open")):
+			continue
 		var is_next := i == _next_door and not _won
 		door.set_lasso_active(is_next)
 		if is_next:
 			door.modulate = Color(1.2, 1.05, 0.4, 1)
-		elif i < _next_door:
-			door.modulate = Color(0.4, 0.85, 0.35, 1)
 		else:
-			door.modulate = Color(0.75, 0.75, 0.75, 0.9)
+			door.modulate = Color(0.85, 0.85, 0.85, 1)
