@@ -197,6 +197,10 @@ func _wire_world_objects() -> void:
 			var belt := node as ConveyorBelt
 			if not belt.first_ride.is_connected(_on_conveyor_first_ride):
 				belt.first_ride.connect(_on_conveyor_first_ride)
+		elif node is TimedDoor:
+			var door := node as TimedDoor
+			if not door.first_warn.is_connected(_on_door_first_warn):
+				door.first_warn.connect(_on_door_first_warn)
 
 
 func _on_checkpoint_activated(checkpoint: Checkpoint) -> void:
@@ -230,6 +234,11 @@ func _on_spring_bounced() -> void:
 func _on_conveyor_first_ride() -> void:
 	if hud != null:
 		hud.show_toast("The belt pushes you along!", 2.4)
+
+
+func _on_door_first_warn() -> void:
+	if hud != null:
+		hud.show_toast("Watch the gate! Wait or hurry!", 2.6)
 
 
 func _on_player_mode_changed(mode_name: String, remaining: float) -> void:

@@ -229,7 +229,7 @@ Each cycle must maintain the following status block:
 ### Current development status
 
 - **Current iteration:** `v1.2.10` belt tips and bobbing title
-- **Last completed step:** Conveyor first-ride toast; WAIT! gates; bobbing Cowboy Trail title
+- **Last completed step:** First belt ride and gate-warn toasts; louder HURRY!/WAIT! gate labels
 - **Currently in progress:** Ralph polish loop until 17:00 CEST (hard stop; credit % not readable)
 - **Next step:** Keep polishing playability/visuals in the ralph loop until stop time
 - **Completed features:** Long playable 10-level cowboy trail; 3 camps per level; animated cowboy; modes; Xbox-ready input; Chapter 14 QA green

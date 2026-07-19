@@ -1,6 +1,8 @@
 class_name TimedDoor
 extends StaticBody2D
 
+signal first_warn
+
 @export var open_time: float = 2.8
 @export var closed_time: float = 1.6
 @export var start_open: bool = false
@@ -12,6 +14,7 @@ var _shape: CollisionShape2D
 var _visual: ColorRect
 var _label: Label
 var _blink_phase: float = 0.0
+var _warned: bool = false
 
 
 func _ready() -> void:
@@ -29,6 +32,7 @@ func _process(delta: float) -> void:
 	if _timer <= 0.0:
 		_open = not _open
 		_timer = open_time if _open else closed_time
+		_warned = false
 		_apply_state()
 		return
 	_update_warning_blink()
@@ -42,6 +46,7 @@ func _apply_state() -> void:
 	if _label != null:
 		_label.text = "OPEN" if _open else "GATE"
 		_label.modulate = Color(0.25, 0.55, 0.2, 1.0) if _open else Color(0.45, 0.18, 0.08, 1.0)
+		_label.add_theme_font_size_override(&"font_size", 14)
 
 
 func _update_warning_blink() -> void:
@@ -54,13 +59,17 @@ func _update_warning_blink() -> void:
 		elif _label != null:
 			_label.text = "OPEN"
 		return
+	if not _warned:
+		_warned = true
+		first_warn.emit()
 	var pulse := 0.35 + absf(sin(_blink_phase)) * 0.65
 	if _open:
 		_visual.modulate = Color(1.0, 0.95, 0.35, pulse)
 		if _label != null:
 			_label.text = "HURRY!"
+			_label.add_theme_font_size_override(&"font_size", 18)
 	else:
 		_visual.modulate = Color(1.0, 0.85, 0.3, pulse)
 		if _label != null:
 			_label.text = "WAIT!"
-			_label.add_theme_font_size_override(&"font_size", 16)
+			_label.add_theme_font_size_override(&"font_size", 18)
