@@ -144,11 +144,12 @@ Godot is well suited to a small 2D game, has a compact scene system, exports to 
 
 The launch scripts locate Godot 4, set the project directory correctly, and forward any additional command-line arguments to Godot.
 
+- **Windows PC (no install needed):** double-click **`Play Cowboy Trail.bat`**. The bundled Godot engine in `godot/` is unpacked automatically on first run, assets are imported once, and the game starts. Nothing has to be installed.
 - **Linux:** run `./run_linux.sh`
-- **Windows PC:** double-click `run_windows.bat` or run it from Command Prompt
+- **Windows (with your own Godot):** double-click `run_windows.bat` or run it from Command Prompt
 - **Tests:** `godot --headless --path . res://tests/test_runner.tscn`
 
-Godot must either be available on `PATH` or be specified with the `GODOT_BIN` environment variable. On Windows, the launcher also detects a `Godot_v*-stable_win64.exe` placed beside the script.
+For the developer launch scripts (`run_*.bat`/`.sh`), Godot must be on `PATH` or set via `GODOT_BIN`. On Windows, `run_windows.bat` also detects a `Godot_v*-stable_win64.exe` beside the script or in the bundled `godot/` folder. The `Play Cowboy Trail.bat` launcher needs none of this — it uses the bundled engine.
 
 ## Chapter 11: Implementation approach
 

@@ -26,9 +26,15 @@ if not defined GODOT_EXECUTABLE (
         if exist "%%~fG" if not defined GODOT_EXECUTABLE set "GODOT_EXECUTABLE=%%~fG"
     )
 )
+if not defined GODOT_EXECUTABLE (
+    for %%G in ("%PROJECT_DIR%godot\Godot_v*-stable_win64.exe") do (
+        if exist "%%~fG" if not defined GODOT_EXECUTABLE set "GODOT_EXECUTABLE=%%~fG"
+    )
+)
 
 if not defined GODOT_EXECUTABLE (
-    echo Godot 4 was not found. Install it, add it to PATH, place its executable beside this script, or set GODOT_BIN. 1>&2
+    echo Godot 4 was not found. Double-click "Play Cowboy Trail.bat" to use the bundled engine, 1>&2
+    echo or install Godot, add it to PATH, place its executable beside this script, or set GODOT_BIN. 1>&2
     exit /b 1
 )
 
