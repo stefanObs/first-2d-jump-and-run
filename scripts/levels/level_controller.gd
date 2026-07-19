@@ -205,7 +205,7 @@ func _on_mode_item_collected(mode: ModeController.Mode) -> void:
 		return
 	var toast := ModeController.mode_toast(mode)
 	if not toast.is_empty():
-		hud.show_toast(toast, 2.2)
+		hud.show_toast(toast, 3.0)
 
 
 func _on_wind_first_touch() -> void:

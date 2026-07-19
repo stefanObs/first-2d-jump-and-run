@@ -93,4 +93,14 @@ static func mode_name_kid(mode: Mode) -> String:
 
 
 static func mode_toast(mode: Mode) -> String:
-	return mode_name_kid(mode)
+	match mode:
+		Mode.WINGS:
+			return "Fly high! Hold Jump to rise!"
+		Mode.MAGIC_BOOTS:
+			return "Super jump! Leap farther!"
+		Mode.SPEED_STAR:
+			return "Zoom! Run like the wind!"
+		Mode.BUBBLE_SHIELD:
+			return "Safe bubble! Bandits bounce off!"
+		_:
+			return ""

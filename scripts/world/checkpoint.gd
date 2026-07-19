@@ -26,18 +26,41 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	if not is_active:
-		return
 	_pulse += delta * 4.0
-	if _flag != null:
-		var bob := sin(_pulse) * 3.0
-		_flag.offset_top = _flag_base_top + bob
-		_flag.offset_bottom = _flag_base_top + 28.0 + bob
-	if _pop_time > 0.0:
-		_pop_time = maxf(_pop_time - delta, 0.0)
-		var t := 1.0 - (_pop_time / 0.35)
-		var s := lerpf(1.25, 1.0, t)
-		scale = Vector2(s, s)
+	if is_active:
+		if _flag != null:
+			var bob := sin(_pulse) * 3.0
+			_flag.offset_top = _flag_base_top + bob
+			_flag.offset_bottom = _flag_base_top + 28.0 + bob
+		if _pop_time > 0.0:
+			_pop_time = maxf(_pop_time - delta, 0.0)
+			var t := 1.0 - (_pop_time / 0.35)
+			var s := lerpf(1.25, 1.0, t)
+			scale = Vector2(s, s)
+		return
+
+	# Wave inactive camps so kids notice the next save point.
+	var nearby := _player_nearby(220.0)
+	if _label != null and nearby:
+		_label.text = "CAMP!"
+		_label.modulate = Color(1.0, 0.9 + sin(_pulse) * 0.1, 0.3, 1.0)
+	elif _label != null:
+		_label.text = "CAMP"
+		_label.modulate = Color(1, 1, 1, 1)
+	if _flag != null and nearby:
+		_flag.modulate = Color(1.0, 0.7 + absf(sin(_pulse)) * 0.3, 0.5, 1.0)
+	elif _flag != null:
+		_flag.modulate = Color(1, 1, 1, 1)
+
+
+func _player_nearby(radius: float) -> bool:
+	var tree := get_tree()
+	if tree == null:
+		return false
+	for node in tree.get_nodes_in_group("player"):
+		if node is Node2D and global_position.distance_to((node as Node2D).global_position) <= radius:
+			return true
+	return false
 
 
 func activate() -> void:

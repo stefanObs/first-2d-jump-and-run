@@ -228,8 +228,8 @@ Each cycle must maintain the following status block:
 
 ### Current development status
 
-- **Current iteration:** `v1.2.8` saloon approach cues and power sparks
-- **Last completed step:** THIS WAY! near saloon, longer gate/cloud warnings, Magic Boots sparkles
+- **Current iteration:** `v1.2.8` power how-to toasts and beckoning camps
+- **Last completed step:** Mode toasts teach controls; camps flash CAMP!; colored power dust
 - **Currently in progress:** Ralph polish loop until 17:00 CEST (hard stop; credit % not readable)
 - **Next step:** Keep polishing playability/visuals in the ralph loop until stop time
 - **Completed features:** Long playable 10-level cowboy trail; 3 camps per level; animated cowboy; modes; Xbox-ready input; Chapter 14 QA green
