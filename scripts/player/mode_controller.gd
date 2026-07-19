@@ -76,3 +76,21 @@ static func mode_name(mode: Mode) -> String:
 			return "Bubble Shield"
 		_:
 			return "None"
+
+
+static func mode_name_kid(mode: Mode) -> String:
+	match mode:
+		Mode.WINGS:
+			return "Fly high!"
+		Mode.MAGIC_BOOTS:
+			return "Super jump!"
+		Mode.SPEED_STAR:
+			return "Zoom!"
+		Mode.BUBBLE_SHIELD:
+			return "Safe bubble!"
+		_:
+			return ""
+
+
+static func mode_toast(mode: Mode) -> String:
+	return mode_name_kid(mode)

@@ -16,14 +16,19 @@ func _ready() -> void:
 	layer = 100
 
 
-func play_celebration(message: String = "Yeehaw!") -> void:
+func play_celebration(message: String = "Yeehaw!", stars: int = 0) -> void:
 	visible = true
 	if _veil != null:
 		_veil.color = Color(1.0, 0.72, 0.28, 0.0)
 	if _banner != null:
 		_banner.text = message
 		_banner.modulate.a = 0.0
+		_banner.scale = Vector2(0.85, 0.85)
 	if _subtitle != null:
+		if stars > 0:
+			_subtitle.text = "Badges found: %d" % stars
+		else:
+			_subtitle.text = "On to the next trail!"
 		_subtitle.modulate.a = 0.0
 	var tween := create_tween()
 	tween.set_parallel(true)
@@ -31,8 +36,11 @@ func play_celebration(message: String = "Yeehaw!") -> void:
 		tween.tween_property(_veil, "color:a", 0.62, 0.45)
 	if _banner != null:
 		tween.tween_property(_banner, "modulate:a", 1.0, 0.35)
+		tween.tween_property(_banner, "scale", Vector2(1.12, 1.12), 0.35)
 	if _subtitle != null:
 		tween.tween_property(_subtitle, "modulate:a", 1.0, 0.5)
+	if _banner != null:
+		tween.chain().tween_property(_banner, "scale", Vector2(1.0, 1.0), 0.2)
 
 
 func set_progress(progress: float) -> void:

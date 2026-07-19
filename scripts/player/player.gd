@@ -197,16 +197,20 @@ func _update_animation(on_floor: bool) -> void:
 func _update_mode_visual() -> void:
 	if _sprite == null:
 		return
+	var color := Color(1, 1, 1, 1)
 	if _modes.has_shield():
-		_sprite.modulate = Color(0.7, 0.95, 1.0, 1.0)
+		color = Color(0.7, 0.95, 1.0, 1.0)
 	elif _modes.is_flying():
-		_sprite.modulate = Color(0.85, 0.95, 1.0, 1.0)
+		color = Color(0.85, 0.95, 1.0, 1.0)
 	elif _modes.active_mode == ModeController.Mode.SPEED_STAR:
-		_sprite.modulate = Color(1.0, 0.92, 0.55, 1.0)
+		color = Color(1.0, 0.92, 0.55, 1.0)
 	elif _modes.active_mode == ModeController.Mode.MAGIC_BOOTS:
-		_sprite.modulate = Color(0.9, 0.75, 1.0, 1.0)
-	else:
-		_sprite.modulate = Color(1, 1, 1, 1)
+		color = Color(0.9, 0.75, 1.0, 1.0)
+	if _invulnerable_remaining > 0.0:
+		var blink := 0.35 + absf(sin(Time.get_ticks_msec() * 0.025)) * 0.65
+		color.a = blink
+	_sprite.modulate = color
+
 
 
 func _apply_flight(delta: float) -> void:

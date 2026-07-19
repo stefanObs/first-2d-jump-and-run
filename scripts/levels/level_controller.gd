@@ -102,8 +102,11 @@ func begin_completion() -> void:
 	if player != null:
 		player.set_input_enabled(false)
 	if transition != null:
+		var stars := player.stars_collected if player != null else 0
 		var message := "Trail complete!" if is_final_level else "Yeehaw!"
-		transition.play_celebration(message)
+		if stars > 0:
+			message = "%s  %d badges!" % [message, stars]
+		transition.play_celebration(message, stars)
 	_completion.start()
 	level_completed.emit()
 
@@ -116,6 +119,8 @@ func respawn_player() -> void:
 	for node in find_children("*", "Area2D", true, false):
 		if node is ModeItem:
 			(node as ModeItem).restore_if_needed()
+	if hud != null:
+		hud.show_toast("Oops! Back to camp!", 2.0)
 	player_respawned.emit(destination)
 
 
@@ -129,7 +134,7 @@ func _wire_ui() -> void:
 		pause_menu.settings_pressed.connect(_on_settings_pressed)
 	if player != null and hud != null:
 		player.star_collected.connect(hud.set_stars)
-		player.mode_changed.connect(hud.set_mode)
+		player.mode_changed.connect(_on_player_mode_changed)
 
 
 func _wire_world_objects() -> void:
@@ -146,6 +151,14 @@ func _wire_world_objects() -> void:
 			var hazard := node as Hazard
 			if not hazard.hurt.is_connected(_on_hazard_hurt):
 				hazard.hurt.connect(_on_hazard_hurt)
+		elif node is ModeItem:
+			var item := node as ModeItem
+			if not item.collected.is_connected(_on_mode_item_collected):
+				item.collected.connect(_on_mode_item_collected)
+		elif node is WindZone:
+			var wind := node as WindZone
+			if not wind.first_touch.is_connected(_on_wind_first_touch):
+				wind.first_touch.connect(_on_wind_first_touch)
 	for node in find_children("*", "AnimatableBody2D", true, false):
 		if node is Opponent:
 			var opponent := node as Opponent
@@ -157,8 +170,29 @@ func _on_checkpoint_activated(checkpoint: Checkpoint) -> void:
 	if _active_checkpoint != null and _active_checkpoint != checkpoint:
 		_active_checkpoint.deactivate()
 	_active_checkpoint = checkpoint
+	if hud != null:
+		hud.show_toast("Camp saved!", 1.8)
 	if bool(GameManager.get_settings().get("vibration", true)) and InputManager.is_controller():
 		Input.start_joy_vibration(0, 0.15, 0.0, 0.1)
+
+
+func _on_mode_item_collected(mode: ModeController.Mode) -> void:
+	if hud == null:
+		return
+	var toast := ModeController.mode_toast(mode)
+	if not toast.is_empty():
+		hud.show_toast(toast, 2.2)
+
+
+func _on_wind_first_touch() -> void:
+	if hud != null:
+		hud.show_toast("Wind pushes you!", 2.0)
+
+
+func _on_player_mode_changed(mode_name: String, remaining: float) -> void:
+	if hud != null:
+		hud.set_mode(mode_name, remaining)
+
 
 
 func _on_goal_reached(_goal: Goal) -> void:

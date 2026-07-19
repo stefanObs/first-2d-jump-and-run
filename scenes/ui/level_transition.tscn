@@ -27,6 +27,7 @@ offset_right = 280.0
 offset_bottom = 20.0
 grow_horizontal = 2
 grow_vertical = 2
+pivot_offset = Vector2(280, 45)
 theme_override_colors/font_color = Color(0.35, 0.14, 0.05, 1)
 theme_override_font_sizes/font_size = 56
 text = "Yeehaw!"
