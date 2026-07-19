@@ -278,7 +278,7 @@ Each cycle must maintain the following status block:
   - Boss arenas and new fence/cloud art still need an in-game visual play-test
   - Xbox controller not physically verified on this machine
 - **Latest iteration tag:** `v1.3.2`
-- **Relevant commit:** `c84f260`
+- **Relevant commit:** `8cf2024`
 
 ### Cycle notes — 2026-07-19 (v1.3.3)
 
