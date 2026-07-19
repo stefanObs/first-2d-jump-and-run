@@ -236,8 +236,14 @@ Each cycle must maintain the following status block:
 - **Remaining work:** Music/SFX; richer hand-drawn art; live Xbox verification; supervised child play-tests
 - **Tests last run:** `godot --headless --path . res://tests/test_runner.tscn` — all 16 tests passed
 - **Known issues or blockers:** Placeholder pixel art; no music/SFX yet; Xbox controller not physically verified on this machine
-- **Latest iteration tag:** `v1.2.2`
+- **Latest iteration tag:** `v1.2.3`
 - **Relevant commit:** `5c1c58a`
+
+### Cycle notes — 2026-07-19 (v1.2.3)
+
+- Camps pop and wave when saved; pits show a clear PIT! label; cacti are larger.
+- Pause and save screens use kid-friendly trail wording and bigger buttons.
+- Gates, rafts, and mode pickups are more obvious on the long courses.
 
 ### Cycle notes — 2026-07-19 (v1.2.2)
 

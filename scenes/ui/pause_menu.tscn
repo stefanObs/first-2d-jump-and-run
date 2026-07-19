@@ -12,7 +12,7 @@ script = ExtResource("1")
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-color = Color(0, 0, 0, 0.45)
+color = Color(0.25, 0.12, 0.05, 0.5)
 
 [node name="Panel" type="PanelContainer" parent="."]
 anchors_preset = 8
@@ -20,48 +20,57 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -160.0
-offset_top = -170.0
-offset_right = 160.0
-offset_bottom = 170.0
+offset_left = -200.0
+offset_top = -210.0
+offset_right = 200.0
+offset_bottom = 210.0
+
+[node name="Bg" type="ColorRect" parent="Panel"]
+layout_mode = 2
+color = Color(1, 0.93, 0.78, 1)
 
 [node name="VBox" type="VBoxContainer" parent="Panel"]
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 14
 
 [node name="Title" type="Label" parent="Panel/VBox"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 28
-text = "Paused"
+theme_override_colors/font_color = Color(0.35, 0.16, 0.05, 1)
+theme_override_font_sizes/font_size = 34
+text = "Trail Pause"
 horizontal_alignment = 1
 
 [node name="ContinueButton" type="Button" parent="Panel"]
 unique_name_in_owner = true
 offset_left = 40.0
 offset_top = 70.0
-offset_right = 280.0
-offset_bottom = 110.0
-text = "Continue"
+offset_right = 360.0
+offset_bottom = 125.0
+theme_override_font_sizes/font_size = 22
+text = "Keep Riding"
 
 [node name="RestartButton" type="Button" parent="Panel"]
 offset_left = 40.0
-offset_top = 120.0
-offset_right = 280.0
-offset_bottom = 160.0
-text = "Restart Level"
+offset_top = 140.0
+offset_right = 360.0
+offset_bottom = 195.0
+theme_override_font_sizes/font_size = 22
+text = "Restart Trail"
 
 [node name="SaveSelectButton" type="Button" parent="Panel"]
 offset_left = 40.0
-offset_top = 170.0
-offset_right = 280.0
-offset_bottom = 210.0
-text = "Save Selection"
+offset_top = 210.0
+offset_right = 360.0
+offset_bottom = 265.0
+theme_override_font_sizes/font_size = 22
+text = "Pick Save"
 
 [node name="SettingsButton" type="Button" parent="Panel"]
 offset_left = 40.0
-offset_top = 220.0
-offset_right = 280.0
-offset_bottom = 260.0
+offset_top = 280.0
+offset_right = 360.0
+offset_bottom = 335.0
+theme_override_font_sizes/font_size = 22
 text = "Settings"
 
 [node name="SettingsPanel" type="PanelContainer" parent="."]
@@ -71,51 +80,59 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -200.0
-offset_top = -180.0
-offset_right = 200.0
-offset_bottom = 180.0
+offset_left = -220.0
+offset_top = -200.0
+offset_right = 220.0
+offset_bottom = 200.0
 script = ExtResource("2")
 
 [node name="VBox" type="VBoxContainer" parent="SettingsPanel"]
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 12
 
 [node name="Title" type="Label" parent="SettingsPanel/VBox"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 24
+theme_override_colors/font_color = Color(0.35, 0.16, 0.05, 1)
+theme_override_font_sizes/font_size = 28
 text = "Settings"
 horizontal_alignment = 1
 
 [node name="MusicLabel" type="Label" parent="SettingsPanel/VBox"]
 layout_mode = 2
+theme_override_font_sizes/font_size = 18
 text = "Music"
 
 [node name="MusicSlider" type="HSlider" parent="SettingsPanel/VBox"]
 layout_mode = 2
+custom_minimum_size = Vector2(0, 28)
 max_value = 1.0
 step = 0.05
 value = 0.8
 
 [node name="SfxLabel" type="Label" parent="SettingsPanel/VBox"]
 layout_mode = 2
+theme_override_font_sizes/font_size = 18
 text = "Sound"
 
 [node name="SfxSlider" type="HSlider" parent="SettingsPanel/VBox"]
 layout_mode = 2
+custom_minimum_size = Vector2(0, 28)
 max_value = 1.0
 step = 0.05
 value = 0.8
 
 [node name="VibrationToggle" type="CheckButton" parent="SettingsPanel/VBox"]
 layout_mode = 2
+theme_override_font_sizes/font_size = 18
 button_pressed = true
-text = "Controller vibration"
+text = "Controller buzz"
 
 [node name="FullscreenToggle" type="CheckButton" parent="SettingsPanel/VBox"]
 layout_mode = 2
-text = "Fullscreen"
+theme_override_font_sizes/font_size = 18
+text = "Big screen"
 
 [node name="BackButton" type="Button" parent="SettingsPanel/VBox"]
 layout_mode = 2
+theme_override_font_sizes/font_size = 20
 text = "Back"

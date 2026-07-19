@@ -16,6 +16,7 @@ func _configure_visual() -> void:
 	var sprite := get_node_or_null("Sprite2D") as CanvasItem
 	var pit := get_node_or_null("PitVisual") as CanvasItem
 	var rim := get_node_or_null("PitRim") as CanvasItem
+	var label := get_node_or_null("PitLabel") as Label
 	var wide := maxf(absf(scale.x), absf(scale.y)) > 1.35
 	if sprite != null:
 		sprite.visible = not wide
@@ -23,6 +24,10 @@ func _configure_visual() -> void:
 		pit.visible = wide
 	if rim != null:
 		rim.visible = wide
+	if label != null:
+		label.visible = wide
+		if wide:
+			label.text = "PIT!"
 
 
 func _on_body_entered(body: Node2D) -> void:

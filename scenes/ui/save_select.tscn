@@ -38,8 +38,16 @@ offset_right = 320.0
 offset_bottom = 140.0
 theme_override_colors/font_color = Color(0.45, 0.22, 0.08, 1)
 theme_override_font_sizes/font_size = 22
-text = "Pick a trail save"
+text = "A long cowboy adventure (~45 minutes)"
 horizontal_alignment = 1
+
+[node name="Sun" type="ColorRect" parent="."]
+offset_left = 80.0
+offset_top = 40.0
+offset_right = 160.0
+offset_bottom = 120.0
+color = Color(1, 0.92, 0.35, 1)
+mouse_filter = 2
 
 [node name="Slots" type="HBoxContainer" parent="."]
 anchors_preset = 8
