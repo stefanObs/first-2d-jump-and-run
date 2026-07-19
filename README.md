@@ -250,7 +250,7 @@ Each cycle must maintain the following status block:
   - Latest spring, bandit, camp, carrion, shield, and Rail Yard changes still need an in-game visual play-test
   - Xbox controller not physically verified on this machine
 - **Latest iteration tag:** `v1.3.2`
-- **Relevant commit:** pending
+- **Relevant commit:** `8ccec96`
 
 ### Cycle notes — 2026-07-19 (v1.3.3)
 
