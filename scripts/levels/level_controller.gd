@@ -73,6 +73,11 @@ func setup_level() -> void:
 	if hud != null:
 		hud.set_level_title(level_title)
 		hud.set_prompt(_gameplay_prompt())
+		var hint := get_node_or_null("HintLabel") as Label
+		var tip := hint.text if hint != null and not String(hint.text).is_empty() else "Let's go: %s!" % level_title
+		hud.show_toast(tip, 4.5)
+		if hint != null:
+			hint.visible = false
 		InputManager.device_changed.connect(_on_device_changed)
 
 

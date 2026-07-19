@@ -1,7 +1,7 @@
 class_name ConveyorBelt
 extends StaticBody2D
 
-@export var push_speed: float = 120.0
+@export var push_speed: float = 95.0
 @export var push_right: bool = true
 
 var _area: Area2D

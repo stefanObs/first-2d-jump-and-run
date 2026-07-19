@@ -228,16 +228,22 @@ Each cycle must maintain the following status block:
 
 ### Current development status
 
-- **Current iteration:** `v1.2.3` clearer camps, pits, gates, and menus
-- **Last completed step:** Orange pit rims, glowing camps, labeled gates, larger power-ups, directional rafts, friendlier pause/save UI
+- **Current iteration:** `v1.2.4` start guidance, shield bubble, saloon pulse
+- **Last completed step:** Level-start toast, wider camera view, pulsing saloon, visible shield bubble, gentler conveyors
 - **Currently in progress:** Ralph polish loop until 17:00 CEST (hard stop; credit % not readable)
 - **Next step:** Keep polishing playability/visuals in the ralph loop until stop time
 - **Completed features:** Long playable 10-level cowboy trail; 3 camps per level; animated cowboy; modes; Xbox-ready input; Chapter 14 QA green
 - **Remaining work:** Music/SFX; richer hand-drawn art; live Xbox verification; supervised child play-tests
 - **Tests last run:** `godot --headless --path . res://tests/test_runner.tscn` — all 16 tests passed
 - **Known issues or blockers:** Placeholder pixel art; no music/SFX yet; Xbox controller not physically verified on this machine
-- **Latest iteration tag:** `v1.2.3`
+- **Latest iteration tag:** `v1.2.4`
 - **Relevant commit:** `1c91888`
+
+### Cycle notes — 2026-07-19 (v1.2.4)
+
+- Each level greets kids with a "Let's go" toast naming the trail.
+- Camera zooms out slightly so more of the long course is visible.
+- Saloon goal pulses; Bubble Shield draws a clear aqua bubble; conveyors push more gently.
 
 ### Cycle notes — 2026-07-19 (v1.2.3)
 

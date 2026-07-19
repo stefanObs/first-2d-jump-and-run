@@ -35,6 +35,7 @@ var _jump_cut_applied: bool = false
 var _invulnerable_remaining: float = 0.0
 var _sprite: AnimatedSprite2D
 var _facing: float = 1.0
+var _shield_bubble: ColorRect
 
 
 func _ready() -> void:
@@ -42,6 +43,7 @@ func _ready() -> void:
 	_ensure_modes()
 	_sprite = get_node_or_null("AnimatedSprite2D") as AnimatedSprite2D
 	_setup_sprite_frames()
+	_ensure_shield_bubble()
 	if _sprite != null:
 		_sprite.play(&"idle")
 
@@ -159,7 +161,7 @@ func _setup_sprite_frames() -> void:
 	_sprite.sprite_frames = frames
 	_sprite.centered = true
 	_sprite.offset = Vector2(0, -32)
-	_sprite.scale = Vector2(1.35, 1.35)
+	_sprite.scale = Vector2(1.5, 1.5)
 
 
 func _add_anim(
@@ -210,6 +212,33 @@ func _update_mode_visual() -> void:
 		var blink := 0.35 + absf(sin(Time.get_ticks_msec() * 0.025)) * 0.65
 		color.a = blink
 	_sprite.modulate = color
+	_update_shield_bubble()
+
+
+func _ensure_shield_bubble() -> void:
+	_shield_bubble = get_node_or_null("ShieldBubble") as ColorRect
+	if _shield_bubble != null:
+		return
+	_shield_bubble = ColorRect.new()
+	_shield_bubble.name = "ShieldBubble"
+	_shield_bubble.size = Vector2(56, 64)
+	_shield_bubble.position = Vector2(-28, -60)
+	_shield_bubble.color = Color(0.35, 0.9, 1.0, 0.28)
+	_shield_bubble.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_shield_bubble.visible = false
+	add_child(_shield_bubble)
+	move_child(_shield_bubble, 0)
+
+
+func _update_shield_bubble() -> void:
+	_ensure_shield_bubble()
+	if _shield_bubble == null:
+		return
+	var show_bubble := _modes.has_shield()
+	_shield_bubble.visible = show_bubble
+	if show_bubble:
+		var pulse := 0.22 + absf(sin(Time.get_ticks_msec() * 0.008)) * 0.18
+		_shield_bubble.color = Color(0.35, 0.9, 1.0, pulse)
 
 
 

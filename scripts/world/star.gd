@@ -28,6 +28,12 @@ func _on_body_entered(body: Node2D) -> void:
 	if _taken or not (body is Player):
 		return
 	_taken = true
+	monitoring = false
 	(body as Player).collect_star()
 	collected.emit()
-	queue_free()
+	var sprite := get_node_or_null("Sprite2D") as Node2D
+	var tween := create_tween()
+	if sprite != null:
+		tween.tween_property(sprite, "scale", sprite.scale * 1.6, 0.12)
+		tween.parallel().tween_property(sprite, "modulate:a", 0.0, 0.18)
+	tween.tween_callback(queue_free)
