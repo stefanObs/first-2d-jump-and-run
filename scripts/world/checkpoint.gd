@@ -7,20 +7,21 @@ signal activated(checkpoint: Checkpoint)
 
 @export var is_active: bool = false
 
-var _visual: ColorRect
+const TEX_INACTIVE := preload("res://assets/world/checkpoint_inactive.png")
+const TEX_ACTIVE := preload("res://assets/world/checkpoint_active.png")
+
+var _sprite: Sprite2D
 var _label: Label
-var _flag: ColorRect
 var _pulse: float = 0.0
 var _pop_time: float = 0.0
-var _flag_base_top: float = -64.0
+var _sprite_base_y: float = -40.0
 
 
 func _ready() -> void:
-	_visual = get_node_or_null("Visual") as ColorRect
+	_sprite = get_node_or_null("Sprite2D") as Sprite2D
 	_label = get_node_or_null("Label") as Label
-	_flag = get_node_or_null("Flag") as ColorRect
-	if _flag != null:
-		_flag_base_top = _flag.offset_top
+	if _sprite != null:
+		_sprite_base_y = _sprite.position.y
 	body_entered.connect(_on_body_entered)
 	_update_visual()
 
@@ -28,10 +29,8 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_pulse += delta * 4.0
 	if is_active:
-		if _flag != null:
-			var bob := sin(_pulse) * 3.0
-			_flag.offset_top = _flag_base_top + bob
-			_flag.offset_bottom = _flag_base_top + 28.0 + bob
+		if _sprite != null:
+			_sprite.position.y = _sprite_base_y + sin(_pulse) * 3.0
 		if _pop_time > 0.0:
 			_pop_time = maxf(_pop_time - delta, 0.0)
 			var t := 1.0 - (_pop_time / 0.35)
@@ -39,7 +38,6 @@ func _process(delta: float) -> void:
 			scale = Vector2(s, s)
 		return
 
-	# Wave inactive camps so kids notice the next save point.
 	var nearby := _player_nearby(220.0)
 	if _label != null and nearby:
 		_label.text = "CAMP!"
@@ -47,10 +45,10 @@ func _process(delta: float) -> void:
 	elif _label != null:
 		_label.text = "CAMP"
 		_label.modulate = Color(1, 1, 1, 1)
-	if _flag != null and nearby:
-		_flag.modulate = Color(1.0, 0.7 + absf(sin(_pulse)) * 0.3, 0.5, 1.0)
-	elif _flag != null:
-		_flag.modulate = Color(1, 1, 1, 1)
+	if _sprite != null and nearby:
+		_sprite.modulate = Color(1.0, 0.85 + absf(sin(_pulse)) * 0.15, 0.7, 1.0)
+	elif _sprite != null:
+		_sprite.modulate = Color(1, 1, 1, 1)
 
 
 func _player_nearby(radius: float) -> bool:
@@ -75,9 +73,8 @@ func activate() -> void:
 func deactivate() -> void:
 	is_active = false
 	scale = Vector2.ONE
-	if _flag != null:
-		_flag.offset_top = _flag_base_top
-		_flag.offset_bottom = _flag_base_top + 28.0
+	if _sprite != null:
+		_sprite.position.y = _sprite_base_y
 	_update_visual()
 
 
@@ -91,10 +88,8 @@ func _on_body_entered(body: Node2D) -> void:
 
 
 func _update_visual() -> void:
-	if _visual != null:
-		_visual.color = Color(0.95, 0.75, 0.2, 1.0) if is_active else Color(0.55, 0.32, 0.14, 1.0)
-	if _flag != null:
-		_flag.color = Color(1.0, 0.85, 0.2, 1.0) if is_active else Color(0.92, 0.22, 0.18, 1.0)
+	if _sprite != null:
+		_sprite.texture = TEX_ACTIVE if is_active else TEX_INACTIVE
 	if _label != null:
 		_label.text = "SAVED!" if is_active else "CAMP"
 		_label.add_theme_color_override(

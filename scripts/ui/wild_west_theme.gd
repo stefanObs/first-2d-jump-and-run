@@ -1,12 +1,11 @@
 class_name WildWestTheme
 extends RefCounted
 
-## Applies a cheerful wild-west look to level and menu visuals.
+## Applies cheerful hand-drawn wild-west art across levels.
 
 
 static func desert_sky_color() -> Color:
-	# Cool mid-horizon so warm dirt floors stay readable.
-	return Color(0.62, 0.84, 0.96, 1.0)
+	return Color(0.58, 0.82, 0.96, 1.0)
 
 
 static func sand_color() -> Color:
@@ -32,28 +31,70 @@ static func apply_to_level(level: Node) -> void:
 
 	var sky := level.get_node_or_null("SkyBand") as ColorRect
 	if sky != null:
-		sky.color = Color(0.42, 0.74, 0.98, 1.0)
+		sky.color = Color(0.38, 0.72, 0.96, 1.0)
 
+	_dress_sun(level)
+	_dress_mesas_and_fences(level)
+	_dress_grounds_and_platforms(level)
+
+
+static func _dress_sun(level: Node) -> void:
+	var sun := level.get_node_or_null("Sun") as ColorRect
+	if sun == null:
+		return
+	sun.visible = false
+	if level.get_node_or_null("SunArt") != null:
+		return
+	var sprite := Sprite2D.new()
+	sprite.name = "SunArt"
+	sprite.texture = load("res://assets/world/sun.png")
+	sprite.centered = true
+	sprite.position = sun.position + sun.size * 0.5
+	sprite.z_index = sun.z_index
+	level.add_child(sprite)
+
+
+static func _dress_mesas_and_fences(level: Node) -> void:
 	for node in level.find_children("*", "ColorRect", true, false):
 		var rect := node as ColorRect
 		var rect_name := String(rect.name)
-		var parent_name := String(rect.get_parent().name)
-
-		# Keep decorative accents painted in the level scenes.
-		if rect_name in ["Nail", "Sun", "Mesa", "Fence"]:
+		if rect_name == "Sun" or rect.get_parent() != level:
 			continue
-		if rect_name.begins_with("Mesa") or rect_name.begins_with("Fence"):
+		var texture_path := ""
+		if rect_name.begins_with("Mesa"):
+			var digits := String(rect_name).trim_prefix("Mesa")
+			var mesa_index := int(digits) if digits.is_valid_int() else 0
+			texture_path = (
+				"res://assets/world/mesa_near.png"
+				if mesa_index % 2 == 0
+				else "res://assets/world/mesa.png"
+			)
+		elif rect_name.begins_with("Fence"):
+			texture_path = "res://assets/world/fence.png"
+		else:
 			continue
+		rect.visible = false
+		var art_name := "%sArt" % rect_name
+		if level.get_node_or_null(art_name) != null:
+			continue
+		var sprite := Sprite2D.new()
+		sprite.name = art_name
+		sprite.texture = load(texture_path)
+		sprite.centered = true
+		sprite.position = rect.position + rect.size * 0.5
+		var tex_size := sprite.texture.get_size()
+		if tex_size.x > 0.0 and tex_size.y > 0.0:
+			sprite.scale = Vector2(rect.size.x / tex_size.x, rect.size.y / tex_size.y)
+		sprite.z_index = rect.z_index
+		sprite.modulate = rect.modulate
+		level.add_child(sprite)
 
+
+static func _dress_grounds_and_platforms(level: Node) -> void:
+	for node in level.find_children("*", "PhysicsBody2D", true, false):
+		var parent_name := String(node.name)
 		if parent_name.begins_with("Ground"):
-			if rect_name == "Visual":
-				rect.color = sand_color()
-			elif rect_name == "TopStripe":
-				rect.color = grass_color()
-				# Thicker grass rim so kids can spot the walkable top.
-				rect.offset_bottom = rect.offset_top + 20.0
-			elif rect_name == "DirtEdge":
-				rect.color = dirt_edge_color()
+			_replace_block_art(node, "res://assets/world/ground_tile.png", true)
 		elif (
 			parent_name.begins_with("Platform")
 			or parent_name.begins_with("SpringLedge")
@@ -61,33 +102,37 @@ static func apply_to_level(level: Node) -> void:
 			or parent_name.begins_with("StarPlatform")
 			or parent_name.begins_with("High")
 		):
-			if rect_name == "Visual":
-				rect.color = wood_color()
-		elif parent_name.begins_with("Gap") or parent_name.begins_with("Cloud"):
-			rect.color = Color(0.95, 0.92, 0.82, 1.0)
-
-	_ensure_ground_edges(level)
+			_replace_block_art(node, "res://assets/world/wood_plank.png", false)
 
 
-static func _ensure_ground_edges(level: Node) -> void:
-	for node in level.find_children("*", "StaticBody2D", true, false):
-		if not String(node.name).begins_with("Ground"):
-			continue
-		var visual := node.get_node_or_null("Visual") as ColorRect
-		if visual == null:
-			continue
-		var edge := node.get_node_or_null("DirtEdge") as ColorRect
-		if edge == null:
-			edge = ColorRect.new()
-			edge.name = "DirtEdge"
-			edge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			node.add_child(edge)
-		edge.offset_left = visual.offset_left
-		edge.offset_right = visual.offset_right
-		edge.offset_top = visual.offset_bottom - 8.0
-		edge.offset_bottom = visual.offset_bottom
-		edge.color = dirt_edge_color()
-		edge.z_index = 1
+static func _replace_block_art(body: Node, texture_path: String, is_ground: bool) -> void:
+	var visual := body.get_node_or_null("Visual") as ColorRect
+	if visual == null:
+		return
+	for child_name in ["TopStripe", "DirtEdge", "Nail"]:
+		var child := body.get_node_or_null(child_name) as CanvasItem
+		if child != null:
+			child.visible = false
+	visual.visible = false
+	if body.get_node_or_null("HandArt") != null:
+		return
+	var sprite := Sprite2D.new()
+	sprite.name = "HandArt"
+	sprite.texture = load(texture_path)
+	sprite.centered = true
+	var width := absf(visual.offset_right - visual.offset_left)
+	var height := absf(visual.offset_bottom - visual.offset_top)
+	sprite.position = Vector2(
+		(visual.offset_left + visual.offset_right) * 0.5,
+		(visual.offset_top + visual.offset_bottom) * 0.5
+	)
+	var tex_size := sprite.texture.get_size()
+	if tex_size.x > 0.0 and tex_size.y > 0.0:
+		# Ground tiles stretch to the segment; planks keep a slightly thicker look.
+		var target_h := height if is_ground else maxf(height, 28.0)
+		sprite.scale = Vector2(width / tex_size.x, target_h / tex_size.y)
+	sprite.z_index = 1
+	body.add_child(sprite)
 
 
 static func configure_player_camera(level: Node, player: Player) -> void:

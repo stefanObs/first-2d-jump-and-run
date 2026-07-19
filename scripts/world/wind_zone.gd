@@ -5,7 +5,7 @@ signal first_touch
 
 @export var wind_force: Vector2 = Vector2(180, 0)
 
-var _gusts: Array[ColorRect] = []
+var _gusts: Array[Node2D] = []
 var _phase: float = 0.0
 var _touched: bool = false
 var _label: Label
@@ -14,8 +14,8 @@ var _label: Label
 func _ready() -> void:
 	_label = get_node_or_null("Label") as Label
 	for child in get_children():
-		if child is ColorRect and String(child.name).begins_with("Gust"):
-			_gusts.append(child as ColorRect)
+		if child is Node2D and String(child.name).begins_with("Gust"):
+			_gusts.append(child as Node2D)
 	if _label != null:
 		_label.text = "WIND >>>" if wind_force.x >= 0.0 else "<<< WIND"
 	body_entered.connect(_on_body_entered)
@@ -28,6 +28,7 @@ func _process(delta: float) -> void:
 		var gust := _gusts[i]
 		gust.position.x = -70.0 + fmod((_phase * 40.0 * direction) + float(i) * 55.0, 140.0)
 		gust.modulate.a = 0.35 + absf(sin(_phase + float(i))) * 0.45
+		gust.scale.x = absf(gust.scale.y) * direction
 
 
 func _physics_process(_delta: float) -> void:

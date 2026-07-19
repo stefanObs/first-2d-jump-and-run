@@ -1,6 +1,7 @@
-[gd_scene load_steps=3 format=3 uid="uid://ccheckpoint01"]
+[gd_scene load_steps=4 format=3 uid="uid://ccheckpoint01"]
 
 [ext_resource type="Script" path="res://scripts/world/checkpoint.gd" id="1_checkpoint"]
+[ext_resource type="Texture2D" path="res://assets/world/checkpoint_inactive.png" id="2"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_area"]
 size = Vector2(36, 64)
@@ -11,32 +12,16 @@ collision_mask = 2
 monitorable = false
 script = ExtResource("1_checkpoint")
 
-[node name="Visual" type="ColorRect" parent="."]
-offset_left = -8.0
-offset_top = -64.0
-offset_right = 8.0
-offset_bottom = 0.0
-color = Color(0.55, 0.32, 0.14, 1)
-
-[node name="Flag" type="ColorRect" parent="."]
-offset_left = 8.0
-offset_top = -64.0
-offset_right = 40.0
-offset_bottom = -36.0
-color = Color(0.92, 0.22, 0.18, 1)
-
-[node name="FlagTip" type="ColorRect" parent="."]
-offset_left = 40.0
-offset_top = -56.0
-offset_right = 52.0
-offset_bottom = -44.0
-color = Color(1, 0.85, 0.2, 1)
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(8, -40)
+scale = Vector2(1.1, 1.1)
+texture = ExtResource("2")
 
 [node name="Label" type="Label" parent="."]
 offset_left = -36.0
-offset_top = -92.0
+offset_top = -100.0
 offset_right = 44.0
-offset_bottom = -68.0
+offset_bottom = -76.0
 theme_override_colors/font_color = Color(0.35, 0.18, 0.05, 1)
 theme_override_font_sizes/font_size = 14
 text = "CAMP"

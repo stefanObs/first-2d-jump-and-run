@@ -13,9 +13,9 @@ monitorable = false
 script = ExtResource("1_goal")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
-position = Vector2(0, -32)
+position = Vector2(0, -48)
 texture = ExtResource("2")
-scale = Vector2(1.4, 1.4)
+scale = Vector2(1.2, 1.2)
 
 [node name="Label" type="Label" parent="."]
 offset_left = -50.0

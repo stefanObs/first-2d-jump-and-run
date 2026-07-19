@@ -11,7 +11,7 @@ signal first_warn
 var _open: bool = false
 var _timer: float = 0.0
 var _shape: CollisionShape2D
-var _visual: ColorRect
+var _visual: CanvasItem
 var _label: Label
 var _blink_phase: float = 0.0
 var _warned: bool = false
@@ -19,7 +19,7 @@ var _warned: bool = false
 
 func _ready() -> void:
 	_shape = get_node_or_null("CollisionShape2D") as CollisionShape2D
-	_visual = get_node_or_null("Visual") as ColorRect
+	_visual = get_node_or_null("Visual") as CanvasItem
 	_label = get_node_or_null("Label") as Label
 	_open = start_open
 	_timer = open_time if _open else closed_time

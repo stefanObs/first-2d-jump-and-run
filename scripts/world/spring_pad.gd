@@ -5,7 +5,7 @@ signal bounced
 
 @export var bounce_velocity: float = -820.0
 
-var _visual: ColorRect
+var _visual: Node2D
 var _label: Label
 var _base_scale: Vector2 = Vector2.ONE
 var _squash_time: float = 0.0
@@ -13,7 +13,7 @@ var _taught: bool = false
 
 
 func _ready() -> void:
-	_visual = get_node_or_null("Visual") as ColorRect
+	_visual = get_node_or_null("Visual") as Node2D
 	_label = get_node_or_null("Label") as Label
 	if _visual != null:
 		_base_scale = _visual.scale

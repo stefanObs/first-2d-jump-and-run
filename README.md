@@ -231,16 +231,21 @@ Each cycle must maintain the following status block:
 
 ### Current development status
 
-- **Current iteration:** `v1.3.0` reachable hazards, hand-drawn cowboy, music, and custom trail builder
-- **Last completed step:** Removed blocking plank highways, repaired pits/checkpoints/fall recovery, added original art/music and a three-slot editor
+- **Current iteration:** `v1.3.1` hand-drawn world art pass
+- **Last completed step:** Replaced flat ColorRect world/UI props with hand-drawn sprites matching the cowboy
 - **Currently in progress:** None
 - **Next step:** Supervised child play-test and live Xbox verification
-- **Completed features:** Long 10-level cowboy trail; reachable hazards/ground mechanics; hand-drawn cowboy; looping music; three custom editor slots; saves; modes; Xbox-ready input; stronger Chapter 14 QA
+- **Completed features:** Long 10-level cowboy trail; reachable hazards; hand-drawn cowboy + world props; looping music; three custom editor slots; saves; modes; Xbox-ready input; stronger Chapter 14 QA
 - **Remaining work:** Additional SFX; live Xbox verification; supervised child play-tests
-- **Tests last run:** `godot --headless --path . res://tests/test_runner.tscn` — all 19 tests passed; custom hub/editor/runtime smoke tests passed
+- **Tests last run:** `godot --headless --path . res://tests/test_runner.tscn` — all 19 tests passed
 - **Known issues or blockers:** Xbox controller not physically verified on this machine
-- **Latest iteration tag:** `v1.3.0`
-- **Relevant commit:** `6a3366d`
+- **Latest iteration tag:** `v1.3.1`
+- **Relevant commit:** *(set after commit)*
+
+### Cycle notes — 2026-07-19 (v1.3.1)
+
+- Hand-drawn cactus, badges, saloon, bandit, camps, springs, pits, modes, rafts, clouds, conveyors, gates, wind, ground, planks, mesas, fences, and sun.
+- Shared world scenes and WildWestTheme now dress campaign trails with the new art instead of flat colored boxes.
 
 ### Cycle notes — 2026-07-19 (v1.3.0)
 

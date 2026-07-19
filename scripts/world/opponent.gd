@@ -14,6 +14,7 @@ var _origin: Vector2
 var _going_to_b: bool = true
 var _area: Area2D
 var _label: Label
+var _sprite: Sprite2D
 var _hint_phase: float = 0.0
 
 
@@ -21,6 +22,7 @@ func _ready() -> void:
 	_origin = global_position
 	_area = get_node_or_null("HurtArea") as Area2D
 	_label = get_node_or_null("Label") as Label
+	_sprite = get_node_or_null("Sprite2D") as Sprite2D
 	if _area != null:
 		_area.body_entered.connect(_on_body_entered)
 
@@ -32,7 +34,12 @@ func _process(delta: float) -> void:
 
 func _physics_process(delta: float) -> void:
 	var target := _origin + (point_b if _going_to_b else point_a)
+	var previous := global_position
 	global_position = global_position.move_toward(target, move_speed * delta)
+	if _sprite != null:
+		var dx := global_position.x - previous.x
+		if absf(dx) > 0.01:
+			_sprite.flip_h = dx < 0.0
 	if global_position.distance_to(target) < 2.0:
 		_going_to_b = not _going_to_b
 

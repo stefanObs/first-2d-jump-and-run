@@ -10,7 +10,7 @@ var _timer: float = 0.0
 var _solid: bool = true
 var _started: bool = false
 var _shape: CollisionShape2D
-var _visual: ColorRect
+var _visual: CanvasItem
 var _label: Label
 var _extras: Array[CanvasItem] = []
 var _blink_phase: float = 0.0
@@ -18,11 +18,13 @@ var _blink_phase: float = 0.0
 
 func _ready() -> void:
 	_shape = get_node_or_null("CollisionShape2D") as CollisionShape2D
-	_visual = get_node_or_null("Visual") as ColorRect
+	_visual = get_node_or_null("Visual") as CanvasItem
 	_label = get_node_or_null("Label") as Label
 	for child in get_children():
 		if child is CanvasItem and (String(child.name).begins_with("Fluff") or child == _visual):
 			_extras.append(child as CanvasItem)
+	if _extras.is_empty() and _visual != null:
+		_extras.append(_visual)
 	_timer = start_delay
 	_started = start_delay <= 0.0
 	_apply_state()

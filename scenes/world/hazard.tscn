@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/world/hazard.gd" id="1_hazard"]
 [ext_resource type="Texture2D" path="res://assets/world/cactus.png" id="2"]
+[ext_resource type="Texture2D" path="res://assets/world/pit.png" id="3"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_area"]
 size = Vector2(36, 48)
@@ -13,28 +14,20 @@ monitorable = false
 script = ExtResource("1_hazard")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
-position = Vector2(0, -8)
-scale = Vector2(1.35, 1.35)
+position = Vector2(0, -28)
+scale = Vector2(1.15, 1.15)
 texture = ExtResource("2")
 
-[node name="PitVisual" type="ColorRect" parent="."]
+[node name="PitVisual" type="Sprite2D" parent="."]
 visible = false
-offset_left = -64.0
-offset_top = -20.0
-offset_right = 64.0
-offset_bottom = 24.0
-color = Color(0.28, 0.12, 0.06, 1)
+position = Vector2(0, 0)
+scale = Vector2(1.1, 1.0)
+texture = ExtResource("3")
 
-[node name="PitRim" type="ColorRect" parent="."]
+[node name="PitRim" type="Node2D" parent="."]
 visible = false
-offset_left = -68.0
-offset_top = -28.0
-offset_right = 68.0
-offset_bottom = -12.0
-color = Color(0.95, 0.55, 0.2, 1)
 
 [node name="PitLabel" type="Label" parent="."]
-visible = false
 offset_left = -50.0
 offset_top = -58.0
 offset_right = 50.0
