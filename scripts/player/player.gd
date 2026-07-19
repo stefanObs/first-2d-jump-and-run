@@ -184,6 +184,11 @@ func activate_mode(mode: ModeController.Mode) -> void:
 	mode_changed.emit(ModeController.mode_name(mode), _modes.remaining)
 
 
+func restore_mode(mode: ModeController.Mode, remaining: float, minimum_remaining: float = 20.0) -> void:
+	_ensure_modes()
+	_modes.restore(mode, remaining, minimum_remaining)
+
+
 func clear_modes() -> void:
 	_ensure_modes()
 	_modes.clear()

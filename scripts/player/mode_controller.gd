@@ -33,6 +33,12 @@ func activate(mode: Mode) -> void:
 	mode_changed.emit(active_mode, remaining)
 
 
+func restore(mode: Mode, saved_remaining: float, minimum_remaining: float = 0.0) -> void:
+	active_mode = mode
+	remaining = maxf(saved_remaining, minimum_remaining) if mode != Mode.NONE else 0.0
+	mode_changed.emit(active_mode, remaining)
+
+
 func extend_from_badge() -> void:
 	if active_mode == Mode.NONE:
 		return

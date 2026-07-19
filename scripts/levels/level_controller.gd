@@ -28,6 +28,10 @@ var _paused: bool = false
 var _progress_milestones: Dictionary = {}
 var _collected_badge_names: Array[String] = []
 var _stored_badge_names: Array[String] = []
+var _tied_opponent_names: Array[String] = []
+var _stored_tied_opponent_names: Array[String] = []
+var _stored_mode: ModeController.Mode = ModeController.Mode.NONE
+var _stored_mode_remaining: float = 0.0
 var _restoring_run_state: bool = false
 var _loaded_run_state: bool = false
 var _next_level_tap_time_msec: int = -1000
@@ -178,6 +182,8 @@ func respawn_player() -> void:
 	var destination := get_active_respawn_position()
 	player.respawn_at(destination)
 	_reset_unstored_badges()
+	_reset_unstored_opponents()
+	_restore_camp_mode()
 	for node in find_children("*", "Area2D", true, false):
 		if node is ModeItem:
 			(node as ModeItem).restore_if_needed()
@@ -197,6 +203,11 @@ func _clear_hostile_projectiles() -> void:
 
 func _store_badges_at_camp() -> void:
 	_stored_badge_names = _collected_badge_names.duplicate()
+	_stored_tied_opponent_names = _tied_opponent_names.duplicate()
+	if player != null:
+		var modes := player.get_modes()
+		_stored_mode = modes.active_mode
+		_stored_mode_remaining = modes.remaining
 
 
 func _reset_unstored_badges() -> void:
@@ -215,6 +226,29 @@ func _reset_unstored_badges() -> void:
 	player.stars_collected = _stored_badge_names.size()
 	if hud != null:
 		hud.set_stars(player.stars_collected)
+
+
+func _reset_unstored_opponents() -> void:
+	for node in find_children("*", "AnimatableBody2D", true, false):
+		if not (node is Opponent):
+			continue
+		var opponent := node as Opponent
+		var opponent_name := String(opponent.name)
+		if opponent_name in _stored_tied_opponent_names:
+			if not opponent.is_tied():
+				opponent.tie_up(false)
+		elif opponent.is_tied():
+			opponent.untie_for_respawn()
+	_tied_opponent_names = _stored_tied_opponent_names.duplicate()
+
+
+func _restore_camp_mode() -> void:
+	if player == null:
+		return
+	if _stored_mode == ModeController.Mode.NONE:
+		player.clear_modes()
+		return
+	player.restore_mode(_stored_mode, _stored_mode_remaining, 20.0)
 
 
 func _wire_ui() -> void:
@@ -281,6 +315,8 @@ func _wire_world_objects() -> void:
 				opponent.hurt_player.connect(_on_opponent_hurt)
 			if not opponent.bounty_caught.is_connected(_on_bounty_caught):
 				opponent.bounty_caught.connect(_on_bounty_caught)
+			if not opponent.captured.is_connected(_on_opponent_captured):
+				opponent.captured.connect(_on_opponent_captured)
 	for node in find_children("*", "PhysicsBody2D", true, false):
 		if node is ConveyorBelt:
 			var belt := node as ConveyorBelt
@@ -350,6 +386,12 @@ func _on_badge_taken(badge_name: String) -> void:
 		_collected_badge_names.append(badge_name)
 
 
+func _on_opponent_captured(opponent: Opponent) -> void:
+	var opponent_name := String(opponent.name)
+	if opponent_name not in _tied_opponent_names:
+		_tied_opponent_names.append(opponent_name)
+
+
 func _save_run_state(show_feedback: bool = true) -> bool:
 	if is_custom_level or player == null:
 		return false
@@ -359,7 +401,10 @@ func _save_run_state(show_feedback: bool = true) -> bool:
 		checkpoint_name,
 		_stored_badge_names,
 		_stored_badge_names.size(),
-		_play_time
+		_play_time,
+		_stored_tied_opponent_names,
+		int(_stored_mode),
+		_stored_mode_remaining
 	)
 	if saved:
 		if pause_menu != null:
@@ -389,11 +434,23 @@ func _restore_run_state() -> void:
 			var badge := find_child(badge_name, true, false) as Star
 			if badge != null:
 				badge.restore_as_collected()
+	var saved_opponents: Variant = state.get("tied_opponents", [])
+	if saved_opponents is Array:
+		for value in saved_opponents:
+			var opponent_name := str(value)
+			if opponent_name not in _tied_opponent_names:
+				_tied_opponent_names.append(opponent_name)
+			if opponent_name not in _stored_tied_opponent_names:
+				_stored_tied_opponent_names.append(opponent_name)
 	for node in find_children("*", "AnimatableBody2D", true, false):
 		if node is Opponent:
 			var opponent := node as Opponent
-			if opponent.bounty_bandit and "Bounty_%s_0" % opponent.name in _stored_badge_names:
+			if String(opponent.name) in _stored_tied_opponent_names:
 				opponent.tie_up(false)
+	_stored_mode = int(state.get("active_mode", ModeController.Mode.NONE))
+	_stored_mode_remaining = maxf(float(state.get("mode_remaining", 0.0)), 0.0)
+	if _stored_mode != ModeController.Mode.NONE:
+		player.restore_mode(_stored_mode, _stored_mode_remaining, 20.0)
 	player.stars_collected = maxi(int(state.get("stars_found", 0)), _stored_badge_names.size())
 	var checkpoint_name := str(state.get("checkpoint_name", ""))
 	if not checkpoint_name.is_empty():
@@ -438,17 +495,17 @@ func _on_opponent_hurt(_hurt_player: Player) -> void:
 func _on_bounty_caught(opponent: Opponent, amount: int) -> void:
 	if player == null or amount <= 0:
 		return
-	player.collect_badges(amount)
+	var new_badges := 0
 	for index in range(amount):
 		var bounty_name := "Bounty_%s_%d" % [opponent.name, index]
 		if bounty_name not in _collected_badge_names:
 			_collected_badge_names.append(bounty_name)
-		if bounty_name not in _stored_badge_names:
-			_stored_badge_names.append(bounty_name)
+			new_badges += 1
+	if new_badges <= 0:
+		return
+	player.collect_badges(new_badges)
 	if hud != null:
-		hud.show_toast("Bounty caught! +%d badges!" % amount, 2.2)
-	if not is_custom_level:
-		_save_run_state(false)
+		hud.show_toast("Bounty caught! +%d badges!" % new_badges, 2.2)
 
 
 func _on_celebration_finished() -> void:

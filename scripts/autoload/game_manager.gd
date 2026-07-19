@@ -154,7 +154,10 @@ func save_run_state(
 	checkpoint_name: String,
 	collected_badges: Array[String],
 	stars_found: int,
-	level_play_time: float
+	level_play_time: float,
+	tied_opponents: Array[String] = [],
+	active_mode: int = 0,
+	mode_remaining: float = 0.0
 ) -> bool:
 	if active_slot_index < 0:
 		return false
@@ -166,6 +169,9 @@ func save_run_state(
 		"collected_badges": collected_badges.duplicate(),
 		"stars_found": maxi(stars_found, 0),
 		"level_play_time": maxf(level_play_time, 0.0),
+		"tied_opponents": tied_opponents.duplicate(),
+		"active_mode": active_mode,
+		"mode_remaining": maxf(mode_remaining, 0.0),
 	}
 	(_data["slots"] as Array)[active_slot_index] = slot
 	save_to_disk()

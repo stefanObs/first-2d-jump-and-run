@@ -16,6 +16,7 @@ func _ready() -> void:
 	failures += _run("Level 01 contains core objects", _test_level_01_world_objects)
 	failures += _run("Level catalog has ten scenes", _test_ten_levels_exist)
 	failures += _run("LevelController respawns at checkpoint", _test_respawn_uses_checkpoint)
+	failures += _run("Camp restores tied bandits and active bonuses", _test_camp_restores_state)
 	failures += _run("Goal completion disables player input", _test_goal_disables_input)
 	failures += _run("Bubble shield blocks opponent damage flag", _test_shield_blocks_damage_flag)
 	failures += _run("InputManager device prompts", _test_input_manager_prompts)
@@ -125,6 +126,9 @@ func _test_mode_controller() -> Variant:
 	modes.extend_from_badge()
 	if not is_equal_approx(modes.remaining - before_badge, 5.0):
 		return "A badge should add exactly five seconds to the active mode."
+	modes.restore(ModeController.Mode.WINGS, 7.0, 20.0)
+	if not modes.is_flying() or not is_equal_approx(modes.remaining, 20.0):
+		return "A camp-restored mode should have at least twenty seconds."
 	return null
 
 
@@ -208,6 +212,38 @@ func _test_respawn_uses_checkpoint() -> Variant:
 	var error: Variant = null
 	if controller.player.global_position.distance_to(checkpoint.get_respawn_position()) > 0.1:
 		error = "Respawn position mismatch."
+	_free_level(controller)
+	return error
+
+
+func _test_camp_restores_state() -> Variant:
+	var level: Variant = _instantiate_level("res://scenes/levels/level_05.tscn")
+	if level is String:
+		return level
+	var controller := level as LevelController
+	var bandit := controller.find_child("Opponent0", true, false) as Opponent
+	var checkpoint_b := controller.find_child("CheckpointB", true, false) as Checkpoint
+	if bandit == null or checkpoint_b == null:
+		_free_level(controller)
+		return "Camp-state fixture is missing a bandit or checkpoint."
+	bandit.tie_up(false)
+	controller.respawn_player()
+	if bandit.is_tied():
+		_free_level(controller)
+		return "A bandit tied after the camp should be untied on respawn."
+	bandit.tie_up(false)
+	controller.player.activate_mode(ModeController.Mode.WINGS)
+	controller.player.get_modes().remaining = 7.0
+	checkpoint_b.activate()
+	controller.player.get_modes().remaining = 1.0
+	controller.respawn_player()
+	var error: Variant = null
+	if not bandit.is_tied():
+		error = "A bandit tied before camp activation should stay tied."
+	elif not controller.player.get_modes().is_flying():
+		error = "The active camp bonus should be restored."
+	elif controller.player.get_modes().remaining < 20.0:
+		error = "A restored camp bonus should have at least twenty seconds."
 	_free_level(controller)
 	return error
 
@@ -464,7 +500,10 @@ func _test_mid_trail_save() -> Variant:
 	})
 	GameManager.active_slot_index = 0
 	var badges: Array[String] = ["TrailStar0", "SpringStar2"]
-	if not GameManager.save_run_state(3, "CheckpointB", badges, 2, 45.5):
+	var tied: Array[String] = ["Opponent1"]
+	if not GameManager.save_run_state(
+		3, "CheckpointB", badges, 2, 45.5, tied, ModeController.Mode.WINGS, 22.0
+	):
 		return "Could not save mid-trail state."
 	GameManager.load_from_disk()
 	var state := GameManager.get_run_state(3)
@@ -477,6 +516,12 @@ func _test_mid_trail_save() -> Variant:
 		error = "Saved badge count did not persist."
 	elif (state.get("collected_badges", []) as Array).size() != 2:
 		error = "Collected badge identities did not persist."
+	elif (state.get("tied_opponents", []) as Array).size() != 1:
+		error = "Tied opponent identities did not persist."
+	elif int(state.get("active_mode", 0)) != ModeController.Mode.WINGS:
+		error = "Active camp bonus did not persist."
+	elif not is_equal_approx(float(state.get("mode_remaining", 0.0)), 22.0):
+		error = "Camp bonus timer did not persist."
 	GameManager.clear_run_state()
 	if GameManager.has_run_state(3):
 		error = "Clearing run state should remove the load point."

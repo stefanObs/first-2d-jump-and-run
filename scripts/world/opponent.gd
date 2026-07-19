@@ -4,6 +4,7 @@ extends AnimatableBody2D
 ## Slow predictable foe. Touching it hurts unless the player has a shield.
 
 signal hurt_player(player: Player)
+signal captured(opponent: Opponent)
 signal bounty_caught(opponent: Opponent, amount: int)
 
 @export var point_a: Vector2 = Vector2(-80, 0)
@@ -42,20 +43,7 @@ func _ready() -> void:
 
 func _setup_sprite() -> void:
 	var old := get_node_or_null("Sprite2D") as Node
-	var frames := SpriteFrames.new()
-	frames.add_animation(&"walk")
-	frames.set_animation_speed(&"walk", 6.0)
-	frames.set_animation_loop(&"walk", true)
-	var suffix := "_red" if bounty_bandit else ""
-	for path in [
-		"res://assets/world/bandit_walk_0%s.png" % suffix,
-		"res://assets/world/bandit%s.png" % suffix,
-		"res://assets/world/bandit_walk_1%s.png" % suffix,
-		"res://assets/world/bandit%s.png" % suffix,
-	]:
-		var tex: Texture2D = load(path)
-		if tex != null:
-			frames.add_frame(&"walk", tex)
+	var frames := _make_walk_frames()
 	_sprite = AnimatedSprite2D.new()
 	_sprite.name = "WalkSprite"
 	_sprite.sprite_frames = frames
@@ -71,6 +59,24 @@ func _setup_sprite() -> void:
 	if _label != null and bounty_bandit:
 		_label.text = "BOUNTY!"
 		_label.add_theme_color_override(&"font_color", Color(0.75, 0.08, 0.05, 1.0))
+
+
+func _make_walk_frames() -> SpriteFrames:
+	var frames := SpriteFrames.new()
+	frames.add_animation(&"walk")
+	frames.set_animation_speed(&"walk", 6.0)
+	frames.set_animation_loop(&"walk", true)
+	var suffix := "_red" if bounty_bandit else ""
+	for path in [
+		"res://assets/world/bandit_walk_0%s.png" % suffix,
+		"res://assets/world/bandit%s.png" % suffix,
+		"res://assets/world/bandit_walk_1%s.png" % suffix,
+		"res://assets/world/bandit%s.png" % suffix,
+	]:
+		var tex: Texture2D = load(path)
+		if tex != null:
+			frames.add_frame(&"walk", tex)
+	return frames
 
 
 func _process(delta: float) -> void:
@@ -149,8 +155,41 @@ func tie_up(award_bounty: bool = true) -> void:
 		_label.text = "TIED!"
 		_label.modulate = Color(0.55, 0.25, 0.06, 1.0)
 		_label.position.y = -78.0
+	captured.emit(self)
 	if bounty_bandit and award_bounty:
 		bounty_caught.emit(self, 2)
+
+
+func untie_for_respawn() -> void:
+	if not _tied:
+		return
+	_tied = false
+	_shooting = false
+	collision_layer = 1
+	z_index = 0
+	var body_shape := get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if body_shape != null:
+		body_shape.set_deferred("disabled", false)
+	if _area != null:
+		_area.set_deferred("monitoring", true)
+	var hurt_shape := get_node_or_null("HurtArea/CollisionShape2D") as CollisionShape2D
+	if hurt_shape != null:
+		hurt_shape.set_deferred("disabled", false)
+	var ropes := get_node_or_null("TiedRopes")
+	if ropes != null:
+		ropes.queue_free()
+	if _sprite != null:
+		_sprite.sprite_frames = _make_walk_frames()
+		_sprite.rotation = 0.0
+		_sprite.offset = Vector2(0, -35)
+		_sprite.scale = Vector2(1.15, 1.15)
+		_apply_facing(_facing)
+		_sprite.play(&"walk")
+	if _label != null:
+		_label.position.y = 0.0
+		_label.text = "BOUNTY!" if bounty_bandit else "BANDIT"
+		_label.modulate = Color.WHITE
+	_shot_timer = randf_range(1.8, 3.0) if bounty_bandit else randf_range(3.0, 5.0)
 
 
 func _show_floor_bound_pose() -> void:
