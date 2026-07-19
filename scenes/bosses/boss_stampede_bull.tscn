@@ -1,10 +1,11 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://scripts/bosses/stampede_bull_boss.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="3"]
 [ext_resource type="PackedScene" path="res://scenes/world/spring_pad.tscn" id="4"]
 [ext_resource type="Texture2D" path="res://assets/world/boss_stampede_bull.png" id="5"]
+[ext_resource type="Texture2D" path="res://assets/world/fence_post.png" id="6"]
 [ext_resource type="Script" path="res://scripts/bosses/bull_lasso_ring.gd" id="8"]
 
 [sub_resource type="RectangleShape2D" id="Ground"]
@@ -15,6 +16,9 @@ size = Vector2(150, 70)
 
 [sub_resource type="RectangleShape2D" id="Ring"]
 size = Vector2(72, 90)
+
+[sub_resource type="RectangleShape2D" id="Wall"]
+size = Vector2(40, 160)
 
 [node name="BossStampedeBull" type="Node2D"]
 script = ExtResource("1")
@@ -58,6 +62,40 @@ color = Color(0.91, 0.67, 0.37, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground"]
 shape = SubResource("Ground")
 
+[node name="WallLeft" type="StaticBody2D" parent="."]
+position = Vector2(400, 250)
+collision_layer = 1
+collision_mask = 0
+[node name="Post" type="Sprite2D" parent="WallLeft"]
+position = Vector2(0, 40)
+scale = Vector2(1.4, 1.8)
+texture = ExtResource("6")
+[node name="Board" type="ColorRect" parent="WallLeft"]
+offset_left = -18.0
+offset_top = -90.0
+offset_right = 18.0
+offset_bottom = 70.0
+color = Color(0.55, 0.32, 0.14, 1)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="WallLeft"]
+shape = SubResource("Wall")
+
+[node name="WallRight" type="StaticBody2D" parent="."]
+position = Vector2(1200, 250)
+collision_layer = 1
+collision_mask = 0
+[node name="Post" type="Sprite2D" parent="WallRight"]
+position = Vector2(0, 40)
+scale = Vector2(-1.4, 1.8)
+texture = ExtResource("6")
+[node name="Board" type="ColorRect" parent="WallRight"]
+offset_left = -18.0
+offset_top = -90.0
+offset_right = 18.0
+offset_bottom = 70.0
+color = Color(0.55, 0.32, 0.14, 1)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="WallRight"]
+shape = SubResource("Wall")
+
 [node name="Spring0" parent="." instance=ExtResource("4")]
 position = Vector2(520, 320)
 bounce_velocity = -780.0
@@ -74,6 +112,22 @@ collision_mask = 0
 [node name="Sprite2D" type="Sprite2D" parent="Bull"]
 position = Vector2(0, -55)
 texture = ExtResource("5")
+
+[node name="StunStars" type="Node2D" parent="Bull"]
+visible = false
+position = Vector2(0, -120)
+[node name="Star0" type="Polygon2D" parent="Bull/StunStars"]
+position = Vector2(-22, -8)
+color = Color(1, 0.85, 0.2, 1)
+polygon = PackedVector2Array(0, -10, 3, -3, 10, -3, 4, 2, 6, 9, 0, 5, -6, 9, -4, 2, -10, -3, -3, -3)
+[node name="Star1" type="Polygon2D" parent="Bull/StunStars"]
+position = Vector2(20, -12)
+color = Color(1, 0.92, 0.35, 1)
+polygon = PackedVector2Array(0, -10, 3, -3, 10, -3, 4, 2, 6, 9, 0, 5, -6, 9, -4, 2, -10, -3, -3, -3)
+[node name="Star2" type="Polygon2D" parent="Bull/StunStars"]
+position = Vector2(0, 6)
+color = Color(0.95, 0.75, 0.15, 1)
+polygon = PackedVector2Array(0, -8, 2, -2, 8, -2, 3, 1, 5, 7, 0, 4, -5, 7, -3, 1, -8, -2, -2, -2)
 
 [node name="Label" type="Label" parent="Bull"]
 offset_left = -50.0

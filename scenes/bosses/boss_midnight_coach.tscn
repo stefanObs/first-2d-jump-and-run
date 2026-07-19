@@ -91,10 +91,11 @@ texture = ExtResource("6")
 
 [node name="Driver" type="Sprite2D" parent="Coach"]
 z_index = 1
-position = Vector2(-132, -118)
-scale = Vector2(0.95, 0.95)
+position = Vector2(-148, -78)
+scale = Vector2(0.72, 0.72)
 texture = ExtResource("9")
 flip_h = true
+offset = Vector2(0, -8)
 
 [node name="Door0" type="Area2D" parent="Coach"]
 position = Vector2(-70, -38)

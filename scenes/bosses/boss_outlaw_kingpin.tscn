@@ -65,7 +65,7 @@ point_b = Vector2(-90, 0)
 
 [node name="Kingpin" type="Node2D" parent="."]
 position = Vector2(980, 320)
-z_index = -1
+z_index = 1
 
 [node name="Sprite2D" type="Sprite2D" parent="Kingpin"]
 position = Vector2(0, -70)

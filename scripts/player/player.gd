@@ -143,6 +143,11 @@ func is_invulnerable() -> bool:
 	return _invulnerable_remaining > 0.0 or _modes.has_shield()
 
 
+func has_timed_invulnerability() -> bool:
+	## Respawn blink only — Bubble Shield does not count (canyon falls still apply).
+	return _invulnerable_remaining > 0.0
+
+
 func is_canyon_falling() -> bool:
 	return _is_canyon_falling
 

@@ -66,7 +66,8 @@ func _process(delta: float) -> void:
 		player != null
 		and player.global_position.y > fall_recovery_y
 		and not _is_recovering
-		and not player.is_invulnerable()
+		and not player.is_canyon_falling()
+		and not player.has_timed_invulnerability()
 	):
 		_play_canyon_fall_and_respawn()
 		return
@@ -504,10 +505,10 @@ func _on_hazard_hurt(hurt_player: Player, hazard: Hazard) -> void:
 		if hud != null:
 			hud.show_toast("Bounce! Bubble safe!", 1.4)
 		return
-	if hurt_player.is_invulnerable():
-		return
 	if hazard.is_canyon():
 		_play_canyon_fall_and_respawn()
+		return
+	if hurt_player.is_invulnerable():
 		return
 	respawn_player()
 
@@ -515,7 +516,7 @@ func _on_hazard_hurt(hurt_player: Player, hazard: Hazard) -> void:
 func _play_canyon_fall_and_respawn() -> void:
 	if _is_recovering or player == null or _is_completing:
 		return
-	if player.is_invulnerable():
+	if player.is_canyon_falling():
 		return
 	_is_recovering = true
 	await player.play_canyon_fall()

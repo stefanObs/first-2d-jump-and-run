@@ -19,6 +19,7 @@ func _ready() -> void:
 	failures += _run("Camp restores tied bandits and active bonuses", _test_camp_restores_state)
 	failures += _run("Goal completion disables player input", _test_goal_disables_input)
 	failures += _run("Bubble shield blocks opponent damage flag", _test_shield_blocks_damage_flag)
+	failures += _run("Bubble shield does not block canyon falls", _test_canyon_ignores_bubble_shield)
 	failures += _run("InputManager device prompts", _test_input_manager_prompts)
 	failures += _run("Star reachability heuristics", _test_star_reachability)
 	failures += _run(
@@ -119,6 +120,9 @@ func _test_boss_arenas() -> Variant:
 	if ring == null or not ring.has_method("lasso_hit") or not (ring is Area2D):
 		bull.queue_free()
 		return "Stampede Bull needs an Area2D lasso ring with lasso_hit."
+	if bull.get_node_or_null("WallLeft") == null or bull.get_node_or_null("WallRight") == null:
+		bull.queue_free()
+		return "Stampede Bull arena needs left and right walls."
 	bull.queue_free()
 
 	var coach := coach_packed.instantiate()
@@ -334,11 +338,32 @@ func _test_shield_blocks_damage_flag() -> Variant:
 	if not player.is_invulnerable():
 		player.queue_free()
 		return "Shield should grant invulnerability."
+	if player.has_timed_invulnerability():
+		player.queue_free()
+		return "Shield alone should not count as timed invulnerability."
 	player.clear_modes()
 	var still := player.is_invulnerable()
 	player.queue_free()
 	if still:
 		return "Clearing modes should remove shield."
+	return null
+
+
+func _test_canyon_ignores_bubble_shield() -> Variant:
+	var player := Player.new()
+	add_child(player)
+	player.activate_mode(ModeController.Mode.BUBBLE_SHIELD)
+	var hazard := Hazard.new()
+	hazard.scale = Vector2(2.0, 2.0)
+	add_child(hazard)
+	var emitted := {"hit": false}
+	hazard.hurt.connect(func(_p: Player) -> void: emitted["hit"] = true)
+	hazard._on_body_entered(player)
+	var hit: bool = emitted["hit"]
+	player.queue_free()
+	hazard.queue_free()
+	if not hit:
+		return "Canyon should hurt the player even with a Bubble Shield."
 	return null
 
 
