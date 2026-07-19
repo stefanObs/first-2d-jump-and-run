@@ -17,6 +17,8 @@ static func validate_level_node(level: Node) -> PackedStringArray:
 	errors.append_array(_validate_platforms(level))
 	errors.append_array(_validate_checkpoints(level))
 	errors.append_array(_validate_no_plank_highway(level))
+	errors.append_array(_validate_ground_props_clear_of_raised_platforms(level))
+	errors.append_array(_validate_mode_item_spacing(level))
 	errors.append_array(_validate_visuals(level))
 	return errors
 
@@ -246,6 +248,47 @@ static func _validate_visuals(level: Node) -> PackedStringArray:
 	return errors
 
 
+static func _validate_ground_props_clear_of_raised_platforms(level: Node) -> PackedStringArray:
+	var errors: PackedStringArray = []
+	var raised: Array[Dictionary] = []
+	for node in level.find_children("*", "PhysicsBody2D", true, false):
+		if not _is_platform(node):
+			continue
+		var surface := _surface_for(node as Node2D)
+		if not surface.is_empty() and float(surface["top"]) < 290.0:
+			raised.append(surface)
+	for node in level.find_children("*", "Area2D", true, false):
+		var is_ground_prop := node is SpringPad or node is Rattlesnake
+		if node is Hazard:
+			is_ground_prop = (node as Hazard).is_cactus()
+		if not is_ground_prop:
+			continue
+		var rect := _approx_rect(node as Node2D, Vector2(64, 40))
+		for surface in raised:
+			if rect.end.x > float(surface["left"]) and rect.position.x < float(surface["right"]):
+				errors.append(
+					"%s must not sit below raised platform %s."
+					% [node.name, String(surface["name"])]
+				)
+				break
+	return errors
+
+
+static func _validate_mode_item_spacing(level: Node) -> PackedStringArray:
+	var errors: PackedStringArray = []
+	var items: Array[ModeItem] = []
+	for node in level.find_children("*", "Area2D", true, false):
+		if node is ModeItem:
+			items.append(node as ModeItem)
+	for left_index in range(items.size()):
+		for right_index in range(left_index + 1, items.size()):
+			var left := items[left_index]
+			var right := items[right_index]
+			if left.global_position.distance_to(right.global_position) < 220.0:
+				errors.append("Mode items %s and %s are too close." % [left.name, right.name])
+	return errors
+
+
 static func _is_platform(node: Node) -> bool:
 	if node is Opponent or node is TimedDoor:
 		return false
@@ -256,6 +299,7 @@ static func _is_platform(node: Node) -> bool:
 		or name_text.begins_with("Moving")
 		or name_text.begins_with("Cloud")
 		or name_text.begins_with("Conveyor")
+		or name_text.contains("Ledge")
 	)
 
 

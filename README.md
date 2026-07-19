@@ -23,6 +23,7 @@ A small, friendly 2D platform game for children around six years old.
 - Three numbered save slots with automatic saving
 - Checkpoints and instant retries without limited lives
 - Stars to collect as an optional extra challenge
+- A nonviolent lasso that ties bandits and makes them safe to pass
 - Collectible items that temporarily activate special player modes
 - A dedicated flying level
 - Simple opponents and obstacles that can hurt the player
@@ -40,7 +41,7 @@ A small, friendly 2D platform game for children around six years old.
 - Moving and disappearing platforms
 - Spring pads, wind zones, conveyor belts, and timed doors
 - Flying, high-jump, speed, and invincibility modes
-- Slow, predictable opponents that are avoided by jumping over them
+- Slow, readable opponents with lasso captures, warning shots, and bounty variants
 - Clear visual and audio feedback for goals, checkpoints, and collectibles
 - Optional animated or spoken hints
 - Music, sound, and controller vibration settings
@@ -55,6 +56,8 @@ The player can run left and right, jump, collect stars and mode items, activate 
 ### Keyboard controls
 
 - Keyboard: arrow keys or `A`/`D` to move, `Space` to jump
+- `Alt`, `F`, or `L`: throw the lasso toward the cowboy's facing direction
+- Numpad `+` twice: move to the next campaign level
 - `Escape`: pause
 
 ### Xbox controller support
@@ -63,6 +66,7 @@ The game must be fully playable with an Xbox One or Xbox Series controller conne
 
 - Left stick or D-pad: move and navigate menus
 - `A`: jump and confirm
+- `X`: throw the lasso
 - `B`: go back
 - Menu button: pause
 - Controller vibration: optional feedback for checkpoints and level completion
@@ -78,17 +82,19 @@ Special items found in the levels temporarily change how the player moves or int
 - **Wings:** activates flying mode; the player holds the jump button to rise and releases it to descend.
 - **Magic Boots:** increases jump height and makes long gaps easier.
 - **Speed Star:** makes the player run faster while keeping acceleration controllable.
-- **Bubble Shield:** makes the player immune to all damage for a limited time. Pits still return the player safely to the latest checkpoint.
+- **Bubble Shield:** makes the player immune to bandits and bounces them safely off cacti for a limited time. Canyons still return the player to the latest checkpoint.
 
-An item plays a short transformation animation when collected. A large icon and a simple visual timer show which mode is active and when it will end. Mode items should be placed where their ability is useful, with a safe practice area before any difficult section.
+Wings, Magic Boots, and Speed Star start with 30 seconds. Bubble Shield starts with 15 seconds and appears multiple times through Rail Yard. Catching a badge adds five seconds to the active mode.
+
+An item plays a short transformation animation when collected. A large icon and a simple visual timer show which mode is active and when it will end. Mode items are separated so they never overlap or immediately replace one another.
 
 Only one special mode is active at a time. Collecting another mode item replaces the current mode. Important items respawn if the player returns to a checkpoint, preventing the player from becoming stuck.
 
 ## Chapter 5: Opponents, obstacles, and damage
 
-Opponents use simple, repeating movement patterns, such as walking between two points or slowly flying up and down. They are obstacles rather than combat targets: the player avoids them by jumping over, flying around, or waiting for a safe moment. There are no weapons and opponents do not need to be defeated.
+Opponents use simple, repeating movement patterns, such as walking between two points or slowly flying up and down. Bandits occasionally raise a revolver with a clear warning animation and fire a slow, bright projectile that can be avoided. The cowboy has no weapon: the nonviolent lasso catches bandits instead. A lasso hit seats and ties the captured bandit with visible rope behind the cowboy; it stops moving and shooting and no longer blocks or hurts the player. Red-scarf bounty bandits shoot a little more often and award two badges when caught.
 
-Harmful obstacles may include spikes, rolling objects, falling objects, and moving barriers. Every danger must be clearly visible, move predictably, and provide enough reaction time for a young child. Taking damage causes a gentle bounce, a clear sound, and a quick return to the latest checkpoint; there is no health counter, life limit, or game-over screen.
+Carrion birds challenge Wings routes at varied heights. Some cacti are replaced by lower, wider rattlesnakes with a visible bite animation. Harmful obstacles must remain readable and predictable. Falling into a canyon now plays a spinning fall animation before returning to camp; there is no health counter, life limit, or game-over screen.
 
 ## Chapter 6: Level progression
 
@@ -186,6 +192,8 @@ Keep the codebase clean, readable, and easy to resume after a pause. Every itera
 
 Development is organized into small, playable iterations. Every iteration follows the same process:
 
+**Repository rule:** after every completed development step, commit the finished work and push it directly to `main`. Do not leave a completed step only in the working tree. Verify that the push succeeded before reporting the step as complete.
+
 1. Select a small group of related changes from the specification.
 2. Implement the changes incrementally, keeping the game playable after each step.
 3. Add or update automated tests for gameplay logic, save data, input handling, and transitions.
@@ -194,7 +202,7 @@ Development is organized into small, playable iterations. Every iteration follow
 6. Confirm every touched level still has safe star collection and forward-only solvability (see Chapter 14).
 7. Play through all completed levels to check for regressions.
 8. Confirm that the iteration meets its acceptance criteria.
-9. Commit the finished work and create an annotated Git tag for the iteration.
+9. Commit the finished work, push it to `origin/main`, verify the push, and create an annotated Git tag when the iteration is ready to release.
 
 Iteration tags use semantic versioning, starting with `v0.1.0`. Minor versions mark playable feature iterations, patch versions mark fixes, and `v1.0.0` marks the first complete release. A tag is created only when tests pass and the iteration is playable.
 
@@ -231,16 +239,48 @@ Each cycle must maintain the following status block:
 
 ### Current development status
 
-- **Current iteration:** `v1.3.2` mid-trail save/load and restart controls
-- **Last completed step:** Added pause-menu Save Game, Load Game, and Restart from Start actions
-- **Currently in progress:** None
-- **Next step:** Supervised child play-test and live Xbox verification
-- **Completed features:** Long 10-level cowboy trail; reachable hazards; hand-drawn cowboy + world props; looping music; three custom editor slots; mid-trail saves; modes; Xbox-ready input; stronger Chapter 14 QA
-- **Remaining work:** Additional SFX; live Xbox verification; supervised child play-tests
-- **Tests last run:** `godot --headless --path . res://tests/test_runner.tscn` — all 22 tests passed
-- **Known issues or blockers:** Xbox controller not physically verified on this machine
+- **Current iteration:** `v1.3.3` hazard variety, bounty bandits, and trail readability
+- **Last completed step:** Added shooting/bounty bandits, rattlesnakes, canyon falling, larger carrions, revised timers, and stricter layout spacing
+- **Currently in progress:** In-game visual/gameplay play-test for this feature pass
+- **Next step:** Play-test projectile speed, bounty rewards, snake bites, carrion scale, canyon recovery, and boost placement; then tag `v1.3.3`
+- **Completed features:** Long 10-level cowboy trail; animated nonviolent bandit lasso; seated tied bandits; warning-shot and bounty bandits; carrions and rattlesnakes; animated canyon recovery; reachable hazards; hand-drawn cowboy + world props; looping music; three custom editor slots; mid-trail saves; modes; Xbox-ready input
+- **Remaining work:** In-game visual/gameplay play-test; Xbox controller physical verification; supervised child play-tests; additional SFX
+- **Tests last run:** all automated tests passed after the latest hazard/bounty pass
+- **Known issues or blockers:**
+  - Latest spring, bandit, camp, carrion, shield, and Rail Yard changes still need an in-game visual play-test
+  - Xbox controller not physically verified on this machine
 - **Latest iteration tag:** `v1.3.2`
-- **Relevant commit:** `c3e684f`
+- **Relevant commit:** pending
+
+### Cycle notes — 2026-07-19 (v1.3.3)
+
+- Tied bandits now sit with rope around their body; both bandit and rope render behind the cowboy.
+- Added `Alt` lasso input (Xbox remains `X`) and double-tap numpad `+` campaign level advance.
+- Set Wings, Boots, and Speed to 30 seconds; Bubble Shield to 15 seconds, with extra shields through Rail Yard.
+- Removed the carrion background, enlarged birds to roughly 2.5 cowboy widths, and added more at varied heights.
+- Added a canyon fall animation, animated wide rattlesnakes, and automated checks preventing ground hazards beneath raised boards.
+- Bandits now telegraph and fire slow bright shots. Red-scarf bounty bandits shoot more often and award two stored badges when lassoed.
+- Separated close/overlapping boost pickups and added automated spacing checks.
+- Plan: finish automated QA, then visually play-test the affected levels and controls before tagging.
+
+- Added a forward lasso throw on keyboard `F`/`L` and Xbox `X`.
+- Lassoed bandits play a capture animation, gain visible rope wraps, stop patrolling, render behind the cowboy, and become harmless/pass-through.
+- Plan: run automated QA, then play-test lasso range, timing, art, and controller feel before tagging.
+
+- Kept every spring fully on solid desert and increased spacing between the first Outlaw Cave bandit and cactus.
+- Made bandit turnarounds explicit, and made camps activate from the horizontal flag point even during a high jump.
+- Reduced each badge's active-mode extension to about five seconds.
+- Added painted flying carrion hazards to Wings levels so flight sections require dodging.
+- Replaced the active Bubble Shield icon overlay with an animated blue force field around the cowboy.
+- Pulled Rail Yard bandit patrols and backward belts farther from canyon edges.
+- Also pulled the same first-canyon bandit patrol off the gap in Moonlight Gulch and Rainbow Saloon, and gave Spring4 more desert clearance.
+- Plan: run automated QA, visually verify the five affected campaign levels, then tag `v1.3.3`.
+
+- Cropped wood-plank art so the cowboy stands on the board tops.
+- Shifted the canyon-level Bronco Springs spring; mid-trail mode pickups; Rail Yard reverse belts moved off canyon approaches; Moonlight Gulch bandit spaced from Speed Star.
+- Bandits patrol walkable ground, face their walk direction, use a walk animation, and stand on the desert.
+- Mode timers last longer and extend when badges are caught; Magic Boots / Wings / Bubble use matching item art on the cowboy.
+- Reverse conveyors flip visually; Bubble Shield bounces off cacti; camps store badges and activate by reaching their point; unstored badges reset on respawn.
 
 ### Cycle notes — 2026-07-19 (v1.3.2)
 
@@ -395,6 +435,7 @@ At the end of each cycle:
 4. Record unfinished work, known defects, assumptions, and important decisions.
 5. Describe one concrete next action that can be started without reconstructing prior context.
 6. Add the relevant commit hash and iteration tag after committing and tagging.
+7. Confirm every completed step has been committed and pushed to `main`.
 
 Detailed cycle notes may be added below the status block under a dated heading. Keep only information needed to resume work; move obsolete details into Git history instead of allowing the README to become a long activity log.
 

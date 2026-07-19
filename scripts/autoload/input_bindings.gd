@@ -33,6 +33,21 @@ func _ready() -> void:
 		]
 	)
 	_ensure_action(
+		&"lasso",
+		[
+			_key(KEY_L),
+			_key(KEY_F),
+			_key(KEY_ALT),
+			_joy_button(JOY_BUTTON_X),
+		]
+	)
+	_ensure_action(
+		&"next_level",
+		[
+			_key(KEY_KP_ADD),
+		]
+	)
+	_ensure_action(
 		&"pause",
 		[
 			_key(KEY_ESCAPE),

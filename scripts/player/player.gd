@@ -35,11 +35,14 @@ var _jump_cut_applied: bool = false
 var _invulnerable_remaining: float = 0.0
 var _sprite: AnimatedSprite2D
 var _facing: float = 1.0
-var _shield_bubble: ColorRect
+var _shield_bubble: BubbleForceField
 var _land_squash: float = 0.0
-var _wing_l: ColorRect
-var _wing_r: ColorRect
+var _wing_sprite: Sprite2D
 var _celebrating: bool = false
+var _using_magic_boots_art: bool = false
+var _bounce_cooldown: float = 0.0
+var _lasso_cooldown: float = 0.0
+var _is_canyon_falling: bool = false
 
 
 func _ready() -> void:
@@ -47,7 +50,7 @@ func _ready() -> void:
 	_ensure_jump_assist()
 	_ensure_modes()
 	_sprite = get_node_or_null("AnimatedSprite2D") as AnimatedSprite2D
-	_setup_sprite_frames()
+	_setup_sprite_frames(false)
 	_ensure_shield_bubble()
 	_ensure_wings()
 	if _sprite != null:
@@ -59,8 +62,16 @@ func _physics_process(delta: float) -> void:
 	_ensure_jump_assist()
 	_ensure_modes()
 	_modes.tick(delta)
+	if _is_canyon_falling:
+		velocity = Vector2.ZERO
+		external_velocity = Vector2.ZERO
+		return
 	if _invulnerable_remaining > 0.0:
 		_invulnerable_remaining = maxf(_invulnerable_remaining - delta, 0.0)
+	if _bounce_cooldown > 0.0:
+		_bounce_cooldown = maxf(_bounce_cooldown - delta, 0.0)
+	if _lasso_cooldown > 0.0:
+		_lasso_cooldown = maxf(_lasso_cooldown - delta, 0.0)
 
 	var on_floor := is_on_floor()
 	_jump_assist.notify_grounded(on_floor)
@@ -68,6 +79,8 @@ func _physics_process(delta: float) -> void:
 
 	if input_enabled and Input.is_action_just_pressed(&"jump"):
 		_jump_assist.notify_jump_pressed()
+	if input_enabled and Input.is_action_just_pressed(&"lasso"):
+		throw_lasso()
 
 	if _modes.is_flying() and input_enabled:
 		_apply_flight(delta)
@@ -108,6 +121,23 @@ func celebrate() -> void:
 		_sprite.play(&"celebrate")
 
 
+func throw_lasso() -> void:
+	if not input_enabled or _lasso_cooldown > 0.0 or _celebrating:
+		return
+	_lasso_cooldown = 0.55
+	var lasso := LassoCast.new()
+	lasso.name = "LassoCast"
+	lasso.position = Vector2(10.0 * _facing, -38.0)
+	lasso.z_index = 4
+	lasso.setup(_facing)
+	add_child(lasso)
+	if _sprite != null:
+		var tween := create_tween()
+		tween.tween_property(_sprite, "rotation", -0.1 * _facing, 0.08)
+		tween.tween_property(_sprite, "rotation", 0.06 * _facing, 0.12)
+		tween.tween_property(_sprite, "rotation", 0.0, 0.1)
+
+
 func is_invulnerable() -> bool:
 	_ensure_modes()
 	return _invulnerable_remaining > 0.0 or _modes.has_shield()
@@ -118,10 +148,34 @@ func respawn_at(world_position: Vector2) -> void:
 	_ensure_modes()
 	global_position = world_position
 	velocity = Vector2.ZERO
+	_is_canyon_falling = false
+	input_enabled = true
+	collision_layer = 2
+	if _sprite != null:
+		_sprite.rotation = 0.0
+		_sprite.scale = Vector2(1.5, 1.5)
+		_sprite.modulate = Color.WHITE
 	_jump_assist.reset()
 	_jump_cut_applied = false
 	_invulnerable_remaining = respawn_invulnerability_time
 	respawned.emit(world_position)
+
+
+func play_canyon_fall() -> void:
+	if _is_canyon_falling:
+		return
+	_is_canyon_falling = true
+	input_enabled = false
+	collision_layer = 0
+	velocity = Vector2.ZERO
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(self, "position:y", position.y + 135.0, 0.55).set_trans(Tween.TRANS_QUAD)
+	if _sprite != null:
+		tween.tween_property(_sprite, "rotation", _sprite.rotation + TAU * 1.5, 0.55)
+		tween.tween_property(_sprite, "scale", Vector2(0.22, 0.22), 0.55)
+		tween.tween_property(_sprite, "modulate:a", 0.25, 0.55)
+	await tween.finished
 
 
 func activate_mode(mode: ModeController.Mode) -> void:
@@ -137,8 +191,30 @@ func clear_modes() -> void:
 
 
 func collect_star() -> void:
-	stars_collected += 1
+	collect_badges(1)
+
+
+func collect_badges(amount: int) -> void:
+	if amount <= 0:
+		return
+	stars_collected += amount
+	_ensure_modes()
+	for index in range(amount):
+		_modes.extend_from_badge()
 	star_collected.emit(stars_collected)
+
+
+func bounce_from_hazard(from_world: Vector2, strength: float = 420.0) -> void:
+	if _bounce_cooldown > 0.0:
+		return
+	_bounce_cooldown = 0.35
+	var away := global_position - from_world
+	if away.length_squared() < 0.01:
+		away = Vector2(-_facing, 0.0)
+	away.y = minf(away.y, -0.35)
+	var dir := away.normalized()
+	velocity = Vector2(dir.x * strength, minf(dir.y * strength * 0.85, -280.0))
+	_invulnerable_remaining = maxf(_invulnerable_remaining, 0.45)
 
 
 func get_jump_assist() -> JumpAssist:
@@ -164,22 +240,46 @@ func _ensure_modes() -> void:
 
 func _on_mode_changed(mode: ModeController.Mode, remaining: float) -> void:
 	mode_changed.emit(ModeController.mode_name(mode), remaining)
+	_refresh_mode_sprites()
 
 
-func _setup_sprite_frames() -> void:
+func _setup_sprite_frames(use_magic_boots: bool) -> void:
 	if _sprite == null:
 		return
 	var frames := SpriteFrames.new()
-	_add_anim(frames, &"idle", ["idle_0.png", "idle_1.png"], 4.0)
-	_add_anim(frames, &"run", ["run_0.png", "run_1.png", "run_2.png", "run_3.png"], 10.0)
-	_add_anim(frames, &"jump", ["jump.png"], 5.0, false)
-	_add_anim(frames, &"celebrate", ["celebrate.png"], 5.0)
+	var suffix := "_boots" if use_magic_boots else ""
+	_add_anim(frames, &"idle", ["idle_0%s.png" % suffix, "idle_1%s.png" % suffix], 4.0)
+	_add_anim(
+		frames,
+		&"run",
+		[
+			"run_0%s.png" % suffix,
+			"run_1%s.png" % suffix,
+			"run_2%s.png" % suffix,
+			"run_3%s.png" % suffix,
+		],
+		10.0
+	)
+	_add_anim(frames, &"jump", ["jump%s.png" % suffix], 5.0, false)
+	_add_anim(frames, &"celebrate", ["celebrate%s.png" % suffix], 5.0)
+	var previous := _sprite.animation
 	_sprite.sprite_frames = frames
 	_sprite.centered = true
 	# Boots sit near the frame bottom. Offset is scaled with the sprite, so
 	# -30 (not -46) plants soles on the collision floor at 1.5x scale.
 	_sprite.offset = Vector2(0, -30)
 	_sprite.scale = Vector2(1.5, 1.5)
+	_using_magic_boots_art = use_magic_boots
+	if previous != StringName() and frames.has_animation(previous):
+		_sprite.play(previous)
+	else:
+		_sprite.play(&"idle")
+
+
+func _refresh_mode_sprites() -> void:
+	var want_boots := _modes != null and _modes.active_mode == ModeController.Mode.MAGIC_BOOTS
+	if want_boots != _using_magic_boots_art:
+		_setup_sprite_frames(want_boots)
 
 
 func _add_anim(
@@ -219,15 +319,16 @@ func _update_animation(on_floor: bool) -> void:
 func _update_mode_visual() -> void:
 	if _sprite == null:
 		return
+	_refresh_mode_sprites()
 	var color := Color(1, 1, 1, 1)
 	if _modes.has_shield():
-		color = Color(0.7, 0.95, 1.0, 1.0)
+		color = Color(0.85, 0.97, 1.0, 1.0)
 	elif _modes.is_flying():
-		color = Color(0.85, 0.95, 1.0, 1.0)
+		color = Color(0.92, 0.97, 1.0, 1.0)
 	elif _modes.active_mode == ModeController.Mode.SPEED_STAR:
 		color = Color(1.0, 0.92, 0.55, 1.0)
 	elif _modes.active_mode == ModeController.Mode.MAGIC_BOOTS:
-		color = Color(0.9, 0.75, 1.0, 1.0)
+		color = Color(1, 1, 1, 1)
 	if _invulnerable_remaining > 0.0:
 		var blink := 0.35 + absf(sin(Time.get_ticks_msec() * 0.025)) * 0.65
 		color.a = blink
@@ -259,39 +360,32 @@ func _update_land_squash(delta: float) -> void:
 
 
 func _ensure_wings() -> void:
-	_wing_l = get_node_or_null("WingL") as ColorRect
-	_wing_r = get_node_or_null("WingR") as ColorRect
-	if _wing_l != null and _wing_r != null:
+	_wing_sprite = get_node_or_null("WingArt") as Sprite2D
+	if _wing_sprite != null:
 		return
-	_wing_l = ColorRect.new()
-	_wing_l.name = "WingL"
-	_wing_l.size = Vector2(18, 10)
-	_wing_l.position = Vector2(-34, -40)
-	_wing_l.color = Color(0.75, 0.9, 1.0, 0.85)
-	_wing_l.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_wing_l.visible = false
-	add_child(_wing_l)
-	_wing_r = ColorRect.new()
-	_wing_r.name = "WingR"
-	_wing_r.size = Vector2(18, 10)
-	_wing_r.position = Vector2(16, -40)
-	_wing_r.color = Color(0.75, 0.9, 1.0, 0.85)
-	_wing_r.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_wing_r.visible = false
-	add_child(_wing_r)
+	_wing_sprite = Sprite2D.new()
+	_wing_sprite.name = "WingArt"
+	_wing_sprite.texture = load("res://assets/world/modes/wings.png")
+	_wing_sprite.centered = true
+	_wing_sprite.position = Vector2(0, -42)
+	_wing_sprite.scale = Vector2(0.72, 0.72)
+	_wing_sprite.z_index = -1
+	_wing_sprite.visible = false
+	add_child(_wing_sprite)
+	move_child(_wing_sprite, 0)
 
 
 func _update_wings() -> void:
 	_ensure_wings()
+	if _wing_sprite == null:
+		return
 	var flying := _modes.is_flying()
-	if _wing_l != null:
-		_wing_l.visible = flying
-	if _wing_r != null:
-		_wing_r.visible = flying
+	_wing_sprite.visible = flying
 	if flying:
-		var flap := sin(Time.get_ticks_msec() * 0.02) * 4.0
-		_wing_l.position.y = -40.0 + flap
-		_wing_r.position.y = -40.0 - flap
+		var flap := 1.0 + sin(Time.get_ticks_msec() * 0.02) * 0.08
+		_wing_sprite.scale = Vector2(0.72 * flap, 0.72 / flap)
+		_wing_sprite.rotation = sin(Time.get_ticks_msec() * 0.015) * 0.08
+		_wing_sprite.flip_h = _facing < 0.0
 
 
 func _update_boot_sparks() -> void:
@@ -314,18 +408,16 @@ func _update_boot_sparks() -> void:
 
 
 func _ensure_shield_bubble() -> void:
-	_shield_bubble = get_node_or_null("ShieldBubble") as ColorRect
+	_shield_bubble = get_node_or_null("ShieldBubble") as BubbleForceField
 	if _shield_bubble != null:
 		return
-	_shield_bubble = ColorRect.new()
+	_shield_bubble = BubbleForceField.new()
 	_shield_bubble.name = "ShieldBubble"
-	_shield_bubble.size = Vector2(56, 64)
-	_shield_bubble.position = Vector2(-28, -60)
-	_shield_bubble.color = Color(0.35, 0.9, 1.0, 0.28)
-	_shield_bubble.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_shield_bubble.position = Vector2(0, -34)
+	_shield_bubble.scale = Vector2(0.88, 1.12)
+	_shield_bubble.z_index = 2
 	_shield_bubble.visible = false
 	add_child(_shield_bubble)
-	move_child(_shield_bubble, 0)
 
 
 func _update_shield_bubble() -> void:
@@ -335,8 +427,7 @@ func _update_shield_bubble() -> void:
 	var show_bubble := _modes.has_shield()
 	_shield_bubble.visible = show_bubble
 	if show_bubble:
-		var pulse := 0.22 + absf(sin(Time.get_ticks_msec() * 0.008)) * 0.18
-		_shield_bubble.color = Color(0.35, 0.9, 1.0, pulse)
+		_shield_bubble.modulate = Color(1.0, 1.0, 1.0, 1.0)
 
 
 func _spawn_dust_puff() -> void:

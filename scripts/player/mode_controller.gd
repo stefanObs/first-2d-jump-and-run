@@ -10,10 +10,11 @@ signal mode_changed(mode: Mode, remaining: float)
 var active_mode: Mode = Mode.NONE
 var remaining: float = 0.0
 
-var wings_duration: float = 18.0
-var boots_duration: float = 14.0
-var speed_duration: float = 12.0
-var shield_duration: float = 12.0
+var wings_duration: float = 30.0
+var boots_duration: float = 30.0
+var speed_duration: float = 30.0
+var shield_duration: float = 15.0
+var badge_extension: float = 5.0
 
 
 func activate(mode: Mode) -> void:
@@ -29,6 +30,13 @@ func activate(mode: Mode) -> void:
 			remaining = shield_duration
 		_:
 			remaining = 0.0
+	mode_changed.emit(active_mode, remaining)
+
+
+func extend_from_badge() -> void:
+	if active_mode == Mode.NONE:
+		return
+	remaining = maxf(remaining + badge_extension, badge_extension)
 	mode_changed.emit(active_mode, remaining)
 
 
@@ -101,6 +109,6 @@ static func mode_toast(mode: Mode) -> String:
 		Mode.SPEED_STAR:
 			return "Zoom! Run like the wind!"
 		Mode.BUBBLE_SHIELD:
-			return "Safe bubble! Bandits bounce off!"
+			return "Safe bubble! Bounce off cacti!"
 		_:
 			return ""

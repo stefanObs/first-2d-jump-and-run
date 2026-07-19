@@ -38,6 +38,11 @@ func _process(delta: float) -> void:
 			scale = Vector2(s, s)
 		return
 
+	# Activate by reaching the camp's place on the trail (not only flag body).
+	if _player_reached_camp():
+		activate()
+		return
+
 	var nearby := _player_nearby(220.0)
 	if _label != null and nearby:
 		_label.text = "CAMP!"
@@ -49,6 +54,25 @@ func _process(delta: float) -> void:
 		_sprite.modulate = Color(1.0, 0.85 + absf(sin(_pulse)) * 0.15, 0.7, 1.0)
 	elif _sprite != null:
 		_sprite.modulate = Color(1, 1, 1, 1)
+
+
+func _player_reached_camp() -> bool:
+	var player := _find_player()
+	if player == null:
+		return false
+	# Reaching the flag's horizontal point is enough, even on a high jump.
+	var dx := absf(player.global_position.x - global_position.x)
+	return dx <= 64.0
+
+
+func _find_player() -> Node2D:
+	var tree := get_tree()
+	if tree == null:
+		return null
+	for node in tree.get_nodes_in_group("player"):
+		if node is Node2D:
+			return node as Node2D
+	return null
 
 
 func _player_nearby(radius: float) -> bool:

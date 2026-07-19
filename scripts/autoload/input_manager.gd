@@ -30,6 +30,8 @@ func prompt_for(action: StringName) -> String:
 	match String(action):
 		"jump", "confirm":
 			return "A" if is_controller() else "Space / Enter"
+		"lasso":
+			return "X" if is_controller() else "Alt / F / L"
 		"back", "pause":
 			return "B / Menu" if is_controller() else "Esc"
 		"move_left", "move_right":

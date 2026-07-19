@@ -27,8 +27,11 @@ var _play_time: float = 0.0
 var _paused: bool = false
 var _progress_milestones: Dictionary = {}
 var _collected_badge_names: Array[String] = []
+var _stored_badge_names: Array[String] = []
 var _restoring_run_state: bool = false
 var _loaded_run_state: bool = false
+var _next_level_tap_time_msec: int = -1000
+var _is_recovering: bool = false
 
 
 func _ready() -> void:
@@ -43,10 +46,14 @@ func _process(delta: float) -> void:
 				transition.set_progress(_completion.progress())
 		return
 
+	if Input.is_action_just_pressed(&"next_level"):
+		_handle_next_level_tap()
+		if _is_completing:
+			return
 	_play_time += delta
 	_update_trail_progress()
-	if player != null and player.global_position.y > fall_recovery_y:
-		respawn_player()
+	if player != null and player.global_position.y > fall_recovery_y and not _is_recovering:
+		_play_canyon_fall_and_respawn()
 		return
 	if Input.is_action_just_pressed(&"pause"):
 		set_paused(true)
@@ -149,17 +156,55 @@ func begin_completion() -> void:
 	level_completed.emit()
 
 
+func _handle_next_level_tap() -> void:
+	if is_custom_level or is_final_level:
+		return
+	var now := Time.get_ticks_msec()
+	if now - _next_level_tap_time_msec <= 450:
+		_is_completing = true
+		if player != null:
+			player.set_input_enabled(false)
+		GameManager.load_level(level_number + 1)
+		return
+	_next_level_tap_time_msec = now
+	if hud != null:
+		hud.show_toast("Press numpad + again for next trail", 1.0)
+
+
 func respawn_player() -> void:
 	if player == null or _is_completing:
 		return
 	var destination := get_active_respawn_position()
 	player.respawn_at(destination)
+	_reset_unstored_badges()
 	for node in find_children("*", "Area2D", true, false):
 		if node is ModeItem:
 			(node as ModeItem).restore_if_needed()
 	if hud != null:
 		hud.show_toast("Oops! Back to camp!", 2.0)
 	player_respawned.emit(destination)
+
+
+func _store_badges_at_camp() -> void:
+	_stored_badge_names = _collected_badge_names.duplicate()
+
+
+func _reset_unstored_badges() -> void:
+	if player == null:
+		return
+	for node in find_children("*", "Area2D", true, false):
+		if not (node is Star):
+			continue
+		var star := node as Star
+		var badge_name := String(star.name)
+		if badge_name in _stored_badge_names:
+			star.restore_as_collected()
+		else:
+			star.restore_for_respawn()
+	_collected_badge_names = _stored_badge_names.duplicate()
+	player.stars_collected = _stored_badge_names.size()
+	if hud != null:
+		hud.set_stars(player.stars_collected)
 
 
 func _wire_ui() -> void:
@@ -191,10 +236,18 @@ func _wire_world_objects() -> void:
 			var goal := node as Goal
 			if not goal.reached.is_connected(_on_goal_reached):
 				goal.reached.connect(_on_goal_reached)
+		elif node is Carrion:
+			var carrion := node as Carrion
+			if not carrion.hurt_player.is_connected(_on_opponent_hurt):
+				carrion.hurt_player.connect(_on_opponent_hurt)
+		elif node is Rattlesnake:
+			var snake := node as Rattlesnake
+			if not snake.hurt_player.is_connected(_on_opponent_hurt):
+				snake.hurt_player.connect(_on_opponent_hurt)
 		elif node is Hazard:
 			var hazard := node as Hazard
 			if not hazard.hurt.is_connected(_on_hazard_hurt):
-				hazard.hurt.connect(_on_hazard_hurt)
+				hazard.hurt.connect(_on_hazard_hurt.bind(hazard))
 		elif node is Star:
 			var star := node as Star
 			var badge_name := String(star.name)
@@ -214,8 +267,10 @@ func _wire_world_objects() -> void:
 	for node in find_children("*", "AnimatableBody2D", true, false):
 		if node is Opponent:
 			var opponent := node as Opponent
-			if not opponent.hurt_player.is_connected(_on_hazard_hurt):
-				opponent.hurt_player.connect(_on_hazard_hurt)
+			if not opponent.hurt_player.is_connected(_on_opponent_hurt):
+				opponent.hurt_player.connect(_on_opponent_hurt)
+			if not opponent.bounty_caught.is_connected(_on_bounty_caught):
+				opponent.bounty_caught.connect(_on_bounty_caught)
 	for node in find_children("*", "PhysicsBody2D", true, false):
 		if node is ConveyorBelt:
 			var belt := node as ConveyorBelt
@@ -231,6 +286,7 @@ func _on_checkpoint_activated(checkpoint: Checkpoint) -> void:
 	if _active_checkpoint != null and _active_checkpoint != checkpoint:
 		_active_checkpoint.deactivate()
 	_active_checkpoint = checkpoint
+	_store_badges_at_camp()
 	if not _restoring_run_state and not is_custom_level:
 		_save_run_state(false)
 	if hud != null:
@@ -291,8 +347,8 @@ func _save_run_state(show_feedback: bool = true) -> bool:
 	var saved := GameManager.save_run_state(
 		level_number,
 		checkpoint_name,
-		_collected_badge_names,
-		player.stars_collected,
+		_stored_badge_names,
+		_stored_badge_names.size(),
 		_play_time
 	)
 	if saved:
@@ -318,10 +374,17 @@ func _restore_run_state() -> void:
 			var badge_name := str(value)
 			if badge_name not in _collected_badge_names:
 				_collected_badge_names.append(badge_name)
+			if badge_name not in _stored_badge_names:
+				_stored_badge_names.append(badge_name)
 			var badge := find_child(badge_name, true, false) as Star
 			if badge != null:
 				badge.restore_as_collected()
-	player.stars_collected = maxi(int(state.get("stars_found", 0)), 0)
+	for node in find_children("*", "AnimatableBody2D", true, false):
+		if node is Opponent:
+			var opponent := node as Opponent
+			if opponent.bounty_bandit and "Bounty_%s_0" % opponent.name in _stored_badge_names:
+				opponent.tie_up(false)
+	player.stars_collected = maxi(int(state.get("stars_found", 0)), _stored_badge_names.size())
 	var checkpoint_name := str(state.get("checkpoint_name", ""))
 	if not checkpoint_name.is_empty():
 		var checkpoint := find_child(checkpoint_name, true, false) as Checkpoint
@@ -337,8 +400,45 @@ func _on_goal_reached(_goal: Goal) -> void:
 	begin_completion()
 
 
-func _on_hazard_hurt(_hurt_player: Player) -> void:
+func _on_hazard_hurt(hurt_player: Player, hazard: Hazard) -> void:
+	if hazard.is_cactus() and hurt_player.get_modes().has_shield():
+		hurt_player.bounce_from_hazard(hazard.global_position)
+		if hud != null:
+			hud.show_toast("Bounce! Bubble safe!", 1.4)
+		return
+	if hazard.is_canyon():
+		_play_canyon_fall_and_respawn()
+		return
 	respawn_player()
+
+
+func _play_canyon_fall_and_respawn() -> void:
+	if _is_recovering or player == null or _is_completing:
+		return
+	_is_recovering = true
+	await player.play_canyon_fall()
+	respawn_player()
+	_is_recovering = false
+
+
+func _on_opponent_hurt(_hurt_player: Player) -> void:
+	respawn_player()
+
+
+func _on_bounty_caught(opponent: Opponent, amount: int) -> void:
+	if player == null or amount <= 0:
+		return
+	player.collect_badges(amount)
+	for index in range(amount):
+		var bounty_name := "Bounty_%s_%d" % [opponent.name, index]
+		if bounty_name not in _collected_badge_names:
+			_collected_badge_names.append(bounty_name)
+		if bounty_name not in _stored_badge_names:
+			_stored_badge_names.append(bounty_name)
+	if hud != null:
+		hud.show_toast("Bounty caught! +%d badges!" % amount, 2.2)
+	if not is_custom_level:
+		_save_run_state(false)
 
 
 func _on_celebration_finished() -> void:
@@ -396,9 +496,10 @@ func _on_device_changed(_device: Variant) -> void:
 
 
 func _gameplay_prompt() -> String:
-	return "Move: %s   Jump: %s   Pause: %s" % [
+	return "Move: %s   Jump: %s   Lasso: %s   Pause: %s" % [
 		InputManager.prompt_for(&"move_left"),
 		InputManager.prompt_for(&"jump"),
+		InputManager.prompt_for(&"lasso"),
 		InputManager.prompt_for(&"pause"),
 	]
 

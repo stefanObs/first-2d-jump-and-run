@@ -695,7 +695,7 @@ shape = SubResource("GroundSeg")
 
 
 [node name="Cactus4" parent="." instance=ExtResource("5_hazard")]
-position = Vector2(1160, 330)
+position = Vector2(920, 330)
 
 
 [node name="Cactus10" parent="." instance=ExtResource("5_hazard")]

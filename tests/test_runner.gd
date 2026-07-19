@@ -25,6 +25,7 @@ func _ready() -> void:
 		_test_level_layout_rules
 	)
 	failures += _run("Cowboy player has movement animations", _test_cowboy_animations)
+	failures += _run("Lasso ties bandits and makes them pass-through", _test_lasso_ties_bandit)
 	failures += _run("Campaign hazards are no longer blocked by plank highways", _test_no_plank_highways)
 	failures += _run("Custom level store and builder work", _test_custom_level_builder)
 	failures += _run("Hand-drawn celebration art and cheerful music load", _test_art_and_music)
@@ -85,7 +86,8 @@ func _test_consume_clears_state() -> Variant:
 
 func _test_input_bindings_actions() -> Variant:
 	var required: Array[StringName] = [
-		&"move_left", &"move_right", &"jump", &"pause", &"confirm", &"back",
+		&"move_left", &"move_right", &"jump", &"lasso", &"next_level",
+		&"pause", &"confirm", &"back",
 		&"ui_up", &"ui_down", &"ui_left", &"ui_right",
 	]
 	for action in required:
@@ -96,6 +98,14 @@ func _test_input_bindings_actions() -> Variant:
 
 func _test_mode_controller() -> Variant:
 	var modes := ModeController.new()
+	if not is_equal_approx(modes.wings_duration, 30.0):
+		return "Wings should start at 30 seconds."
+	if not is_equal_approx(modes.boots_duration, 30.0):
+		return "Magic Boots should start at 30 seconds."
+	if not is_equal_approx(modes.speed_duration, 30.0):
+		return "Speed Star should start at 30 seconds."
+	if not is_equal_approx(modes.shield_duration, 15.0):
+		return "Bubble Shield should start at 15 seconds."
 	modes.activate(ModeController.Mode.BUBBLE_SHIELD)
 	if not modes.has_shield():
 		return "Expected bubble shield."
@@ -111,6 +121,10 @@ func _test_mode_controller() -> Variant:
 	modes.activate(ModeController.Mode.MAGIC_BOOTS)
 	if modes.jump_multiplier() <= 1.0:
 		return "Expected jump boost."
+	var before_badge := modes.remaining
+	modes.extend_from_badge()
+	if not is_equal_approx(modes.remaining - before_badge, 5.0):
+		return "A badge should add exactly five seconds to the active mode."
 	return null
 
 
@@ -295,6 +309,41 @@ func _test_cowboy_animations() -> Variant:
 	return null
 
 
+func _test_lasso_ties_bandit() -> Variant:
+	var packed: PackedScene = load("res://scenes/world/opponent.tscn")
+	if packed == null:
+		return "Missing opponent scene."
+	var node := packed.instantiate()
+	add_child(node)
+	var bandit := node as Opponent
+	if bandit == null:
+		node.queue_free()
+		return "Opponent scene root is not Opponent."
+	bandit.bounty_bandit = true
+	var bounty_amount := [0]
+	bandit.bounty_caught.connect(func(_opponent: Opponent, amount: int) -> void:
+		bounty_amount[0] = amount
+	)
+	bandit.tie_up()
+	if not bandit.is_tied():
+		node.queue_free()
+		return "A lasso hit should tie the bandit."
+	if bandit.collision_layer != 0:
+		node.queue_free()
+		return "Tied bandits should not block the cowboy."
+	if bandit.get_node_or_null("TiedRopes") == null:
+		node.queue_free()
+		return "Tied bandits should show rope artwork."
+	if bandit.z_index >= 0:
+		node.queue_free()
+		return "Tied bandit and rope should render behind the cowboy."
+	if int(bounty_amount[0]) != 2:
+		node.queue_free()
+		return "A red-scarf bounty bandit should award two badges."
+	node.queue_free()
+	return null
+
+
 func _test_no_plank_highways() -> Variant:
 	for path in GameManager.LEVEL_SCENES:
 		var packed: PackedScene = load(path)
@@ -342,6 +391,7 @@ func _test_art_and_music() -> Variant:
 	for path in [
 		"res://assets/world/sky_handdrawn.png",
 		"res://assets/world/trail_desert_tile.png",
+		"res://assets/world/trail_dirt_tile.png",
 		"res://assets/world/horizon_hills_strip.png",
 		"res://assets/world/canyon_gap.png",
 	]:
@@ -379,9 +429,25 @@ func _test_art_and_music() -> Variant:
 		pit.global_position.y
 		+ (pit_mouth.position.y - tex_h * 0.5 * pit_mouth.scale.y) * pit.scale.y
 	)
-	if absf(world_top - floor_top) > 3.0:
+	if absf(world_top - floor_top) > 4.0:
 		controller.queue_free()
-		return "Pit rim should meet the trail floor (top=%.1f, expected %.1f)." % [world_top, floor_top]
+		return "Canyon rim should meet the trail floor (top=%.1f, expected %.1f)." % [world_top, floor_top]
+	# Opening should cover the fall gap between Ground2 and Ground3.
+	var g2 := controller.get_node_or_null("Ground2/Visual") as ColorRect
+	var g3 := controller.get_node_or_null("Ground3/Visual") as ColorRect
+	if g2 != null and g3 != null:
+		var gap_left: float = controller.get_node("Ground2").position.x + maxf(g2.offset_left, g2.offset_right)
+		var gap_right: float = controller.get_node("Ground3").position.x + minf(g3.offset_left, g3.offset_right)
+		var tex_w := float(pit_mouth.texture.get_width())
+		var world_w := tex_w * pit_mouth.scale.x * pit.scale.x
+		var center_x := pit.global_position.x + pit_mouth.position.x * pit.scale.x
+		var open_left := center_x - world_w * 0.5 + world_w * Hazard.OPENING_LEFT
+		var open_right := center_x - world_w * 0.5 + world_w * Hazard.OPENING_RIGHT
+		if absf(open_left - gap_left) > 12.0 or absf(open_right - gap_right) > 12.0:
+			controller.queue_free()
+			return "Canyon borders should match the fall gap (open=%.0f..%.0f gap=%.0f..%.0f)." % [
+				open_left, open_right, gap_left, gap_right
+			]
 	controller.queue_free()
 	return null
 

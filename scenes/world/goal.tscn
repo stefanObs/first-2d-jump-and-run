@@ -13,20 +13,20 @@ monitorable = false
 script = ExtResource("1_goal")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
-position = Vector2(0, -48)
+position = Vector2(0, -78)
 texture = ExtResource("2")
 scale = Vector2(1.2, 1.2)
 
 [node name="Label" type="Label" parent="."]
 offset_left = -50.0
-offset_top = -150.0
+offset_top = -180.0
 offset_right = 50.0
-offset_bottom = -124.0
+offset_bottom = -154.0
 theme_override_colors/font_color = Color(0.45, 0.2, 0.05, 1)
 theme_override_font_sizes/font_size = 18
 text = "SALOON"
 horizontal_alignment = 1
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-position = Vector2(0, -60)
+position = Vector2(0, -72)
 shape = SubResource("RectangleShape2D_area")

@@ -110,6 +110,7 @@ static func _make_endless_hills(level: Node) -> void:
 		return
 
 	var width := _level_width(level)
+	var floor_top := _typical_floor_top(level)
 	var root := Node2D.new()
 	root.name = "HorizonHills"
 	root.z_index = -16
@@ -119,22 +120,20 @@ static func _make_endless_hills(level: Node) -> void:
 	if tex == null:
 		return
 	var tex_size := tex.get_size()
-	var tile_w := tex_size.x * 1.2
-	var tile_h := 360.0
+	var tile_w := tex_size.x * 1.35
+	var tile_h := 520.0
 	var x := -500.0
 	var index := 0
-	# Floor top is ~320; keep mesa bases clearly above the trail.
-	var hill_base_y := 300.0
 	while x < width + 600.0:
 		var sprite := Sprite2D.new()
 		sprite.name = "HillTile%d" % index
 		sprite.texture = tex
 		sprite.centered = false
-		sprite.position = Vector2(x, hill_base_y - tile_h)
+		sprite.position = Vector2(x, floor_top - tile_h + 10.0)
 		sprite.scale = Vector2(tile_w / tex_size.x, tile_h / tex_size.y)
 		sprite.modulate = Color(1, 1, 1, 0.98)
 		root.add_child(sprite)
-		x += tile_w - 180.0
+		x += tile_w - 220.0
 		index += 1
 
 
@@ -173,10 +172,42 @@ static func _make_contiguous_floors(level: Node) -> void:
 	floor_root.z_index = 0
 	level.add_child(floor_root)
 
-	var tex: Texture2D = load("res://assets/world/trail_desert_tile.png")
-	if tex == null:
-		tex = load("res://assets/world/trail_floor_strip.png")
-	var tile_size := tex.get_size() if tex != null else Vector2(160, 72)
+	var surface: Texture2D = load("res://assets/world/trail_desert_tile.png")
+	var dirt: Texture2D = load("res://assets/world/trail_dirt_tile.png")
+	if dirt == null:
+		dirt = load("res://assets/world/trail_dirt_strip.png")
+	if surface == null:
+		surface = load("res://assets/world/trail_floor_strip.png")
+
+	var level_left := -480.0
+	var level_right := _level_width(level) + 480.0
+	var background := level.get_node_or_null("Background") as ColorRect
+	if background != null:
+		level_left = minf(background.offset_left, background.offset_right)
+		level_right = maxf(background.offset_left, background.offset_right)
+	var floor_top := float(merged[0]["top"])
+	var floor_height := float(merged[0]["bottom"]) - floor_top
+	for strip in merged:
+		floor_top = minf(floor_top, float(strip["top"]))
+		floor_height = maxf(floor_height, float(strip["bottom"]) - float(strip["top"]))
+
+	# Solid black underworld so nothing below the trail shows sky.
+	var abyss := ColorRect.new()
+	abyss.name = "FloorAbyss"
+	abyss.position = Vector2(level_left, floor_top)
+	abyss.size = Vector2(level_right - level_left, 900.0)
+	abyss.color = Color(0.04, 0.02, 0.01, 1.0)
+	abyss.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	abyss.z_index = -2
+	floor_root.add_child(abyss)
+
+	# Stretch first/last walkable strips to the level edges.
+	if not merged.is_empty():
+		merged[0]["left"] = minf(float(merged[0]["left"]), level_left)
+		merged[merged.size() - 1]["right"] = maxf(
+			float(merged[merged.size() - 1]["right"]),
+			level_right
+		)
 
 	for i in range(merged.size()):
 		var strip: Dictionary = merged[i]
@@ -184,65 +215,100 @@ static func _make_contiguous_floors(level: Node) -> void:
 		var right := float(strip["right"])
 		var top := float(strip["top"])
 		var bottom := float(strip["bottom"])
-		var width := right - left
 		var height := bottom - top
+		var deep_bottom := top + 880.0
 
-		# Mesa-style underpaint: sand top band, layered rock below.
-		var sand := ColorRect.new()
-		sand.name = "FloorSand%d" % i
-		sand.position = Vector2(left, top)
-		sand.size = Vector2(width, minf(18.0, height))
-		sand.color = sand_color()
-		sand.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		floor_root.add_child(sand)
+		# Surface row only — never overhang into canyon gaps.
+		if surface != null:
+			_tile_strip_row(floor_root, surface, left, right, top, height, 1, "FloorSurface%d" % i)
 
-		var rock := ColorRect.new()
-		rock.name = "FloorRock%d" % i
-		rock.position = Vector2(left, top + 16.0)
-		rock.size = Vector2(width, maxf(height - 16.0, 1.0))
-		rock.color = rock_color()
-		rock.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		floor_root.add_child(rock)
+		# Below: continue brown dirt where the surface tile ends, down toward the abyss.
+		if dirt != null:
+			var surface_h := surface.get_size().y if surface != null else dirt.get_size().y
+			var scale_y := height / surface_h
+			var dirt_h := dirt.get_size().y * scale_y
+			var y := top + height - 2.0
+			var row := 0
+			while y < deep_bottom - 1.0:
+				_tile_strip_row(floor_root, dirt, left, right, y, dirt_h, 0, "FloorDirt%d_%d" % [i, row])
+				y += dirt_h - 2.0
+				row += 1
+				if row > 40:
+					break
 
-		var edge := ColorRect.new()
-		edge.name = "FloorEdge%d" % i
-		edge.position = Vector2(left, bottom - 8.0)
-		edge.size = Vector2(width, 8.0)
-		edge.color = dirt_edge_color()
-		edge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		floor_root.add_child(edge)
 
-		if tex == null:
-			continue
-		var scale_y := height / tile_size.y
-		var tile_w := tile_size.x * scale_y
-		var overlap := minf(32.0, tile_w * 0.24)
-		var x := left - overlap * 0.5
-		var tile_i := 0
-		while x < right - 1.0:
-			var sprite := Sprite2D.new()
-			sprite.name = "FloorArt%d_%d" % [i, tile_i]
-			sprite.texture = tex
-			sprite.centered = false
-			sprite.position = Vector2(x, top)
-			sprite.scale = Vector2(scale_y, scale_y)
-			sprite.z_index = 1
-			floor_root.add_child(sprite)
-			x += tile_w - overlap
-			tile_i += 1
-			if tile_i > 400:
-				break
+static func _tile_strip_row(
+	parent: Node,
+	tex: Texture2D,
+	left: float,
+	right: float,
+	y: float,
+	target_h: float,
+	z: int,
+	name_prefix: String
+) -> void:
+	var tile_size := tex.get_size()
+	if tile_size.y <= 0.0:
+		return
+	var scale_y := target_h / tile_size.y
+	var tile_w := tile_size.x * scale_y
+	var overlap := minf(24.0, tile_w * 0.18)
+	var x := left
+	var tile_i := 0
+	while x < right - 0.5:
+		var remaining := right - x
+		var use_w := minf(tile_w, remaining)
+		var sprite := Sprite2D.new()
+		sprite.name = "%s_%d" % [name_prefix, tile_i]
+		sprite.texture = tex
+		sprite.centered = false
+		sprite.position = Vector2(x, y)
+		sprite.scale = Vector2(use_w / tile_size.x, scale_y)
+		sprite.z_index = z
+		parent.add_child(sprite)
+		if remaining <= tile_w:
+			break
+		x += tile_w - overlap
+		tile_i += 1
+		if tile_i > 400:
+			break
 
 
 static func _align_pits(level: Node) -> void:
 	var floor_top := _typical_floor_top(level)
+	var merged := _merge_segments(_collect_ground_segments(level))
 	for node in level.find_children("*", "Area2D", true, false):
 		if not (node is Hazard):
 			continue
 		var hazard := node as Hazard
 		if maxf(absf(hazard.scale.x), absf(hazard.scale.y)) <= 1.35:
 			continue
-		hazard.align_pit_to_floor(floor_top)
+		var gap := _gap_around(hazard.global_position.x, merged)
+		hazard.align_canyon_to_gap(floor_top, float(gap["left"]), float(gap["right"]))
+
+
+static func _gap_around(x: float, merged: Array[Dictionary]) -> Dictionary:
+	if merged.is_empty():
+		return {"left": x - 80.0, "right": x + 80.0}
+	for i in range(merged.size() - 1):
+		var left_edge := float(merged[i]["right"])
+		var right_edge := float(merged[i + 1]["left"])
+		if left_edge - 8.0 <= x and x <= right_edge + 8.0:
+			return {"left": left_edge, "right": right_edge}
+	# Fallback: nearest edges.
+	var best_left := x - 80.0
+	var best_right := x + 80.0
+	var best_dist := INF
+	for i in range(merged.size() - 1):
+		var left_edge := float(merged[i]["right"])
+		var right_edge := float(merged[i + 1]["left"])
+		var mid := (left_edge + right_edge) * 0.5
+		var dist := absf(mid - x)
+		if dist < best_dist:
+			best_dist = dist
+			best_left = left_edge
+			best_right = right_edge
+	return {"left": best_left, "right": best_right}
 
 
 static func _typical_floor_top(level: Node) -> float:
@@ -328,6 +394,14 @@ static func _replace_block_art(body: Node, texture_path: String, is_ground: bool
 	var tex_size := sprite.texture.get_size()
 	if tex_size.x > 0.0 and tex_size.y > 0.0:
 		var target_h := height if is_ground else maxf(height, 28.0)
+		# Wood planks have transparent pad above the boards; crop so the walk
+		# surface matches the collision top (cowboy no longer floats).
+		if not is_ground and texture_path.ends_with("wood_plank.png") and tex_size.y > 16.0:
+			var atlas := AtlasTexture.new()
+			atlas.atlas = sprite.texture
+			atlas.region = Rect2(0, 12, tex_size.x, tex_size.y - 12)
+			sprite.texture = atlas
+			tex_size = atlas.get_size()
 		sprite.scale = Vector2(width / tex_size.x, target_h / tex_size.y)
 	sprite.z_index = 1
 	body.add_child(sprite)

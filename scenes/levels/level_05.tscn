@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=3 uid="uid://clevel05"]
+[gd_scene load_steps=20 format=3 uid="uid://clevel05"]
 
 [ext_resource type="Script" path="res://scripts/levels/level_05.gd" id="1_level"]
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2_player"]
@@ -17,6 +17,7 @@
 [ext_resource type="PackedScene" path="res://scenes/world/disappearing_platform.tscn" id="15_cloud"]
 [ext_resource type="PackedScene" path="res://scenes/world/conveyor_belt.tscn" id="16_conv"]
 [ext_resource type="PackedScene" path="res://scenes/world/timed_door.tscn" id="17_door"]
+[ext_resource type="PackedScene" path="res://scenes/world/rattlesnake.tscn" id="18_snake"]
 
 [sub_resource type="RectangleShape2D" id="GroundSeg"]
 size = Vector2(420, 64)
@@ -698,7 +699,7 @@ shape = SubResource("GroundSeg")
 position = Vector2(1160, 330)
 
 
-[node name="Cactus10" parent="." instance=ExtResource("5_hazard")]
+[node name="Rattlesnake10" parent="." instance=ExtResource("18_snake")]
 position = Vector2(2270, 330)
 
 
@@ -706,7 +707,7 @@ position = Vector2(2270, 330)
 position = Vector2(3380, 330)
 
 
-[node name="Cactus22" parent="." instance=ExtResource("5_hazard")]
+[node name="Rattlesnake22" parent="." instance=ExtResource("18_snake")]
 position = Vector2(4490, 330)
 
 
@@ -727,9 +728,9 @@ position = Vector2(5490, 320)
 
 
 [node name="Opponent0" parent="." instance=ExtResource("13_opp")]
-position = Vector2(1300, 320)
-point_a = Vector2(-60, 0)
-point_b = Vector2(60, 0)
+position = Vector2(980, 320)
+point_a = Vector2(-40, 0)
+point_b = Vector2(40, 0)
 move_speed = 48.0
 
 
@@ -738,6 +739,7 @@ position = Vector2(2500, 320)
 point_a = Vector2(-60, 0)
 point_b = Vector2(60, 0)
 move_speed = 48.0
+bounty_bandit = true
 
 
 [node name="Opponent2" parent="." instance=ExtResource("13_opp")]
@@ -759,6 +761,7 @@ position = Vector2(6100, 320)
 point_a = Vector2(-60, 0)
 point_b = Vector2(60, 0)
 move_speed = 48.0
+bounty_bandit = true
 
 
 [node name="TrailStar0" parent="." instance=ExtResource("9_star")]

@@ -18,6 +18,11 @@ func _ready() -> void:
 	var arrow := get_node_or_null("Arrow") as Label
 	if arrow != null:
 		arrow.text = ">>>" if push_right else "<<<"
+	# Face the art the same way the belt pushes.
+	if _visual is Sprite2D:
+		(_visual as Sprite2D).flip_h = not push_right
+	elif _visual != null:
+		_visual.scale.x = absf(_visual.scale.x) * (1.0 if push_right else -1.0)
 
 
 func _process(delta: float) -> void:

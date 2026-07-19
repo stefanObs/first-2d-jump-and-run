@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=3 uid="uid://clevel10"]
+[gd_scene load_steps=21 format=3 uid="uid://clevel10"]
 
 [ext_resource type="Script" path="res://scripts/levels/level_10.gd" id="1_level"]
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2_player"]
@@ -17,6 +17,8 @@
 [ext_resource type="PackedScene" path="res://scenes/world/disappearing_platform.tscn" id="15_cloud"]
 [ext_resource type="PackedScene" path="res://scenes/world/conveyor_belt.tscn" id="16_conv"]
 [ext_resource type="PackedScene" path="res://scenes/world/timed_door.tscn" id="17_door"]
+[ext_resource type="PackedScene" path="res://scenes/world/carrion.tscn" id="18_carrion"]
+[ext_resource type="PackedScene" path="res://scenes/world/rattlesnake.tscn" id="19_snake"]
 
 [sub_resource type="RectangleShape2D" id="GroundSeg"]
 size = Vector2(420, 64)
@@ -694,24 +696,16 @@ color = Color(0.45, 0.72, 0.28, 1)
 shape = SubResource("GroundSeg")
 
 
-[node name="Cactus4" parent="." instance=ExtResource("5_hazard")]
-position = Vector2(1160, 330)
-
-
-[node name="Cactus10" parent="." instance=ExtResource("5_hazard")]
-position = Vector2(2270, 330)
-
-
 [node name="Cactus16" parent="." instance=ExtResource("5_hazard")]
 position = Vector2(3380, 330)
 
 
-[node name="Cactus22" parent="." instance=ExtResource("5_hazard")]
-position = Vector2(4490, 330)
+[node name="Rattlesnake22" parent="." instance=ExtResource("19_snake")]
+position = Vector2(4860, 330)
 
 
 [node name="Cactus34" parent="." instance=ExtResource("5_hazard")]
-position = Vector2(6710, 330)
+position = Vector2(6250, 330)
 
 
 [node name="Checkpoint" parent="." instance=ExtResource("3_checkpoint")]
@@ -727,7 +721,7 @@ position = Vector2(5490, 320)
 
 
 [node name="Spring0" parent="." instance=ExtResource("11_spring")]
-position = Vector2(700, 320)
+position = Vector2(660, 320)
 bounce_velocity = -820.0
 
 
@@ -754,7 +748,7 @@ position = Vector2(840, 150)
 
 
 [node name="Spring1" parent="." instance=ExtResource("11_spring")]
-position = Vector2(1800, 320)
+position = Vector2(1760, 320)
 bounce_velocity = -820.0
 
 
@@ -781,7 +775,7 @@ position = Vector2(1940, 150)
 
 
 [node name="Spring2" parent="." instance=ExtResource("11_spring")]
-position = Vector2(3000, 320)
+position = Vector2(2960, 320)
 bounce_velocity = -820.0
 
 
@@ -808,12 +802,12 @@ position = Vector2(3140, 150)
 
 
 [node name="Spring3" parent="." instance=ExtResource("11_spring")]
-position = Vector2(4300, 320)
+position = Vector2(4380, 320)
 bounce_velocity = -820.0
 
 
 [node name="SpringLedge3" type="StaticBody2D" parent="."]
-position = Vector2(4440, 200)
+position = Vector2(4660, 200)
 [node name="Visual" type="ColorRect" parent="SpringLedge3"]
 offset_left = -110.0
 offset_top = -16.0
@@ -831,11 +825,11 @@ shape = SubResource("BlockWide")
 
 
 [node name="SpringStar3" parent="." instance=ExtResource("9_star")]
-position = Vector2(4440, 150)
+position = Vector2(4660, 150)
 
 
 [node name="Spring4" parent="." instance=ExtResource("11_spring")]
-position = Vector2(5600, 320)
+position = Vector2(5480, 320)
 bounce_velocity = -820.0
 
 
@@ -862,12 +856,12 @@ position = Vector2(5740, 150)
 
 
 [node name="Spring5" parent="." instance=ExtResource("11_spring")]
-position = Vector2(6500, 320)
+position = Vector2(6640, 320)
 bounce_velocity = -820.0
 
 
 [node name="SpringLedge5" type="StaticBody2D" parent="."]
-position = Vector2(6640, 200)
+position = Vector2(6800, 200)
 [node name="Visual" type="ColorRect" parent="SpringLedge5"]
 offset_left = -110.0
 offset_top = -16.0
@@ -885,7 +879,7 @@ shape = SubResource("BlockWide")
 
 
 [node name="SpringStar5" parent="." instance=ExtResource("9_star")]
-position = Vector2(6640, 150)
+position = Vector2(6800, 150)
 
 
 [node name="Moving0" parent="." instance=ExtResource("12_move")]
@@ -939,9 +933,9 @@ position = Vector2(6430, 200)
 
 
 [node name="Opponent0" parent="." instance=ExtResource("13_opp")]
-position = Vector2(1300, 320)
-point_a = Vector2(-60, 0)
-point_b = Vector2(60, 0)
+position = Vector2(1080, 320)
+point_a = Vector2(-45, 0)
+point_b = Vector2(45, 0)
 move_speed = 48.0
 
 
@@ -957,10 +951,11 @@ position = Vector2(3700, 320)
 point_a = Vector2(-60, 0)
 point_b = Vector2(60, 0)
 move_speed = 48.0
+bounty_bandit = true
 
 
 [node name="Opponent3" parent="." instance=ExtResource("13_opp")]
-position = Vector2(4900, 320)
+position = Vector2(5850, 320)
 point_a = Vector2(-60, 0)
 point_b = Vector2(60, 0)
 move_speed = 48.0
@@ -971,6 +966,7 @@ position = Vector2(6100, 320)
 point_a = Vector2(-60, 0)
 point_b = Vector2(60, 0)
 move_speed = 48.0
+bounty_bandit = true
 
 
 [node name="Boots" parent="." instance=ExtResource("10_mode")]
@@ -1087,7 +1083,7 @@ position = Vector2(6400, 145)
 
 
 [node name="Wings" parent="." instance=ExtResource("10_mode")]
-position = Vector2(480, 275)
+position = Vector2(1800, 275)
 mode = 1
 
 
@@ -1175,8 +1171,49 @@ position = Vector2(5940, 400)
 scale = Vector2(3.0, 1.4)
 
 
+[node name="Carrion0" parent="." instance=ExtResource("18_carrion")]
+position = Vector2(1900, 105)
+patrol_width = 125.0
+
+
+[node name="Carrion1" parent="." instance=ExtResource("18_carrion")]
+position = Vector2(3700, 80)
+patrol_width = 145.0
+move_speed = 58.0
+
+
+[node name="Carrion2" parent="." instance=ExtResource("18_carrion")]
+position = Vector2(5500, 115)
+patrol_width = 135.0
+move_speed = 62.0
+
+
+[node name="Carrion3" parent="." instance=ExtResource("18_carrion")]
+position = Vector2(1050, 45)
+patrol_width = 105.0
+move_speed = 46.0
+
+
+[node name="Carrion4" parent="." instance=ExtResource("18_carrion")]
+position = Vector2(2750, 205)
+patrol_width = 115.0
+move_speed = 50.0
+
+
+[node name="Carrion5" parent="." instance=ExtResource("18_carrion")]
+position = Vector2(4550, 25)
+patrol_width = 130.0
+move_speed = 56.0
+
+
+[node name="Carrion6" parent="." instance=ExtResource("18_carrion")]
+position = Vector2(6350, 195)
+patrol_width = 115.0
+move_speed = 60.0
+
+
 [node name="Shield" parent="." instance=ExtResource("10_mode")]
-position = Vector2(520, 275)
+position = Vector2(4750, 275)
 mode = 4
 
 
@@ -1194,7 +1231,7 @@ position = Vector2(1650, 245)
 
 
 [node name="Conveyor1" parent="." instance=ExtResource("16_conv")]
-position = Vector2(2900, 320)
+position = Vector2(3400, 320)
 push_right = false
 
 
@@ -1207,7 +1244,7 @@ position = Vector2(2950, 245)
 
 
 [node name="Conveyor2" parent="." instance=ExtResource("16_conv")]
-position = Vector2(4200, 320)
+position = Vector2(3920, 320)
 push_right = true
 
 
@@ -1216,11 +1253,11 @@ position = Vector2(4380, 320)
 
 
 [node name="YardStar2" parent="." instance=ExtResource("9_star")]
-position = Vector2(4250, 245)
+position = Vector2(3980, 245)
 
 
 [node name="Conveyor3" parent="." instance=ExtResource("16_conv")]
-position = Vector2(5500, 320)
+position = Vector2(5250, 320)
 push_right = false
 
 
@@ -1262,7 +1299,7 @@ position = Vector2(6350, 270)
 
 
 [node name="Speed" parent="." instance=ExtResource("10_mode")]
-position = Vector2(3600, 275)
+position = Vector2(6000, 275)
 mode = 3
 
 

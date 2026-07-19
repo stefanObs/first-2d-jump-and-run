@@ -1,0 +1,22 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/world/carrion.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/world/carrion_bird.png" id="2_texture"]
+
+[sub_resource type="CapsuleShape2D" id="BirdShape"]
+radius = 34.0
+height = 180.0
+
+[node name="Carrion" type="Area2D"]
+collision_layer = 0
+collision_mask = 2
+monitorable = false
+script = ExtResource("1_script")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(0, -2)
+texture = ExtResource("2_texture")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+rotation = 1.5708
+shape = SubResource("BirdShape")
