@@ -237,7 +237,7 @@ Each cycle must maintain the following status block:
 - **Tests last run:** `godot --headless --path . res://tests/test_runner.tscn` — all 16 tests passed
 - **Known issues or blockers:** Placeholder pixel art; no music/SFX yet; Xbox controller not physically verified on this machine
 - **Latest iteration tag:** `v1.2.8`
-- **Relevant commit:** `718c21f`
+- **Relevant commit:** `b86577c`
 
 ### Cycle notes — 2026-07-19 (v1.2.8)
 
