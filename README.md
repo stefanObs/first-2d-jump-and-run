@@ -268,7 +268,7 @@ Each cycle must maintain the following status block:
 ### Current development status
 
 - **Current iteration:** `v1.3.3` hazard variety, bounty bandits, and trail readability
-- **Last completed step:** Fixed boss lasso targets, kingpin layout, hand-drawn boss art, and numpad `-` boss shortcut
+- **Last completed step:** Added horses and a driver to the Midnight Coach
 - **Currently in progress:** In-game visual play-test of bosses and polish
 - **Next step:** Play-test bosses, fences, clouds, and flight; then tag `v1.3.3`
 - **Completed features:** Long 10-level cowboy trail; animated nonviolent bandit lasso; seated tied bandits; warning-shot and bounty bandits; carrions and rattlesnakes; animated canyon recovery; reachable hazards; hand-drawn cowboy + world props; looping music; three custom editor slots; mid-trail saves; modes; Xbox-ready input; Stampede Bull / Midnight Coach / Outlaw Kingpin bosses; horizon victory scene
@@ -292,6 +292,7 @@ Each cycle must maintain the following status block:
 - Boss lasso uses tall Area2D targets at rope height; bull ring and coach doors only count when active/glowing.
 - Kingpin guards stand in front of the boss; the kingpin no longer blocks the path with a solid body.
 - Double-tap numpad `-` (or `-`) enters/cycles boss fights from trails and arenas.
+- Midnight Coach now shows a two-horse team and a bandit driver on the box seat.
 - Canyon falls now stay recovering through respawn invulnerability, so holding left/right cannot restart the fall animation immediately.
 - Clouds on Wings routes are purposeful: canyon bridges, stepped climbs to high badges, cactus-clear platforms, and nest landings (some stay solid).
 - Rattlesnakes are larger, cast a ground shadow, and rise much higher when the cowboy approaches.

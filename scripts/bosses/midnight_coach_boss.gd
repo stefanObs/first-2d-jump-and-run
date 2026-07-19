@@ -5,11 +5,14 @@ extends BossArena
 const COACH_TEX := preload("res://assets/world/boss_midnight_coach.png")
 
 var _coach: Node2D
+var _horse_near: Sprite2D
+var _horse_far: Sprite2D
 var _doors: Array[BossLassoTarget] = []
 var _doors_done: int = 0
 var _next_door: int = 0
 var _dir: float = 1.0
 var _speed: float = 150.0
+var _gallop_t: float = 0.0
 
 
 func _ready() -> void:
@@ -17,6 +20,8 @@ func _ready() -> void:
 	boss_title = "Midnight Coach — tie the doors in order!"
 	super._ready()
 	_coach = $Coach as Node2D
+	_horse_near = $Coach/HorseNear as Sprite2D
+	_horse_far = $Coach/HorseFar as Sprite2D
 	var spr := $Coach/Sprite2D as Sprite2D
 	if spr != null:
 		spr.texture = COACH_TEX
@@ -36,8 +41,17 @@ func _physics_process(delta: float) -> void:
 	_coach.position.x += _dir * _speed * delta
 	if _coach.position.x > 1100.0:
 		_dir = -1.0
-	elif _coach.position.x < 500.0:
+	elif _coach.position.x < 560.0:
 		_dir = 1.0
+	_gallop_t += delta * 10.0
+	_bob_horses()
+
+
+func _bob_horses() -> void:
+	if _horse_near != null:
+		_horse_near.position.y = -42.0 + sin(_gallop_t) * 3.0
+	if _horse_far != null:
+		_horse_far.position.y = -48.0 + sin(_gallop_t + 0.7) * 3.0
 
 
 func on_door_lassoed(index: int) -> void:

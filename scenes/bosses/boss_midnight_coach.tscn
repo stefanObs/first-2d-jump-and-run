@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/bosses/midnight_coach_boss.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2"]
@@ -6,6 +6,8 @@
 [ext_resource type="PackedScene" path="res://scenes/world/mode_item.tscn" id="5"]
 [ext_resource type="Texture2D" path="res://assets/world/boss_midnight_coach.png" id="6"]
 [ext_resource type="Script" path="res://scripts/bosses/coach_door.gd" id="7"]
+[ext_resource type="Texture2D" path="res://assets/world/trail_horse.png" id="8"]
+[ext_resource type="Texture2D" path="res://assets/world/bandit.png" id="9"]
 
 [sub_resource type="RectangleShape2D" id="Ground"]
 size = Vector2(1600, 64)
@@ -62,9 +64,37 @@ mode = 3
 [node name="Coach" type="Node2D" parent="."]
 position = Vector2(800, 320)
 
+[node name="HorseFar" type="Sprite2D" parent="Coach"]
+z_index = -2
+position = Vector2(-300, -48)
+scale = Vector2(0.36, 0.36)
+texture = ExtResource("8")
+flip_h = true
+modulate = Color(0.82, 0.78, 0.72, 1)
+
+[node name="HorseNear" type="Sprite2D" parent="Coach"]
+z_index = -1
+position = Vector2(-230, -42)
+scale = Vector2(0.4, 0.4)
+texture = ExtResource("8")
+flip_h = true
+
+[node name="Harness" type="Line2D" parent="Coach"]
+z_index = -1
+points = PackedVector2Array(-200, -55, -150, -62, -120, -70)
+width = 3.0
+default_color = Color(0.35, 0.22, 0.12, 1)
+
 [node name="Sprite2D" type="Sprite2D" parent="Coach"]
 position = Vector2(0, -70)
 texture = ExtResource("6")
+
+[node name="Driver" type="Sprite2D" parent="Coach"]
+z_index = 1
+position = Vector2(-132, -118)
+scale = Vector2(0.95, 0.95)
+texture = ExtResource("9")
+flip_h = true
 
 [node name="Door0" type="Area2D" parent="Coach"]
 position = Vector2(-70, -38)
