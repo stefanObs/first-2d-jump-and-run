@@ -174,6 +174,7 @@ func _handle_next_level_tap() -> void:
 func respawn_player() -> void:
 	if player == null or _is_completing:
 		return
+	_clear_hostile_projectiles()
 	var destination := get_active_respawn_position()
 	player.respawn_at(destination)
 	_reset_unstored_badges()
@@ -183,6 +184,15 @@ func respawn_player() -> void:
 	if hud != null:
 		hud.show_toast("Oops! Back to camp!", 2.0)
 	player_respawned.emit(destination)
+
+
+func _clear_hostile_projectiles() -> void:
+	var tree := get_tree()
+	if tree == null:
+		return
+	for node in tree.get_nodes_in_group("hostile_projectile"):
+		if is_instance_valid(node):
+			node.queue_free()
 
 
 func _store_badges_at_camp() -> void:

@@ -15,8 +15,10 @@ func setup(facing: float) -> void:
 
 
 func _ready() -> void:
+	add_to_group("hostile_projectile")
 	collision_layer = 0
-	collision_mask = 2
+	# world | player: stop on boards and hurt the cowboy.
+	collision_mask = 3
 	monitorable = false
 	var shape_node := CollisionShape2D.new()
 	var shape := RectangleShape2D.new()
@@ -43,9 +45,14 @@ func _draw() -> void:
 
 
 func _on_body_entered(body: Node2D) -> void:
-	if not (body is Player):
+	# Pass through other bandits so a shot is not cancelled by its shooter.
+	if body is Opponent:
 		return
-	var player := body as Player
-	if not player.is_invulnerable():
-		hurt_player.emit(player)
+	if body is Player:
+		var player := body as Player
+		if not player.is_invulnerable():
+			hurt_player.emit(player)
+		queue_free()
+		return
+	# Hit desert boards / platforms before the shot travels forever.
 	queue_free()

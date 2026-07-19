@@ -123,7 +123,7 @@ Progress is saved automatically after every level. A parent-accessible hold-to-c
 
 ## Chapter 9: Child-friendly design and accessibility
 
-- No lives, game-over screen, weapons, timers, or permanent failure
+- No lives, game-over screen, player weapons, timers, or permanent failure; the cowboy uses a nonviolent lasso, while bandits only fire slow, avoidable warning shots
 - Frequent checkpoints and instant retries
 - Predictable opponents and clearly marked harmful obstacles
 - Optional spoken or animated hints instead of text-heavy instructions
@@ -240,12 +240,12 @@ Each cycle must maintain the following status block:
 ### Current development status
 
 - **Current iteration:** `v1.3.3` hazard variety, bounty bandits, and trail readability
-- **Last completed step:** Added shooting/bounty bandits, rattlesnakes, canyon falling, larger carrions, revised timers, and stricter layout spacing
+- **Last completed step:** Applied audit follow-ups: clear leftover rattlesnake/cloud overlap, clear bandit shots on respawn, clarify no-player-weapons wording
 - **Currently in progress:** In-game visual/gameplay play-test for this feature pass
 - **Next step:** Play-test projectile speed, bounty rewards, snake bites, carrion scale, canyon recovery, and boost placement; then tag `v1.3.3`
 - **Completed features:** Long 10-level cowboy trail; animated nonviolent bandit lasso; seated tied bandits; warning-shot and bounty bandits; carrions and rattlesnakes; animated canyon recovery; reachable hazards; hand-drawn cowboy + world props; looping music; three custom editor slots; mid-trail saves; modes; Xbox-ready input
 - **Remaining work:** In-game visual/gameplay play-test; Xbox controller physical verification; supervised child play-tests; additional SFX
-- **Tests last run:** all automated tests passed after the latest hazard/bounty pass
+- **Tests last run:** all automated tests passed after audit follow-ups (projectile cleanup + snake clearance)
 - **Known issues or blockers:**
   - Latest spring, bandit, camp, carrion, shield, and Rail Yard changes still need an in-game visual play-test
   - Xbox controller not physically verified on this machine
@@ -254,6 +254,7 @@ Each cycle must maintain the following status block:
 
 ### Cycle notes — 2026-07-19 (v1.3.3)
 
+- Audit follow-up: moved leftover rattlesnakes out from under cloud boards on levels 9–10, clear bandit projectiles on camp respawn, and align accessibility wording with warning shots.
 - Tied bandits now sit with rope around their body; both bandit and rope render behind the cowboy.
 - Added `Alt` lasso input (Xbox remains `X`) and double-tap numpad `+` campaign level advance.
 - Set Wings, Boots, and Speed to 30 seconds; Bubble Shield to 15 seconds, with extra shields through Rail Yard.
