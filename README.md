@@ -152,6 +152,22 @@ Use reusable Godot scenes rather than building each level independently:
 
 All gameplay code should read named actions such as `move_left`, `move_right`, `jump`, `confirm`, `back`, and `pause` instead of checking physical keys or controller buttons directly. This keeps keyboard and Xbox controller behavior consistent and allows controls to be remapped.
 
+### Code quality and development best practices
+
+Keep the codebase clean, readable, and easy to resume after a pause. Every iteration must follow these practices:
+
+- Prefer small, single-purpose scripts, scenes, and functions over large multi-purpose files.
+- Use clear names for nodes, actions, signals, and variables; avoid abbreviations that need explaining.
+- Keep gameplay logic in dedicated scripts and keep scenes free of duplicated configuration.
+- Prefer composition with reusable scenes and components over deep inheritance.
+- Avoid magic numbers in gameplay code; expose tunable values as exported properties with sensible defaults.
+- Keep side effects explicit: input, saves, scene changes, and audio belong in clearly named managers.
+- Do not leave dead code, commented-out experiments, or unused scenes in the repository.
+- Add automated tests for new gameplay logic and keep existing tests green before tagging an iteration.
+- Match existing formatting and structure; do not introduce a second style for the same kind of file.
+- Document only non-obvious decisions; let names and structure carry most of the meaning.
+- Treat the README progress block as part of the delivery: update it before ending a cycle.
+
 ### Iterative development workflow
 
 Development is organized into small, playable iterations. Every iteration follows the same process:
@@ -200,16 +216,25 @@ Each cycle must maintain the following status block:
 
 ### Current development status
 
-- **Current iteration:** Specification and project planning
-- **Last completed step:** Initial game specification and development workflow documented
-- **Currently in progress:** No implementation work started
-- **Next step:** Create the Godot project and prototype player movement
-- **Completed features:** None yet
-- **Remaining work:** Development milestones in Chapter 12
-- **Tests last run:** Not applicable; no game code exists yet
-- **Known issues or blockers:** None
-- **Latest iteration tag:** None
-- **Relevant commit:** `6a96592`
+- **Current iteration:** `v0.1.0` movement prototype and gray-box level
+- **Last completed step:** Godot 4.4 project created with player movement, input actions, Level 01 gray-box, automated tests, and coding standards in the README
+- **Currently in progress:** None
+- **Next step:** Add checkpoints, a working goal trigger, and the short completion transition into the next level stub
+- **Completed features:** Named keyboard/Xbox input actions; forgiving jump assists; playable gray-box Level 01; headless test runner
+- **Remaining work:** Development milestones 2–8 in Chapter 12
+- **Tests last run:** `godot --headless --path . -s res://tests/run_tests.gd` — all 5 tests passed; main scene smoke-launch with `--quit-after 2` succeeded
+- **Known issues or blockers:** Visual gray-box only; goal is a marker without win logic; no menus or saves yet; Xbox controller not manually verified on this machine
+- **Latest iteration tag:** `v0.1.0`
+- **Relevant commit:** Update after commit
+
+### Cycle notes — 2026-07-19
+
+- Added code quality and development best practices to Chapter 11.
+- Created Godot 4.4.1 project under this repository root.
+- Implemented `JumpAssist`, `Player`, `InputBindings`, `scenes/main.tscn`, and `scenes/levels/level_01.tscn`.
+- Files touched: `project.godot`, `icon.svg`, `.gitignore`, `scripts/**`, `scenes/**`, `tests/run_tests.gd`, `README.md`.
+- Run the game with: `godot --path .`
+- Run tests with: `godot --headless --path . -s res://tests/run_tests.gd`
 
 At the end of each cycle:
 

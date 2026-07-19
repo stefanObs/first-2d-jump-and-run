@@ -1,0 +1,34 @@
+; Engine configuration file.
+; Godot 4.4 project for First 2D Jump-and-Run.
+
+config_version=5
+
+[application]
+
+config/name="First 2D Jump-and-Run"
+config/description="A child-friendly 2D jump-and-run game."
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.4", "Forward Plus")
+config/icon="res://icon.svg"
+
+[autoload]
+
+InputBindings="*res://scripts/autoload/input_bindings.gd"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[layer_names]
+
+2d_physics/layer_1="world"
+2d_physics/layer_2="player"
+
+[rendering]
+
+textures/canvas_textures/default_texture_filter=0
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"

@@ -1,0 +1,121 @@
+[gd_scene load_steps=6 format=3 uid="uid://clevel01gray"]
+
+[ext_resource type="Script" path="res://scripts/levels/level_01.gd" id="1_level"]
+[ext_resource type="PackedScene" uid="uid://bqplayer01" path="res://scenes/player/player.tscn" id="2_player"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_ground"]
+size = Vector2(1600, 64)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_block"]
+size = Vector2(128, 32)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wide"]
+size = Vector2(192, 32)
+
+[node name="Level01" type="Node2D"]
+script = ExtResource("1_level")
+
+[node name="Background" type="ColorRect" parent="."]
+z_index = -10
+offset_left = -200.0
+offset_top = -500.0
+offset_right = 1800.0
+offset_bottom = 400.0
+color = Color(0.55, 0.78, 0.95, 1)
+
+[node name="SpawnPoint" type="Marker2D" parent="."]
+position = Vector2(120, 280)
+
+[node name="GoalMarker" type="ColorRect" parent="."]
+offset_left = 1380.0
+offset_top = 200.0
+offset_right = 1420.0
+offset_bottom = 320.0
+color = Color(0.25, 0.85, 0.45, 1)
+
+[node name="GoalLabel" type="Label" parent="."]
+offset_left = 1340.0
+offset_top = 160.0
+offset_right = 1460.0
+offset_bottom = 190.0
+theme_override_colors/font_color = Color(0.1, 0.25, 0.15, 1)
+theme_override_font_sizes/font_size = 18
+text = "GOAL"
+horizontal_alignment = 1
+
+[node name="HintLabel" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 24.0
+offset_right = 700.0
+offset_bottom = 80.0
+theme_override_colors/font_color = Color(0.1, 0.15, 0.25, 1)
+theme_override_font_sizes/font_size = 20
+text = "Move: A/D or arrows / left stick   Jump: Space / A"
+
+[node name="Ground" type="StaticBody2D" parent="."]
+position = Vector2(800, 352)
+
+[node name="Visual" type="ColorRect" parent="Ground"]
+offset_left = -800.0
+offset_top = -32.0
+offset_right = 800.0
+offset_bottom = 32.0
+color = Color(0.35, 0.4, 0.45, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Ground"]
+shape = SubResource("RectangleShape2D_ground")
+
+[node name="PlatformA" type="StaticBody2D" parent="."]
+position = Vector2(420, 250)
+
+[node name="Visual" type="ColorRect" parent="PlatformA"]
+offset_left = -64.0
+offset_top = -16.0
+offset_right = 64.0
+offset_bottom = 16.0
+color = Color(0.45, 0.5, 0.55, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PlatformA"]
+shape = SubResource("RectangleShape2D_block")
+
+[node name="PlatformB" type="StaticBody2D" parent="."]
+position = Vector2(700, 180)
+
+[node name="Visual" type="ColorRect" parent="PlatformB"]
+offset_left = -64.0
+offset_top = -16.0
+offset_right = 64.0
+offset_bottom = 16.0
+color = Color(0.45, 0.5, 0.55, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PlatformB"]
+shape = SubResource("RectangleShape2D_block")
+
+[node name="PlatformC" type="StaticBody2D" parent="."]
+position = Vector2(1020, 220)
+
+[node name="Visual" type="ColorRect" parent="PlatformC"]
+offset_left = -96.0
+offset_top = -16.0
+offset_right = 96.0
+offset_bottom = 16.0
+color = Color(0.45, 0.5, 0.55, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PlatformC"]
+shape = SubResource("RectangleShape2D_wide")
+
+[node name="GapLedge" type="StaticBody2D" parent="."]
+position = Vector2(1260, 300)
+
+[node name="Visual" type="ColorRect" parent="GapLedge"]
+offset_left = -80.0
+offset_top = -16.0
+offset_right = 80.0
+offset_bottom = 16.0
+color = Color(0.45, 0.5, 0.55, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="GapLedge"]
+shape = SubResource("RectangleShape2D_block")
+
+[node name="Player" parent="." instance=ExtResource("2_player")]
+position = Vector2(120, 280)

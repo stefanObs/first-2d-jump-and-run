@@ -1,0 +1,20 @@
+# Godot 4 generated files
+.godot/
+*.translation
+
+# OS / editor
+.DS_Store
+*~
+*.swp
+.vscode/
+.idea/
+
+# Exports and local tooling
+export_presets.cfg
+*.pck
+*.zip
+*.apk
+*.aab
+*.exe
+*.x86_64
+*.app
