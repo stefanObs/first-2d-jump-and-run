@@ -232,14 +232,14 @@ Each cycle must maintain the following status block:
 
 - **Current iteration:** `v1.3.0` reachable hazards, hand-drawn cowboy, music, and custom trail builder
 - **Last completed step:** Removed blocking plank highways, repaired pits/checkpoints/fall recovery, added original art/music and a three-slot editor
-- **Currently in progress:** Final verification and release commit
+- **Currently in progress:** None
 - **Next step:** Supervised child play-test and live Xbox verification
 - **Completed features:** Long 10-level cowboy trail; reachable hazards/ground mechanics; hand-drawn cowboy; looping music; three custom editor slots; saves; modes; Xbox-ready input; stronger Chapter 14 QA
 - **Remaining work:** Additional SFX; live Xbox verification; supervised child play-tests
 - **Tests last run:** `godot --headless --path . res://tests/test_runner.tscn` — all 19 tests passed; custom hub/editor/runtime smoke tests passed
 - **Known issues or blockers:** Xbox controller not physically verified on this machine
 - **Latest iteration tag:** `v1.3.0`
-- **Relevant commit:** *(set after release commit)*
+- **Relevant commit:** 
 
 ### Cycle notes — 2026-07-19 (v1.3.0)
 
