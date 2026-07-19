@@ -38,6 +38,7 @@ func _process(delta: float) -> void:
 		return
 
 	_play_time += delta
+	_update_trail_progress()
 	if Input.is_action_just_pressed(&"pause"):
 		set_paused(true)
 		return
@@ -138,7 +139,7 @@ func _wire_ui() -> void:
 		pause_menu.save_select_pressed.connect(_on_save_select_pressed)
 		pause_menu.settings_pressed.connect(_on_settings_pressed)
 	if player != null and hud != null:
-		player.star_collected.connect(hud.set_stars)
+		player.star_collected.connect(_on_star_collected)
 		player.mode_changed.connect(_on_player_mode_changed)
 
 
@@ -199,6 +200,12 @@ func _on_player_mode_changed(mode_name: String, remaining: float) -> void:
 		hud.set_mode(mode_name, remaining)
 
 
+func _on_star_collected(total: int) -> void:
+	if hud != null:
+		hud.set_stars(total)
+		if total > 0 and total % 5 == 0:
+			hud.show_toast("Nice! %d badges!" % total, 1.8)
+
 
 func _on_goal_reached(_goal: Goal) -> void:
 	begin_completion()
@@ -246,3 +253,16 @@ func _gameplay_prompt() -> String:
 		InputManager.prompt_for(&"jump"),
 		InputManager.prompt_for(&"pause"),
 	]
+
+
+func _update_trail_progress() -> void:
+	if hud == null or player == null or spawn_point == null:
+		return
+	var goal := find_child("Goal", true, false) as Node2D
+	if goal == null:
+		return
+	var start_x := spawn_point.global_position.x
+	var end_x := goal.global_position.x
+	var span := maxf(end_x - start_x, 1.0)
+	var ratio := (player.global_position.x - start_x) / span
+	hud.set_trail_progress(ratio)

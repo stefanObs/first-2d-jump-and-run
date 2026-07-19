@@ -36,6 +36,9 @@ var _invulnerable_remaining: float = 0.0
 var _sprite: AnimatedSprite2D
 var _facing: float = 1.0
 var _shield_bubble: ColorRect
+var _land_squash: float = 0.0
+var _wing_l: ColorRect
+var _wing_r: ColorRect
 
 
 func _ready() -> void:
@@ -44,8 +47,10 @@ func _ready() -> void:
 	_sprite = get_node_or_null("AnimatedSprite2D") as AnimatedSprite2D
 	_setup_sprite_frames()
 	_ensure_shield_bubble()
+	_ensure_wings()
 	if _sprite != null:
 		_sprite.play(&"idle")
+	landed.connect(_on_landed)
 
 
 func _physics_process(delta: float) -> void:
@@ -80,6 +85,7 @@ func _physics_process(delta: float) -> void:
 	on_floor = is_on_floor()
 	if on_floor and not _was_on_floor:
 		landed.emit()
+		_spawn_dust_puff()
 	_was_on_floor = on_floor
 	_update_animation(on_floor)
 	_update_mode_visual()
@@ -213,6 +219,64 @@ func _update_mode_visual() -> void:
 		color.a = blink
 	_sprite.modulate = color
 	_update_shield_bubble()
+	_update_wings()
+	_update_land_squash(get_physics_process_delta_time())
+
+
+func _on_landed() -> void:
+	_land_squash = 0.18
+
+
+func _update_land_squash(delta: float) -> void:
+	if _sprite == null:
+		return
+	if _land_squash > 0.0:
+		_land_squash = maxf(_land_squash - delta, 0.0)
+		var t := 1.0 - (_land_squash / 0.18)
+		var y := lerpf(0.82, 1.0, t)
+		var x := lerpf(1.18, 1.0, t)
+		_sprite.scale = Vector2(1.5 * x, 1.5 * y)
+	elif _modes.is_flying():
+		var flap := 1.0 + sin(Time.get_ticks_msec() * 0.02) * 0.04
+		_sprite.scale = Vector2(1.5, 1.5 * flap)
+	else:
+		_sprite.scale = Vector2(1.5, 1.5)
+
+
+func _ensure_wings() -> void:
+	_wing_l = get_node_or_null("WingL") as ColorRect
+	_wing_r = get_node_or_null("WingR") as ColorRect
+	if _wing_l != null and _wing_r != null:
+		return
+	_wing_l = ColorRect.new()
+	_wing_l.name = "WingL"
+	_wing_l.size = Vector2(18, 10)
+	_wing_l.position = Vector2(-34, -40)
+	_wing_l.color = Color(0.75, 0.9, 1.0, 0.85)
+	_wing_l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_wing_l.visible = false
+	add_child(_wing_l)
+	_wing_r = ColorRect.new()
+	_wing_r.name = "WingR"
+	_wing_r.size = Vector2(18, 10)
+	_wing_r.position = Vector2(16, -40)
+	_wing_r.color = Color(0.75, 0.9, 1.0, 0.85)
+	_wing_r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_wing_r.visible = false
+	add_child(_wing_r)
+
+
+func _update_wings() -> void:
+	_ensure_wings()
+	var flying := _modes.is_flying()
+	if _wing_l != null:
+		_wing_l.visible = flying
+	if _wing_r != null:
+		_wing_r.visible = flying
+	if flying:
+		var flap := sin(Time.get_ticks_msec() * 0.02) * 4.0
+		_wing_l.position.y = -40.0 + flap
+		_wing_r.position.y = -40.0 - flap
 
 
 func _ensure_shield_bubble() -> void:
@@ -239,6 +303,20 @@ func _update_shield_bubble() -> void:
 	if show_bubble:
 		var pulse := 0.22 + absf(sin(Time.get_ticks_msec() * 0.008)) * 0.18
 		_shield_bubble.color = Color(0.35, 0.9, 1.0, pulse)
+
+
+func _spawn_dust_puff() -> void:
+	var dust := ColorRect.new()
+	dust.size = Vector2(28, 10)
+	dust.position = Vector2(-14, -6)
+	dust.color = Color(0.9, 0.75, 0.45, 0.7)
+	dust.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(dust)
+	var tween := create_tween()
+	tween.tween_property(dust, "modulate:a", 0.0, 0.28)
+	tween.parallel().tween_property(dust, "position:y", -18.0, 0.28)
+	tween.parallel().tween_property(dust, "size:x", 44.0, 0.28)
+	tween.tween_callback(dust.queue_free)
 
 
 

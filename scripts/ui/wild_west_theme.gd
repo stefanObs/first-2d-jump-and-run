@@ -60,9 +60,9 @@ static func configure_player_camera(level: Node, player: Player) -> void:
 		return
 	camera.position_smoothing_enabled = true
 	camera.position_smoothing_speed = 7.0
-	camera.zoom = Vector2(0.92, 0.92)
-	camera.limit_top = -260
-	camera.limit_bottom = 540
+	camera.zoom = Vector2(0.84, 0.84)
+	camera.limit_top = -280
+	camera.limit_bottom = 560
 	camera.limit_left = -80
 	var goal := level.find_child("Goal", true, false) as Node2D
 	if goal != null:

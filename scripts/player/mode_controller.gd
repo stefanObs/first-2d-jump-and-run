@@ -10,10 +10,10 @@ signal mode_changed(mode: Mode, remaining: float)
 var active_mode: Mode = Mode.NONE
 var remaining: float = 0.0
 
-var wings_duration: float = 12.0
-var boots_duration: float = 10.0
-var speed_duration: float = 8.0
-var shield_duration: float = 8.0
+var wings_duration: float = 18.0
+var boots_duration: float = 14.0
+var speed_duration: float = 12.0
+var shield_duration: float = 12.0
 
 
 func activate(mode: Mode) -> void:

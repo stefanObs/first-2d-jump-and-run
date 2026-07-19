@@ -228,16 +228,22 @@ Each cycle must maintain the following status block:
 
 ### Current development status
 
-- **Current iteration:** `v1.2.4` saloon pulse, floating tips, clearer clouds
-- **Last completed step:** Pulsing saloon goal, HUD trail tips, WAIT! cloud warnings, badge pop, bigger cowboy
+- **Current iteration:** `v1.2.5` longer powers, trail %, clearer dangers
+- **Last completed step:** Longer mode timers, wider camera, dust landings, OUCH/BANDIT labels, badge milestone toasts, trail progress bar
 - **Currently in progress:** Ralph polish loop until 17:00 CEST (hard stop; credit % not readable)
 - **Next step:** Keep polishing playability/visuals in the ralph loop until stop time
 - **Completed features:** Long playable 10-level cowboy trail; 3 camps per level; animated cowboy; modes; Xbox-ready input; Chapter 14 QA green
 - **Remaining work:** Music/SFX; richer hand-drawn art; live Xbox verification; supervised child play-tests
 - **Tests last run:** `godot --headless --path . res://tests/test_runner.tscn` — all 16 tests passed
 - **Known issues or blockers:** Placeholder pixel art; no music/SFX yet; Xbox controller not physically verified on this machine
-- **Latest iteration tag:** `v1.2.4`
+- **Latest iteration tag:** `v1.2.5`
 - **Relevant commit:** `ba2a615`
+
+### Cycle notes — 2026-07-19 (v1.2.5)
+
+- Power-ups last longer on the long trail; camera zooms out a little more.
+- Landing dust puffs; cacti say OUCH!; bandits are labeled; badge milestones cheer.
+- HUD trail % shows how far kids have ridden toward the saloon.
 
 ### Cycle notes — 2026-07-19 (v1.2.4)
 

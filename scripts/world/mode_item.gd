@@ -51,9 +51,19 @@ func _on_body_entered(body: Node2D) -> void:
 
 func _update_visual() -> void:
 	if _label != null:
-		_label.text = ModeController.mode_name(mode)
+		match mode:
+			ModeController.Mode.WINGS:
+				_label.text = "FLY!"
+			ModeController.Mode.MAGIC_BOOTS:
+				_label.text = "JUMP!"
+			ModeController.Mode.SPEED_STAR:
+				_label.text = "ZOOM!"
+			ModeController.Mode.BUBBLE_SHIELD:
+				_label.text = "SAFE!"
+			_:
+				_label.text = ModeController.mode_name(mode)
 		_label.add_theme_color_override(&"font_color", Color(0.3, 0.12, 0.05, 1.0))
-		_label.add_theme_font_size_override(&"font_size", 14)
+		_label.add_theme_font_size_override(&"font_size", 16)
 	if _visual == null:
 		return
 	match mode:
