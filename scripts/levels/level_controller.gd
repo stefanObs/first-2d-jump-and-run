@@ -23,6 +23,7 @@ var _is_completing: bool = false
 var _is_set_up: bool = false
 var _play_time: float = 0.0
 var _paused: bool = false
+var _progress_milestones: Dictionary = {}
 
 
 func _ready() -> void:
@@ -71,6 +72,7 @@ func setup_level() -> void:
 		player.respawn_at(spawn_point.global_position)
 	WildWestTheme.apply_to_level(self)
 	WildWestTheme.configure_player_camera(self, player)
+	_animate_sun()
 	if hud != null:
 		hud.set_level_title(level_title)
 		hud.set_prompt(_gameplay_prompt())
@@ -79,7 +81,23 @@ func setup_level() -> void:
 		hud.show_toast(tip, 4.5)
 		if hint != null:
 			hint.visible = false
+		_setup_camp_marks()
 		InputManager.device_changed.connect(_on_device_changed)
+
+
+func _setup_camp_marks() -> void:
+	if hud == null or spawn_point == null:
+		return
+	var goal := find_child("Goal", true, false) as Node2D
+	if goal == null:
+		return
+	var start_x := spawn_point.global_position.x
+	var span := maxf(goal.global_position.x - start_x, 1.0)
+	var ratios: Array = []
+	for node in find_children("*", "Area2D", true, false):
+		if node is Checkpoint:
+			ratios.append(((node as Node2D).global_position.x - start_x) / span)
+	hud.mark_camps(ratios)
 
 
 func set_paused(value: bool) -> void:
@@ -266,3 +284,31 @@ func _update_trail_progress() -> void:
 	var span := maxf(end_x - start_x, 1.0)
 	var ratio := (player.global_position.x - start_x) / span
 	hud.set_trail_progress(ratio)
+
+
+func _animate_sun() -> void:
+	var sun := get_node_or_null("Sun") as CanvasItem
+	if sun == null:
+		return
+	var tween := create_tween()
+	tween.set_loops()
+	tween.tween_property(sun, "modulate", Color(1.0, 1.0, 0.85, 1.0), 1.4)
+	tween.tween_property(sun, "modulate", Color(1.0, 0.92, 0.55, 1.0), 1.4)
+	_maybe_progress_toast(ratio)
+
+
+func _maybe_progress_toast(ratio: float) -> void:
+	if hud == null:
+		return
+	var checks := [
+		[0.25, "Nice ride! Keep going!"],
+		[0.5, "Halfway to the saloon!"],
+		[0.75, "Almost there, cowboy!"],
+		[0.92, "The saloon is close!"],
+	]
+	for entry in checks:
+		var mark: float = float(entry[0])
+		var key := str(mark)
+		if ratio >= mark and not bool(_progress_milestones.get(key, false)):
+			_progress_milestones[key] = true
+			hud.show_toast(str(entry[1]), 2.4)

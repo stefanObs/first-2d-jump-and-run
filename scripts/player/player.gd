@@ -42,6 +42,7 @@ var _wing_r: ColorRect
 
 
 func _ready() -> void:
+	add_to_group("player")
 	_ensure_jump_assist()
 	_ensure_modes()
 	_sprite = get_node_or_null("AnimatedSprite2D") as AnimatedSprite2D

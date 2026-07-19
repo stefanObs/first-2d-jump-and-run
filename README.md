@@ -228,16 +228,21 @@ Each cycle must maintain the following status block:
 
 ### Current development status
 
-- **Current iteration:** `v1.2.5` trail progress bar and clearer powers
-- **Last completed step:** Trail % bar, FLY/JUMP/ZOOM/SAFE labels, wing flaps, landing squash
+- **Current iteration:** `v1.2.6` milestone cheers and camp marks
+- **Last completed step:** Halfway toasts, camp ticks, confetti finish, JUMP! bandit hints
 - **Currently in progress:** Ralph polish loop until 17:00 CEST (hard stop; credit % not readable)
 - **Next step:** Keep polishing playability/visuals in the ralph loop until stop time
 - **Completed features:** Long playable 10-level cowboy trail; 3 camps per level; animated cowboy; modes; Xbox-ready input; Chapter 14 QA green
 - **Remaining work:** Music/SFX; richer hand-drawn art; live Xbox verification; supervised child play-tests
 - **Tests last run:** `godot --headless --path . res://tests/test_runner.tscn` — all 16 tests passed
 - **Known issues or blockers:** Placeholder pixel art; no music/SFX yet; Xbox controller not physically verified on this machine
-- **Latest iteration tag:** `v1.2.5`
+- **Latest iteration tag:** `v1.2.6`
 - **Relevant commit:** `68fe106`
+
+### Cycle notes — 2026-07-19 (v1.2.6)
+
+- Cheerful milestone toasts at 25/50/75/92% of each long trail.
+- Camp marks on the progress bar; confetti on level complete; bandits flash JUMP! when nearby.
 
 ### Cycle notes — 2026-07-19 (v1.2.5)
 

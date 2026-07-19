@@ -70,8 +70,26 @@ func set_trail_progress(ratio: float) -> void:
 	var clamped := clampf(ratio, 0.0, 1.0)
 	if _progress_fill != null:
 		_progress_fill.size.x = 300.0 * clamped
+		# Cheerful color shift toward the saloon.
+		_progress_fill.color = Color(0.35, 0.72, 0.35, 1.0).lerp(Color(0.95, 0.7, 0.2, 1.0), clamped)
 	if _progress_label != null:
 		_progress_label.text = "Trail %d%%" % int(round(clamped * 100.0))
+
+
+func mark_camps(ratios: Array) -> void:
+	_ensure_progress_widgets()
+	for child in get_children():
+		if String(child.name).begins_with("CampMark"):
+			child.queue_free()
+	for i in range(ratios.size()):
+		var mark := ColorRect.new()
+		mark.name = "CampMark%d" % i
+		var x := 482.0 + 300.0 * clampf(float(ratios[i]), 0.0, 1.0) - 2.0
+		mark.position = Vector2(x, 22)
+		mark.size = Vector2(4, 22)
+		mark.color = Color(0.85, 0.25, 0.15, 1.0)
+		mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(mark)
 
 
 func _ensure_progress_widgets() -> void:
