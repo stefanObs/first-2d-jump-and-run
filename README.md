@@ -228,8 +228,8 @@ Each cycle must maintain the following status block:
 
 ### Current development status
 
-- **Current iteration:** `v1.2.2` clearer trail props and celebrations
-- **Last completed step:** Brighter springs/rafts/wind/clouds/pits, warmer Yeehaw celebration, slower outlaws
+- **Current iteration:** `v1.2.3` clearer camps, pits, gates, and menus
+- **Last completed step:** Orange pit rims, glowing camps, labeled gates, larger power-ups, directional rafts, friendlier pause/save UI
 - **Currently in progress:** Ralph polish loop until 17:00 CEST (hard stop; credit % not readable)
 - **Next step:** Keep polishing playability/visuals in the ralph loop until stop time
 - **Completed features:** Long playable 10-level cowboy trail; 3 camps per level; animated cowboy; modes; Xbox-ready input; Chapter 14 QA green
