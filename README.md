@@ -192,7 +192,7 @@ Keep the codebase clean, readable, and easy to resume after a pause. Every itera
 
 Development is organized into small, playable iterations. Every iteration follows the same process:
 
-**Repository rule:** after every completed development step, commit the finished work and push it directly to `main`. Do not leave a completed step only in the working tree. Verify that the push succeeded before reporting the step as complete.
+**Repository rule:** after every completed development step, commit the finished work and push it directly to the server's `origin/main` branch. Do not create pull requests. Do not leave a completed step only in the working tree. Verify that the remote `main` branch contains the commit before reporting the step as complete.
 
 1. Select a small group of related changes from the specification.
 2. Implement the changes incrementally, keeping the game playable after each step.
