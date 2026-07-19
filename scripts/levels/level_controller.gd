@@ -26,6 +26,9 @@ var _is_set_up: bool = false
 var _play_time: float = 0.0
 var _paused: bool = false
 var _progress_milestones: Dictionary = {}
+var _collected_badge_names: Array[String] = []
+var _restoring_run_state: bool = false
+var _loaded_run_state: bool = false
 
 
 func _ready() -> void:
@@ -75,6 +78,7 @@ func setup_level() -> void:
 
 	if player != null and spawn_point != null:
 		player.respawn_at(spawn_point.global_position)
+	_restore_run_state()
 	WildWestTheme.apply_to_level(self)
 	WildWestTheme.configure_player_camera(self, player)
 	_animate_sun()
@@ -82,7 +86,12 @@ func setup_level() -> void:
 		hud.set_level_title(level_title)
 		hud.set_prompt(_gameplay_prompt())
 		var hint := get_node_or_null("HintLabel") as Label
-		var tip := hint.text if hint != null and not String(hint.text).is_empty() else "Let's go: %s!" % level_title
+		var tip := (
+			"Loaded! Back at your saved camp."
+			if _loaded_run_state
+			else hint.text if hint != null and not String(hint.text).is_empty()
+			else "Let's go: %s!" % level_title
+		)
 		hud.show_toast(tip, 4.5)
 		if hint != null:
 			hint.visible = false
@@ -158,9 +167,15 @@ func _wire_ui() -> void:
 		pause_menu.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 		pause_menu.visible = false
 		pause_menu.continue_pressed.connect(func() -> void: set_paused(false))
+		pause_menu.save_pressed.connect(_on_save_pressed)
+		pause_menu.load_pressed.connect(_on_load_pressed)
 		pause_menu.restart_pressed.connect(_on_restart_pressed)
 		pause_menu.save_select_pressed.connect(_on_save_select_pressed)
 		pause_menu.settings_pressed.connect(_on_settings_pressed)
+		pause_menu.set_save_options(
+			not is_custom_level,
+			not is_custom_level and GameManager.has_run_state(level_number)
+		)
 	if player != null and hud != null:
 		player.star_collected.connect(_on_star_collected)
 		player.mode_changed.connect(_on_player_mode_changed)
@@ -180,6 +195,10 @@ func _wire_world_objects() -> void:
 			var hazard := node as Hazard
 			if not hazard.hurt.is_connected(_on_hazard_hurt):
 				hazard.hurt.connect(_on_hazard_hurt)
+		elif node is Star:
+			var star := node as Star
+			var badge_name := String(star.name)
+			star.collected.connect(_on_badge_taken.bind(badge_name))
 		elif node is ModeItem:
 			var item := node as ModeItem
 			if not item.collected.is_connected(_on_mode_item_collected):
@@ -212,6 +231,8 @@ func _on_checkpoint_activated(checkpoint: Checkpoint) -> void:
 	if _active_checkpoint != null and _active_checkpoint != checkpoint:
 		_active_checkpoint.deactivate()
 	_active_checkpoint = checkpoint
+	if not _restoring_run_state and not is_custom_level:
+		_save_run_state(false)
 	if hud != null:
 		hud.show_toast("Camp saved!", 1.8)
 	if bool(GameManager.get_settings().get("vibration", true)) and InputManager.is_controller():
@@ -258,6 +279,60 @@ func _on_star_collected(total: int) -> void:
 			hud.show_toast("Nice! %d badges!" % total, 1.8)
 
 
+func _on_badge_taken(badge_name: String) -> void:
+	if badge_name not in _collected_badge_names:
+		_collected_badge_names.append(badge_name)
+
+
+func _save_run_state(show_feedback: bool = true) -> bool:
+	if is_custom_level or player == null:
+		return false
+	var checkpoint_name := String(_active_checkpoint.name) if _active_checkpoint != null else ""
+	var saved := GameManager.save_run_state(
+		level_number,
+		checkpoint_name,
+		_collected_badge_names,
+		player.stars_collected,
+		_play_time
+	)
+	if saved:
+		if pause_menu != null:
+			pause_menu.set_save_options(true, true)
+		if show_feedback and hud != null:
+			hud.show_toast("Game saved at camp!", 2.0)
+	return saved
+
+
+func _restore_run_state() -> void:
+	if is_custom_level or player == null:
+		return
+	var state := GameManager.get_run_state(level_number)
+	if state.is_empty():
+		return
+	_restoring_run_state = true
+	_loaded_run_state = true
+	_play_time = maxf(float(state.get("level_play_time", 0.0)), 0.0)
+	var saved_names: Variant = state.get("collected_badges", [])
+	if saved_names is Array:
+		for value in saved_names:
+			var badge_name := str(value)
+			if badge_name not in _collected_badge_names:
+				_collected_badge_names.append(badge_name)
+			var badge := find_child(badge_name, true, false) as Star
+			if badge != null:
+				badge.restore_as_collected()
+	player.stars_collected = maxi(int(state.get("stars_found", 0)), 0)
+	var checkpoint_name := str(state.get("checkpoint_name", ""))
+	if not checkpoint_name.is_empty():
+		var checkpoint := find_child(checkpoint_name, true, false) as Checkpoint
+		if checkpoint != null:
+			checkpoint.activate()
+			player.respawn_at(checkpoint.get_respawn_position())
+	if hud != null:
+		hud.set_stars(player.stars_collected)
+	_restoring_run_state = false
+
+
 func _on_goal_reached(_goal: Goal) -> void:
 	begin_completion()
 
@@ -279,12 +354,23 @@ func _on_celebration_finished() -> void:
 		GameManager.load_level(level_number + 1)
 
 
+func _on_save_pressed() -> void:
+	if _save_run_state(true):
+		set_paused(false)
+
+
+func _on_load_pressed() -> void:
+	get_tree().paused = false
+	_paused = false
+	GameManager.load_saved_run(level_number)
+
+
 func _on_restart_pressed() -> void:
 	get_tree().paused = false
 	if is_custom_level:
 		GameManager.play_custom_level(GameManager.active_custom_slot, GameManager.custom_return_to_editor)
 		return
-	GameManager.restart_current_level()
+	GameManager.restart_level_from_start(level_number)
 
 
 func _on_save_select_pressed() -> void:
@@ -293,6 +379,8 @@ func _on_save_select_pressed() -> void:
 		GameManager.return_from_custom_level()
 		return
 	GameManager.add_play_time(_play_time)
+	_play_time = 0.0
+	_save_run_state(false)
 	GameManager.save_to_disk()
 	GameManager.return_to_save_select()
 

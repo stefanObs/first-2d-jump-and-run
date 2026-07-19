@@ -231,16 +231,22 @@ Each cycle must maintain the following status block:
 
 ### Current development status
 
-- **Current iteration:** `v1.3.1` hand-drawn world art pass
-- **Last completed step:** Replaced flat ColorRect world/UI props with hand-drawn sprites matching the cowboy
+- **Current iteration:** `v1.3.2` mid-trail save/load and restart controls
+- **Last completed step:** Added pause-menu Save Game, Load Game, and Restart from Start actions
 - **Currently in progress:** None
 - **Next step:** Supervised child play-test and live Xbox verification
-- **Completed features:** Long 10-level cowboy trail; reachable hazards; hand-drawn cowboy + world props; looping music; three custom editor slots; saves; modes; Xbox-ready input; stronger Chapter 14 QA
+- **Completed features:** Long 10-level cowboy trail; reachable hazards; hand-drawn cowboy + world props; looping music; three custom editor slots; mid-trail saves; modes; Xbox-ready input; stronger Chapter 14 QA
 - **Remaining work:** Additional SFX; live Xbox verification; supervised child play-tests
-- **Tests last run:** `godot --headless --path . res://tests/test_runner.tscn` — all 19 tests passed
+- **Tests last run:** `godot --headless --path . res://tests/test_runner.tscn` — all 22 tests passed
 - **Known issues or blockers:** Xbox controller not physically verified on this machine
-- **Latest iteration tag:** `v1.3.1`
-- **Relevant commit:** `97e2759`
+- **Latest iteration tag:** `v1.3.2`
+- **Relevant commit:** *(set after commit)*
+
+### Cycle notes — 2026-07-19 (v1.3.2)
+
+- Pause menu now has explicit **Save Game**, **Load Game**, and **Restart from Start** actions.
+- Saves restore the current level, active camp, collected badge count/identities, and elapsed trail time.
+- Camps auto-save progress; returning through the save-slot screen continues from the saved camp.
 
 ### Cycle notes — 2026-07-19 (v1.3.1)
 

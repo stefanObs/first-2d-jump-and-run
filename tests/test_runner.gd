@@ -28,6 +28,9 @@ func _ready() -> void:
 	failures += _run("Campaign hazards are no longer blocked by plank highways", _test_no_plank_highways)
 	failures += _run("Custom level store and builder work", _test_custom_level_builder)
 	failures += _run("Hand-drawn celebration art and cheerful music load", _test_art_and_music)
+	failures += _run("Mid-trail save data persists and loads", _test_mid_trail_save)
+	failures += _run("Saved camp and badges restore inside a level", _test_level_run_restore)
+	failures += _run("Pause menu exposes save, load, and restart from start", _test_pause_save_controls)
 
 	if failures == 0:
 		print("All tests passed.")
@@ -342,6 +345,83 @@ func _test_art_and_music() -> Variant:
 	if AudioServer.get_bus_index(&"Music") < 0:
 		return "Music bus was not created."
 	return null
+
+
+func _test_mid_trail_save() -> Variant:
+	GameManager.erase_slot(0)
+	GameManager.debug_set_slot(0, {
+		"empty": false,
+		"current_level": 3,
+	})
+	GameManager.active_slot_index = 0
+	var badges: Array[String] = ["TrailStar0", "SpringStar2"]
+	if not GameManager.save_run_state(3, "CheckpointB", badges, 2, 45.5):
+		return "Could not save mid-trail state."
+	GameManager.load_from_disk()
+	var state := GameManager.get_run_state(3)
+	var error: Variant = null
+	if state.is_empty():
+		error = "Saved run state did not persist."
+	elif str(state.get("checkpoint_name", "")) != "CheckpointB":
+		error = "Saved checkpoint did not persist."
+	elif int(state.get("stars_found", 0)) != 2:
+		error = "Saved badge count did not persist."
+	elif (state.get("collected_badges", []) as Array).size() != 2:
+		error = "Collected badge identities did not persist."
+	GameManager.clear_run_state()
+	if GameManager.has_run_state(3):
+		error = "Clearing run state should remove the load point."
+	GameManager.erase_slot(0)
+	return error
+
+
+func _test_pause_save_controls() -> Variant:
+	var packed: PackedScene = load("res://scenes/ui/pause_menu.tscn")
+	if packed == null:
+		return "Missing pause menu scene."
+	var menu := packed.instantiate()
+	add_child(menu)
+	var error: Variant = null
+	for path in [
+		"Panel/SaveButton",
+		"Panel/LoadButton",
+		"Panel/RestartButton",
+	]:
+		if menu.get_node_or_null(path) == null:
+			error = "Pause menu missing %s." % path
+			break
+	var restart := menu.get_node_or_null("Panel/RestartButton") as Button
+	if error == null and restart != null and restart.text != "Restart from Start":
+		error = "Restart action should clearly say it starts over."
+	menu.queue_free()
+	return error
+
+
+func _test_level_run_restore() -> Variant:
+	GameManager.erase_slot(0)
+	GameManager.debug_set_slot(0, {"empty": false, "current_level": 1})
+	GameManager.active_slot_index = 0
+	var badges: Array[String] = ["TrailStar0"]
+	GameManager.save_run_state(1, "CheckpointB", badges, 1, 12.0)
+	var level: Variant = _instantiate_level("res://scenes/levels/level_01.tscn")
+	if level is String:
+		GameManager.erase_slot(0)
+		return level
+	var controller := level as LevelController
+	var checkpoint := controller.find_child("CheckpointB", true, false) as Checkpoint
+	var error: Variant = null
+	if checkpoint == null:
+		error = "Level fixture is missing CheckpointB."
+	elif controller.player.stars_collected != 1:
+		error = "Saved badge count was not restored to the player."
+	elif controller.get_active_respawn_position().distance_to(checkpoint.get_respawn_position()) > 0.1:
+		error = "Saved camp was not restored as the active respawn."
+	var saved_badge := controller.find_child("TrailStar0", true, false) as Star
+	if error == null and saved_badge != null and saved_badge.visible:
+		error = "Previously collected badge should stay hidden after loading."
+	_free_level(controller)
+	GameManager.erase_slot(0)
+	return error
 
 
 func _instantiate_level(path: String) -> Variant:

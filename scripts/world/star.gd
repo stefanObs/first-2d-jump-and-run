@@ -37,3 +37,10 @@ func _on_body_entered(body: Node2D) -> void:
 		tween.tween_property(sprite, "scale", sprite.scale * 1.6, 0.12)
 		tween.parallel().tween_property(sprite, "modulate:a", 0.0, 0.18)
 	tween.tween_callback(queue_free)
+
+
+func restore_as_collected() -> void:
+	_taken = true
+	monitoring = false
+	visible = false
+	queue_free()

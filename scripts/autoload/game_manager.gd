@@ -3,7 +3,7 @@ extends Node
 ## Owns save slots, settings, and level progression.
 
 const SAVE_PATH := "user://save_data.json"
-const SAVE_VERSION := 1
+const SAVE_VERSION := 2
 const SLOT_COUNT := 3
 const CUSTOM_LEVEL_STORE := preload("res://scripts/levels/custom_level_store.gd")
 
@@ -72,7 +72,11 @@ func start_or_continue_slot(slot_index: int) -> void:
 		(_data["slots"] as Array)[slot_index] = slot
 		save_to_disk()
 	active_slot_changed.emit(slot_index)
-	load_level(int(slot.get("current_level", 1)))
+	var resume: Variant = slot.get("resume", {})
+	if resume is Dictionary and not (resume as Dictionary).is_empty():
+		load_level(int((resume as Dictionary).get("level_number", slot.get("current_level", 1))))
+	else:
+		load_level(int(slot.get("current_level", 1)))
 
 
 func erase_slot(slot_index: int) -> void:
@@ -125,6 +129,7 @@ func complete_level(level_number: int, stars_found: int) -> void:
 		slot["completed"] = true
 	else:
 		slot["current_level"] = max(level_number + 1, int(slot.get("current_level", 1)))
+	slot["resume"] = {}
 	(_data["slots"] as Array)[active_slot_index] = slot
 	save_to_disk()
 	saves_changed.emit()
@@ -142,6 +147,67 @@ func return_to_save_select() -> void:
 
 func restart_current_level() -> void:
 	load_level(get_current_level_number())
+
+
+func save_run_state(
+	level_number: int,
+	checkpoint_name: String,
+	collected_badges: Array[String],
+	stars_found: int,
+	level_play_time: float
+) -> bool:
+	if active_slot_index < 0:
+		return false
+	var slot := get_slot(active_slot_index)
+	slot["empty"] = false
+	slot["resume"] = {
+		"level_number": clampi(level_number, 1, LEVEL_SCENES.size()),
+		"checkpoint_name": checkpoint_name,
+		"collected_badges": collected_badges.duplicate(),
+		"stars_found": maxi(stars_found, 0),
+		"level_play_time": maxf(level_play_time, 0.0),
+	}
+	(_data["slots"] as Array)[active_slot_index] = slot
+	save_to_disk()
+	saves_changed.emit()
+	return true
+
+
+func get_run_state(level_number: int) -> Dictionary:
+	if active_slot_index < 0:
+		return {}
+	var resume: Variant = get_slot(active_slot_index).get("resume", {})
+	if not (resume is Dictionary):
+		return {}
+	var state := resume as Dictionary
+	if int(state.get("level_number", -1)) != level_number:
+		return {}
+	return state.duplicate(true)
+
+
+func has_run_state(level_number: int) -> bool:
+	return not get_run_state(level_number).is_empty()
+
+
+func load_saved_run(level_number: int) -> bool:
+	if not has_run_state(level_number):
+		return false
+	load_level(level_number)
+	return true
+
+
+func restart_level_from_start(level_number: int) -> void:
+	clear_run_state()
+	load_level(level_number)
+
+
+func clear_run_state() -> void:
+	if active_slot_index < 0:
+		return
+	var slot := get_slot(active_slot_index)
+	slot["resume"] = {}
+	(_data["slots"] as Array)[active_slot_index] = slot
+	save_to_disk()
 
 
 func edit_custom_level(slot_index: int) -> void:
@@ -251,6 +317,7 @@ func _empty_slot() -> Dictionary:
 		"stars": 0,
 		"play_time_sec": 0.0,
 		"completed": false,
+		"resume": {},
 	}
 
 

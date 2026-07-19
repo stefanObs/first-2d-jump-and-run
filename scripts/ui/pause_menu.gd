@@ -2,6 +2,8 @@ class_name PauseMenu
 extends CanvasLayer
 
 signal continue_pressed
+signal save_pressed
+signal load_pressed
 signal restart_pressed
 signal save_select_pressed
 signal settings_pressed
@@ -15,7 +17,14 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 	layer = 120
 	_settings = get_node_or_null("SettingsPanel") as SettingsPanel
-	for name in ["ContinueButton", "RestartButton", "SaveSelectButton", "SettingsButton"]:
+	for name in [
+		"ContinueButton",
+		"SaveButton",
+		"LoadButton",
+		"RestartButton",
+		"SaveSelectButton",
+		"SettingsButton",
+	]:
 		var button := get_node_or_null("Panel/%s" % name) as Button
 		if button != null:
 			_buttons.append(button)
@@ -53,13 +62,49 @@ func show_settings() -> void:
 		_settings.focus_first()
 
 
+func set_save_options(campaign_save_enabled: bool, can_load: bool) -> void:
+	var save_button := get_node_or_null("Panel/SaveButton") as Button
+	var load_button := get_node_or_null("Panel/LoadButton") as Button
+	if save_button != null:
+		save_button.visible = campaign_save_enabled
+	if load_button != null:
+		load_button.visible = campaign_save_enabled
+		load_button.disabled = not can_load
+		load_button.text = "Load Game" if can_load else "Load Game (none yet)"
+	_buttons.clear()
+	for name in [
+		"ContinueButton",
+		"SaveButton",
+		"LoadButton",
+		"RestartButton",
+		"SaveSelectButton",
+		"SettingsButton",
+	]:
+		var button := get_node_or_null("Panel/%s" % name) as Button
+		if button != null and button.visible and not button.disabled:
+			_buttons.append(button)
+	focus_first()
+
+
 func _connect_buttons() -> void:
-	if _buttons.size() < 4:
-		return
-	_buttons[0].pressed.connect(func() -> void: continue_pressed.emit())
-	_buttons[1].pressed.connect(func() -> void: restart_pressed.emit())
-	_buttons[2].pressed.connect(func() -> void: save_select_pressed.emit())
-	_buttons[3].pressed.connect(func() -> void: settings_pressed.emit())
+	var continue_button := get_node_or_null("Panel/ContinueButton") as Button
+	var save_button := get_node_or_null("Panel/SaveButton") as Button
+	var load_button := get_node_or_null("Panel/LoadButton") as Button
+	var restart_button := get_node_or_null("Panel/RestartButton") as Button
+	var select_button := get_node_or_null("Panel/SaveSelectButton") as Button
+	var settings_button := get_node_or_null("Panel/SettingsButton") as Button
+	if continue_button != null:
+		continue_button.pressed.connect(func() -> void: continue_pressed.emit())
+	if save_button != null:
+		save_button.pressed.connect(func() -> void: save_pressed.emit())
+	if load_button != null:
+		load_button.pressed.connect(func() -> void: load_pressed.emit())
+	if restart_button != null:
+		restart_button.pressed.connect(func() -> void: restart_pressed.emit())
+	if select_button != null:
+		select_button.pressed.connect(func() -> void: save_select_pressed.emit())
+	if settings_button != null:
+		settings_button.pressed.connect(func() -> void: settings_pressed.emit())
 
 
 func _move(delta: int) -> void:
