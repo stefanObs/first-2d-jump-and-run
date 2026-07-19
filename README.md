@@ -185,7 +185,7 @@ Godot is well suited to a small 2D game, has a compact scene system, exports to 
 
 The launch scripts locate Godot 4, set the project directory correctly, and forward any additional command-line arguments to Godot.
 
-- **Windows PC (no install needed):** double-click **`Play Cowboy Trail.bat`**. The bundled Godot engine in `godot/` is unpacked automatically on first run. After a `git pull` or fresh checkout, the launcher refreshes assets automatically so you always get the latest version. Nothing has to be installed.
+- **Windows PC (no install needed):** double-click **`Play Cowboy Trail.lnk`** (cowboy-head icon) or **`Play Cowboy Trail.bat`**. The first run creates the shortcut and refreshes assets after a git pull. Nothing has to be installed.
 - **Linux:** run `./run_linux.sh` (also refreshes assets when `content_version.txt` changes)
 - **Windows (with your own Godot):** double-click `run_windows.bat` or run it from Command Prompt
 - **Portable Windows exe:** run `./create_exe.sh` (Linux/macOS) or `create_exe.bat` (Windows). The build lands in `dist/windows/CowboyTrail.exe` with the game data embedded. Share that folder; progress appears in `savegames/` beside the exe. Rebuild the exe after pulling so the portable build matches current sources.
@@ -276,17 +276,17 @@ Each cycle must maintain the following status block:
 ### Current development status
 
 - **Current iteration:** `v1.3.3` hazard variety, bounty bandits, and trail readability
-- **Last completed step:** Raised kingpin so feet sit on the desert floor
+- **Last completed step:** Cowboy-head icon for taskbar, shortcuts, and Windows exe
 - **Currently in progress:** In-game visual play-test of bosses and polish
 - **Next step:** Play-test bosses, fences, clouds, and flight; then tag `v1.3.3`
 - **Completed features:** Long 10-level cowboy trail; animated nonviolent bandit lasso; seated tied bandits; warning-shot and bounty bandits; carrions and rattlesnakes; animated canyon recovery; reachable hazards; hand-drawn cowboy + world props; looping music; three custom editor slots; mid-trail saves; modes; Xbox-ready input; Stampede Bull / Midnight Coach / Outlaw Kingpin bosses; horizon victory scene
 - **Remaining work:** In-game visual/gameplay play-test; Xbox controller physical verification; supervised child play-tests; additional SFX
-- **Tests last run:** all automated tests passed after kingpin floor alignment
+- **Tests last run:** all automated tests passed after cowboy icon branding
 - **Known issues or blockers:**
   - Boss arenas and new fence/cloud art still need an in-game visual play-test
   - Xbox controller not physically verified on this machine
 - **Latest iteration tag:** `v1.3.2`
-- **Relevant commit:** `086ce86`
+- **Relevant commit:** (pending push)
 
 
 ### Cycle notes — 2026-07-19 (v1.3.3)

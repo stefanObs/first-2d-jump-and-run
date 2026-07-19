@@ -102,11 +102,11 @@ if not exist "%DIST_DIR%" mkdir "%DIST_DIR%"
 	echo binary_format/architecture="x86_64"
 	echo codesign/enable=false
 	echo application/modify_resources=true
-	echo application/icon=""
-	echo application/console_wrapper_icon=""
-	echo application/icon_interpolation=4
-	echo application/file_version="1.3.4.0"
-	echo application/product_version="1.3.4.0"
+	echo application/icon="res://icon.ico"
+	echo application/console_wrapper_icon="res://icon.ico"
+	echo application/icon_interpolation=0
+	echo application/file_version="1.3.5.0"
+	echo application/product_version="1.3.5.0"
 	echo application/company_name="Cowboy Trail"
 	echo application/product_name="Cowboy Trail"
 	echo application/file_description="A friendly cowboy jump-and-run for kids"
@@ -138,6 +138,10 @@ if not exist "%DIST_DIR%\%EXE_NAME%" (
 	echo Export failed: %DIST_DIR%\%EXE_NAME% not found.
 	exit /b 1
 )
+
+if exist "%PROJECT_DIR%\icon.ico" copy /Y "%PROJECT_DIR%\icon.ico" "%DIST_DIR%\icon.ico" >nul
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+	"$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('%DIST_DIR%\Cowboy Trail.lnk'); $s.TargetPath = '%DIST_DIR%\%EXE_NAME%'; $s.WorkingDirectory = '%DIST_DIR%'; $s.IconLocation = '%DIST_DIR%\icon.ico'; $s.Description = 'Cowboy Trail'; $s.Save()"
 
 echo.
 echo Done.

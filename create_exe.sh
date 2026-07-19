@@ -118,11 +118,11 @@ texture_format/etc2_astc=false
 binary_format/architecture="x86_64"
 codesign/enable=false
 application/modify_resources=true
-application/icon=""
-application/console_wrapper_icon=""
-application/icon_interpolation=4
-application/file_version="1.3.4.0"
-application/product_version="1.3.4.0"
+application/icon="res://icon.ico"
+application/console_wrapper_icon="res://icon.ico"
+application/icon_interpolation=0
+application/file_version="1.3.5.0"
+application/product_version="1.3.5.0"
 application/company_name="Cowboy Trail"
 application/product_name="Cowboy Trail"
 application/file_description="A friendly cowboy jump-and-run for kids"
@@ -165,6 +165,9 @@ main() {
 	if [[ ! -f "$DIST_DIR/$EXE_NAME" ]]; then
 		printf 'Export failed: %s not found.\n' "$DIST_DIR/$EXE_NAME" >&2
 		exit 1
+	fi
+	if [[ -f "$PROJECT_DIR/icon.ico" ]]; then
+		cp -f "$PROJECT_DIR/icon.ico" "$DIST_DIR/icon.ico"
 	fi
 	printf '\nDone.\n'
 	printf 'Portable build: %s\n' "$DIST_DIR/$EXE_NAME"

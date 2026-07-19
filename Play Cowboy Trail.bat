@@ -8,6 +8,8 @@ set "ENGINE=%ROOT%\godot\Godot_v4.4.1-stable_win64.exe"
 set "ENGINE_ZIP=%ROOT%\godot\Godot_v4.4.1-stable_win64.exe.zip"
 set "STAMP_FILE=%ROOT%\content_version.txt"
 set "CACHE_STAMP=%ROOT%\.godot\cowboy_trail_content_version.txt"
+set "ICON=%ROOT%\icon.ico"
+set "SHORTCUT=%ROOT%\Play Cowboy Trail.lnk"
 
 rem --- First launch: unpack the bundled Godot engine (no install needed) ---
 if not exist "%ENGINE%" (
@@ -20,6 +22,12 @@ if not exist "%ENGINE%" (
 	echo.
 	pause
 	exit /b 1
+)
+
+rem --- Shortcut with cowboy-head icon for Explorer / taskbar pinning ---
+if exist "%ICON%" (
+	powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+		"$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('%SHORTCUT%'); $s.TargetPath = '%ROOT%\Play Cowboy Trail.bat'; $s.WorkingDirectory = '%ROOT%'; $s.IconLocation = '%ICON%'; $s.Description = 'Cowboy Trail'; $s.Save()"
 )
 
 rem --- Refresh assets whenever the repo content version changes (git pull / new checkout) ---

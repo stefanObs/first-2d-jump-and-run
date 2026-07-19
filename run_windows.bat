@@ -57,5 +57,10 @@ if "%NEED_IMPORT%"=="1" (
     copy /Y "%STAMP_FILE%" "%CACHE_STAMP%" >nul
 )
 
+if exist "%PROJECT_DIR%\icon.ico" (
+    powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+        "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('%PROJECT_DIR%\Play Cowboy Trail.lnk'); $s.TargetPath = '%PROJECT_DIR%\Play Cowboy Trail.bat'; $s.WorkingDirectory = '%PROJECT_DIR%'; $s.IconLocation = '%PROJECT_DIR%\icon.ico'; $s.Description = 'Cowboy Trail'; $s.Save()"
+)
+
 "%GODOT_EXECUTABLE%" --path "%PROJECT_DIR%" %*
 exit /b %ERRORLEVEL%
