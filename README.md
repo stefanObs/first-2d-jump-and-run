@@ -228,8 +228,8 @@ Each cycle must maintain the following status block:
 
 ### Current development status
 
-- **Current iteration:** `v1.2.7` badge pop, speed dust, glowing title sun
-- **Last completed step:** Badge counter bounce, speed-mode dust trail, pulsing save-select sun
+- **Current iteration:** `v1.2.7` visible power timer bar
+- **Last completed step:** Power countdown bar on HUD; clearer cactus OUCH! labels
 - **Currently in progress:** Ralph polish loop until 17:00 CEST (hard stop; credit % not readable)
 - **Next step:** Keep polishing playability/visuals in the ralph loop until stop time
 - **Completed features:** Long playable 10-level cowboy trail; 3 camps per level; animated cowboy; modes; Xbox-ready input; Chapter 14 QA green

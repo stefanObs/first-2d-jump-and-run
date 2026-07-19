@@ -27,8 +27,11 @@ func _configure_visual() -> void:
 	if label != null:
 		label.visible = true
 		label.text = "PIT!" if wide else "OUCH!"
+		label.add_theme_font_size_override(&"font_size", 18 if wide else 15)
 		if not wide:
-			label.add_theme_color_override(&"font_color", Color(0.2, 0.45, 0.15, 1.0))
+			label.add_theme_color_override(&"font_color", Color(0.15, 0.5, 0.18, 1.0))
+		else:
+			label.add_theme_color_override(&"font_color", Color(0.95, 0.4, 0.15, 1.0))
 
 
 func _on_body_entered(body: Node2D) -> void:

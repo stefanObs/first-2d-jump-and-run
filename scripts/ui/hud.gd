@@ -12,6 +12,7 @@ var _power_fill: ColorRect
 var _default_prompt: String = "Controls"
 var _toast_remaining: float = 0.0
 var _mode_max: float = 1.0
+var _mode_name_active: String = "None"
 
 
 func _ready() -> void:
@@ -54,12 +55,16 @@ func set_mode(mode_name: String, remaining: float) -> void:
 	if mode_name == "None" or remaining <= 0.0:
 		_mode_label.text = "Power: -"
 		_mode_max = 1.0
+		_mode_name_active = "None"
 		if _power_fill != null:
 			_power_fill.size.x = 0.0
 		if _power_track != null:
 			_power_track.visible = false
 		return
-	if remaining > _mode_max:
+	if mode_name != _mode_name_active:
+		_mode_name_active = mode_name
+		_mode_max = maxf(remaining, 0.01)
+	elif remaining > _mode_max:
 		_mode_max = remaining
 	_mode_label.text = "Power: %s (%.0fs)" % [mode_name, remaining]
 	if _power_track != null:
