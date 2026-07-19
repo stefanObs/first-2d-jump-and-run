@@ -240,12 +240,12 @@ Each cycle must maintain the following status block:
 ### Current development status
 
 - **Current iteration:** `v1.3.3` hazard variety, bounty bandits, and trail readability
-- **Last completed step:** Added canyon-side cactus clearance rules and fixed affected campaign placements
+- **Last completed step:** Made carrions smaller, obstacle-aware, safely elevated, and arranged into flight corridors
 - **Currently in progress:** In-game visual/gameplay play-test for this feature pass
 - **Next step:** Play-test tied floor pose, cactus spacing, projectile speed, bounty rewards, and boost placement; then tag `v1.3.3`
 - **Completed features:** Long 10-level cowboy trail; animated nonviolent bandit lasso; seated tied bandits; warning-shot and bounty bandits; carrions and rattlesnakes; animated canyon recovery; reachable hazards; hand-drawn cowboy + world props; looping music; three custom editor slots; mid-trail saves; modes; Xbox-ready input
 - **Remaining work:** In-game visual/gameplay play-test; Xbox controller physical verification; supervised child play-tests; additional SFX
-- **Tests last run:** all automated tests passed after cactus/canyon clearance changes
+- **Tests last run:** all automated tests passed after carrion size, patrol, and Wings-route changes
 - **Known issues or blockers:**
   - Latest spring, bandit, camp, carrion, shield, and Rail Yard changes still need an in-game visual play-test
   - Xbox controller not physically verified on this machine
@@ -254,6 +254,7 @@ Each cycle must maintain the following status block:
 
 ### Cycle notes — 2026-07-19 (v1.3.3)
 
+- Carrions are smaller and reverse before solid obstacles. Wings routes keep them high enough to walk under, include ceiling blockers, and include paired birds the cowboy must fly between.
 - Cacti may no longer sit directly before or after a canyon unless a nearby spring launches the cowboy over them; affected early-trail placements were moved.
 - Tying a red-scarf bounty bandit now pops animated sheriff badges from the capture and flies them to the cowboy.
 - Camp activation now stores tied-bandit identities and the active bonus. Respawning unties captures made after that camp and restores its bonus with at least 20 seconds.

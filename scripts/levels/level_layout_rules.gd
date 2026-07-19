@@ -20,6 +20,7 @@ static func validate_level_node(level: Node) -> PackedStringArray:
 	errors.append_array(_validate_ground_props_clear_of_raised_platforms(level))
 	errors.append_array(_validate_cactus_clear_of_springs(level))
 	errors.append_array(_validate_cactus_clear_of_canyons(level))
+	errors.append_array(_validate_carrion_flight_paths(level))
 	errors.append_array(_validate_mode_item_spacing(level))
 	errors.append_array(_validate_visuals(level))
 	return errors
@@ -333,6 +334,62 @@ static func _validate_cactus_clear_of_canyons(level: Node) -> PackedStringArray:
 					% [cactus.name, canyon.name]
 				)
 				break
+	return errors
+
+
+static func _validate_carrion_flight_paths(level: Node) -> PackedStringArray:
+	var errors: PackedStringArray = []
+	var carrions: Array[Carrion] = []
+	for node in level.find_children("*", "Area2D", true, false):
+		if node is Carrion:
+			carrions.append(node as Carrion)
+	if carrions.is_empty():
+		return errors
+	var has_high_blocker := false
+	var has_flight_corridor := false
+	for carrion in carrions:
+		has_high_blocker = has_high_blocker or carrion.global_position.y <= 70.0
+		var bird_rect := Rect2(carrion.global_position - Vector2(66, 25), Vector2(132, 50))
+		bird_rect.position.x -= carrion.patrol_width
+		bird_rect.size.x += carrion.patrol_width * 2.0
+		bird_rect.position.y -= carrion.bob_height
+		bird_rect.size.y += carrion.bob_height * 2.0
+		for body in level.find_children("*", "PhysicsBody2D", true, false):
+			if body is Player or body is Opponent:
+				continue
+			var body_rect := _approx_rect(body as Node2D, Vector2(64, 32))
+			if bird_rect.intersects(body_rect):
+				errors.append(
+					"Carrion %s patrols through solid obstacle %s."
+					% [carrion.name, body.name]
+				)
+				break
+		var floor_top := INF
+		for body in level.find_children("Ground*", "StaticBody2D", true, false):
+			var surface := _surface_for(body as Node2D)
+			if surface.is_empty():
+				continue
+			if (
+				carrion.global_position.x >= float(surface["left"])
+				and carrion.global_position.x <= float(surface["right"])
+			):
+				floor_top = minf(floor_top, float(surface["top"]))
+		if floor_top < INF and floor_top - bird_rect.end.y < 90.0:
+			errors.append("Carrion %s flies too low for the cowboy to walk under." % carrion.name)
+	for upper in carrions:
+		for lower in carrions:
+			var vertical_gap := lower.global_position.y - upper.global_position.y
+			if (
+				vertical_gap >= 100.0
+				and vertical_gap <= 170.0
+				and absf(upper.global_position.x - lower.global_position.x) <= 45.0
+			):
+				has_flight_corridor = true
+	if _has_mode(level, ModeController.Mode.WINGS):
+		if not has_high_blocker:
+			errors.append("Wings route needs a high carrion so the cowboy cannot fly over every hazard.")
+		if not has_flight_corridor:
+			errors.append("Wings route needs a paired carrion corridor to fly between.")
 	return errors
 
 
