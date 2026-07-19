@@ -92,7 +92,7 @@ func _begin_stun() -> void:
 		_stars.visible = true
 	_play_wall_impact()
 	report_progress("Now! Lasso the ring!")
-	await get_tree().create_timer(2.1).timeout
+	await get_tree().create_timer(7.0).timeout
 	if token != _stun_token or _won:
 		return
 	if _state == State.STUN:

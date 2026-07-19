@@ -3,6 +3,7 @@ extends BossArena
 ## Outlaw Kingpin: tie bodyguards first, then lasso the boss during telegraph.
 
 const KING_TEX := preload("res://assets/world/boss_outlaw_kingpin.png")
+const TIED_TEX := preload("res://assets/world/bandit_tied_red.png")
 
 var _king: Node2D
 var _king_sprite: Sprite2D
@@ -18,6 +19,7 @@ var _right_x: float = 1180.0
 var _shot_timer: float = 1.2
 var _shooting: bool = false
 var _shot_generation: int = 0
+var _capturing: bool = false
 
 
 func _ready() -> void:
@@ -34,7 +36,9 @@ func _ready() -> void:
 		_king_target.set_lasso_active(false)
 	_revolver = RevolverOverlay.new()
 	_revolver.name = "Revolver"
-	_revolver.z_index = 3
+	_revolver.z_index = 4
+	_revolver.position = Vector2(0, -18)
+	_revolver.scale = Vector2(1.35, 1.35)
 	_revolver.visible = false
 	_king.add_child(_revolver)
 	for name in ["Guard0", "Guard1"]:
@@ -46,7 +50,7 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if _won or _king == null:
+	if _won or _king == null or _capturing:
 		return
 	if not _shooting:
 		_king.position.x += _walk_dir * _walk_speed * delta
@@ -80,7 +84,7 @@ func _on_guard_captured(_opp: Opponent) -> void:
 func _start_telegraph_loop() -> void:
 	while not _won and is_instance_valid(self):
 		await get_tree().create_timer(2.4).timeout
-		if _won or _guards_left > 0:
+		if _won or _guards_left > 0 or _capturing:
 			continue
 		_vulnerable = true
 		if _king_target != null:
@@ -89,6 +93,8 @@ func _start_telegraph_loop() -> void:
 			_label.text = "LOOK OUT!"
 			_label.modulate = Color(0.95, 0.2, 0.1, 1)
 		await get_tree().create_timer(1.6).timeout
+		if _capturing or _won:
+			continue
 		_vulnerable = false
 		if _king_target != null and not _won:
 			_king_target.set_lasso_active(false)
@@ -98,7 +104,7 @@ func _start_telegraph_loop() -> void:
 
 
 func _shoot_at_player() -> void:
-	if _won or _king == null or player == null:
+	if _won or _capturing or _king == null or player == null:
 		_shot_timer = 0.8
 		return
 	_shooting = true
@@ -106,13 +112,15 @@ func _shoot_at_player() -> void:
 	var shot_id := _shot_generation
 	_walk_dir = 1.0 if player.global_position.x >= _king.global_position.x else -1.0
 	_apply_facing()
+	# Raise the gun into his hands before the shot.
 	if _revolver != null:
+		_revolver.position = Vector2(12.0 * _walk_dir, -42.0)
 		_revolver.show_aim(_walk_dir)
 	if _label != null and not _vulnerable:
 		_label.text = "BANG!"
 		_label.modulate = Color(0.9, 0.2, 0.1, 1)
-	await get_tree().create_timer(0.35).timeout
-	if shot_id != _shot_generation or _won:
+	await get_tree().create_timer(0.4).timeout
+	if shot_id != _shot_generation or _won or _capturing:
 		_shooting = false
 		return
 	if _revolver != null:
@@ -126,23 +134,25 @@ func _shoot_at_player() -> void:
 			fail_soft()
 	)
 	add_child(bullet)
-	bullet.global_position = _king.global_position + Vector2(40.0 * _walk_dir, -48.0)
-	await get_tree().create_timer(0.2).timeout
+	var muzzle := _king.global_position + Vector2(48.0 * _walk_dir, -58.0)
+	if _revolver != null:
+		muzzle = _revolver.global_position + _revolver.muzzle_position()
+	bullet.global_position = muzzle
+	await get_tree().create_timer(0.22).timeout
 	if shot_id != _shot_generation:
 		_shooting = false
 		return
 	if _revolver != null:
 		_revolver.hide_gun()
 	_shooting = false
-	# Faster than trail bandits (those use ~5–8s / bounty ~3–5s).
 	_shot_timer = randf_range(1.1, 1.9)
-	if _label != null and not _vulnerable and not _won:
+	if _label != null and not _vulnerable and not _won and not _capturing:
 		_label.text = "KINGPIN"
 		_label.modulate = Color(0.7, 0.15, 0.1, 1)
 
 
 func lasso_kingpin() -> void:
-	if _won:
+	if _won or _capturing:
 		return
 	if _guards_left > 0:
 		report_progress("Tie the bodyguards first!")
@@ -152,4 +162,57 @@ func lasso_kingpin() -> void:
 		return
 	_shot_generation += 1
 	_shooting = false
-	win_boss()
+	_vulnerable = false
+	if _king_target != null:
+		_king_target.set_lasso_active(false)
+	if _revolver != null:
+		_revolver.hide_gun()
+	await _play_capture_animation()
+	await win_boss()
+
+
+func _play_capture_animation() -> void:
+	_capturing = true
+	report_progress("Kingpin captured!")
+	if _label != null:
+		_label.text = "GOTCHA!"
+		_label.modulate = Color(0.2, 0.8, 0.25, 1)
+	if _king_sprite == null:
+		await get_tree().create_timer(0.8).timeout
+		return
+	var face := -1.0 if _king_sprite.flip_h else 1.0
+	var tween := create_tween()
+	tween.tween_property(_king_sprite, "scale", Vector2(1.15 * face, 0.75), 0.1)
+	tween.tween_property(_king_sprite, "rotation", 0.25 * face, 0.12)
+	tween.tween_property(_king_sprite, "scale", Vector2(0.85 * face, 0.85), 0.14)
+	tween.tween_property(_king_sprite, "rotation", 0.0, 0.1)
+	# Rope coils settle onto the kingpin.
+	var ropes := Node2D.new()
+	ropes.name = "CaptureRopes"
+	ropes.z_index = 5
+	_king.add_child(ropes)
+	for i in range(4):
+		var loop := Line2D.new()
+		loop.width = 5.0
+		loop.default_color = Color(0.72, 0.5, 0.22, 1.0)
+		var radius := 34.0 + float(i) * 7.0
+		var points := PackedVector2Array()
+		for step in range(12):
+			var ang := TAU * float(step) / 11.0
+			points.append(Vector2(cos(ang) * radius * 0.55, -55.0 - float(i) * 9.0 + sin(ang) * radius * 0.3))
+		loop.points = points
+		loop.modulate.a = 0.0
+		ropes.add_child(loop)
+		var rt := create_tween()
+		rt.tween_property(loop, "modulate:a", 1.0, 0.1).set_delay(0.06 * float(i))
+	await get_tree().create_timer(0.45).timeout
+	# Settle into a tied sit pose.
+	_king_sprite.flip_h = false
+	_king_sprite.texture = TIED_TEX
+	_king_sprite.position = Vector2(0, -48)
+	_king_sprite.scale = Vector2(0.85 * face, 0.85)
+	_king_sprite.rotation = 0.0
+	if _label != null:
+		_label.text = "TIED!"
+		_label.modulate = Color(0.55, 0.25, 0.06, 1)
+	await get_tree().create_timer(0.9).timeout

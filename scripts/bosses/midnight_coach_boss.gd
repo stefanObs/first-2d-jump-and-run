@@ -2,9 +2,15 @@ extends BossArena
 
 ## Midnight Coach: lasso three door handles in order.
 
-const COACH_TEX := preload("res://assets/world/boss_midnight_coach.png")
+const COACH_FRAMES: Array[Texture2D] = [
+	preload("res://assets/world/boss_midnight_coach_0.png"),
+	preload("res://assets/world/boss_midnight_coach_1.png"),
+	preload("res://assets/world/boss_midnight_coach_2.png"),
+	preload("res://assets/world/boss_midnight_coach_3.png"),
+]
 
 var _coach: Node2D
+var _coach_sprite: Sprite2D
 var _horse_near: Sprite2D
 var _horse_far: Sprite2D
 var _doors: Array[BossLassoTarget] = []
@@ -20,11 +26,10 @@ func _ready() -> void:
 	boss_title = "Midnight Coach — tie the doors in order!"
 	super._ready()
 	_coach = $Coach as Node2D
+	_coach_sprite = $Coach/Sprite2D as Sprite2D
 	_horse_near = $Coach/HorseNear as Sprite2D
 	_horse_far = $Coach/HorseFar as Sprite2D
-	var spr := $Coach/Sprite2D as Sprite2D
-	if spr != null:
-		spr.texture = COACH_TEX
+	_apply_coach_frame(0)
 	_doors.clear()
 	for i in range(3):
 		var door := get_node_or_null("Coach/Door%d" % i) as BossLassoTarget
@@ -54,6 +59,13 @@ func _bob_horses() -> void:
 		_horse_far.position.y = -48.0 + sin(_gallop_t + 0.7) * 3.0
 
 
+func _apply_coach_frame(open_count: int) -> void:
+	if _coach_sprite == null:
+		return
+	var idx := clampi(open_count, 0, COACH_FRAMES.size() - 1)
+	_coach_sprite.texture = COACH_FRAMES[idx]
+
+
 func on_door_lassoed(index: int) -> void:
 	if _won:
 		return
@@ -69,7 +81,7 @@ func on_door_lassoed(index: int) -> void:
 			door.call("play_open")
 		else:
 			door.set_lasso_active(false)
-			door.modulate = Color(0.4, 0.85, 0.35, 1)
+	_apply_coach_frame(_doors_done)
 	_refresh_door_hints()
 	if _doors_done >= 3:
 		win_boss()
@@ -85,6 +97,6 @@ func _refresh_door_hints() -> void:
 		var is_next := i == _next_door and not _won
 		door.set_lasso_active(is_next)
 		if is_next:
-			door.modulate = Color(1.2, 1.05, 0.4, 1)
+			door.modulate = Color(1.25, 1.1, 0.45, 1)
 		else:
-			door.modulate = Color(0.85, 0.85, 0.85, 1)
+			door.modulate = Color(1, 1, 1, 0.35)

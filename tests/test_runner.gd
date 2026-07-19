@@ -123,6 +123,15 @@ func _test_boss_arenas() -> Variant:
 	if bull.get_node_or_null("WallLeft") == null or bull.get_node_or_null("WallRight") == null:
 		bull.queue_free()
 		return "Stampede Bull arena needs left and right walls."
+	var spawn := bull.get_node_or_null("SpawnPoint") as Marker2D
+	var wall_l := bull.get_node_or_null("WallLeft") as Node2D
+	var wall_r := bull.get_node_or_null("WallRight") as Node2D
+	if spawn == null or wall_l == null or wall_r == null:
+		bull.queue_free()
+		return "Bull arena missing spawn or walls."
+	if spawn.position.x <= wall_l.position.x or spawn.position.x >= wall_r.position.x:
+		bull.queue_free()
+		return "Player spawn must be between the bull arena walls."
 	bull.queue_free()
 
 	var coach := coach_packed.instantiate()
@@ -135,6 +144,15 @@ func _test_boss_arenas() -> Variant:
 	if coach.get_node_or_null("Coach") is AnimatableBody2D:
 		coach.queue_free()
 		return "Coach root should not be a solid AnimatableBody2D."
+	for frame_path in [
+		"res://assets/world/boss_midnight_coach_0.png",
+		"res://assets/world/boss_midnight_coach_1.png",
+		"res://assets/world/boss_midnight_coach_2.png",
+		"res://assets/world/boss_midnight_coach_3.png",
+	]:
+		if load(frame_path) == null:
+			coach.queue_free()
+			return "Missing coach door frame: %s" % frame_path
 	coach.queue_free()
 
 	var king := king_packed.instantiate()

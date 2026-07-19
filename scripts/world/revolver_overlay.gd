@@ -42,20 +42,19 @@ func _draw() -> void:
 	if not visible:
 		return
 	var side := facing
-	var shoulder := Vector2(8.0 * side, -43.0)
-	var hand := Vector2(20.0 * side, -40.0)
+	# Arm from shoulder into the hand, then a clear revolver silhouette.
+	var shoulder := Vector2(6.0 * side, -46.0)
+	var elbow := Vector2(14.0 * side, -42.0)
+	var hand := Vector2(22.0 * side, -40.0)
 	var muzzle := muzzle_position()
-	draw_line(shoulder, hand, Color(0.32, 0.22, 0.18, 1.0), 8.0, true)
-	draw_circle(hand, 5.0, Color(0.73, 0.45, 0.25, 1.0))
-	draw_line(hand, muzzle, Color(0.16, 0.18, 0.2, 1.0), 7.0, true)
-	draw_circle(Vector2(23.0 * side, -39.0), 6.0, Color(0.32, 0.34, 0.36, 1.0))
-	draw_line(
-		Vector2(22.0 * side, -36.0),
-		Vector2(18.0 * side, -29.0),
-		Color(0.28, 0.16, 0.08, 1.0),
-		5.0,
-		true
-	)
+	draw_line(shoulder, elbow, Color(0.28, 0.2, 0.16, 1.0), 9.0, true)
+	draw_line(elbow, hand, Color(0.32, 0.22, 0.18, 1.0), 8.0, true)
+	draw_circle(hand, 6.0, Color(0.73, 0.45, 0.25, 1.0))
+	# Grip + barrel held in the hand.
+	draw_line(hand + Vector2(-2.0 * side, 4.0), hand + Vector2(2.0 * side, -2.0), Color(0.28, 0.16, 0.08, 1.0), 6.0, true)
+	draw_line(hand, muzzle, Color(0.14, 0.16, 0.18, 1.0), 8.0, true)
+	draw_circle(hand + Vector2(4.0 * side, -1.0), 7.0, Color(0.28, 0.3, 0.32, 1.0))
+	draw_rect(Rect2(Vector2(minf(hand.x, muzzle.x), -43.0), Vector2(absf(muzzle.x - hand.x), 8.0)), Color(0.18, 0.2, 0.22, 1.0))
 	if flash_amount > 0.0:
 		var size := 13.0 * flash_amount
 		var points := PackedVector2Array()
