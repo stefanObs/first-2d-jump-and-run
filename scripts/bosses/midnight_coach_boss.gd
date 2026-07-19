@@ -36,6 +36,10 @@ var _bursting: bool = false
 var _shooting: bool = false
 var _shot_generation: int = 0
 var _ground_half_w: float = 800.0
+var _desert_root: Node2D
+var _desert_built_to: float = 0.0
+var _hills_root: Node2D
+var _hills_built_to: float = 0.0
 
 
 func _ready() -> void:
@@ -53,10 +57,11 @@ func _ready() -> void:
 	_driver_gun = RevolverOverlay.new()
 	_driver_gun.name = "DriverGun"
 	_driver_gun.z_index = 5
-	_driver_gun.position = Vector2(-148, -95)
+	_driver_gun.position = Vector2(148, -95)
 	_driver_gun.scale = Vector2(1.15, 1.15)
 	_driver_gun.visible = false
 	_coach.add_child(_driver_gun)
+	_face_coach_forward()
 	_apply_coach_frame(0)
 	_doors.clear()
 	for i in range(3):
@@ -66,6 +71,7 @@ func _ready() -> void:
 			door.set_lasso_active(i == 0)
 			_doors.append(door)
 	_refresh_door_hints()
+	_setup_desert_floor()
 	# Infinite Speed Star for the race.
 	if player != null:
 		player.activate_mode(ModeController.Mode.SPEED_STAR, 0.0, true)
@@ -86,6 +92,89 @@ func _on_combat_started() -> void:
 		player.activate_mode(ModeController.Mode.SPEED_STAR, 0.0, true)
 	_speed = _player_run_speed() * COACH_SPEED_RATIO * 0.55
 	_waiting = false
+
+
+func _face_coach_forward() -> void:
+	## Coach art faces left; flip the whole team so it races to the right.
+	if _coach_sprite != null:
+		_coach_sprite.flip_h = true
+		_coach_sprite.position = Vector2(-20, -78)
+	if _horse_near != null:
+		_horse_near.position = Vector2(230, -42)
+		_horse_near.flip_h = false
+	if _horse_far != null:
+		_horse_far.position = Vector2(300, -48)
+		_horse_far.flip_h = false
+	var harness := _coach.get_node_or_null("Harness") as Line2D
+	if harness != null:
+		harness.points = PackedVector2Array([Vector2(120, -70), Vector2(160, -62), Vector2(210, -55)])
+	# Rear door closest to the chasing player (left), then mid, then front.
+	var door_xs := [-90.0, -25.0, 45.0]
+	for i in range(3):
+		var door := _coach.get_node_or_null("Door%d" % i) as Node2D
+		if door != null:
+			door.position = Vector2(door_xs[i], -48.0)
+
+
+func _setup_desert_floor() -> void:
+	_desert_root = Node2D.new()
+	_desert_root.name = "DesertFloor"
+	_desert_root.z_index = -12
+	add_child(_desert_root)
+	_hills_root = get_node_or_null("HorizonHills") as Node2D
+	if _hills_root == null:
+		_hills_root = Node2D.new()
+		_hills_root.name = "RaceHills"
+		_hills_root.z_index = -16
+		add_child(_hills_root)
+	if _ground_visual != null:
+		_ground_visual.color = WildWestTheme.sand_color()
+	_extend_desert_to(2400.0)
+
+
+func _extend_desert_to(right_x: float) -> void:
+	var sand: Texture2D = load("res://assets/world/trail_desert_tile.png")
+	var dirt: Texture2D = load("res://assets/world/trail_dirt_tile.png")
+	var hills: Texture2D = load("res://assets/world/horizon_hills_strip.png")
+	var floor_y := 320.0
+	if sand != null and _desert_root != null:
+		var tile_w := float(sand.get_width()) * 1.2
+		var x := _desert_built_to
+		if x <= 0.0:
+			x = -400.0
+		while x < right_x + 400.0:
+			var sprite := Sprite2D.new()
+			sprite.texture = sand
+			sprite.centered = false
+			sprite.position = Vector2(x, floor_y - 8.0)
+			sprite.scale = Vector2(1.2, 1.15)
+			_desert_root.add_child(sprite)
+			if dirt != null:
+				var under := Sprite2D.new()
+				under.texture = dirt
+				under.centered = false
+				under.position = Vector2(x, floor_y + 36.0)
+				under.scale = Vector2(1.2, 1.0)
+				under.z_index = -1
+				_desert_root.add_child(under)
+			x += tile_w - 4.0
+		_desert_built_to = x
+	if hills != null and _hills_root != null:
+		var tile_w := float(hills.get_width()) * 1.35
+		var tile_h := 520.0
+		var x := _hills_built_to
+		if x <= 0.0:
+			x = -500.0
+		while x < right_x + 600.0:
+			var hill := Sprite2D.new()
+			hill.texture = hills
+			hill.centered = false
+			hill.position = Vector2(x, floor_y - tile_h + 10.0)
+			hill.scale = Vector2(tile_w / float(hills.get_width()), tile_h / float(hills.get_height()))
+			hill.modulate = Color(1, 1, 1, 0.98)
+			_hills_root.add_child(hill)
+			x += tile_w - 220.0
+		_hills_built_to = x
 
 
 func _player_run_speed() -> float:
@@ -138,7 +227,8 @@ func _update_chase(delta: float) -> void:
 func _ensure_world_ahead() -> void:
 	if _ground == null or player == null:
 		return
-	var need_right := maxf(player.global_position.x, _coach.global_position.x) + 1600.0
+	var need_right := maxf(player.global_position.x, _coach.global_position.x) + 2000.0
+	_extend_desert_to(need_right)
 	var half := need_right * 0.5
 	if half <= _ground_half_w:
 		return
@@ -147,6 +237,7 @@ func _ensure_world_ahead() -> void:
 	if _ground_visual != null:
 		_ground_visual.offset_left = -half
 		_ground_visual.offset_right = half
+		_ground_visual.color = WildWestTheme.sand_color()
 	if _ground_shape != null and _ground_shape.shape is RectangleShape2D:
 		var rect := (_ground_shape.shape as RectangleShape2D).duplicate() as RectangleShape2D
 		rect.size = Vector2(half * 2.0, 64.0)
@@ -154,6 +245,7 @@ func _ensure_world_ahead() -> void:
 	if _background != null:
 		_background.offset_left = -400.0
 		_background.offset_right = need_right + 800.0
+		_background.color = WildWestTheme.desert_sky_color()
 
 
 func _bob_horses() -> void:
@@ -170,8 +262,9 @@ func _apply_coach_frame(open_count: int) -> void:
 	var idx := clampi(open_count, 0, COACH_FRAMES.size() - 1)
 	_coach_sprite.texture = COACH_FRAMES[idx]
 	_coach_sprite.centered = true
+	_coach_sprite.flip_h = true
 	_coach_sprite.scale = Vector2(0.92, 0.92)
-	_coach_sprite.position = Vector2(20, -78)
+	_coach_sprite.position = Vector2(-20, -78)
 
 
 func _active_door() -> BossLassoTarget:
@@ -203,7 +296,7 @@ func _fire_warning_shot() -> void:
 	if player != null and player.global_position.x > _coach.global_position.x:
 		face = 1.0
 	if _driver_gun != null:
-		_driver_gun.position = Vector2(-148.0 + 8.0 * face, -95.0)
+		_driver_gun.position = Vector2(140.0 + 8.0 * face, -95.0)
 		_driver_gun.show_aim(face)
 	report_progress("LOOK OUT!")
 	await get_tree().create_timer(0.4).timeout
@@ -221,7 +314,7 @@ func _fire_warning_shot() -> void:
 			fail_soft()
 	)
 	add_child(bullet)
-	var muzzle := _coach.global_position + Vector2(-148.0 + 40.0 * face, -95.0)
+	var muzzle := _coach.global_position + Vector2(140.0 + 40.0 * face, -95.0)
 	if _driver_gun != null:
 		muzzle = _driver_gun.global_position + _driver_gun.muzzle_position()
 	bullet.global_position = muzzle
@@ -248,13 +341,13 @@ func _start_speed_burst() -> void:
 			fail_soft()
 	)
 	add_child(dust)
-	dust.global_position = _coach.global_position + Vector2(-70.0, -10.0)
+	dust.global_position = _coach.global_position + Vector2(-90.0, -10.0)
 	var follow_t := 0.0
 	while follow_t < 1.0 and is_instance_valid(dust) and not _won:
 		await get_tree().process_frame
 		follow_t += get_process_delta_time()
 		if is_instance_valid(dust) and _coach != null:
-			dust.global_position = _coach.global_position + Vector2(-55.0, -10.0)
+			dust.global_position = _coach.global_position + Vector2(-75.0, -10.0)
 	_bursting = false
 	_burst_timer = randf_range(4.5, 6.5)
 
@@ -265,7 +358,7 @@ func _toss_lantern() -> void:
 	report_progress("Lantern!")
 	var lantern := CoachLantern.new()
 	lantern.name = "CoachLantern"
-	var from := _coach.global_position + Vector2(-130.0, -110.0)
+	var from := _coach.global_position + Vector2(130.0, -110.0)
 	var ground_y := 318.0
 	lantern.setup(from, player.global_position.x, ground_y)
 	lantern.hit_player.connect(func(hit: Player) -> void:

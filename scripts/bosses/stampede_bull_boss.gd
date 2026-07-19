@@ -130,7 +130,7 @@ func _begin_stun() -> void:
 		_stars.visible = true
 	_play_wall_impact()
 	report_progress("Now! Lasso the ring!")
-	await get_tree().create_timer(7.0).timeout
+	await get_tree().create_timer(3.5).timeout
 	if token != _stun_token or _won:
 		return
 	if _state == State.STUN:
@@ -217,11 +217,15 @@ func _on_bull_body(body: Node2D) -> void:
 		return
 	if _hit_cooldown > 0.0:
 		return
-	_hit_cooldown = 0.9
+	_hit_cooldown = 1.1
 	_hearts = maxi(_hearts - 1, 0)
 	_refresh_hearts()
 	if player != null:
-		player.velocity = Vector2(-_dir * 360.0, -280.0)
+		# Blink + drop into the arena middle from above the bull.
+		var mid_x := (_left_x + _right_x) * 0.5
+		var drop_y := _bull.global_position.y - 170.0
+		player.respawn_at(Vector2(mid_x, drop_y))
+		player.velocity = Vector2.ZERO
 	if _hearts_label != null:
 		var tw := create_tween()
 		tw.tween_property(_hearts_label, "modulate", Color(1.5, 0.4, 0.4, 1), 0.08)
