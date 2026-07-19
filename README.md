@@ -240,7 +240,7 @@ Each cycle must maintain the following status block:
 - **Tests last run:** `godot --headless --path . res://tests/test_runner.tscn` — all 19 tests passed
 - **Known issues or blockers:** Xbox controller not physically verified on this machine
 - **Latest iteration tag:** `v1.3.1`
-- **Relevant commit:** 
+- **Relevant commit:** `97e2759`
 
 ### Cycle notes — 2026-07-19 (v1.3.1)
 
