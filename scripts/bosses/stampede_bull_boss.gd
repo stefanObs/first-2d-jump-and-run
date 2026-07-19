@@ -3,6 +3,8 @@ extends BossArena
 ## Stampede Bull: bounce clear of horns, lasso the back ring while stunned.
 
 const BULL_TEX := preload("res://assets/world/boss_stampede_bull.png")
+## Keep the bull body clear of the solid arena walls.
+const WALL_CLEAR := 90.0
 
 enum State { CHARGE, STUN, HIT }
 
@@ -15,12 +17,13 @@ var _sprite: Sprite2D
 var _label: Label
 var _stars: Node2D
 var _hits: int = 0
-var _dir: float = 1.0
+var _dir: float = -1.0
 var _state: State = State.CHARGE
 var _left_x: float = 460.0
 var _right_x: float = 1140.0
 var _charge_bob: float = 0.0
 var _stun_token: int = 0
+var _charge_grace: float = 0.0
 
 
 func _ready() -> void:
@@ -42,7 +45,26 @@ func _ready() -> void:
 	var hurt := $Bull/HurtArea as Area2D
 	if hurt != null:
 		hurt.body_entered.connect(_on_bull_body)
-	_apply_facing()
+	# Start beside the right wall, facing the cowboy for the opening charge.
+	_place_at_right_wall()
+	_aim_at_player()
+	combat_started.connect(_on_combat_started)
+
+
+func _on_combat_started() -> void:
+	if _won or _bull == null:
+		return
+	_place_at_right_wall()
+	_aim_at_player()
+	_state = State.CHARGE
+	_charge_grace = 0.35
+
+
+func _place_at_right_wall() -> void:
+	if _bull == null:
+		return
+	_bull.position.x = _right_x - WALL_CLEAR
+	_bull.position.y = 320.0
 
 
 func get_heart_drop_position() -> Vector2:
@@ -56,6 +78,8 @@ func get_heart_drop_position() -> Vector2:
 func _physics_process(delta: float) -> void:
 	if _won or _bull == null or not combat_ready:
 		return
+	if _charge_grace > 0.0:
+		_charge_grace = maxf(_charge_grace - delta, 0.0)
 	match _state:
 		State.CHARGE:
 			_charge_bob += delta * 14.0
@@ -64,7 +88,13 @@ func _physics_process(delta: float) -> void:
 				_sprite.position.y = -55.0 + sin(_charge_bob) * 4.0
 				_sprite.rotation = sin(_charge_bob * 0.5) * 0.04 * _dir
 			_apply_facing()
-			if _bull.position.x >= _right_x:
+			if _charge_grace > 0.0:
+				_bull.position.x = clampf(
+					_bull.position.x,
+					_left_x + WALL_CLEAR * 0.35,
+					_right_x - WALL_CLEAR * 0.35
+				)
+			elif _bull.position.x >= _right_x:
 				_bull.position.x = _right_x
 				_begin_stun()
 			elif _bull.position.x <= _left_x:
@@ -83,10 +113,25 @@ func _apply_facing() -> void:
 		_ring.position.x = 24.0 if _dir < 0.0 else -24.0
 
 
+func _pull_clear_of_walls() -> void:
+	if _bull == null:
+		return
+	_bull.position.x = clampf(
+		_bull.position.x,
+		_left_x + WALL_CLEAR,
+		_right_x - WALL_CLEAR
+	)
+
+
 func _aim_at_player() -> void:
 	if player == null or _bull == null:
 		return
 	_dir = 1.0 if player.global_position.x >= _bull.global_position.x else -1.0
+	# Never charge back into the wall we are pressed against.
+	if _bull.position.x >= _right_x - WALL_CLEAR and _dir > 0.0:
+		_dir = -1.0
+	elif _bull.position.x <= _left_x + WALL_CLEAR and _dir < 0.0:
+		_dir = 1.0
 	_apply_facing()
 
 
@@ -96,7 +141,8 @@ func _begin_stun() -> void:
 	_state = State.STUN
 	_stun_token += 1
 	var token := _stun_token
-	# Face (and later charge) toward the cowboy; ring stays on the trailing side.
+	# Step out of the wall first so the bull is not stuck inside it.
+	_pull_clear_of_walls()
 	_aim_at_player()
 	if _ring != null:
 		_ring.set_lasso_active(true)
@@ -152,8 +198,8 @@ func _end_stun(from_lasso: bool) -> void:
 		_ring.set_lasso_active(false)
 	if _stars != null:
 		_stars.visible = false
+	_pull_clear_of_walls()
 	_aim_at_player()
-	_bull.position.x = clampf(_bull.position.x + _dir * 18.0, _left_x + 8.0, _right_x - 8.0)
 	if from_lasso:
 		_state = State.HIT
 		_play_hit_reaction()
@@ -164,7 +210,9 @@ func _end_stun(from_lasso: bool) -> void:
 		if _won:
 			return
 	_state = State.CHARGE
+	_pull_clear_of_walls()
 	_aim_at_player()
+	_charge_grace = 0.4
 	if _label != null and not _won:
 		_label.text = "BULL"
 		_label.modulate = Color(0.55, 0.2, 0.08, 1)

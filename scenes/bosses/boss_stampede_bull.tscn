@@ -95,7 +95,7 @@ position = Vector2(960, 320)
 bounce_velocity = -780.0
 
 [node name="Bull" type="AnimatableBody2D" parent="."]
-position = Vector2(800, 320)
+position = Vector2(1050, 320)
 collision_layer = 1
 collision_mask = 0
 
