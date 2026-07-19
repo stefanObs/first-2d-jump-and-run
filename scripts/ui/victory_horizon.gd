@@ -59,11 +59,16 @@ func _run() -> void:
 	# Prefer silhouette sunset rider; fall back to trail horse frames.
 	rider.texture = RIDER_0 if RIDER_0 != null else RIDE_0
 	rider.centered = true
-	# Silhouette frames are large (~1300px); keep a readable on-screen size.
-	var tex_h := float(rider.texture.get_height()) if rider.texture != null else 256.0
+	# Keep both ride frames at the same on-screen height (textures are padded equally).
 	var target_h := view.y * 0.38
-	var s := target_h / maxf(tex_h, 1.0)
-	rider.scale = Vector2(s, s)
+	var shrink := {"value": 1.0}
+	var apply_rider_scale := func() -> void:
+		if rider.texture == null:
+			return
+		var tex_h := float(rider.texture.get_height())
+		var s := (target_h / maxf(tex_h, 1.0)) * float(shrink["value"])
+		rider.scale = Vector2(s, s)
+	apply_rider_scale.call()
 	rider.position = Vector2(-220.0, ground_y)
 	rider.z_index = 2
 	add_child(rider)
@@ -82,6 +87,7 @@ func _run() -> void:
 			rider.texture = RIDER_0 if use_a else RIDER_1
 		else:
 			rider.texture = RIDE_0 if use_a else RIDE_1
+		apply_rider_scale.call()
 		rider.position.y = ground_y + sin(float(phase["t"]) * 0.8) * 4.0
 	)
 	add_child(blink)
@@ -96,7 +102,10 @@ func _run() -> void:
 	tween.tween_property(rider, "position:x", view.x * 0.55, 2.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	tween.tween_property(rider, "position:x", view.x + 260.0, 3.4).set_trans(Tween.TRANS_LINEAR)
 	tween.parallel().tween_property(rider, "modulate", Color(1, 0.7, 0.35, 0.85), 3.4)
-	tween.parallel().tween_property(rider, "scale", Vector2(0.75, 0.75), 3.4)
+	tween.parallel().tween_method(func(v: float) -> void:
+		shrink["value"] = v
+		apply_rider_scale.call()
+	, 1.0, 0.72, 3.4)
 
 	# Occasional dust puffs under the hooves while riding.
 	var dust_timer := Timer.new()

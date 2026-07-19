@@ -83,14 +83,21 @@ func _apply_facing() -> void:
 		_ring.position.x = 24.0 if _dir < 0.0 else -24.0
 
 
+func _aim_at_player() -> void:
+	if player == null or _bull == null:
+		return
+	_dir = 1.0 if player.global_position.x >= _bull.global_position.x else -1.0
+	_apply_facing()
+
+
 func _begin_stun() -> void:
 	if _state != State.CHARGE:
 		return
 	_state = State.STUN
 	_stun_token += 1
 	var token := _stun_token
-	_dir *= -1.0
-	_apply_facing()
+	# Face (and later charge) toward the cowboy; ring stays on the trailing side.
+	_aim_at_player()
 	if _ring != null:
 		_ring.set_lasso_active(true)
 	if _label != null:
@@ -145,6 +152,7 @@ func _end_stun(from_lasso: bool) -> void:
 		_ring.set_lasso_active(false)
 	if _stars != null:
 		_stars.visible = false
+	_aim_at_player()
 	_bull.position.x = clampf(_bull.position.x + _dir * 18.0, _left_x + 8.0, _right_x - 8.0)
 	if from_lasso:
 		_state = State.HIT
@@ -156,6 +164,7 @@ func _end_stun(from_lasso: bool) -> void:
 		if _won:
 			return
 	_state = State.CHARGE
+	_aim_at_player()
 	if _label != null and not _won:
 		_label.text = "BULL"
 		_label.modulate = Color(0.55, 0.2, 0.08, 1)
@@ -168,7 +177,7 @@ func _on_ring_lasso() -> void:
 	if _state != State.STUN or _won or not combat_ready:
 		return
 	_hits += 1
-	_stun_token += 1
+	_stun_token += 1  # Cancel the stun timer — lasso unstuns immediately.
 	report_progress("Ring caught! %d / %d" % [_hits, hits_needed])
 	if _hits >= hits_needed:
 		_state = State.HIT
