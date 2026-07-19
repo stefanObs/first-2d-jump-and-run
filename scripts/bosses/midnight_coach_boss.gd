@@ -93,6 +93,10 @@ func _apply_coach_frame(open_count: int) -> void:
 		return
 	var idx := clampi(open_count, 0, COACH_FRAMES.size() - 1)
 	_coach_sprite.texture = COACH_FRAMES[idx]
+	# Keep a stable on-screen size across door-state frames.
+	_coach_sprite.centered = true
+	_coach_sprite.scale = Vector2(0.92, 0.92)
+	_coach_sprite.position = Vector2(20, -78)
 
 
 func _active_door() -> BossLassoTarget:

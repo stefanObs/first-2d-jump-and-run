@@ -268,7 +268,7 @@ Each cycle must maintain the following status block:
 ### Current development status
 
 - **Current iteration:** `v1.3.3` hazard variety, bounty bandits, and trail readability
-- **Last completed step:** Midnight Coach defenses (shots, dust surge, lanterns)
+- **Last completed step:** Coach size fix, lantern art, kingpin shot height, sunset ride
 - **Currently in progress:** In-game visual play-test of bosses and polish
 - **Next step:** Play-test bosses, fences, clouds, and flight; then tag `v1.3.3`
 - **Completed features:** Long 10-level cowboy trail; animated nonviolent bandit lasso; seated tied bandits; warning-shot and bounty bandits; carrions and rattlesnakes; animated canyon recovery; reachable hazards; hand-drawn cowboy + world props; looping music; three custom editor slots; mid-trail saves; modes; Xbox-ready input; Stampede Bull / Midnight Coach / Outlaw Kingpin bosses; horizon victory scene
@@ -297,6 +297,7 @@ Each cycle must maintain the following status block:
 - Midnight Coach door panels swing open when each handle is lassoed.
 - Bull arena spawn is inside the hand-drawn walls; stun lasts 7s; coach uses four door-state sprites with driver baked in; kingpin raises a hand-gun and plays a capture flourish on one lasso.
 - Midnight Coach defends with driver warning shots, dust speed surges, and tossed lantern puddles.
+- Coach door frames keep a stable size; lanterns use hand-drawn flight/ground art; kingpin hip-fires slower body-height shots; finale is a hand-drawn sunset ride.
 - Canyon falls now stay recovering through respawn invulnerability, so holding left/right cannot restart the fall animation immediately.
 - Clouds on Wings routes are purposeful: canyon bridges, stepped climbs to high badges, cactus-clear platforms, and nest landings (some stay solid).
 - Rattlesnakes are larger, cast a ground shadow, and rise much higher when the cowboy approaches.

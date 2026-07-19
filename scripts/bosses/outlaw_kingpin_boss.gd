@@ -37,8 +37,9 @@ func _ready() -> void:
 	_revolver = RevolverOverlay.new()
 	_revolver.name = "Revolver"
 	_revolver.z_index = 4
-	_revolver.position = Vector2(0, -18)
-	_revolver.scale = Vector2(1.35, 1.35)
+	_revolver.aim_style = RevolverOverlay.AimStyle.HIP
+	_revolver.position = Vector2(0, -6)
+	_revolver.scale = Vector2(1.25, 1.25)
 	_revolver.visible = false
 	_king.add_child(_revolver)
 	for name in ["Guard0", "Guard1"]:
@@ -112,9 +113,9 @@ func _shoot_at_player() -> void:
 	var shot_id := _shot_generation
 	_walk_dir = 1.0 if player.global_position.x >= _king.global_position.x else -1.0
 	_apply_facing()
-	# Raise the gun into his hands before the shot.
+	# Raise the gun into his hands before the shot (hip height for standing hits).
 	if _revolver != null:
-		_revolver.position = Vector2(12.0 * _walk_dir, -42.0)
+		_revolver.position = Vector2(10.0 * _walk_dir, -8.0)
 		_revolver.show_aim(_walk_dir)
 	if _label != null and not _vulnerable:
 		_label.text = "BANG!"
@@ -128,13 +129,14 @@ func _shoot_at_player() -> void:
 	var bullet := BanditBullet.new()
 	bullet.name = "KingpinBullet"
 	bullet.setup(_walk_dir)
-	bullet.speed = 175.0
+	bullet.speed = 105.0
 	bullet.hurt_player.connect(func(hit_player: Player) -> void:
 		if hit_player != null and not hit_player.is_invulnerable():
 			fail_soft()
 	)
 	add_child(bullet)
-	var muzzle := _king.global_position + Vector2(48.0 * _walk_dir, -58.0)
+	# Chest/belly height vs a standing cowboy (feet at kingpin y).
+	var muzzle := _king.global_position + Vector2(44.0 * _walk_dir, -34.0)
 	if _revolver != null:
 		muzzle = _revolver.global_position + _revolver.muzzle_position()
 	bullet.global_position = muzzle

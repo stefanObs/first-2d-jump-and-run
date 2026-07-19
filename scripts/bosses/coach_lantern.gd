@@ -1,14 +1,21 @@
 class_name CoachLantern
 extends Area2D
 
-## Glowing lantern toss that lands as a short-lived trail hazard.
+## Glowing hand-drawn lantern toss that lands as a short-lived trail hazard.
 
 signal hit_player(player: Player)
+
+const FLY_0 := preload("res://assets/world/lantern_fly_0.png")
+const FLY_1 := preload("res://assets/world/lantern_fly_1.png")
+const GROUND := preload("res://assets/world/lantern_ground.png")
 
 var _velocity: Vector2 = Vector2.ZERO
 var _life: float = 0.0
 var _grounded: bool = false
 var _ground_y: float = 320.0
+var _sprite: Sprite2D
+var _glow: Sprite2D
+var _anim_t: float = 0.0
 
 
 func setup(from: Vector2, toward_x: float, ground_y: float) -> void:
@@ -29,49 +36,65 @@ func _ready() -> void:
 	circle.radius = 16.0
 	shape.shape = circle
 	add_child(shape)
+	_glow = Sprite2D.new()
+	_glow.z_index = -1
+	_glow.modulate = Color(1.0, 0.7, 0.2, 0.45)
+	_glow.scale = Vector2(1.4, 1.4)
+	add_child(_glow)
+	_sprite = Sprite2D.new()
+	_sprite.texture = FLY_0
+	_sprite.scale = Vector2(0.85, 0.85)
+	add_child(_sprite)
 	body_entered.connect(_on_body_entered)
 	z_index = 6
-	queue_redraw()
 
 
 func _physics_process(delta: float) -> void:
 	_life += delta
+	_anim_t += delta
 	if not _grounded:
 		_velocity.y += 780.0 * delta
 		global_position += _velocity * delta
+		if _sprite != null:
+			_sprite.texture = FLY_0 if int(_anim_t * 8.0) % 2 == 0 else FLY_1
+			_sprite.rotation = _velocity.x * 0.002 + sin(_anim_t * 10.0) * 0.25
+			_sprite.scale = Vector2(0.85, 0.85)
+		if _glow != null:
+			_glow.texture = FLY_0
+			_glow.modulate = Color(1.0, 0.75, 0.2, 0.35 + 0.15 * sin(_anim_t * 12.0))
+			_glow.scale = Vector2(1.5, 1.5)
 		if global_position.y >= _ground_y:
 			global_position.y = _ground_y
 			_velocity = Vector2.ZERO
 			_grounded = true
 			_life = 0.0
-			# Wider puddle hitbox once on the ground.
-			var shape := get_child(0) as CollisionShape2D
-			if shape != null and shape.shape is CircleShape2D:
-				(shape.shape as CircleShape2D).radius = 28.0
-			queue_redraw()
+			_land()
 		elif _life > 3.5:
 			queue_free()
-		else:
-			queue_redraw()
 		return
+	if _glow != null:
+		var pulse := 0.4 + 0.2 * sin(_life * 9.0)
+		_glow.modulate = Color(1.0, 0.55, 0.12, pulse)
+		_glow.scale = Vector2(1.8 + sin(_life * 8.0) * 0.15, 1.5 + cos(_life * 7.0) * 0.1)
 	if _life >= 3.2:
-		queue_free()
-		return
-	queue_redraw()
+		var fade := create_tween()
+		fade.tween_property(self, "modulate:a", 0.0, 0.25)
+		fade.tween_callback(queue_free)
+		set_physics_process(false)
 
 
-func _draw() -> void:
-	if _grounded:
-		var pulse := 0.55 + 0.25 * sin(_life * 8.0)
-		draw_circle(Vector2.ZERO, 30.0, Color(1.0, 0.45, 0.08, 0.35 * pulse))
-		draw_circle(Vector2.ZERO, 18.0, Color(1.0, 0.7, 0.15, 0.55))
-		draw_circle(Vector2(0, -6), 8.0, Color(1.0, 0.9, 0.35, 0.9))
-	else:
-		# Hanging lantern in flight.
-		draw_rect(Rect2(-7, -4, 14, 16), Color(0.75, 0.55, 0.15, 1.0))
-		draw_rect(Rect2(-5, -2, 10, 10), Color(1.0, 0.85, 0.25, 0.95))
-		draw_line(Vector2(0, -4), Vector2(0, -12), Color(0.35, 0.25, 0.1, 1.0), 2.0)
-		draw_circle(Vector2(0, -2), 3.0, Color(1.0, 0.95, 0.6, 1.0))
+func _land() -> void:
+	var shape := get_child(0) as CollisionShape2D
+	if shape != null and shape.shape is CircleShape2D:
+		(shape.shape as CircleShape2D).radius = 30.0
+	if _sprite != null:
+		_sprite.texture = GROUND
+		_sprite.rotation = 0.0
+		_sprite.scale = Vector2(0.95, 0.95)
+		_sprite.position = Vector2(0, -8)
+	if _glow != null:
+		_glow.texture = GROUND
+		_glow.position = Vector2(0, -4)
 
 
 func _on_body_entered(body: Node2D) -> void:

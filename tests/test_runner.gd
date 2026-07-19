@@ -546,6 +546,12 @@ func _test_art_and_music() -> Variant:
 		"res://assets/world/trail_horse.png",
 		"res://assets/world/cowboy_horse_ride_0.png",
 		"res://assets/world/cowboy_horse_ride_1.png",
+		"res://assets/world/lantern_fly_0.png",
+		"res://assets/world/lantern_fly_1.png",
+		"res://assets/world/lantern_ground.png",
+		"res://assets/world/sunset_backdrop.png",
+		"res://assets/world/sunset_rider_0.png",
+		"res://assets/world/sunset_rider_1.png",
 	]:
 		if load(path) == null:
 			return "Missing hand-drawn world art: %s" % path
