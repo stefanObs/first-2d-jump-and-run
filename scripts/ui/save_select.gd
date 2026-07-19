@@ -24,6 +24,7 @@ func _ready() -> void:
 	_refresh_prompts()
 	_highlight()
 	_pulse_sun()
+	_bob_title()
 
 
 func _pulse_sun() -> void:
@@ -34,6 +35,17 @@ func _pulse_sun() -> void:
 	tween.set_loops()
 	tween.tween_property(sun, "modulate", Color(1.0, 1.0, 0.8, 1.0), 1.2)
 	tween.tween_property(sun, "modulate", Color(1.0, 0.9, 0.45, 1.0), 1.2)
+
+
+func _bob_title() -> void:
+	var title := get_node_or_null("Title") as Control
+	if title == null:
+		return
+	var base := title.position.y
+	var tween := create_tween()
+	tween.set_loops()
+	tween.tween_property(title, "position:y", base - 6.0, 0.9).set_trans(Tween.TRANS_SINE)
+	tween.tween_property(title, "position:y", base + 4.0, 0.9).set_trans(Tween.TRANS_SINE)
 
 
 func _process(delta: float) -> void:

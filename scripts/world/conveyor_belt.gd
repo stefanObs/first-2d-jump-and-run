@@ -1,12 +1,15 @@
 class_name ConveyorBelt
 extends StaticBody2D
 
+signal first_ride
+
 @export var push_speed: float = 95.0
 @export var push_right: bool = true
 
 var _area: Area2D
 var _stripes: Array[ColorRect] = []
 var _scroll: float = 0.0
+var _taught: bool = false
 
 
 func _ready() -> void:
@@ -33,6 +36,9 @@ func _physics_process(_delta: float) -> void:
 	for body in _area.get_overlapping_bodies():
 		if body is Player:
 			(body as Player).external_velocity.x += push_speed * direction
+			if not _taught:
+				_taught = true
+				first_ride.emit()
 
 
 func _ensure_stripes() -> void:

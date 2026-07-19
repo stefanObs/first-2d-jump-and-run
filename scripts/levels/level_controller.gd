@@ -192,6 +192,11 @@ func _wire_world_objects() -> void:
 			var opponent := node as Opponent
 			if not opponent.hurt_player.is_connected(_on_hazard_hurt):
 				opponent.hurt_player.connect(_on_hazard_hurt)
+	for node in find_children("*", "PhysicsBody2D", true, false):
+		if node is ConveyorBelt:
+			var belt := node as ConveyorBelt
+			if not belt.first_ride.is_connected(_on_conveyor_first_ride):
+				belt.first_ride.connect(_on_conveyor_first_ride)
 
 
 func _on_checkpoint_activated(checkpoint: Checkpoint) -> void:
@@ -220,6 +225,11 @@ func _on_wind_first_touch() -> void:
 func _on_spring_bounced() -> void:
 	if hud != null:
 		hud.show_toast("Boing! Springs launch you up!", 2.4)
+
+
+func _on_conveyor_first_ride() -> void:
+	if hud != null:
+		hud.show_toast("The belt pushes you along!", 2.4)
 
 
 func _on_player_mode_changed(mode_name: String, remaining: float) -> void:

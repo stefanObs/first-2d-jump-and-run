@@ -62,4 +62,5 @@ func _update_warning_blink() -> void:
 	else:
 		_visual.modulate = Color(1.0, 0.85, 0.3, pulse)
 		if _label != null:
-			_label.text = "WAIT"
+			_label.text = "WAIT!"
+			_label.add_theme_font_size_override(&"font_size", 16)
