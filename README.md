@@ -235,7 +235,7 @@ Each cycle must maintain the following status block:
 - **Tests last run:** `godot --headless --path . res://tests/test_runner.tscn` — all 13 tests passed; main scene smoke-launch with `--quit-after 2` succeeded
 - **Known issues or blockers:** Visuals are gray-box placeholders; no bespoke music/SFX assets yet; Xbox controller not physically verified on this machine
 - **Latest iteration tag:** `v1.0.0`
-- **Relevant commit:** Pending
+- **Relevant commit:** `82e3165`
 
 ### Rated possible extensions (post-v1.0.0)
 
