@@ -228,16 +228,22 @@ Each cycle must maintain the following status block:
 
 ### Current development status
 
-- **Current iteration:** `v1.2.0` long wild-west trail (~45 minutes)
-- **Last completed step:** Rebuilt all 10 levels as ~7200px multi-camp courses with richer desert scenery, camera limits, and child-friendly spacing
+- **Current iteration:** `v1.2.1` child-appeal polish on the long trail
+- **Last completed step:** Bobbing badges/mode items, friendlier outlaws, dessert HUD banners, more forgiving jump feel
 - **Currently in progress:** Ralph polish loop until 17:00 CEST (hard stop; credit % not readable)
-- **Next step:** Continue visual/playability polish in the ralph loop; optional music/SFX later
+- **Next step:** Keep polishing playability/visuals in the ralph loop until stop time
 - **Completed features:** Long playable 10-level cowboy trail; 3 camps per level; animated cowboy; modes; Xbox-ready input; Chapter 14 QA green
 - **Remaining work:** Music/SFX; richer hand-drawn art; live Xbox verification; supervised child play-tests
 - **Tests last run:** `godot --headless --path . res://tests/test_runner.tscn` — all 16 tests passed
 - **Known issues or blockers:** Placeholder pixel art; no music/SFX yet; Xbox controller not physically verified on this machine
-- **Latest iteration tag:** `v1.2.0`
+- **Latest iteration tag:** `v1.2.1`
 - **Relevant commit:** `0a58e8a`
+
+### Cycle notes — 2026-07-19 (v1.2.1)
+
+- Badge stars and mode pickups gently bob so they stay easy to spot.
+- Outlaws look more cartoonish; HUD uses parchment banners.
+- Slightly more forgiving coyote/buffer/jump for long courses.
 
 ### Cycle notes — 2026-07-19 (v1.2.0)
 

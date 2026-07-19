@@ -8,21 +8,21 @@ signal respawned(position: Vector2)
 signal mode_changed(mode_name: String, remaining: float)
 signal star_collected(total: int)
 
-@export var move_speed: float = 260.0
-@export var acceleration: float = 1800.0
-@export var air_acceleration: float = 1200.0
+@export var move_speed: float = 270.0
+@export var acceleration: float = 1900.0
+@export var air_acceleration: float = 1300.0
 @export var friction: float = 2000.0
 @export var air_friction: float = 400.0
-@export var jump_velocity: float = -480.0
-@export var gravity: float = 1400.0
-@export var fall_gravity_multiplier: float = 1.35
-@export var jump_cut_multiplier: float = 0.45
-@export var coyote_time: float = 0.12
-@export var jump_buffer_time: float = 0.12
-@export var max_fall_speed: float = 900.0
-@export var respawn_invulnerability_time: float = 0.6
-@export var fly_rise_speed: float = 220.0
-@export var fly_fall_speed: float = 160.0
+@export var jump_velocity: float = -500.0
+@export var gravity: float = 1350.0
+@export var fall_gravity_multiplier: float = 1.25
+@export var jump_cut_multiplier: float = 0.5
+@export var coyote_time: float = 0.16
+@export var jump_buffer_time: float = 0.15
+@export var max_fall_speed: float = 820.0
+@export var respawn_invulnerability_time: float = 0.85
+@export var fly_rise_speed: float = 240.0
+@export var fly_fall_speed: float = 150.0
 
 var input_enabled: bool = true
 var stars_collected: int = 0

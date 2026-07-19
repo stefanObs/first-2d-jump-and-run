@@ -18,14 +18,35 @@ offset_left = -18.0
 offset_top = -36.0
 offset_right = 18.0
 offset_bottom = 0.0
-color = Color(0.35, 0.22, 0.14, 1)
+color = Color(0.82, 0.42, 0.22, 1)
+
+[node name="Bandana" type="ColorRect" parent="."]
+offset_left = -18.0
+offset_top = -28.0
+offset_right = 18.0
+offset_bottom = -18.0
+color = Color(0.2, 0.45, 0.85, 1)
 
 [node name="Hat" type="ColorRect" parent="."]
-offset_left = -16.0
-offset_top = -44.0
-offset_right = 16.0
+offset_left = -20.0
+offset_top = -46.0
+offset_right = 20.0
 offset_bottom = -34.0
-color = Color(0.2, 0.15, 0.1, 1)
+color = Color(0.25, 0.16, 0.1, 1)
+
+[node name="EyeL" type="ColorRect" parent="."]
+offset_left = -10.0
+offset_top = -22.0
+offset_right = -4.0
+offset_bottom = -16.0
+color = Color(1, 1, 1, 1)
+
+[node name="EyeR" type="ColorRect" parent="."]
+offset_left = 4.0
+offset_top = -22.0
+offset_right = 10.0
+offset_bottom = -16.0
+color = Color(1, 1, 1, 1)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 position = Vector2(0, -18)
