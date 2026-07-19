@@ -7,7 +7,7 @@ signal level_completed
 signal player_respawned(position: Vector2)
 
 @export var level_number: int = 1
-@export var celebration_duration: float = 3.5
+@export var celebration_duration: float = 4.2
 @export var level_title: String = "Level"
 @export var is_final_level: bool = false
 
@@ -183,6 +183,10 @@ func _wire_world_objects() -> void:
 			var wind := node as WindZone
 			if not wind.first_touch.is_connected(_on_wind_first_touch):
 				wind.first_touch.connect(_on_wind_first_touch)
+		elif node is SpringPad:
+			var spring := node as SpringPad
+			if not spring.bounced.is_connected(_on_spring_bounced):
+				spring.bounced.connect(_on_spring_bounced)
 	for node in find_children("*", "AnimatableBody2D", true, false):
 		if node is Opponent:
 			var opponent := node as Opponent
@@ -211,6 +215,11 @@ func _on_mode_item_collected(mode: ModeController.Mode) -> void:
 func _on_wind_first_touch() -> void:
 	if hud != null:
 		hud.show_toast("Wind pushes you!", 2.0)
+
+
+func _on_spring_bounced() -> void:
+	if hud != null:
+		hud.show_toast("Boing! Springs launch you up!", 2.4)
 
 
 func _on_player_mode_changed(mode_name: String, remaining: float) -> void:

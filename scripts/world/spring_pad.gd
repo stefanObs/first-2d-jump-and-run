@@ -1,12 +1,15 @@
 class_name SpringPad
 extends Area2D
 
+signal bounced
+
 @export var bounce_velocity: float = -820.0
 
 var _visual: ColorRect
 var _label: Label
 var _base_scale: Vector2 = Vector2.ONE
 var _squash_time: float = 0.0
+var _taught: bool = false
 
 
 func _ready() -> void:
@@ -24,7 +27,6 @@ func _process(delta: float) -> void:
 		return
 	_squash_time = maxf(_squash_time - delta, 0.0)
 	var t := 1.0 - (_squash_time / 0.28)
-	# Squash then overshoot back.
 	var y := lerpf(0.45, 1.15, t) if t < 0.55 else lerpf(1.15, 1.0, (t - 0.55) / 0.45)
 	var x := lerpf(1.35, 0.9, t) if t < 0.55 else lerpf(0.9, 1.0, (t - 0.55) / 0.45)
 	_visual.scale = Vector2(_base_scale.x * x, _base_scale.y * y)
@@ -36,3 +38,6 @@ func _on_body_entered(body: Node2D) -> void:
 		var player := body as Player
 		player.velocity.y = bounce_velocity
 		_squash_time = 0.28
+		if not _taught:
+			_taught = true
+			bounced.emit()

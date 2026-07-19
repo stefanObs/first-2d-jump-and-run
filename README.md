@@ -228,16 +228,21 @@ Each cycle must maintain the following status block:
 
 ### Current development status
 
-- **Current iteration:** `v1.2.8` power how-to toasts and beckoning camps
-- **Last completed step:** Mode toasts teach controls; camps flash CAMP!; colored power dust
+- **Current iteration:** `v1.2.9` friendlier gates and spring tips
+- **Last completed step:** Longer open gates with OPEN/HURRY/WAIT labels; first spring teaches Boing!
 - **Currently in progress:** Ralph polish loop until 17:00 CEST (hard stop; credit % not readable)
 - **Next step:** Keep polishing playability/visuals in the ralph loop until stop time
 - **Completed features:** Long playable 10-level cowboy trail; 3 camps per level; animated cowboy; modes; Xbox-ready input; Chapter 14 QA green
 - **Remaining work:** Music/SFX; richer hand-drawn art; live Xbox verification; supervised child play-tests
 - **Tests last run:** `godot --headless --path . res://tests/test_runner.tscn` — all 16 tests passed
 - **Known issues or blockers:** Placeholder pixel art; no music/SFX yet; Xbox controller not physically verified on this machine
-- **Latest iteration tag:** `v1.2.8`
+- **Latest iteration tag:** `v1.2.9`
 - **Relevant commit:** `91284c9`
+
+### Cycle notes — 2026-07-19 (v1.2.9)
+
+- Yard gates stay open longer and show OPEN / WAIT / HURRY so kids can react in time.
+- First spring bounce teaches "Boing! Springs launch you up!"
 
 ### Cycle notes — 2026-07-19 (v1.2.8)
 
