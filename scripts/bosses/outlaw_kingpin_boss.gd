@@ -38,7 +38,7 @@ func _ready() -> void:
 	_revolver.name = "Revolver"
 	_revolver.z_index = 4
 	_revolver.aim_style = RevolverOverlay.AimStyle.HIP
-	_revolver.position = Vector2(0, -6)
+	_revolver.position = Vector2(0, -12)
 	_revolver.scale = Vector2(1.25, 1.25)
 	_revolver.visible = false
 	_king.add_child(_revolver)
@@ -116,7 +116,7 @@ func _shoot_at_player() -> void:
 	_apply_facing()
 	# Raise the gun into his hands before the shot (hip height for standing hits).
 	if _revolver != null:
-		_revolver.position = Vector2(10.0 * _walk_dir, -8.0)
+		_revolver.position = Vector2(10.0 * _walk_dir, -14.0)
 		_revolver.show_aim(_walk_dir)
 	if _label != null and not _capturing:
 		_label.text = "BANG!"
@@ -137,7 +137,7 @@ func _shoot_at_player() -> void:
 	)
 	add_child(bullet)
 	# Chest/belly height vs a standing cowboy (feet at kingpin y).
-	var muzzle := _king.global_position + Vector2(44.0 * _walk_dir, -34.0)
+	var muzzle := _king.global_position + Vector2(44.0 * _walk_dir, -52.0)
 	if _revolver != null:
 		muzzle = _revolver.global_position + _revolver.muzzle_position()
 	bullet.global_position = muzzle
@@ -217,7 +217,8 @@ func _play_capture_animation() -> void:
 	var stand_h := float(KING_TEX.get_height()) if KING_TEX != null else 180.0
 	var tied_h := float(TIED_TEX.get_height()) if TIED_TEX != null else 130.0
 	var tied_scale := stand_h / maxf(tied_h, 1.0)
-	_king_sprite.position = Vector2(0, -stand_h * 0.28)
+	# Keep feet on the desert floor (sprite is centered).
+	_king_sprite.position = Vector2(0, -stand_h * 0.5)
 	_king_sprite.scale = Vector2(tied_scale, tied_scale)
 	_king_sprite.rotation = 0.0
 	if _label != null:
