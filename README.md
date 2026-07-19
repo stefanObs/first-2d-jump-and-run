@@ -228,16 +228,22 @@ Each cycle must maintain the following status block:
 
 ### Current development status
 
-- **Current iteration:** `v1.1.0` wild-west cowboy visuals and stricter level QA
-- **Last completed step:** Added cowboy animated player, desert/saloon/cactus art, safe-star and forward-only layout tests, and README QA rules
+- **Current iteration:** `v1.1.1` complete-route, platform, and visual QA
+- **Last completed step:** Added explicit QA requirements and automated validation for level completion order, platform reachability, visible effects, and styled environments
 - **Currently in progress:** None
 - **Next step:** Optional extensions from the rated backlog; supervised child play-testing and live Xbox verification
-- **Completed features:** Wild-west themed 10-level trail; animated cowboy; safe/forward star-level QA; saves; modes; Xbox-ready input
+- **Completed features:** Wild-west themed 10-level trail; animated cowboy; safe stars; forward-completable levels; reachable/styled platforms; visible-effect validation; saves; modes; Xbox-ready input
 - **Remaining work:** Music/SFX; richer art pass; live Xbox verification; supervised child play-tests
 - **Tests last run:** `godot --headless --path . res://tests/test_runner.tscn` — all 16 tests passed; launcher smoke-launch succeeded
 - **Known issues or blockers:** Placeholder pixel art (not final production art); no music/SFX yet; Xbox controller not physically verified on this machine
-- **Latest iteration tag:** `v1.1.0`
-- **Relevant commit:** `f43d6fd`
+- **Latest iteration tag:** `v1.1.1`
+- **Relevant commit:** Pending
+
+### Cycle notes — 2026-07-19 (v1.1.1)
+
+- Expanded Chapter 14 with level-completion, platform-reachability, effect-visibility, and environment-styling requirements.
+- Extended `LevelLayoutRules` to model platform-to-platform reachability and verify visible themed art on gameplay objects.
+- The strict test command now rejects script, parse, and compile errors in addition to failed assertions.
 
 ### Cycle notes — 2026-07-19 (v1.1.0)
 
@@ -313,9 +319,13 @@ Every iteration that changes levels, stars, hazards, checkpoints, or player move
 1. **Safe star collection:** Every star can be collected without taking damage or falling into a hazard at the moment of collection. Stars must not overlap hazards or opponent hurt boxes, and collecting a star must not require standing inside a dangerous volume.
 2. **Forward-only solvability:** Every level can be finished without going back behind a mid-level checkpoint after that checkpoint has been activated. Required route objects stay ahead of or on the way to the next forward landmark (spawn → checkpoint → goal).
 3. **Reachable stars:** Every star remains within jump, spring, boots, flight, or clearly intended assist range from a standable surface.
-4. **Manual smoke:** After layout or movement changes, play each touched level with keyboard and, when available, an Xbox controller.
+4. **Level completion:** Every level has a valid, continuous route from spawn to goal using the abilities available before they are needed.
+5. **Reachable platforms:** Every platform can be reached from the ground, another reachable platform, or an available assist such as springs, Magic Boots, moving platforms, or Wings.
+6. **Visible effects:** Power-up, checkpoint, damage, collection, goal, and completion effects must be clearly visible against the background and understandable without text.
+7. **Styled environments:** Backgrounds, ground, platforms, hazards, goals, opponents, and collectibles must have deliberate theme styling—not unstyled debug shapes or invisible collision-only objects.
+8. **Manual smoke:** After layout, movement, or visual changes, play each touched level with keyboard and, when available, an Xbox controller. Confirm visual effects remain readable during movement.
 
-Automated tests must encode rules 1–3. A tagged iteration is invalid if these tests fail.
+Automated tests must encode rules 1–7 where they can be verified structurally or mathematically. Manual play-testing completes the visual and feel checks. A tagged iteration is invalid if these checks fail.
 
 ## Chapter 15: Definition of done
 
@@ -333,4 +343,6 @@ Automated tests must encode rules 1–3. A tagged iteration is invalid if these 
 - The game can be completed without reading instructions or losing progress.
 - Every star is reachable and collectible without dying on collection.
 - Every level is solvable without backtracking behind an activated mid-level checkpoint.
+- Every level can be completed and every platform is reachable with an ability available on the forward route.
+- All effects are clearly visible, and every environment and platform is properly styled for the wild-west theme.
 - The player uses a wild-west cowboy appearance with visible movement animation.

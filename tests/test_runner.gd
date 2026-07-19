@@ -20,7 +20,10 @@ func _ready() -> void:
 	failures += _run("Bubble shield blocks opponent damage flag", _test_shield_blocks_damage_flag)
 	failures += _run("InputManager device prompts", _test_input_manager_prompts)
 	failures += _run("Star reachability heuristics", _test_star_reachability)
-	failures += _run("Stars are safe and levels are forward-only", _test_level_layout_rules)
+	failures += _run(
+		"Levels complete; platforms reachable; effects and environments styled",
+		_test_level_layout_rules
+	)
 	failures += _run("Cowboy player has movement animations", _test_cowboy_animations)
 
 	if failures == 0:

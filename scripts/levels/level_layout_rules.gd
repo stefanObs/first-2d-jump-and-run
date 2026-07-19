@@ -1,10 +1,25 @@
 class_name LevelLayoutRules
 extends RefCounted
 
-## Validates safe star pickup and forward-only level solvability.
+## Structural and mathematical QA for safe, forward-solvable, styled levels.
+
+const BASE_JUMP_HEIGHT := 90.0
+const ASSISTED_JUMP_HEIGHT := 190.0
+const SPRING_JUMP_HEIGHT := 250.0
+const BASE_HORIZONTAL_GAP := 230.0
+const ASSISTED_HORIZONTAL_GAP := 340.0
 
 
 static func validate_level_node(level: Node) -> PackedStringArray:
+	var errors: PackedStringArray = []
+	errors.append_array(_validate_forward_route(level))
+	errors.append_array(_validate_stars(level))
+	errors.append_array(_validate_platforms(level))
+	errors.append_array(_validate_visuals(level))
+	return errors
+
+
+static func _validate_forward_route(level: Node) -> PackedStringArray:
 	var errors: PackedStringArray = []
 	var spawn := level.get_node_or_null("SpawnPoint") as Node2D
 	var checkpoint := level.find_child("Checkpoint", true, false) as Node2D
@@ -19,23 +34,39 @@ static func validate_level_node(level: Node) -> PackedStringArray:
 	var spawn_x := spawn.global_position.x
 	var goal_x := goal.global_position.x
 	if goal_x <= spawn_x + 80.0:
-		errors.append("Goal should be clearly ahead of the spawn for forward play.")
-
-	var checkpoint_x := spawn_x
+		errors.append("Goal should be clearly ahead of the spawn.")
 	if checkpoint != null:
-		checkpoint_x = checkpoint.global_position.x
+		var checkpoint_x := checkpoint.global_position.x
 		if checkpoint_x <= spawn_x + 40.0:
 			errors.append("Checkpoint should be ahead of the spawn.")
 		if goal_x <= checkpoint_x + 40.0:
 			errors.append("Goal should be ahead of the checkpoint.")
 
+	var ground := level.find_child("Ground", true, false) as Node2D
+	if ground == null:
+		ground = level.find_child("GroundLeft", true, false) as Node2D
+	if ground == null:
+		errors.append("No styled ground route exists between spawn and goal.")
+	return errors
+
+
+static func _validate_stars(level: Node) -> PackedStringArray:
+	var errors: PackedStringArray = []
+	var spawn := level.get_node_or_null("SpawnPoint") as Node2D
+	var checkpoint := level.find_child("Checkpoint", true, false) as Node2D
+	if spawn == null:
+		return errors
+
 	var hazards: Array[Rect2] = []
 	for node in level.find_children("*", "Area2D", true, false):
 		if node is Hazard:
 			hazards.append(_approx_rect(node as Node2D, Vector2(64, 32)))
-		elif node is Opponent:
+	for node in level.find_children("*", "AnimatableBody2D", true, false):
+		if node is Opponent:
 			hazards.append(_approx_rect(node as Node2D, Vector2(48, 48)))
 
+	var spawn_x := spawn.global_position.x
+	var checkpoint_x := checkpoint.global_position.x if checkpoint != null else spawn_x
 	for node in level.find_children("*", "Area2D", true, false):
 		if not (node is Star):
 			continue
@@ -44,17 +75,183 @@ static func validate_level_node(level: Node) -> PackedStringArray:
 		var star_rect := _approx_rect(star, Vector2(28, 28))
 		if star_pos.x < spawn_x - 40.0:
 			errors.append("Star %s is behind the spawn." % star.name)
-		# Stars before the checkpoint must still be on the forward approach,
-		# not stranded far behind spawn after the player has progressed.
-		if checkpoint != null and star_pos.x < checkpoint_x:
-			if star_pos.x < spawn_x + 20.0:
-				errors.append("Star %s is not on the forward path to the checkpoint." % star.name)
+		if checkpoint != null and star_pos.x < checkpoint_x and star_pos.x < spawn_x + 20.0:
+			errors.append("Star %s is not on the forward path to the checkpoint." % star.name)
 		for hazard_rect in hazards:
-			var padded := hazard_rect.grow(18.0)
-			if padded.intersects(star_rect):
-				errors.append("Star %s overlaps a hazard/opponent and is unsafe to collect." % star.name)
+			if hazard_rect.grow(18.0).intersects(star_rect):
+				errors.append("Star %s is unsafe to collect." % star.name)
 				break
 	return errors
+
+
+static func _validate_platforms(level: Node) -> PackedStringArray:
+	var errors: PackedStringArray = []
+	var surfaces: Array[Dictionary] = []
+	for node in level.find_children("*", "PhysicsBody2D", true, false):
+		if _is_platform(node):
+			var surface := _surface_for(node as Node2D)
+			if not surface.is_empty():
+				surfaces.append(surface)
+	if surfaces.is_empty():
+		errors.append("Level has no standable, styled surfaces.")
+		return errors
+
+	var has_wings := _has_mode(level, ModeController.Mode.WINGS)
+	var has_boots := _has_mode(level, ModeController.Mode.MAGIC_BOOTS)
+	var has_spring := _has_spring(level)
+	var jump_height := BASE_JUMP_HEIGHT
+	var horizontal_gap := BASE_HORIZONTAL_GAP
+	if has_boots:
+		jump_height = ASSISTED_JUMP_HEIGHT
+		horizontal_gap = ASSISTED_HORIZONTAL_GAP
+	if has_spring:
+		jump_height = maxf(jump_height, SPRING_JUMP_HEIGHT)
+		horizontal_gap = ASSISTED_HORIZONTAL_GAP
+
+	var reachable: Array[int] = []
+	for index in range(surfaces.size()):
+		if bool(surfaces[index]["is_ground"]):
+			reachable.append(index)
+	if reachable.is_empty():
+		errors.append("No reachable ground surface starts the level.")
+		return errors
+
+	if not has_wings:
+		var changed := true
+		while changed:
+			changed = false
+			for target_index in range(surfaces.size()):
+				if target_index in reachable:
+					continue
+				for source_index in reachable:
+					if _can_reach_surface(
+						surfaces[source_index],
+						surfaces[target_index],
+						jump_height,
+						horizontal_gap
+					):
+						reachable.append(target_index)
+						changed = true
+						break
+
+	for index in range(surfaces.size()):
+		if has_wings or index in reachable:
+			continue
+		errors.append("Platform %s is not reachable from the forward route." % surfaces[index]["name"])
+	return errors
+
+
+static func _validate_visuals(level: Node) -> PackedStringArray:
+	var errors: PackedStringArray = []
+	var background := level.get_node_or_null("Background") as ColorRect
+	if background == null or not background.visible or background.color.a < 0.8:
+		errors.append("Environment needs a clearly visible styled background.")
+
+	for node in level.find_children("*", "PhysicsBody2D", true, false):
+		if _is_platform(node) and not _has_visible_art(node):
+			errors.append("Platform %s has no visible styling." % node.name)
+	for node in level.find_children("*", "Area2D", true, false):
+		if (
+			node is Star
+			or node is Hazard
+			or node is Goal
+			or node is Checkpoint
+			or node is ModeItem
+			or node is SpringPad
+			or node is WindZone
+		):
+			if not _has_visible_art(node):
+				errors.append("Gameplay object %s has no clearly visible effect/art." % node.name)
+	for node in level.find_children("*", "AnimatableBody2D", true, false):
+		if (node is Opponent or node is MovingPlatform) and not _has_visible_art(node):
+			errors.append("Moving object %s has no visible styling." % node.name)
+
+	var transition := level.find_child("LevelTransition", true, false)
+	if transition == null or transition.get_node_or_null("Veil") == null or transition.get_node_or_null("Banner") == null:
+		errors.append("Completion effect is missing its visible veil or banner.")
+	return errors
+
+
+static func _is_platform(node: Node) -> bool:
+	if node is Opponent or node is TimedDoor:
+		return false
+	var name_text := String(node.name)
+	return (
+		name_text.begins_with("Ground")
+		or name_text.contains("Platform")
+		or name_text.begins_with("Moving")
+		or name_text.begins_with("Cloud")
+		or name_text.begins_with("Conveyor")
+	)
+
+
+static func _surface_for(node: Node2D) -> Dictionary:
+	var shape_node := node.get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if shape_node == null or not (shape_node.shape is RectangleShape2D):
+		return {}
+	var size := (shape_node.shape as RectangleShape2D).size * node.scale.abs()
+	var center := shape_node.global_position
+	var left := center.x - size.x * 0.5
+	var right := center.x + size.x * 0.5
+	if node is MovingPlatform:
+		var moving := node as MovingPlatform
+		left += minf(moving.point_a.x, moving.point_b.x)
+		right += maxf(moving.point_a.x, moving.point_b.x)
+	return {
+		"name": String(node.name),
+		"left": left,
+		"right": right,
+		"top": center.y - size.y * 0.5,
+		"is_ground": String(node.name).begins_with("Ground"),
+	}
+
+
+static func _can_reach_surface(
+	source: Dictionary,
+	target: Dictionary,
+	jump_height: float,
+	horizontal_gap: float
+) -> bool:
+	var rise: float = float(source["top"]) - float(target["top"])
+	if rise > jump_height + 12.0:
+		return false
+	var gap := 0.0
+	if float(target["left"]) > float(source["right"]):
+		gap = float(target["left"]) - float(source["right"])
+	elif float(source["left"]) > float(target["right"]):
+		gap = float(source["left"]) - float(target["right"])
+	return gap <= horizontal_gap
+
+
+static func _has_mode(level: Node, mode: ModeController.Mode) -> bool:
+	for node in level.find_children("*", "Area2D", true, false):
+		if node is ModeItem and (node as ModeItem).mode == mode:
+			return true
+	return false
+
+
+static func _has_spring(level: Node) -> bool:
+	for node in level.find_children("*", "Area2D", true, false):
+		if node is SpringPad:
+			return true
+	return false
+
+
+static func _has_visible_art(node: Node) -> bool:
+	for child in node.get_children():
+		if child is CanvasItem:
+			var canvas := child as CanvasItem
+			if not canvas.visible or canvas.modulate.a < 0.25:
+				continue
+			if child is ColorRect and (child as ColorRect).color.a >= 0.25:
+				return true
+			if child is Sprite2D and (child as Sprite2D).texture != null:
+				return true
+			if child is AnimatedSprite2D:
+				return true
+		if _has_visible_art(child):
+			return true
+	return false
 
 
 static func _approx_rect(node: Node2D, fallback_size: Vector2) -> Rect2:
