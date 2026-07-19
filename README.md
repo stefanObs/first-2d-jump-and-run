@@ -137,6 +137,15 @@ Progress is saved automatically after every level. A parent-accessible hold-to-c
 
 Godot is well suited to a small 2D game, has a compact scene system, exports to the intended platforms, supports Xbox-compatible controllers without an additional input library, and does not require licensing fees. The Windows desktop build is the primary release because it provides the most predictable Xbox controller experience.
 
+### Running the game
+
+The launch scripts locate Godot 4, set the project directory correctly, and forward any additional command-line arguments to Godot.
+
+- **Linux:** run `./run_linux.sh`
+- **Windows PC:** double-click `run_windows.bat` or run it from Command Prompt
+
+Godot must either be available on `PATH` or be specified with the `GODOT_BIN` environment variable. On Windows, the launcher also detects a `Godot_v*-stable_win64.exe` placed beside the script.
+
 ## Chapter 11: Implementation approach
 
 Use reusable Godot scenes rather than building each level independently:
@@ -216,16 +225,23 @@ Each cycle must maintain the following status block:
 
 ### Current development status
 
-- **Current iteration:** `v0.2.0` checkpoints, hazards, goals, and level transitions
-- **Last completed step:** Added reusable Checkpoint, Hazard, and Goal scenes; LevelController celebration flow; Level 02 stub; player respawn/invulnerability; extended headless tests
+- **Current iteration:** `v0.2.1` Linux and Windows launchers
+- **Last completed step:** Added portable launch scripts for Linux and Windows PC and documented their Godot discovery behavior
 - **Currently in progress:** None
 - **Next step:** Add InputManager device switching and basic pause menu navigation for keyboard and Xbox controller
-- **Completed features:** Named keyboard/Xbox input actions; forgiving jump assists; playable Level 01 with checkpoint/hazard/goal; celebration transition into Level 02 stub; headless test runner
+- **Completed features:** Named keyboard/Xbox input actions; forgiving jump assists; playable Level 01 with checkpoint/hazard/goal; celebration transition into Level 02 stub; headless test runner; Linux and Windows launchers
 - **Remaining work:** Development milestones 2 and 4–8 in Chapter 12 (milestone 3 partially complete: checkpoints/goals/transitions done; fuller damage variety still open)
-- **Tests last run:** `godot --headless --path . -s res://tests/run_tests.gd` — all 9 tests passed; main scene smoke-launch with `--quit-after 2` succeeded
+- **Tests last run:** `bash -n run_linux.sh`; Linux launcher smoke-launch; all 9 headless tests passed through `run_linux.sh`; Windows launcher static checks passed
 - **Known issues or blockers:** Gray-box visuals only; Level 02 is a stub; no save slots or pause menu yet; Xbox controller not manually verified on this machine
-- **Latest iteration tag:** `v0.2.0`
-- **Relevant commit:** `4c46aa2`
+- **Latest iteration tag:** `v0.2.1`
+- **Relevant commit:** Pending
+
+### Cycle notes — 2026-07-19 (v0.2.1)
+
+- Added `run_linux.sh` and `run_windows.bat`.
+- Both launchers resolve the repository root and forward optional Godot arguments.
+- Linux checks `GODOT_BIN`, `godot4`, `godot`, and the user-local Godot binary.
+- Windows checks `GODOT_BIN`, `godot4.exe`, `godot.exe`, and a Godot executable beside the script.
 
 ### Cycle notes — 2026-07-19 (v0.2.0)
 
