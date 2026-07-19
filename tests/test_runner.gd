@@ -257,6 +257,14 @@ func _test_goal_disables_input() -> Variant:
 	var error: Variant = null
 	if controller.player.input_enabled:
 		error = "Input should be disabled."
+	elif controller.player.visible:
+		error = "Cowboy should switch from the player sprite to the horse transition."
+	elif controller.transition == null:
+		error = "Horse transition is missing."
+	elif controller.transition.get_node_or_null("TrailHorse") == null:
+		error = "Horse transition should create the saddle horse."
+	elif controller.transition.get_node_or_null("CowboyHorse") == null:
+		error = "Horse transition should create the mounted cowboy."
 	_free_level(controller)
 	return error
 
@@ -434,6 +442,9 @@ func _test_art_and_music() -> Variant:
 		"res://assets/world/trail_dirt_tile.png",
 		"res://assets/world/horizon_hills_strip.png",
 		"res://assets/world/canyon_gap.png",
+		"res://assets/world/trail_horse.png",
+		"res://assets/world/cowboy_horse_ride_0.png",
+		"res://assets/world/cowboy_horse_ride_1.png",
 	]:
 		if load(path) == null:
 			return "Missing hand-drawn world art: %s" % path

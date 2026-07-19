@@ -40,6 +40,7 @@ signal active_slot_changed(slot_index: int)
 var active_slot_index: int = -1
 var active_custom_slot: int = 0
 var custom_return_to_editor: bool = true
+var _horse_arrival_pending: bool = false
 var _data: Dictionary = {}
 
 
@@ -147,6 +148,16 @@ func return_to_save_select() -> void:
 
 func restart_current_level() -> void:
 	load_level(get_current_level_number())
+
+
+func request_horse_arrival() -> void:
+	_horse_arrival_pending = true
+
+
+func consume_horse_arrival() -> bool:
+	var pending := _horse_arrival_pending
+	_horse_arrival_pending = false
+	return pending
 
 
 func save_run_state(

@@ -110,6 +110,8 @@ func setup_level() -> void:
 			hint.visible = false
 		_setup_camp_marks()
 		InputManager.device_changed.connect(_on_device_changed)
+	if not is_custom_level and GameManager.consume_horse_arrival():
+		_play_horse_arrival()
 
 
 func _setup_camp_marks() -> void:
@@ -152,6 +154,7 @@ func begin_completion() -> void:
 	_is_completing = true
 	if player != null:
 		player.set_input_enabled(false)
+		player.visible = false
 	if transition != null:
 		var stars := player.stars_collected if player != null else 0
 		var message := "Trail complete!" if is_final_level else "Yeehaw!"
@@ -524,7 +527,21 @@ func _on_celebration_finished() -> void:
 	if is_final_level:
 		GameManager.return_to_save_select()
 	else:
+		GameManager.request_horse_arrival()
 		GameManager.load_level(level_number + 1)
+
+
+func _play_horse_arrival() -> void:
+	if transition == null or player == null:
+		return
+	player.visible = false
+	player.set_input_enabled(false)
+	transition.play_arrival()
+	await transition.arrival_finished
+	if not is_instance_valid(player):
+		return
+	player.visible = true
+	player.set_input_enabled(true)
 
 
 func _on_save_pressed() -> void:
