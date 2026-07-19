@@ -8,6 +8,16 @@ signal restart_pressed
 signal save_select_pressed
 signal settings_pressed
 
+const TEXT_COLOR := Color(0.28, 0.12, 0.04, 1.0)
+const BUTTON_NAMES := [
+	"ContinueButton",
+	"SaveButton",
+	"LoadButton",
+	"RestartButton",
+	"SaveSelectButton",
+	"SettingsButton",
+]
+
 var _settings: SettingsPanel
 var _buttons: Array[Button] = []
 var _index: int = 0
@@ -17,20 +27,11 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 	layer = 120
 	_settings = get_node_or_null("SettingsPanel") as SettingsPanel
-	for name in [
-		"ContinueButton",
-		"SaveButton",
-		"LoadButton",
-		"RestartButton",
-		"SaveSelectButton",
-		"SettingsButton",
-	]:
-		var button := get_node_or_null("Panel/%s" % name) as Button
-		if button != null:
-			_buttons.append(button)
+	_style_panel()
+	_collect_buttons(true)
 	if _settings != null:
 		_settings.visible = false
-		_settings.closed.connect(func() -> void: _settings.visible = false)
+		_settings.closed.connect(_on_settings_closed)
 	_connect_buttons()
 
 
@@ -57,42 +58,60 @@ func focus_first() -> void:
 
 
 func show_settings() -> void:
+	var panel := get_node_or_null("Panel") as Control
+	if panel != null:
+		panel.visible = false
 	if _settings != null:
 		_settings.visible = true
 		_settings.focus_first()
 
 
 func set_save_options(campaign_save_enabled: bool, can_load: bool) -> void:
-	var save_button := get_node_or_null("Panel/SaveButton") as Button
-	var load_button := get_node_or_null("Panel/LoadButton") as Button
+	var save_button := _button("SaveButton")
+	var load_button := _button("LoadButton")
 	if save_button != null:
 		save_button.visible = campaign_save_enabled
 	if load_button != null:
 		load_button.visible = campaign_save_enabled
 		load_button.disabled = not can_load
 		load_button.text = "Load Game" if can_load else "Load Game (none yet)"
-	_buttons.clear()
-	for name in [
-		"ContinueButton",
-		"SaveButton",
-		"LoadButton",
-		"RestartButton",
-		"SaveSelectButton",
-		"SettingsButton",
-	]:
-		var button := get_node_or_null("Panel/%s" % name) as Button
-		if button != null and button.visible and not button.disabled:
-			_buttons.append(button)
+	_collect_buttons(false)
 	focus_first()
 
 
+func _on_settings_closed() -> void:
+	if _settings != null:
+		_settings.visible = false
+	var panel := get_node_or_null("Panel") as Control
+	if panel != null:
+		panel.visible = true
+	focus_first()
+
+
+func _button(button_name: String) -> Button:
+	var button := get_node_or_null("Panel/Margin/VBox/%s" % button_name) as Button
+	if button == null:
+		button = get_node_or_null("Panel/%s" % button_name) as Button
+	return button
+
+
+func _collect_buttons(include_disabled: bool) -> void:
+	_buttons.clear()
+	for button_name in BUTTON_NAMES:
+		var button := _button(button_name)
+		if button == null or not button.visible:
+			continue
+		if include_disabled or not button.disabled:
+			_buttons.append(button)
+
+
 func _connect_buttons() -> void:
-	var continue_button := get_node_or_null("Panel/ContinueButton") as Button
-	var save_button := get_node_or_null("Panel/SaveButton") as Button
-	var load_button := get_node_or_null("Panel/LoadButton") as Button
-	var restart_button := get_node_or_null("Panel/RestartButton") as Button
-	var select_button := get_node_or_null("Panel/SaveSelectButton") as Button
-	var settings_button := get_node_or_null("Panel/SettingsButton") as Button
+	var continue_button := _button("ContinueButton")
+	var save_button := _button("SaveButton")
+	var load_button := _button("LoadButton")
+	var restart_button := _button("RestartButton")
+	var select_button := _button("SaveSelectButton")
+	var settings_button := _button("SettingsButton")
 	if continue_button != null:
 		continue_button.pressed.connect(func() -> void: continue_pressed.emit())
 	if save_button != null:
@@ -105,6 +124,52 @@ func _connect_buttons() -> void:
 		select_button.pressed.connect(func() -> void: save_select_pressed.emit())
 	if settings_button != null:
 		settings_button.pressed.connect(func() -> void: settings_pressed.emit())
+
+
+func _style_panel() -> void:
+	var panel := get_node_or_null("Panel") as PanelContainer
+	if panel != null:
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color(1, 0.93, 0.78, 1)
+		style.set_border_width_all(4)
+		style.border_color = Color(0.45, 0.24, 0.08, 1)
+		style.set_corner_radius_all(12)
+		panel.add_theme_stylebox_override(&"panel", style)
+	var title := get_node_or_null("Panel/Margin/VBox/Title") as Label
+	if title != null:
+		title.add_theme_color_override(&"font_color", TEXT_COLOR)
+	for button_name in BUTTON_NAMES:
+		var button := _button(button_name)
+		if button != null:
+			_style_button(button)
+
+
+func _style_button(button: Button) -> void:
+	button.add_theme_color_override(&"font_color", TEXT_COLOR)
+	button.add_theme_color_override(&"font_hover_color", Color(0.45, 0.2, 0.06, 1.0))
+	button.add_theme_color_override(&"font_pressed_color", TEXT_COLOR)
+	button.add_theme_color_override(&"font_disabled_color", Color(0.45, 0.35, 0.28, 1.0))
+	button.add_theme_font_size_override(&"font_size", 22)
+	button.custom_minimum_size.y = 52
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = Color(0.95, 0.78, 0.42, 1)
+	normal.set_corner_radius_all(10)
+	normal.set_border_width_all(3)
+	normal.border_color = Color(0.45, 0.24, 0.08, 1)
+	normal.content_margin_left = 12
+	normal.content_margin_right = 12
+	normal.content_margin_top = 8
+	normal.content_margin_bottom = 8
+	var hover := normal.duplicate() as StyleBoxFlat
+	hover.bg_color = Color(1.0, 0.86, 0.5, 1)
+	var disabled := normal.duplicate() as StyleBoxFlat
+	disabled.bg_color = Color(0.85, 0.78, 0.65, 1)
+	disabled.border_color = Color(0.6, 0.5, 0.4, 1)
+	button.add_theme_stylebox_override(&"normal", normal)
+	button.add_theme_stylebox_override(&"hover", hover)
+	button.add_theme_stylebox_override(&"pressed", hover)
+	button.add_theme_stylebox_override(&"focus", hover)
+	button.add_theme_stylebox_override(&"disabled", disabled)
 
 
 func _move(delta: int) -> void:

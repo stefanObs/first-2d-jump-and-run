@@ -20,72 +20,69 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -200.0
-offset_top = -280.0
-offset_right = 200.0
-offset_bottom = 280.0
+offset_left = -240.0
+offset_top = -320.0
+offset_right = 240.0
+offset_bottom = 320.0
 
-[node name="Bg" type="ColorRect" parent="Panel"]
+[node name="Margin" type="MarginContainer" parent="Panel"]
 layout_mode = 2
-color = Color(1, 0.93, 0.78, 1)
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 24
 
-[node name="VBox" type="VBoxContainer" parent="Panel"]
+[node name="VBox" type="VBoxContainer" parent="Panel/Margin"]
 layout_mode = 2
-theme_override_constants/separation = 14
+theme_override_constants/separation = 12
 
-[node name="Title" type="Label" parent="Panel/VBox"]
+[node name="Title" type="Label" parent="Panel/Margin/VBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.35, 0.16, 0.05, 1)
+theme_override_colors/font_color = Color(0.28, 0.12, 0.04, 1)
 theme_override_font_sizes/font_size = 34
 text = "Trail Pause"
 horizontal_alignment = 1
 
-[node name="ContinueButton" type="Button" parent="Panel"]
+[node name="ContinueButton" type="Button" parent="Panel/Margin/VBox"]
 unique_name_in_owner = true
-offset_left = 40.0
-offset_top = 70.0
-offset_right = 360.0
-offset_bottom = 125.0
+layout_mode = 2
+custom_minimum_size = Vector2(0, 52)
+theme_override_colors/font_color = Color(0.28, 0.12, 0.04, 1)
 theme_override_font_sizes/font_size = 22
 text = "Keep Riding"
 
-[node name="RestartButton" type="Button" parent="Panel"]
-offset_left = 40.0
-offset_top = 280.0
-offset_right = 360.0
-offset_bottom = 335.0
-theme_override_font_sizes/font_size = 22
-text = "Restart from Start"
-
-[node name="SaveButton" type="Button" parent="Panel"]
-offset_left = 40.0
-offset_top = 140.0
-offset_right = 360.0
-offset_bottom = 195.0
+[node name="SaveButton" type="Button" parent="Panel/Margin/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 52)
+theme_override_colors/font_color = Color(0.28, 0.12, 0.04, 1)
 theme_override_font_sizes/font_size = 22
 text = "Save Game"
 
-[node name="LoadButton" type="Button" parent="Panel"]
-offset_left = 40.0
-offset_top = 210.0
-offset_right = 360.0
-offset_bottom = 265.0
+[node name="LoadButton" type="Button" parent="Panel/Margin/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 52)
+theme_override_colors/font_color = Color(0.28, 0.12, 0.04, 1)
 theme_override_font_sizes/font_size = 22
 text = "Load Game"
 
-[node name="SaveSelectButton" type="Button" parent="Panel"]
-offset_left = 40.0
-offset_top = 350.0
-offset_right = 360.0
-offset_bottom = 405.0
+[node name="RestartButton" type="Button" parent="Panel/Margin/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 52)
+theme_override_colors/font_color = Color(0.28, 0.12, 0.04, 1)
 theme_override_font_sizes/font_size = 22
-text = "Pick Save"
+text = "Restart from Start"
 
-[node name="SettingsButton" type="Button" parent="Panel"]
-offset_left = 40.0
-offset_top = 420.0
-offset_right = 360.0
-offset_bottom = 475.0
+[node name="SaveSelectButton" type="Button" parent="Panel/Margin/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 52)
+theme_override_colors/font_color = Color(0.28, 0.12, 0.04, 1)
+theme_override_font_sizes/font_size = 22
+text = "Back to Start Screen"
+
+[node name="SettingsButton" type="Button" parent="Panel/Margin/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 52)
+theme_override_colors/font_color = Color(0.28, 0.12, 0.04, 1)
 theme_override_font_sizes/font_size = 22
 text = "Settings"
 
@@ -96,59 +93,72 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -220.0
-offset_top = -200.0
-offset_right = 220.0
-offset_bottom = 200.0
+offset_left = -260.0
+offset_top = -250.0
+offset_right = 260.0
+offset_bottom = 250.0
 script = ExtResource("2")
 
-[node name="VBox" type="VBoxContainer" parent="SettingsPanel"]
+[node name="Margin" type="MarginContainer" parent="SettingsPanel"]
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 24
 
-[node name="Title" type="Label" parent="SettingsPanel/VBox"]
+[node name="VBox" type="VBoxContainer" parent="SettingsPanel/Margin"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.35, 0.16, 0.05, 1)
-theme_override_font_sizes/font_size = 28
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="SettingsPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.28, 0.12, 0.04, 1)
+theme_override_font_sizes/font_size = 32
 text = "Trail Options"
 horizontal_alignment = 1
 
-[node name="MusicLabel" type="Label" parent="SettingsPanel/VBox"]
+[node name="MusicLabel" type="Label" parent="SettingsPanel/Margin/VBox"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.28, 0.12, 0.04, 1)
+theme_override_font_sizes/font_size = 22
 text = "Music"
 
-[node name="MusicSlider" type="HSlider" parent="SettingsPanel/VBox"]
+[node name="MusicSlider" type="HSlider" parent="SettingsPanel/Margin/VBox"]
 layout_mode = 2
-custom_minimum_size = Vector2(0, 28)
+custom_minimum_size = Vector2(0, 36)
 max_value = 1.0
 step = 0.05
 value = 0.8
 
-[node name="SfxLabel" type="Label" parent="SettingsPanel/VBox"]
+[node name="SfxLabel" type="Label" parent="SettingsPanel/Margin/VBox"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.28, 0.12, 0.04, 1)
+theme_override_font_sizes/font_size = 22
 text = "Sound"
 
-[node name="SfxSlider" type="HSlider" parent="SettingsPanel/VBox"]
+[node name="SfxSlider" type="HSlider" parent="SettingsPanel/Margin/VBox"]
 layout_mode = 2
-custom_minimum_size = Vector2(0, 28)
+custom_minimum_size = Vector2(0, 36)
 max_value = 1.0
 step = 0.05
 value = 0.8
 
-[node name="VibrationToggle" type="CheckButton" parent="SettingsPanel/VBox"]
+[node name="VibrationToggle" type="CheckButton" parent="SettingsPanel/Margin/VBox"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.28, 0.12, 0.04, 1)
+theme_override_font_sizes/font_size = 22
 button_pressed = true
 text = "Controller buzz"
 
-[node name="FullscreenToggle" type="CheckButton" parent="SettingsPanel/VBox"]
+[node name="FullscreenToggle" type="CheckButton" parent="SettingsPanel/Margin/VBox"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.28, 0.12, 0.04, 1)
+theme_override_font_sizes/font_size = 22
 text = "Big screen"
 
-[node name="BackButton" type="Button" parent="SettingsPanel/VBox"]
+[node name="BackButton" type="Button" parent="SettingsPanel/Margin/VBox"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 20
+custom_minimum_size = Vector2(0, 52)
+theme_override_colors/font_color = Color(0.28, 0.12, 0.04, 1)
+theme_override_font_sizes/font_size = 24
 text = "Back"

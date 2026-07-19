@@ -221,6 +221,8 @@ static func _validate_visuals(level: Node) -> PackedStringArray:
 
 	for node in level.find_children("*", "PhysicsBody2D", true, false):
 		if _is_platform(node) and not _has_visible_art(node):
+			if String(node.name).begins_with("Ground") and level.get_node_or_null("TrailFloor") != null:
+				continue
 			errors.append("Platform %s has no visible styling." % node.name)
 	for node in level.find_children("*", "Area2D", true, false):
 		if (

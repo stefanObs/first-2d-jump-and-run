@@ -383,16 +383,20 @@ func _test_pause_save_controls() -> Variant:
 	add_child(menu)
 	var error: Variant = null
 	for path in [
-		"Panel/SaveButton",
-		"Panel/LoadButton",
-		"Panel/RestartButton",
+		"Panel/Margin/VBox/SaveButton",
+		"Panel/Margin/VBox/LoadButton",
+		"Panel/Margin/VBox/RestartButton",
+		"Panel/Margin/VBox/SaveSelectButton",
 	]:
 		if menu.get_node_or_null(path) == null:
 			error = "Pause menu missing %s." % path
 			break
-	var restart := menu.get_node_or_null("Panel/RestartButton") as Button
+	var restart := menu.get_node_or_null("Panel/Margin/VBox/RestartButton") as Button
 	if error == null and restart != null and restart.text != "Restart from Start":
 		error = "Restart action should clearly say it starts over."
+	var start_screen := menu.get_node_or_null("Panel/Margin/VBox/SaveSelectButton") as Button
+	if error == null and start_screen != null and start_screen.text != "Back to Start Screen":
+		error = "Pause menu should offer a clear return to the start screen."
 	menu.queue_free()
 	return error
 
