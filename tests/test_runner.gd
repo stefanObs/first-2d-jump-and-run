@@ -250,6 +250,11 @@ func _test_save_slots() -> Variant:
 	if int(updated.get("stars", 0)) != 2:
 		return "Stars should be stored."
 	GameManager.save_to_disk()
+	var path := GameManager.save_path()
+	if not str(path).contains("savegames"):
+		return "Saves should live under a savegames folder, got: %s" % path
+	if not FileAccess.file_exists(path):
+		return "Save file was not written to disk."
 	GameManager.load_from_disk()
 	var reloaded := GameManager.get_slot(0)
 	if int(reloaded.get("current_level", 0)) != 2:

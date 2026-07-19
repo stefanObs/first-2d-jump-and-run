@@ -2,10 +2,10 @@ extends Node
 
 ## Owns save slots, settings, and level progression.
 
-const SAVE_PATH := "user://save_data.json"
 const SAVE_VERSION := 3
 const SLOT_COUNT := 3
 const CUSTOM_LEVEL_STORE := preload("res://scripts/levels/custom_level_store.gd")
+const SavePaths := preload("res://scripts/autoload/save_paths.gd")
 
 const LEVEL_SCENES: PackedStringArray = [
 	"res://scenes/levels/level_01.tscn",
@@ -46,6 +46,7 @@ var _data: Dictionary = {}
 
 func _ready() -> void:
 	_data = _default_data()
+	SavePaths.migrate_legacy_if_needed()
 	load_from_disk()
 	_apply_settings()
 
@@ -320,20 +321,26 @@ func set_setting(key: String, value: Variant) -> void:
 	settings_changed.emit()
 
 
+func save_path() -> String:
+	return SavePaths.campaign_path()
+
+
 func save_to_disk() -> void:
 	_ensure_data()
-	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+	var path := save_path()
+	var file := FileAccess.open(path, FileAccess.WRITE)
 	if file == null:
-		push_error("Could not write save file.")
+		push_error("Could not write save file: %s" % path)
 		return
 	file.store_string(JSON.stringify(_data, "\t"))
 
 
 func load_from_disk() -> void:
-	if not FileAccess.file_exists(SAVE_PATH):
+	var path := save_path()
+	if not FileAccess.file_exists(path):
 		_data = _default_data()
 		return
-	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
+	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null:
 		_data = _default_data()
 		return

@@ -147,7 +147,13 @@ Reaching the goal disables player input and starts a 3–5 second transition: th
 
 The start screen displays three large save cards numbered **1**, **2**, and **3**. Each card shows the current level, collected stars, and total play time. Selecting an empty card starts level 1; selecting an existing card continues immediately.
 
-Progress is saved automatically after every level. A parent-accessible hold-to-confirm action can erase a save, preventing accidental deletion. Saves are stored locally and the game works fully offline.
+Progress is saved automatically after every level. A parent-accessible hold-to-confirm action can erase a save, preventing accidental deletion. Saves are stored locally in a **`savegames/`** folder and the game works fully offline.
+
+- **While developing / using Play Cowboy Trail:** `savegames/` sits next to the project files.
+- **Portable Windows exe:** `savegames/` is created next to `CowboyTrail.exe`.
+- The folder is gitignored so each player keeps their own progress.
+
+Older saves under Godot’s `user://` folder are copied into `savegames/` automatically the first time the game starts.
 
 ## Chapter 9: Child-friendly design and accessibility
 
@@ -167,7 +173,7 @@ Progress is saved automatically after every level. A parent-accessible hold-to-c
 - **Rendering:** Godot 2D renderer using tile maps and animated sprites
 - **Input:** Godot InputMap actions for keyboard and joypad controls
 - **Controller support:** Godot joypad API and built-in controller mappings, tested with Xbox One and Xbox Series controllers over USB and Bluetooth
-- **Data:** Godot resources for level metadata; versioned JSON files for the three saves
+- **Data:** Godot resources for level metadata; versioned JSON files in a local `savegames/` folder
 - **Audio:** OGG music and WAV/OGG sound effects
 - **Targets:** Windows PC first, followed by Linux and optional web export
 - **Testing:** Scene-based headless suite plus manual keyboard, Xbox controller, and child play-testing
@@ -181,6 +187,7 @@ The launch scripts locate Godot 4, set the project directory correctly, and forw
 - **Windows PC (no install needed):** double-click **`Play Cowboy Trail.bat`**. The bundled Godot engine in `godot/` is unpacked automatically on first run, assets are imported once, and the game starts. Nothing has to be installed.
 - **Linux:** run `./run_linux.sh`
 - **Windows (with your own Godot):** double-click `run_windows.bat` or run it from Command Prompt
+- **Portable Windows exe:** run `./create_exe.sh` (Linux/macOS) or `create_exe.bat` (Windows). The build lands in `dist/windows/CowboyTrail.exe` with the game data embedded. Share that folder; progress appears in `savegames/` beside the exe.
 - **Tests:** `godot --headless --path . res://tests/test_runner.tscn`
 
 For the developer launch scripts (`run_*.bat`/`.sh`), Godot must be on `PATH` or set via `GODOT_BIN`. On Windows, `run_windows.bat` also detects a `Godot_v*-stable_win64.exe` beside the script or in the bundled `godot/` folder. The `Play Cowboy Trail.bat` launcher needs none of this — it uses the bundled engine.
@@ -268,17 +275,17 @@ Each cycle must maintain the following status block:
 ### Current development status
 
 - **Current iteration:** `v1.3.3` hazard variety, bounty bandits, and trail readability
-- **Last completed step:** Shared 5-heart boss logic + cleaned sunset rider sprites
+- **Last completed step:** Local `savegames/` persistence + portable Windows `create_exe` scripts
 - **Currently in progress:** In-game visual play-test of bosses and polish
 - **Next step:** Play-test bosses, fences, clouds, and flight; then tag `v1.3.3`
 - **Completed features:** Long 10-level cowboy trail; animated nonviolent bandit lasso; seated tied bandits; warning-shot and bounty bandits; carrions and rattlesnakes; animated canyon recovery; reachable hazards; hand-drawn cowboy + world props; looping music; three custom editor slots; mid-trail saves; modes; Xbox-ready input; Stampede Bull / Midnight Coach / Outlaw Kingpin bosses; horizon victory scene
 - **Remaining work:** In-game visual/gameplay play-test; Xbox controller physical verification; supervised child play-tests; additional SFX
-- **Tests last run:** all automated tests passed after shared boss hearts + sunset rider cleanup
+- **Tests last run:** all automated tests passed after savegames folder + create_exe scripts
 - **Known issues or blockers:**
   - Boss arenas and new fence/cloud art still need an in-game visual play-test
   - Xbox controller not physically verified on this machine
 - **Latest iteration tag:** `v1.3.2`
-- **Relevant commit:** `75bd565`
+- **Relevant commit:** (pending push)
 
 
 ### Cycle notes — 2026-07-19 (v1.3.3)
@@ -301,6 +308,7 @@ Each cycle must maintain the following status block:
 - Coach door frames keep a stable size; lanterns use hand-drawn flight/ground art; kingpin hip-fires slower body-height shots; finale is a hand-drawn sunset ride.
 - Midnight Coach is an endless rightward chase (stops if you lag a screen; 3/4 player speed with infinite Speed); every boss shares a 5-heart UI and slower heart-loss recovery; every boss starts with a 3-2-1 countdown.
 - Sunset victory rider frames were regenerated with transparent backgrounds (no white patches).
+- Campaign and custom-trail saves live in a gitignored `savegames/` folder (next to the project in development, next to the exe when exported). `create_exe.sh` / `create_exe.bat` build a portable Windows exe.
 - Canyon falls now stay recovering through respawn invulnerability, so holding left/right cannot restart the fall animation immediately.
 - Clouds on Wings routes are purposeful: canyon bridges, stepped climbs to high badges, cactus-clear platforms, and nest landings (some stay solid).
 - Rattlesnakes are larger, cast a ground shadow, and rise much higher when the cowboy approaches.

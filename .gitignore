@@ -18,6 +18,11 @@ export_presets.cfg
 *.exe
 *.x86_64
 *.app
+dist/
+build/
+
+# Player save data (campaign + custom trails) — kept local, never committed
+savegames/
 
 # Keep the bundled Windows engine so the game runs with no install.
 # (The .exe is unpacked from this zip on first launch and stays ignored.)

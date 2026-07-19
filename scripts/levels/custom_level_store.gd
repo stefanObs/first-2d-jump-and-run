@@ -3,9 +3,9 @@ extends RefCounted
 
 ## Versioned local storage for three parent-built trails.
 
-const DIRECTORY := "user://custom_levels"
 const VERSION := 1
 const SLOT_COUNT := 3
+const SavePaths := preload("res://scripts/autoload/save_paths.gd")
 
 
 static func default_level(slot_index: int) -> Dictionary:
@@ -29,8 +29,8 @@ static func default_level(slot_index: int) -> Dictionary:
 
 
 static func save(slot_index: int, data: Dictionary) -> bool:
-	DirAccess.make_dir_recursive_absolute(DIRECTORY)
-	var file := FileAccess.open(_path(slot_index), FileAccess.WRITE)
+	var path := SavePaths.custom_level_path(slot_index)
+	var file := FileAccess.open(path, FileAccess.WRITE)
 	if file == null:
 		return false
 	var cleaned := sanitize(data, slot_index)
@@ -39,9 +39,10 @@ static func save(slot_index: int, data: Dictionary) -> bool:
 
 
 static func load_level(slot_index: int) -> Dictionary:
-	if not FileAccess.file_exists(_path(slot_index)):
+	var path := SavePaths.custom_level_path(slot_index)
+	if not FileAccess.file_exists(path):
 		return default_level(slot_index)
-	var file := FileAccess.open(_path(slot_index), FileAccess.READ)
+	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null:
 		return default_level(slot_index)
 	var parsed: Variant = JSON.parse_string(file.get_as_text())
@@ -51,11 +52,11 @@ static func load_level(slot_index: int) -> Dictionary:
 
 
 static func exists(slot_index: int) -> bool:
-	return FileAccess.file_exists(_path(slot_index))
+	return FileAccess.file_exists(SavePaths.custom_level_path(slot_index))
 
 
 static func erase(slot_index: int) -> void:
-	var path := _path(slot_index)
+	var path := SavePaths.custom_level_path(slot_index)
 	if FileAccess.file_exists(path):
 		DirAccess.remove_absolute(path)
 
@@ -88,7 +89,3 @@ static func _valid_object(object: Dictionary) -> bool:
 	var x := int(object.get("x", -1))
 	var y := int(object.get("y", -1))
 	return x >= 0 and x < 24 and y >= 0 and y < 10
-
-
-static func _path(slot_index: int) -> String:
-	return "%s/trail_%d.json" % [DIRECTORY, clampi(slot_index, 0, SLOT_COUNT - 1) + 1]
