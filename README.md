@@ -234,7 +234,7 @@ Each cycle must maintain the following status block:
 - **Tests last run:** `bash -n run_linux.sh`; Linux launcher smoke-launch; all 9 headless tests passed through `run_linux.sh`; Windows launcher static checks passed
 - **Known issues or blockers:** Gray-box visuals only; Level 02 is a stub; no save slots or pause menu yet; Xbox controller not manually verified on this machine
 - **Latest iteration tag:** `v0.2.1`
-- **Relevant commit:** Pending
+- **Relevant commit:** `14fb12b`
 
 ### Cycle notes — 2026-07-19 (v0.2.1)
 
