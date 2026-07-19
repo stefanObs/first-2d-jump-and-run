@@ -111,9 +111,36 @@ Carrion birds challenge Wings routes at varied heights. Some cacti are replaced 
 
 Each level introduces at most one new mechanic, demonstrates it safely, and then asks the player to use it. Optional stars provide an extra challenge but are never required to continue.
 
+### Boss encounters
+
+Boss arenas use the same jump, lasso, mode, and platform tools as the trail. Defeat is always nonviolent. Failing a boss returns the cowboy to the arena entrance with no lives lost.
+
+**Active rollout (this iteration):**
+
+| After clearing | Boss | How to win |
+|----------------|------|------------|
+| Level 3 | **1. Stampede Bull** | Bounce on springs past the horns, then lasso the glowing rope ring on its back three times while it is stunned on wall bales. |
+| Level 7 | **3. Midnight Coach** | Grab a Speed Star (or stay quick on foot), race alongside, and lasso each door handle in order until all three doors are tied shut. |
+| Level 10 | **6. Outlaw Kingpin** | Lasso the two bodyguards first, then lasso the kingpin during his long “LOOK OUT!” telegraph. |
+
+After the Kingpin falls, play a **horizon victory ride**: the cowboy mounts and rides into the sunset before returning to save select.
+
+### Iteration instructions — 2026-07-19 (bosses & trail polish)
+
+Status: **implemented** on `main` (see Chapter 13).
+
+1. **Saloon doorway:** Celebration cowboy stands **in front of the saloon door**.
+2. **Clouds:** Steeper steps; only canyon bridges (wider), multi-hazard approaches, or plank climbs.
+3. **Rattlesnake:** Floor-bound; **head-raise only** (no size growth).
+4. **Flight ceiling:** Soft clamp + non-blocking ceilings so the cowboy can always descend.
+5. **Fence doors:** Visible posts + swinging open/close animation.
+6. **Rainbow Saloon:** Removed stacked low carrion over a canyon.
+7. **Bosses:** Stampede Bull / Midnight Coach / Outlaw Kingpin with matching art.
+8. **Victory:** Horizon ride after the final boss.
+
 ## Chapter 7: Level completion and progression
 
-Reaching the goal disables player input and starts a 3–5 second transition: a saddled horse arrives, the cowboy mounts, and they ride toward the next trail while the collected badge total remains displayed above them. The next level starts automatically with the cowboy riding in and dismounting before control returns. After level 10, the ride-out returns to the save selection screen.
+Reaching the goal disables player input and starts a 3–5 second transition: the cowboy stands at the saloon door, a horse rides in from the left, the cowboy mounts, and they ride toward the next trail while the collected badge total remains displayed above them. The next level starts automatically with the cowboy riding in and dismounting before control returns. After level 10 and the Outlaw Kingpin boss, the cowboy rides into the horizon, then returns to the save selection screen.
 
 ## Chapter 8: Save system
 
@@ -240,20 +267,27 @@ Each cycle must maintain the following status block:
 ### Current development status
 
 - **Current iteration:** `v1.3.3` hazard variety, bounty bandits, and trail readability
-- **Last completed step:** Polish pass: canyon re-trigger fix, purposeful clouds, taller rattlesnakes, horse-from-saloon exit, fence gates, plank boost routes, tying flourish
-- **Currently in progress:** In-game visual/gameplay play-test for this feature pass
-- **Next step:** Play-test horse transition, cactus rims, rattlesnakes, carrion corridors, and camp bonus restore; then tag `v1.3.3`
-- **Completed features:** Long 10-level cowboy trail; animated nonviolent bandit lasso; seated tied bandits; warning-shot and bounty bandits; carrions and rattlesnakes; animated canyon recovery; reachable hazards; hand-drawn cowboy + world props; looping music; three custom editor slots; mid-trail saves; modes; Xbox-ready input
+- **Last completed step:** Implemented saloon doorway pose, steep purposeful clouds, floor rattlesnakes, flight unstick, visible fence gates, L10 canyon carrion fix, bosses after L3/L7/L10, horizon victory ride
+- **Currently in progress:** In-game visual play-test of bosses and polish
+- **Next step:** Play-test bosses, fences, clouds, and flight; then tag `v1.3.3`
+- **Completed features:** Long 10-level cowboy trail; animated nonviolent bandit lasso; seated tied bandits; warning-shot and bounty bandits; carrions and rattlesnakes; animated canyon recovery; reachable hazards; hand-drawn cowboy + world props; looping music; three custom editor slots; mid-trail saves; modes; Xbox-ready input; Stampede Bull / Midnight Coach / Outlaw Kingpin bosses; horizon victory scene
 - **Remaining work:** In-game visual/gameplay play-test; Xbox controller physical verification; supervised child play-tests; additional SFX
-- **Tests last run:** all automated tests passed after polish pass (canyon, clouds, snakes, horse, fences, planks)
+- **Tests last run:** all automated tests passed after boss arenas and trail polish
 - **Known issues or blockers:**
-  - Latest spring, bandit, camp, carrion, shield, and Rail Yard changes still need an in-game visual play-test
+  - Boss arenas and new fence/cloud art still need an in-game visual play-test
   - Xbox controller not physically verified on this machine
 - **Latest iteration tag:** `v1.3.2`
-- **Relevant commit:** `b8837a7`
+- **Relevant commit:** pending push
 
 ### Cycle notes — 2026-07-19 (v1.3.3)
 
+- Celebration cowboy now stands centered on the saloon doorway before the horse arrives.
+- Clouds are steeper and only used as canyon bridges (wider), hazard-approach steps, or plank climbs.
+- Rattlesnakes stay floor-sized; only the head rises to warn.
+- Wings flight soft-clamps at the screen top and no longer wedges under FlightCeilings.
+- Fence gates are larger, post-framed, and swing open/closed clearly.
+- Rainbow Saloon no longer stacks a low carrion over a canyon; corridor moved to clear sky.
+- Bosses after levels 3 / 7 / 10: Stampede Bull, Midnight Coach, Outlaw Kingpin (matching art). Final boss leads to a horizon victory ride.
 - Canyon falls now stay recovering through respawn invulnerability, so holding left/right cannot restart the fall animation immediately.
 - Clouds on Wings routes are purposeful: canyon bridges, stepped climbs to high badges, cactus-clear platforms, and nest landings (some stay solid).
 - Rattlesnakes are larger, cast a ground shadow, and rise much higher when the cowboy approaches.

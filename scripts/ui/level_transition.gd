@@ -53,19 +53,20 @@ func play_celebration(message: String = "Yeehaw!", stars: int = 0) -> void:
 	if _subtitle != null:
 		_subtitle.text = "Badges found: %d" % stars
 		_subtitle.modulate.a = 1.0
-	var ground_y := view_size.y * 0.62
-	var saloon_x := view_size.x * 0.72
+	var ground_y := view_size.y * 0.64
+	var saloon_x := view_size.x * 0.70
+	# Saloon sits on the boardwalk; cowboy starts centered on the doorway.
 	_saloon.visible = true
 	_saloon.modulate.a = 1.0
-	_saloon.position = Vector2(saloon_x, ground_y - 20.0)
+	_saloon.position = Vector2(saloon_x, ground_y - 8.0)
 	_horse.visible = true
 	_horse.modulate.a = 1.0
 	_horse.flip_h = false
 	_horse.position = Vector2(-220.0, ground_y)
 	_cowboy.visible = true
 	_cowboy.modulate.a = 1.0
-	_cowboy.position = Vector2(saloon_x - 10.0, ground_y - 36.0)
-	_cowboy.scale = Vector2(1.35, 1.35)
+	_cowboy.position = Vector2(saloon_x, ground_y - 42.0)
+	_cowboy.scale = Vector2(1.55, 1.55)
 	_rider.visible = false
 	_rider.modulate.a = 0.0
 
@@ -75,40 +76,35 @@ func set_progress(progress: float) -> void:
 		return
 	_ensure_horse_art()
 	var view_size := get_viewport().get_visible_rect().size
-	var ground_y := view_size.y * 0.62
-	var saloon_x := view_size.x * 0.72
-	var mount_x := view_size.x * 0.42
-	_saloon.position = Vector2(saloon_x, ground_y - 20.0)
+	var ground_y := view_size.y * 0.64
+	var saloon_x := view_size.x * 0.70
+	var door_x := saloon_x
+	var mount_x := view_size.x * 0.40
+	_saloon.position = Vector2(saloon_x, ground_y - 8.0)
 	if progress < 0.28:
-		# Horse rides in from the left toward the saloon.
 		var arrival_ratio := progress / 0.28
 		_horse.visible = true
 		_horse.modulate.a = 1.0
 		_horse.position = Vector2(lerpf(-220.0, mount_x, arrival_ratio), ground_y)
 		_cowboy.visible = true
 		_cowboy.modulate.a = 1.0
-		_cowboy.position = Vector2(saloon_x - 10.0, ground_y - 36.0)
+		_cowboy.position = Vector2(door_x, ground_y - 42.0)
 		_rider.visible = false
 		_animating_rider = false
 	elif progress < 0.48:
-		# Cowboy leaves the saloon and jumps onto the horse.
 		var mount_ratio := (progress - 0.28) / 0.20
 		_horse.visible = true
 		_horse.position = Vector2(mount_x, ground_y)
 		_horse.modulate.a = 1.0
-		var jump_y := ground_y - 36.0 - sin(mount_ratio * PI) * 70.0
+		var jump_y := ground_y - 42.0 - sin(mount_ratio * PI) * 78.0
 		_cowboy.visible = true
-		_cowboy.position = Vector2(
-			lerpf(saloon_x - 10.0, mount_x + 8.0, mount_ratio),
-			jump_y
-		)
+		_cowboy.position = Vector2(lerpf(door_x, mount_x + 6.0, mount_ratio), jump_y)
 		_cowboy.modulate.a = 1.0 - mount_ratio
 		_rider.visible = mount_ratio > 0.55
 		_rider.position = Vector2(mount_x, ground_y)
 		_rider.modulate.a = clampf((mount_ratio - 0.55) / 0.45, 0.0, 1.0)
 		_animating_rider = _rider.visible
 	else:
-		# Mounted cowboy rides off to the right.
 		var ride_ratio := (progress - 0.48) / 0.52
 		_horse.visible = false
 		_cowboy.visible = false
@@ -118,7 +114,6 @@ func set_progress(progress: float) -> void:
 		_animating_rider = true
 	if _veil != null:
 		_veil.color.a = lerpf(0.38, 0.72, progress)
-
 
 func play_arrival() -> void:
 	_arrival_active = true

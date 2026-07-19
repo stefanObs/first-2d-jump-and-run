@@ -537,6 +537,8 @@ func _on_celebration_finished() -> void:
 	GameManager.add_play_time(_play_time)
 	var stars := player.stars_collected if player != null else 0
 	GameManager.complete_level(level_number, stars)
+	if GameManager.try_load_boss_after(level_number):
+		return
 	if is_final_level:
 		GameManager.return_to_save_select()
 	else:

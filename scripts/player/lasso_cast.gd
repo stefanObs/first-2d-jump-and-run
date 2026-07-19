@@ -79,7 +79,16 @@ func _draw() -> void:
 
 
 func _on_body_entered(body: Node2D) -> void:
-	if _caught or not (body is Opponent):
+	if _caught:
+		return
+	if body.has_method("lasso_hit"):
+		_caught = true
+		monitoring = false
+		body.call("lasso_hit")
+		_returning = true
+		_elapsed = 0.0
+		return
+	if not (body is Opponent):
 		return
 	var opponent := body as Opponent
 	if opponent.is_tied():

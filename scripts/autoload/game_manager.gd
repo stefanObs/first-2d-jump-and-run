@@ -160,6 +160,28 @@ func consume_horse_arrival() -> bool:
 	return pending
 
 
+const BOSS_SCENES := {
+	3: "res://scenes/bosses/boss_stampede_bull.tscn",
+	7: "res://scenes/bosses/boss_midnight_coach.tscn",
+	10: "res://scenes/bosses/boss_outlaw_kingpin.tscn",
+}
+
+
+func try_load_boss_after(level_number: int) -> bool:
+	if not BOSS_SCENES.has(level_number):
+		return false
+	get_tree().change_scene_to_file(str(BOSS_SCENES[level_number]))
+	return true
+
+
+func finish_boss(source_level: int) -> void:
+	if source_level >= LEVEL_SCENES.size():
+		get_tree().change_scene_to_file("res://scenes/ui/victory_horizon.tscn")
+		return
+	request_horse_arrival()
+	load_level(source_level + 1)
+
+
 func save_run_state(
 	level_number: int,
 	checkpoint_name: String,

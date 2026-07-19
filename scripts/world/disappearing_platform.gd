@@ -7,6 +7,7 @@ extends StaticBody2D
 @export var warn_time: float = 0.75
 @export var always_solid: bool = false
 @export var purpose_label: String = "CLOUD"
+@export var platform_width_scale: float = 1.0
 
 var _timer: float = 0.0
 var _solid: bool = true
@@ -22,6 +23,7 @@ func _ready() -> void:
 	_shape = get_node_or_null("CollisionShape2D") as CollisionShape2D
 	_visual = get_node_or_null("Visual") as CanvasItem
 	_label = get_node_or_null("Label") as Label
+	_apply_width_scale()
 	for child in get_children():
 		if child is CanvasItem and (String(child.name).begins_with("Fluff") or child == _visual):
 			_extras.append(child as CanvasItem)
@@ -30,6 +32,20 @@ func _ready() -> void:
 	_timer = start_delay
 	_started = start_delay <= 0.0
 	_apply_state()
+
+
+func _apply_width_scale() -> void:
+	var w := maxf(platform_width_scale, 0.5)
+	if _visual is Sprite2D:
+		var spr := _visual as Sprite2D
+		spr.scale = Vector2(0.95 * w, 0.9)
+	if _shape != null and _shape.shape is RectangleShape2D:
+		var rect := (_shape.shape as RectangleShape2D).duplicate() as RectangleShape2D
+		rect.size = Vector2(130.0 * w, 30.0)
+		_shape.shape = rect
+	if _label != null:
+		_label.offset_left = -40.0 * w
+		_label.offset_right = 40.0 * w
 
 
 func _process(delta: float) -> void:

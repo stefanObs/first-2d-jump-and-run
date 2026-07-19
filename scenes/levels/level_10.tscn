@@ -1094,17 +1094,11 @@ position = Vector2(1800, 275)
 mode = 1
 
 
-[node name="Cloud0" parent="." instance=ExtResource("15_cloud")]
-position = Vector2(1360, 250)
-start_delay = 0.0
-visible_time = 3.2
-hidden_time = 0.9
+[node name="CloudCanyon0" parent="." instance=ExtResource("15_cloud")]
+position = Vector2(1360, 240)
 always_solid = true
+platform_width_scale = 1.6
 purpose_label = "BRIDGE"
-
-
-[node name="CloudStar0" parent="." instance=ExtResource("9_star")]
-position = Vector2(1360, 195)
 
 
 [node name="SkyPit0" parent="." instance=ExtResource("5_hazard")]
@@ -1112,106 +1106,51 @@ position = Vector2(1440, 400)
 scale = Vector2(3.0, 1.4)
 
 
-[node name="Cloud1" parent="." instance=ExtResource("15_cloud")]
-position = Vector2(2140, 210)
-start_delay = 0.2
-visible_time = 2.6
-hidden_time = 1.1
-purpose_label = "STEP"
-
-
-[node name="Cloud1b" parent="." instance=ExtResource("15_cloud")]
-position = Vector2(2320, 140)
-start_delay = 0.45
-visible_time = 2.6
-hidden_time = 1.1
-purpose_label = "UP"
-
-
-[node name="CloudStar1" parent="." instance=ExtResource("9_star")]
-position = Vector2(2320, 40)
+[node name="CloudCanyon1" parent="." instance=ExtResource("15_cloud")]
+position = Vector2(2720, 240)
+always_solid = true
+platform_width_scale = 1.5
+purpose_label = "BRIDGE"
 
 
 [node name="SkyPit1" parent="." instance=ExtResource("5_hazard")]
-position = Vector2(2340, 400)
+position = Vector2(2800, 400)
 scale = Vector2(3.0, 1.4)
 
 
-[node name="Cloud2" parent="." instance=ExtResource("15_cloud")]
-position = Vector2(3160, 255)
-start_delay = 0.0
-visible_time = 3.5
-hidden_time = 0.8
+[node name="CloudApproach0" parent="." instance=ExtResource("15_cloud")]
+position = Vector2(3180, 270)
+always_solid = true
+purpose_label = "UP"
+
+
+[node name="CloudApproach1" parent="." instance=ExtResource("15_cloud")]
+position = Vector2(3280, 175)
 always_solid = true
 purpose_label = "OVER"
 
 
-[node name="CloudStar2" parent="." instance=ExtResource("9_star")]
-position = Vector2(3320, -20)
+[node name="CloudCanyon2" parent="." instance=ExtResource("15_cloud")]
+position = Vector2(4160, 240)
+always_solid = true
+platform_width_scale = 1.5
+purpose_label = "BRIDGE"
 
 
 [node name="SkyPit2" parent="." instance=ExtResource("5_hazard")]
-position = Vector2(3240, 400)
+position = Vector2(4240, 400)
 scale = Vector2(3.0, 1.4)
 
 
-[node name="Cloud3" parent="." instance=ExtResource("15_cloud")]
-position = Vector2(4040, 235)
-start_delay = 0.6
-visible_time = 2.4
-hidden_time = 1.2
-purpose_label = "SAFE"
-
-
-[node name="CloudStar3" parent="." instance=ExtResource("9_star")]
-position = Vector2(4040, 175)
+[node name="CloudCanyon3" parent="." instance=ExtResource("15_cloud")]
+position = Vector2(5700, 240)
+always_solid = true
+platform_width_scale = 1.35
+purpose_label = "BRIDGE"
 
 
 [node name="SkyPit3" parent="." instance=ExtResource("5_hazard")]
-position = Vector2(4140, 400)
-scale = Vector2(3.0, 1.4)
-
-
-[node name="Cloud4" parent="." instance=ExtResource("15_cloud")]
-position = Vector2(4980, 200)
-start_delay = 0.3
-visible_time = 2.8
-hidden_time = 1.0
-purpose_label = "NEST"
-
-
-[node name="Cloud4b" parent="." instance=ExtResource("15_cloud")]
-position = Vector2(5160, 95)
-start_delay = 0.55
-visible_time = 2.8
-hidden_time = 1.0
-purpose_label = "HIGH"
-
-
-[node name="CloudStar4" parent="." instance=ExtResource("9_star")]
-position = Vector2(5160, -15)
-
-
-[node name="SkyPit4" parent="." instance=ExtResource("5_hazard")]
-position = Vector2(5040, 400)
-scale = Vector2(3.0, 1.4)
-
-
-[node name="Cloud5" parent="." instance=ExtResource("15_cloud")]
-position = Vector2(5840, 250)
-start_delay = 0.0
-visible_time = 3.0
-hidden_time = 1.0
-always_solid = true
-purpose_label = "LAND"
-
-
-[node name="CloudStar5" parent="." instance=ExtResource("9_star")]
-position = Vector2(5980, 40)
-
-
-[node name="SkyPit5" parent="." instance=ExtResource("5_hazard")]
-position = Vector2(5940, 400)
+position = Vector2(5680, 400)
 scale = Vector2(3.0, 1.4)
 
 
@@ -1221,14 +1160,14 @@ patrol_width = 95.0
 
 
 [node name="Carrion1" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(2850, -15)
-patrol_width = 70.0
+position = Vector2(3000, -90)
+patrol_width = 40.0
 move_speed = 58.0
 
 
 [node name="Carrion2" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(5500, 90)
-patrol_width = 100.0
+position = Vector2(5200, 70)
+patrol_width = 60.0
 move_speed = 62.0
 
 
@@ -1239,26 +1178,28 @@ move_speed = 46.0
 
 
 [node name="Carrion4" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(2850, 183)
-patrol_width = 70.0
+position = Vector2(3000, 95)
+patrol_width = 40.0
 move_speed = 50.0
 
 
+
+
 [node name="Carrion5" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(4580, 35)
-patrol_width = 80.0
+position = Vector2(3100, 40)
+patrol_width = 50.0
 move_speed = 56.0
 
 
 [node name="Carrion6" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(6120, 150)
-patrol_width = 55.0
+position = Vector2(700, 90)
+patrol_width = 40.0
 move_speed = 60.0
 
 
 [node name="FlightCeiling0" type="StaticBody2D" parent="."]
 position = Vector2(3850, -130)
-collision_layer = 1
+collision_layer = 0
 collision_mask = 0
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="FlightCeiling0"]
@@ -1266,7 +1207,7 @@ shape = SubResource("FlightCeilingShape")
 
 [node name="FlightCeiling1" type="StaticBody2D" parent="."]
 position = Vector2(1600, -110)
-collision_layer = 1
+collision_layer = 0
 collision_mask = 0
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="FlightCeiling1"]

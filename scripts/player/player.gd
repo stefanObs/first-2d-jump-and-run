@@ -466,10 +466,20 @@ func _apply_flight(delta: float) -> void:
 		input_axis * move_speed * _modes.move_speed_multiplier(),
 		acceleration * delta
 	)
-	if Input.is_action_pressed(&"jump"):
+	var rising := Input.is_action_pressed(&"jump")
+	if rising and not is_on_ceiling():
 		velocity.y = -fly_rise_speed
 	else:
+		# Always allow descent — never stay pinned under a flight ceiling.
 		velocity.y = move_toward(velocity.y, fly_fall_speed, gravity * delta)
+		if is_on_ceiling():
+			velocity.y = maxf(velocity.y, fly_fall_speed * 0.85)
+	# Soft screen-top clamp so Wings cannot wedge into solids above the camera.
+	var min_y := -240.0
+	if global_position.y < min_y:
+		global_position.y = min_y
+		if velocity.y < 0.0:
+			velocity.y = 0.0
 
 
 func _apply_gravity(delta: float, on_floor: bool) -> void:
