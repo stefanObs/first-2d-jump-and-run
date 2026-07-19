@@ -216,23 +216,29 @@ Each cycle must maintain the following status block:
 
 ### Current development status
 
-- **Current iteration:** `v0.1.0` movement prototype and gray-box level
-- **Last completed step:** Godot 4.4 project created with player movement, input actions, Level 01 gray-box, automated tests, and coding standards in the README
+- **Current iteration:** `v0.2.0` checkpoints, hazards, goals, and level transitions
+- **Last completed step:** Added reusable Checkpoint, Hazard, and Goal scenes; LevelController celebration flow; Level 02 stub; player respawn/invulnerability; extended headless tests
 - **Currently in progress:** None
-- **Next step:** Add checkpoints, a working goal trigger, and the short completion transition into the next level stub
-- **Completed features:** Named keyboard/Xbox input actions; forgiving jump assists; playable gray-box Level 01; headless test runner
-- **Remaining work:** Development milestones 2–8 in Chapter 12
-- **Tests last run:** `godot --headless --path . -s res://tests/run_tests.gd` — all 5 tests passed; main scene smoke-launch with `--quit-after 2` succeeded
-- **Known issues or blockers:** Visual gray-box only; goal is a marker without win logic; no menus or saves yet; Xbox controller not manually verified on this machine
-- **Latest iteration tag:** `v0.1.0`
-- **Relevant commit:** `614228f`
+- **Next step:** Add InputManager device switching and basic pause menu navigation for keyboard and Xbox controller
+- **Completed features:** Named keyboard/Xbox input actions; forgiving jump assists; playable Level 01 with checkpoint/hazard/goal; celebration transition into Level 02 stub; headless test runner
+- **Remaining work:** Development milestones 2 and 4–8 in Chapter 12 (milestone 3 partially complete: checkpoints/goals/transitions done; fuller damage variety still open)
+- **Tests last run:** `godot --headless --path . -s res://tests/run_tests.gd` — all 9 tests passed; main scene smoke-launch with `--quit-after 2` succeeded
+- **Known issues or blockers:** Gray-box visuals only; Level 02 is a stub; no save slots or pause menu yet; Xbox controller not manually verified on this machine
+- **Latest iteration tag:** `v0.2.0`
+- **Relevant commit:** pending
 
-### Cycle notes — 2026-07-19
+### Cycle notes — 2026-07-19 (v0.2.0)
+
+- Added `LevelController`, `LevelCompletionFlow`, `Checkpoint`, `Goal`, `Hazard`, and `LevelTransition`.
+- Level 01 now includes a mid-level flag, a pit hazard, a working goal, and auto-loads Level 02 after a short celebration.
+- Player supports input lock, respawn, and brief invulnerability after being hurt.
+- Files touched: `scripts/levels/**`, `scripts/world/**`, `scripts/ui/**`, `scripts/player/player.gd`, `scenes/**`, `tests/run_tests.gd`, `README.md`.
+
+### Cycle notes — 2026-07-19 (v0.1.0)
 
 - Added code quality and development best practices to Chapter 11.
 - Created Godot 4.4.1 project under this repository root.
 - Implemented `JumpAssist`, `Player`, `InputBindings`, `scenes/main.tscn`, and `scenes/levels/level_01.tscn`.
-- Files touched: `project.godot`, `icon.svg`, `.gitignore`, `scripts/**`, `scenes/**`, `tests/run_tests.gd`, `README.md`.
 - Run the game with: `godot --path .`
 - Run tests with: `godot --headless --path . -s res://tests/run_tests.gd`
 

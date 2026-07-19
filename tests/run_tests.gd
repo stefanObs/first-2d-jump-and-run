@@ -11,6 +11,10 @@ func _initialize() -> void:
 	failures += _run("JumpAssist consume clears coyote and buffer", _test_consume_clears_state)
 	failures += _run("InputBindings registers required actions", _test_input_bindings_actions)
 	failures += _run("Main scene loads with a Player", _test_main_scene_has_player)
+	failures += _run("LevelCompletionFlow finishes after duration", _test_completion_flow)
+	failures += _run("Level 01 wires checkpoint, hazard, and goal", _test_level_01_world_objects)
+	failures += _run("LevelController respawns at active checkpoint", _test_respawn_uses_checkpoint)
+	failures += _run("Goal completion disables player input", _test_goal_disables_input)
 
 	if failures == 0:
 		print("All tests passed.")
@@ -105,3 +109,106 @@ func _test_main_scene_has_player() -> Variant:
 		return "Player node is not using the Player script."
 	root.free()
 	return null
+
+
+func _test_completion_flow() -> Variant:
+	var flow := LevelCompletionFlow.new(1.0)
+	flow.start()
+	if not flow.is_active:
+		return "Expected flow to be active after start."
+	if flow.tick(0.4):
+		return "Expected flow to remain active before duration elapses."
+	if not is_equal_approx(flow.progress(), 0.4):
+		return "Unexpected progress value: %s" % str(flow.progress())
+	if not flow.tick(0.7):
+		return "Expected flow to finish after full duration."
+	if flow.is_active:
+		return "Expected flow to become inactive after finishing."
+	return null
+
+
+func _test_level_01_world_objects() -> Variant:
+	var level: Variant = _instantiate_level("res://scenes/levels/level_01.tscn")
+	if level is String:
+		return level
+	var node := level as LevelController
+	var checkpoint := node.find_child("Checkpoint", true, false)
+	var hazard := node.find_child("PitHazard", true, false)
+	var goal := node.find_child("Goal", true, false)
+	var transition := node.find_child("LevelTransition", true, false)
+	var error: Variant = null
+	if checkpoint == null or not (checkpoint is Checkpoint):
+		error = "Level 01 is missing a Checkpoint."
+	elif hazard == null or not (hazard is Hazard):
+		error = "Level 01 is missing a Hazard."
+	elif goal == null or not (goal is Goal):
+		error = "Level 01 is missing a Goal."
+	elif transition == null or not (transition is LevelTransition):
+		error = "Level 01 is missing LevelTransition."
+	elif node.next_level_scene != "res://scenes/levels/level_02.tscn":
+		error = "Level 01 next_level_scene should point to Level 02."
+	_free_level(node)
+	return error
+
+
+func _test_respawn_uses_checkpoint() -> Variant:
+	var level: Variant = _instantiate_level("res://scenes/levels/level_01.tscn")
+	if level is String:
+		return level
+	var controller := level as LevelController
+	if controller.player == null:
+		_free_level(controller)
+		return "LevelController.player was not resolved."
+	var checkpoint := controller.find_child("Checkpoint", true, false) as Checkpoint
+	checkpoint.activate()
+	controller.respawn_player()
+	var player := controller.player
+	var error: Variant = null
+	if player.global_position.distance_to(checkpoint.get_respawn_position()) > 0.1:
+		error = "Player did not respawn at the active checkpoint."
+	elif not player.is_invulnerable():
+		error = "Expected brief invulnerability after respawn."
+	_free_level(controller)
+	return error
+
+
+func _test_goal_disables_input() -> Variant:
+	var level: Variant = _instantiate_level("res://scenes/levels/level_01.tscn")
+	if level is String:
+		return level
+	var controller := level as LevelController
+	if controller.player == null:
+		_free_level(controller)
+		return "LevelController.player was not resolved."
+	controller.begin_completion()
+	var error: Variant = null
+	if controller.player.input_enabled:
+		error = "Expected player input to be disabled during celebration."
+	elif controller.get_node_or_null("LevelTransition") == null:
+		error = "Expected transition overlay to exist."
+	_free_level(controller)
+	return error
+
+
+func _instantiate_level(path: String) -> Variant:
+	var packed: PackedScene = load(path)
+	if packed == null:
+		return "Failed to load scene: %s" % path
+	var level: Node = packed.instantiate()
+	if not (level is LevelController):
+		level.free()
+		return "Scene root is not a LevelController: %s" % path
+	root.add_child(level)
+	var controller := level as LevelController
+	controller.setup_level()
+	if controller.player == null:
+		var player_node := controller.get_node_or_null("Player")
+		_free_level(controller)
+		return "Failed to resolve Player node (found=%s)." % str(player_node)
+	return level
+
+
+func _free_level(level: Node) -> void:
+	if level.get_parent() != null:
+		level.get_parent().remove_child(level)
+	level.free()
