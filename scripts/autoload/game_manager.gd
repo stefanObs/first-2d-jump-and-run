@@ -3,7 +3,7 @@ extends Node
 ## Owns save slots, settings, and level progression.
 
 const SAVE_PATH := "user://save_data.json"
-const SAVE_VERSION := 2
+const SAVE_VERSION := 3
 const SLOT_COUNT := 3
 const CUSTOM_LEVEL_STORE := preload("res://scripts/levels/custom_level_store.gd")
 

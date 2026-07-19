@@ -23,6 +23,7 @@ var _facing: float = 1.0
 var _tied: bool = false
 var _shooting: bool = false
 var _shot_timer: float = 0.0
+var _shot_generation: int = 0
 var _revolver: RevolverOverlay
 
 
@@ -132,6 +133,8 @@ func tie_up(award_bounty: bool = true) -> void:
 	if _tied:
 		return
 	_tied = true
+	_shot_generation += 1
+	_shooting = false
 	collision_layer = 0
 	var body_shape := get_node_or_null("CollisionShape2D") as CollisionShape2D
 	if body_shape != null:
@@ -164,9 +167,12 @@ func untie_for_respawn() -> void:
 	if not _tied:
 		return
 	_tied = false
+	_shot_generation += 1
 	_shooting = false
 	collision_layer = 1
 	z_index = 0
+	global_position = _origin
+	_going_to_b = true
 	var body_shape := get_node_or_null("CollisionShape2D") as CollisionShape2D
 	if body_shape != null:
 		body_shape.set_deferred("disabled", false)
@@ -178,6 +184,8 @@ func untie_for_respawn() -> void:
 	var ropes := get_node_or_null("TiedRopes")
 	if ropes != null:
 		ropes.queue_free()
+	if _revolver != null:
+		_revolver.hide_gun()
 	if _sprite != null:
 		_sprite.sprite_frames = _make_walk_frames()
 		_sprite.rotation = 0.0
@@ -224,6 +232,8 @@ func _shoot_at(player: Player) -> void:
 	if _tied or _shooting:
 		return
 	_shooting = true
+	_shot_generation += 1
+	var shot_id := _shot_generation
 	_facing = 1.0 if player.global_position.x >= global_position.x else -1.0
 	_apply_facing(_facing)
 	if _sprite != null:
@@ -234,7 +244,7 @@ func _shoot_at(player: Player) -> void:
 		_label.text = "LOOK OUT!"
 		_label.modulate = Color(0.9, 0.16, 0.05, 1.0)
 	await get_tree().create_timer(0.45).timeout
-	if _tied:
+	if shot_id != _shot_generation or _tied:
 		_shooting = false
 		return
 	if _revolver != null:
@@ -246,6 +256,9 @@ func _shoot_at(player: Player) -> void:
 	get_parent().add_child(bullet)
 	bullet.global_position = global_position + Vector2(36.0 * _facing, -39.0)
 	await get_tree().create_timer(0.25).timeout
+	if shot_id != _shot_generation:
+		_shooting = false
+		return
 	if _revolver != null:
 		_revolver.hide_gun()
 	if not _tied:

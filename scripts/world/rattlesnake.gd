@@ -16,10 +16,10 @@ var _raised: bool = false
 
 const WATCH_DISTANCE := 360.0
 const RAISE_DISTANCE := 190.0
-const REST_POSITION := Vector2(0, -22)
-const RAISED_POSITION := Vector2(0, -32)
-const REST_SCALE := Vector2(0.54, 0.42)
-const RAISED_SCALE := Vector2(0.57, 0.54)
+const REST_POSITION := Vector2(0, -18)
+const RAISED_POSITION := Vector2(0, -28)
+const REST_SCALE := Vector2(0.40, 0.32)
+const RAISED_SCALE := Vector2(0.42, 0.40)
 
 
 func _ready() -> void:
@@ -91,7 +91,7 @@ func _bite(player: Player) -> void:
 	if _sprite != null:
 		_sprite.texture = BITE_TEXTURE
 		var tween := create_tween()
-		tween.tween_property(_sprite, "scale", Vector2(0.64, 0.58), 0.1)
+		tween.tween_property(_sprite, "scale", Vector2(0.48, 0.44), 0.1)
 		tween.tween_property(_sprite, "scale", RAISED_SCALE, 0.12)
 	if _label != null:
 		_label.text = "HISS!"
