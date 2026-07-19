@@ -15,6 +15,8 @@ static func validate_level_node(level: Node) -> PackedStringArray:
 	errors.append_array(_validate_forward_route(level))
 	errors.append_array(_validate_stars(level))
 	errors.append_array(_validate_platforms(level))
+	errors.append_array(_validate_checkpoints(level))
+	errors.append_array(_validate_no_plank_highway(level))
 	errors.append_array(_validate_visuals(level))
 	return errors
 
@@ -67,6 +69,18 @@ static func _validate_stars(level: Node) -> PackedStringArray:
 
 	var spawn_x := spawn.global_position.x
 	var checkpoint_x := checkpoint.global_position.x if checkpoint != null else spawn_x
+	var surfaces: Array[Dictionary] = []
+	for surface_node in level.find_children("*", "PhysicsBody2D", true, false):
+		if _is_platform(surface_node):
+			var surface := _surface_for(surface_node as Node2D)
+			if not surface.is_empty():
+				surfaces.append(surface)
+	var jump_height := BASE_JUMP_HEIGHT
+	if _has_mode(level, ModeController.Mode.MAGIC_BOOTS):
+		jump_height = ASSISTED_JUMP_HEIGHT
+	if _has_spring(level):
+		jump_height = maxf(jump_height, SPRING_JUMP_HEIGHT)
+	var has_wings := _has_mode(level, ModeController.Mode.WINGS)
 	for node in level.find_children("*", "Area2D", true, false):
 		if not (node is Star):
 			continue
@@ -81,7 +95,29 @@ static func _validate_stars(level: Node) -> PackedStringArray:
 			if hazard_rect.grow(18.0).intersects(star_rect):
 				errors.append("Star %s is unsafe to collect." % star.name)
 				break
+		if not has_wings and not _star_has_reachable_surface(star_pos, surfaces, jump_height):
+			errors.append("Star %s has no reachable supporting surface." % star.name)
 	return errors
+
+
+static func _star_has_reachable_surface(
+	star_position: Vector2,
+	surfaces: Array[Dictionary],
+	jump_height: float
+) -> bool:
+	for surface in surfaces:
+		var left := float(surface["left"]) - 48.0
+		var right := float(surface["right"]) + 48.0
+		if star_position.x < left or star_position.x > right:
+			continue
+		if StarReachability.is_star_reachable_from_surface(
+			float(surface["top"]),
+			star_position.y,
+			jump_height,
+			12.0
+		):
+			return true
+	return false
 
 
 static func _validate_platforms(level: Node) -> PackedStringArray:
@@ -138,6 +174,42 @@ static func _validate_platforms(level: Node) -> PackedStringArray:
 		if has_wings or index in reachable:
 			continue
 		errors.append("Platform %s is not reachable from the forward route." % surfaces[index]["name"])
+	return errors
+
+
+static func _validate_checkpoints(level: Node) -> PackedStringArray:
+	var errors: PackedStringArray = []
+	var grounds: Array[Dictionary] = []
+	for node in level.find_children("*", "PhysicsBody2D", true, false):
+		if String(node.name).begins_with("Ground"):
+			var surface := _surface_for(node as Node2D)
+			if not surface.is_empty():
+				grounds.append(surface)
+	for node in level.find_children("*", "Area2D", true, false):
+		if not (node is Checkpoint):
+			continue
+		var checkpoint := node as Node2D
+		var supported := false
+		for ground in grounds:
+			if (
+				checkpoint.global_position.x >= float(ground["left"]) + 32.0
+				and checkpoint.global_position.x <= float(ground["right"]) - 32.0
+			):
+				supported = true
+				break
+		if not supported:
+			errors.append("Checkpoint %s is not safely supported by ground." % checkpoint.name)
+	return errors
+
+
+static func _validate_no_plank_highway(level: Node) -> PackedStringArray:
+	var errors: PackedStringArray = []
+	var numbered_planks := 0
+	for node in level.find_children("*", "StaticBody2D", true, false):
+		if String(node.name).match("Platform*") and String(node.name).trim_prefix("Platform").is_valid_int():
+			numbered_planks += 1
+	if numbered_planks > 12:
+		errors.append("Generic plank highway blocks hazards and ground interactions.")
 	return errors
 
 

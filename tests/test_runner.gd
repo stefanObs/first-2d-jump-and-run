@@ -25,6 +25,9 @@ func _ready() -> void:
 		_test_level_layout_rules
 	)
 	failures += _run("Cowboy player has movement animations", _test_cowboy_animations)
+	failures += _run("Campaign hazards are no longer blocked by plank highways", _test_no_plank_highways)
+	failures += _run("Custom level store and builder work", _test_custom_level_builder)
+	failures += _run("Hand-drawn celebration art and cheerful music load", _test_art_and_music)
 
 	if failures == 0:
 		print("All tests passed.")
@@ -278,7 +281,7 @@ func _test_cowboy_animations() -> Variant:
 	if sprite == null or sprite.sprite_frames == null:
 		node.queue_free()
 		return "Cowboy AnimatedSprite2D frames were not set up."
-	for anim_name in [&"idle", &"run", &"jump"]:
+	for anim_name in [&"idle", &"run", &"jump", &"celebrate"]:
 		if not sprite.sprite_frames.has_animation(anim_name):
 			node.queue_free()
 			return "Missing cowboy animation: %s" % String(anim_name)
@@ -286,6 +289,58 @@ func _test_cowboy_animations() -> Variant:
 			node.queue_free()
 			return "Cowboy animation has no frames: %s" % String(anim_name)
 	node.queue_free()
+	return null
+
+
+func _test_no_plank_highways() -> Variant:
+	for path in GameManager.LEVEL_SCENES:
+		var packed: PackedScene = load(path)
+		var level := packed.instantiate()
+		var numbered_planks := 0
+		for node in level.find_children("Platform*", "StaticBody2D", true, false):
+			if String(node.name).trim_prefix("Platform").is_valid_int():
+				numbered_planks += 1
+		level.free()
+		if numbered_planks > 12:
+			return "%s still has a blocking plank highway." % path
+	return null
+
+
+func _test_custom_level_builder() -> Variant:
+	var slot := 2
+	var data := CustomLevelStore.default_level(slot)
+	if not CustomLevelStore.save(slot, data):
+		return "Could not save custom trail."
+	var loaded := CustomLevelStore.load_level(slot)
+	if str(loaded.get("title", "")) != "Family Trail 3":
+		CustomLevelStore.erase(slot)
+		return "Custom trail did not round-trip."
+	var level := LevelController.new()
+	level.is_custom_level = true
+	CustomLevelBuilder.build(level, loaded)
+	var error: Variant = null
+	if level.get_node_or_null("SpawnPoint") == null:
+		error = "Custom builder missing SpawnPoint."
+	elif level.find_child("Goal", true, false) == null:
+		error = "Custom builder missing Goal."
+	elif level.find_child("Player", true, false) == null:
+		error = "Custom builder missing Player."
+	elif level.find_child("Ground0", true, false) == null:
+		error = "Custom builder missing ground."
+	level.free()
+	CustomLevelStore.erase(slot)
+	return error
+
+
+func _test_art_and_music() -> Variant:
+	var texture: Texture2D = load("res://assets/player/celebrate.png")
+	if texture == null:
+		return "Hand-drawn celebration art did not load."
+	var music: AudioStream = load("res://assets/audio/cheerful_cowboy_trail.wav")
+	if music == null:
+		return "Cheerful trail music did not load."
+	if AudioServer.get_bus_index(&"Music") < 0:
+		return "Music bus was not created."
 	return null
 
 

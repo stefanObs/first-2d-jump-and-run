@@ -39,6 +39,7 @@ var _shield_bubble: ColorRect
 var _land_squash: float = 0.0
 var _wing_l: ColorRect
 var _wing_r: ColorRect
+var _celebrating: bool = false
 
 
 func _ready() -> void:
@@ -98,6 +99,13 @@ func set_input_enabled(enabled: bool) -> void:
 	if not enabled:
 		velocity.x = 0.0
 		_jump_assist.reset()
+
+
+func celebrate() -> void:
+	_celebrating = true
+	velocity = Vector2.ZERO
+	if _sprite != null:
+		_sprite.play(&"celebrate")
 
 
 func is_invulnerable() -> bool:
@@ -165,6 +173,7 @@ func _setup_sprite_frames() -> void:
 	_add_anim(frames, &"idle", ["idle_0.png", "idle_1.png"], 4.0)
 	_add_anim(frames, &"run", ["run_0.png", "run_1.png", "run_2.png", "run_3.png"], 10.0)
 	_add_anim(frames, &"jump", ["jump.png"], 5.0, false)
+	_add_anim(frames, &"celebrate", ["celebrate.png"], 5.0)
 	_sprite.sprite_frames = frames
 	_sprite.centered = true
 	_sprite.offset = Vector2(0, -32)
@@ -195,7 +204,9 @@ func _update_animation(on_floor: bool) -> void:
 	_sprite.flip_h = _facing < 0.0
 
 	var next := &"idle"
-	if not on_floor or _modes.is_flying():
+	if _celebrating:
+		next = &"celebrate"
+	elif not on_floor or _modes.is_flying():
 		next = &"jump"
 	elif absf(velocity.x) > 20.0:
 		next = &"run"

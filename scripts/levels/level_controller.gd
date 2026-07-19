@@ -10,6 +10,8 @@ signal player_respawned(position: Vector2)
 @export var celebration_duration: float = 4.2
 @export var level_title: String = "Level"
 @export var is_final_level: bool = false
+@export var fall_recovery_y: float = 540.0
+@export var is_custom_level: bool = false
 
 var spawn_point: Marker2D
 var player: Player
@@ -40,6 +42,9 @@ func _process(delta: float) -> void:
 
 	_play_time += delta
 	_update_trail_progress()
+	if player != null and player.global_position.y > fall_recovery_y:
+		respawn_player()
+		return
 	if Input.is_action_just_pressed(&"pause"):
 		set_paused(true)
 		return
@@ -262,6 +267,9 @@ func _on_hazard_hurt(_hurt_player: Player) -> void:
 
 
 func _on_celebration_finished() -> void:
+	if is_custom_level:
+		GameManager.return_from_custom_level()
+		return
 	GameManager.add_play_time(_play_time)
 	var stars := player.stars_collected if player != null else 0
 	GameManager.complete_level(level_number, stars)
@@ -273,11 +281,17 @@ func _on_celebration_finished() -> void:
 
 func _on_restart_pressed() -> void:
 	get_tree().paused = false
+	if is_custom_level:
+		GameManager.play_custom_level(GameManager.active_custom_slot, GameManager.custom_return_to_editor)
+		return
 	GameManager.restart_current_level()
 
 
 func _on_save_select_pressed() -> void:
 	get_tree().paused = false
+	if is_custom_level:
+		GameManager.return_from_custom_level()
+		return
 	GameManager.add_play_time(_play_time)
 	GameManager.save_to_disk()
 	GameManager.return_to_save_select()

@@ -30,6 +30,8 @@ A small, friendly 2D platform game for children around six years old.
 - A longer final celebration after level 10
 - Large, child-friendly menus with minimal reading
 - Pause, restart, settings, and save-selection screens
+- Three local custom-trail slots with a grid-based family level editor and play-test flow
+- Original hand-drawn cowboy animation and looping cheerful trail music
 - Local offline play with no advertisements, purchases, or online account
 
 ### Gameplay features
@@ -228,16 +230,25 @@ Each cycle must maintain the following status block:
 
 ### Current development status
 
-- **Current iteration:** `v1.2.10` belt tips and bobbing title
-- **Last completed step:** First belt ride and gate-warn toasts; louder HURRY!/WAIT! gate labels
-- **Currently in progress:** Ralph polish loop until 17:00 CEST (hard stop; credit % not readable)
-- **Next step:** Keep polishing playability/visuals in the ralph loop until stop time
-- **Completed features:** Long playable 10-level cowboy trail; 3 camps per level; animated cowboy; modes; Xbox-ready input; Chapter 14 QA green
-- **Remaining work:** Music/SFX; richer hand-drawn art; live Xbox verification; supervised child play-tests
-- **Tests last run:** `godot --headless --path . res://tests/test_runner.tscn` — all 16 tests passed
-- **Known issues or blockers:** Placeholder pixel art; no music/SFX yet; Xbox controller not physically verified on this machine
-- **Latest iteration tag:** `v1.2.10`
-- **Relevant commit:** `49482f6`
+- **Current iteration:** `v1.3.0` reachable hazards, hand-drawn cowboy, music, and custom trail builder
+- **Last completed step:** Removed blocking plank highways, repaired pits/checkpoints/fall recovery, added original art/music and a three-slot editor
+- **Currently in progress:** Final verification and release commit
+- **Next step:** Supervised child play-test and live Xbox verification
+- **Completed features:** Long 10-level cowboy trail; reachable hazards/ground mechanics; hand-drawn cowboy; looping music; three custom editor slots; saves; modes; Xbox-ready input; stronger Chapter 14 QA
+- **Remaining work:** Additional SFX; live Xbox verification; supervised child play-tests
+- **Tests last run:** `godot --headless --path . res://tests/test_runner.tscn` — all 19 tests passed; custom hub/editor/runtime smoke tests passed
+- **Known issues or blockers:** Xbox controller not physically verified on this machine
+- **Latest iteration tag:** `v1.3.0`
+- **Relevant commit:** *(set after release commit)*
+
+### Cycle notes — 2026-07-19 (v1.3.0)
+
+- Removed the 36-plank highway from every campaign level; pits, cacti, opponents, springs, pickups, gates, and belts can now be reached from the ground.
+- Widened pit sensors, moved unsafe camps onto solid ground, added below-level fall recovery, and removed stars left floating after the plank removal.
+- Strengthened automated QA for reachable stars, supported checkpoints, and accidental plank highways.
+- Replaced the cowboy frames with original hand-drawn idle/run/jump/celebration art.
+- Added original looping cheerful cowboy music with a persistent Music bus controlled by the existing volume setting.
+- Added **Build Your Own Trail** from the save screen: three local slots, stamp/grid editing, automatic saves, and isolated play-testing.
 
 ### Cycle notes — 2026-07-19 (v1.2.10)
 

@@ -5,6 +5,7 @@ extends Node
 const SAVE_PATH := "user://save_data.json"
 const SAVE_VERSION := 1
 const SLOT_COUNT := 3
+const CUSTOM_LEVEL_STORE := preload("res://scripts/levels/custom_level_store.gd")
 
 const LEVEL_SCENES: PackedStringArray = [
 	"res://scenes/levels/level_01.tscn",
@@ -37,6 +38,8 @@ signal settings_changed
 signal active_slot_changed(slot_index: int)
 
 var active_slot_index: int = -1
+var active_custom_slot: int = 0
+var custom_return_to_editor: bool = true
 var _data: Dictionary = {}
 
 
@@ -141,6 +144,28 @@ func restart_current_level() -> void:
 	load_level(get_current_level_number())
 
 
+func edit_custom_level(slot_index: int) -> void:
+	active_custom_slot = clampi(slot_index, 0, CUSTOM_LEVEL_STORE.SLOT_COUNT - 1)
+	get_tree().change_scene_to_file("res://scenes/ui/level_editor.tscn")
+
+
+func play_custom_level(slot_index: int, return_to_editor: bool = true) -> void:
+	active_custom_slot = clampi(slot_index, 0, CUSTOM_LEVEL_STORE.SLOT_COUNT - 1)
+	custom_return_to_editor = return_to_editor
+	get_tree().change_scene_to_file("res://scenes/levels/custom_level_runtime.tscn")
+
+
+func open_custom_level_hub() -> void:
+	get_tree().change_scene_to_file("res://scenes/ui/custom_level_hub.tscn")
+
+
+func return_from_custom_level() -> void:
+	if custom_return_to_editor:
+		edit_custom_level(active_custom_slot)
+	else:
+		open_custom_level_hub()
+
+
 func get_settings() -> Dictionary:
 	_ensure_data()
 	return _data["settings"]
@@ -200,9 +225,6 @@ func _ensure_data() -> void:
 func _apply_settings() -> void:
 	_ensure_data()
 	var settings: Dictionary = _data["settings"]
-	var music := float(settings.get("music_volume", 0.8))
-	var sfx := float(settings.get("sfx_volume", 0.8))
-	AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Master"), linear_to_db(clampf((music + sfx) * 0.5, 0.0, 1.0)))
 	if bool(settings.get("fullscreen", false)):
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 	else:

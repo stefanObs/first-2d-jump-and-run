@@ -12,6 +12,9 @@ var _hint: Label
 func _ready() -> void:
 	_prompt = get_node_or_null("PromptLabel") as Label
 	_hint = get_node_or_null("HintLabel") as Label
+	var builder := get_node_or_null("BuildTrailButton") as Button
+	if builder != null:
+		builder.pressed.connect(GameManager.open_custom_level_hub)
 	for i in range(3):
 		var card := get_node_or_null("Slots/Slot%d" % (i + 1)) as Button
 		if card != null:
