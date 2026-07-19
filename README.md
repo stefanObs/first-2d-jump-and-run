@@ -1,3 +1,237 @@
-# first-2d-jump-and-run
+# First 2D Jump-and-Run
 
-A 2D jump-and-run game project.
+A small, friendly 2D platform game for children around six years old.
+
+## Chapter 1: Vision
+
+### Goal and design principles
+
+- Complete 10 short levels, each taking about 2–4 minutes.
+- Keep controls simple, forgiving, and understandable without much reading.
+- Make every level slightly harder while avoiding sudden difficulty spikes.
+- Reward exploration and progress; do not punish failure.
+- Use cheerful visuals, clear sounds, large buttons, and no advertisements or online features.
+
+## Chapter 2: Feature list
+
+### Core features
+
+- 10 short levels with a gradual difficulty curve
+- Simple running and jumping with forgiving controls
+- Full keyboard and Xbox controller support on PC
+- Three numbered save slots with automatic saving
+- Checkpoints and instant retries without limited lives
+- Stars to collect as an optional extra challenge
+- Collectible items that temporarily activate special player modes
+- A dedicated flying level
+- Simple opponents and obstacles that can hurt the player
+- A short celebration and automatic transition after every level
+- A longer final celebration after level 10
+- Large, child-friendly menus with minimal reading
+- Pause, restart, settings, and save-selection screens
+- Local offline play with no advertisements, purchases, or online account
+
+### Gameplay features
+
+- Coyote time, jump buffering, and variable jump height
+- Moving and disappearing platforms
+- Spring pads, wind zones, conveyor belts, and timed doors
+- Flying, high-jump, speed, and invincibility modes
+- Slow, predictable opponents that are avoided by jumping over them
+- Clear visual and audio feedback for goals, checkpoints, and collectibles
+- Optional animated or spoken hints
+- Music, sound, and controller vibration settings
+- Fullscreen/windowed mode and remappable controls
+
+## Chapter 3: Gameplay and controls
+
+### Core gameplay
+
+The player can run left and right, jump, collect stars and mode items, activate checkpoints, avoid opponents and obstacles, and reach a clearly marked goal. Falling into a pit or taking damage returns the player to the latest checkpoint after a short recovery animation, without losing lives or saved progress.
+
+### Keyboard controls
+
+- Keyboard: arrow keys or `A`/`D` to move, `Space` to jump
+- `Escape`: pause
+
+### Xbox controller support
+
+The game must be fully playable with an Xbox One or Xbox Series controller connected to the PC by USB or Bluetooth. No keyboard or mouse should be required after the game starts.
+
+- Left stick or D-pad: move and navigate menus
+- `A`: jump and confirm
+- `B`: go back
+- Menu button: pause
+- Controller vibration: optional feedback for checkpoints and level completion
+
+All menus must show the correct Xbox button prompts when a controller is active. The game should switch automatically between keyboard and controller prompts based on the last input used. Connecting or disconnecting a controller while playing must not interrupt the game.
+
+Jumping should include coyote time, jump buffering, and variable jump height so that it feels forgiving. Moving platforms should carry the player reliably.
+
+## Chapter 4: Items and player modes
+
+Special items found in the levels temporarily change how the player moves or interacts with the world. Each item must have a unique shape, color, icon, and sound so a child can recognize it without reading.
+
+- **Wings:** activates flying mode; the player holds the jump button to rise and releases it to descend.
+- **Magic Boots:** increases jump height and makes long gaps easier.
+- **Speed Star:** makes the player run faster while keeping acceleration controllable.
+- **Bubble Shield:** makes the player immune to all damage for a limited time. Pits still return the player safely to the latest checkpoint.
+
+An item plays a short transformation animation when collected. A large icon and a simple visual timer show which mode is active and when it will end. Mode items should be placed where their ability is useful, with a safe practice area before any difficult section.
+
+Only one special mode is active at a time. Collecting another mode item replaces the current mode. Important items respawn if the player returns to a checkpoint, preventing the player from becoming stuck.
+
+## Chapter 5: Opponents, obstacles, and damage
+
+Opponents use simple, repeating movement patterns, such as walking between two points or slowly flying up and down. They are obstacles rather than combat targets: the player avoids them by jumping over, flying around, or waiting for a safe moment. There are no weapons and opponents do not need to be defeated.
+
+Harmful obstacles may include spikes, rolling objects, falling objects, and moving barriers. Every danger must be clearly visible, move predictably, and provide enough reaction time for a young child. Taking damage causes a gentle bounce, a clear sound, and a quick return to the latest checkpoint; there is no health counter, life limit, or game-over screen.
+
+## Chapter 6: Level progression
+
+1. **First Steps** – walking, jumping, and the goal
+2. **Star Meadow** – collecting stars and jumping over small gaps
+3. **Bouncy Woods** – spring pads and slightly higher platforms
+4. **River Run** – moving platforms over water
+5. **Checkpoint Cave** – checkpoints, simple opponents, and falling obstacles
+6. **Windy Hill** – Magic Boots, gentle wind zones, and longer jumps
+7. **Cloud Flight** – Wings activate a flying mode for most of the level
+8. **Friendly Factory** – Bubble Shields, slow conveyor belts, and timed doors
+9. **Moonlight Mountain** – Speed Stars and a combination of earlier mechanics
+10. **Rainbow Castle** – a celebratory final course using all learned skills
+
+Each level introduces at most one new mechanic, demonstrates it safely, and then asks the player to use it. Optional stars provide an extra challenge but are never required to continue.
+
+## Chapter 7: Level completion and progression
+
+Reaching the goal disables player input and starts a 3–5 second celebration: the character cheers, collected stars fly into the counter, music plays, and the screen transitions with a colorful wipe. The next level then starts automatically. After level 10, a longer celebration returns to the save selection screen.
+
+## Chapter 8: Save system
+
+The start screen displays three large save cards numbered **1**, **2**, and **3**. Each card shows the current level, collected stars, and total play time. Selecting an empty card starts level 1; selecting an existing card continues immediately.
+
+Progress is saved automatically after every level. A parent-accessible hold-to-confirm action can erase a save, preventing accidental deletion. Saves are stored locally and the game works fully offline.
+
+## Chapter 9: Child-friendly design and accessibility
+
+- No lives, game-over screen, weapons, timers, or permanent failure
+- Frequent checkpoints and instant retries
+- Predictable opponents and clearly marked harmful obstacles
+- Optional spoken or animated hints instead of text-heavy instructions
+- Adjustable music and sound volume
+- Fullscreen/windowed mode and remappable controls
+- High-contrast goal markers and mechanics that do not rely on color alone
+- Pause menu with **Continue**, **Restart Level**, **Save Selection**, and **Settings**
+
+## Chapter 10: Technology stack
+
+- **Engine:** Godot 4.x
+- **Language:** GDScript
+- **Rendering:** Godot 2D renderer using tile maps and animated sprites
+- **Input:** Godot InputMap actions for keyboard and joypad controls
+- **Controller support:** Godot joypad API and built-in controller mappings, tested with Xbox One and Xbox Series controllers over USB and Bluetooth
+- **Data:** Godot resources for level metadata; versioned JSON files for the three saves
+- **Audio:** OGG music and WAV/OGG sound effects
+- **Targets:** Windows PC first, followed by Linux and optional web export
+- **Testing:** GUT for logic tests plus manual keyboard, Xbox controller, and child play-testing
+
+Godot is well suited to a small 2D game, has a compact scene system, exports to the intended platforms, supports Xbox-compatible controllers without an additional input library, and does not require licensing fees. The Windows desktop build is the primary release because it provides the most predictable Xbox controller experience.
+
+## Chapter 11: Implementation approach
+
+Use reusable Godot scenes rather than building each level independently:
+
+- `Main` manages menus, save selection, and scene transitions.
+- `GameManager` tracks the active save, level progress, stars, and settings.
+- `InputManager` maps keyboard and controller actions, detects the active device, changes button prompts, and handles controller connection changes.
+- `Player` contains movement, animation, checkpoints, damage handling, and input handling.
+- `ModeController` activates timed player modes and updates their visual indicator.
+- `LevelBase` defines spawn points, checkpoints, collectibles, and the goal.
+- Reusable components implement opponents, hazards, mode items, moving platforms, springs, wind, doors, and conveyors.
+- A transition controller owns the completion animation and loads the next level.
+
+All gameplay code should read named actions such as `move_left`, `move_right`, `jump`, `confirm`, `back`, and `pause` instead of checking physical keys or controller buttons directly. This keeps keyboard and Xbox controller behavior consistent and allows controls to be remapped.
+
+### Iterative development workflow
+
+Development is organized into small, playable iterations. Every iteration follows the same process:
+
+1. Select a small group of related changes from the specification.
+2. Implement the changes incrementally, keeping the game playable after each step.
+3. Add or update automated tests for gameplay logic, save data, input handling, and transitions.
+4. Run the complete automated test suite and fix all failures.
+5. Start the game and test the affected behavior thoroughly with keyboard and Xbox controller.
+6. Play through all completed levels to check for regressions.
+7. Confirm that the iteration meets its acceptance criteria.
+8. Commit the finished work and create an annotated Git tag for the iteration.
+
+Iteration tags use semantic versioning, starting with `v0.1.0`. Minor versions mark playable feature iterations, patch versions mark fixes, and `v1.0.0` marks the first complete release. A tag is created only when tests pass and the iteration is playable.
+
+### Planning future extensions
+
+When all currently planned features are complete, review the game and create a list of possible extensions before starting more implementation. Each extension should include:
+
+- A short description and benefit for the player
+- Estimated implementation effort: **Low**, **Medium**, or **High**
+- Expected child-friendly value: **1–5**
+- Technical risk: **Low**, **Medium**, or **High**
+- Priority rating: **1–5**, where 5 is the strongest candidate
+
+Extensions remain optional and must not delay a stable `v1.0.0` release. The highest-rated ideas can be selected for later iterations and receive their own version tags.
+
+## Chapter 12: Development milestones
+
+1. Prototype movement and one gray-box level.
+2. Add keyboard and Xbox controller input, including menu navigation and device switching.
+3. Add checkpoints, damage, goals, and automatic level transitions.
+4. Add reusable mode items, flying controls, opponents, and harmful obstacles.
+5. Add the three-slot save system and menus.
+6. Create all 10 levels using reusable components.
+7. Add art, animation, sound, hints, settings, controller prompts, and accessibility features.
+8. Play-test with adults first, then supervised children; tune jump distances, opponent speed, and checkpoint placement.
+
+Each milestone may contain several small iterations. Every completed iteration must follow the workflow above and receive its own Git tag.
+
+## Chapter 13: Progress and resumability
+
+The progress of every development cycle must be recorded in this README so work can continue safely after a pause, exhausted credits, a compressed context window, or a new development session. The README is the human-readable source of truth and must be updated before ending a work session whenever practical.
+
+Each cycle must maintain the following status block:
+
+### Current development status
+
+- **Current iteration:** Specification and project planning
+- **Last completed step:** Initial game specification and development workflow documented
+- **Currently in progress:** No implementation work started
+- **Next step:** Create the Godot project and prototype player movement
+- **Completed features:** None yet
+- **Remaining work:** Development milestones in Chapter 12
+- **Tests last run:** Not applicable; no game code exists yet
+- **Known issues or blockers:** None
+- **Latest iteration tag:** None
+- **Relevant commit:** 0f8f7db
+
+At the end of each cycle:
+
+1. Update every field in the status block.
+2. List the exact files and systems changed.
+3. Record tests run, their results, and any manual checks performed.
+4. Record unfinished work, known defects, assumptions, and important decisions.
+5. Describe one concrete next action that can be started without reconstructing prior context.
+6. Add the relevant commit hash and iteration tag after committing and tagging.
+
+Detailed cycle notes may be added below the status block under a dated heading. Keep only information needed to resume work; move obsolete details into Git history instead of allowing the README to become a long activity log.
+
+## Chapter 14: Definition of done
+
+- All 10 levels can be completed with keyboard and gamepad.
+- The complete game and every menu can be used with an Xbox controller connected to the PC.
+- USB/Bluetooth connection changes and switching between keyboard and controller work safely.
+- The flying level and all collectible player modes work with keyboard and controller.
+- The Bubble Shield prevents damage for its full active duration.
+- Opponents and harmful obstacles are predictable, clearly visible, and never remove saved progress.
+- Difficulty increases gradually and every new mechanic is introduced safely.
+- Completion animation always leads directly to the next level.
+- All three save slots load, save, display, and erase progress correctly.
+- Closing and reopening the game preserves completed levels and settings.
+- The game can be completed without reading instructions or losing progress.
