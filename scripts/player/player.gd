@@ -187,9 +187,9 @@ func play_canyon_fall() -> void:
 	await tween.finished
 
 
-func activate_mode(mode: ModeController.Mode, duration_override: float = 0.0) -> void:
+func activate_mode(mode: ModeController.Mode, duration_override: float = 0.0, make_infinite: bool = false) -> void:
 	_ensure_modes()
-	_modes.activate(mode, duration_override)
+	_modes.activate(mode, duration_override, make_infinite)
 	mode_changed.emit(ModeController.mode_name(mode), _modes.remaining)
 
 

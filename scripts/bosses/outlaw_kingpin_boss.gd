@@ -51,7 +51,7 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if _won or _king == null or _capturing:
+	if _won or _king == null or _capturing or not combat_ready:
 		return
 	if not _shooting:
 		_king.position.x += _walk_dir * _walk_speed * delta
@@ -105,7 +105,7 @@ func _start_telegraph_loop() -> void:
 
 
 func _shoot_at_player() -> void:
-	if _won or _capturing or _king == null or player == null:
+	if _won or _capturing or not combat_ready or _king == null or player == null:
 		_shot_timer = 0.8
 		return
 	_shooting = true
@@ -154,7 +154,7 @@ func _shoot_at_player() -> void:
 
 
 func lasso_kingpin() -> void:
-	if _won or _capturing:
+	if _won or _capturing or not combat_ready:
 		return
 	if _guards_left > 0:
 		report_progress("Tie the bodyguards first!")

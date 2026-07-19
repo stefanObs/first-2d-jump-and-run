@@ -9,6 +9,7 @@ signal mode_changed(mode: Mode, remaining: float)
 
 var active_mode: Mode = Mode.NONE
 var remaining: float = 0.0
+var infinite: bool = false
 
 var wings_duration: float = 30.0
 var boots_duration: float = 30.0
@@ -17,8 +18,9 @@ var shield_duration: float = 15.0
 var badge_extension: float = 5.0
 
 
-func activate(mode: Mode, duration_override: float = 0.0) -> void:
+func activate(mode: Mode, duration_override: float = 0.0, make_infinite: bool = false) -> void:
 	active_mode = mode
+	infinite = make_infinite and mode != Mode.NONE
 	match mode:
 		Mode.WINGS:
 			remaining = wings_duration
@@ -30,19 +32,23 @@ func activate(mode: Mode, duration_override: float = 0.0) -> void:
 			remaining = shield_duration
 		_:
 			remaining = 0.0
+			infinite = false
 	if duration_override > 0.0:
 		remaining = duration_override
+	if infinite:
+		remaining = 99999.0
 	mode_changed.emit(active_mode, remaining)
 
 
 func restore(mode: Mode, saved_remaining: float, minimum_remaining: float = 0.0) -> void:
 	active_mode = mode
+	infinite = false
 	remaining = maxf(saved_remaining, minimum_remaining) if mode != Mode.NONE else 0.0
 	mode_changed.emit(active_mode, remaining)
 
 
 func extend_from_badge() -> void:
-	if active_mode == Mode.NONE:
+	if active_mode == Mode.NONE or infinite:
 		return
 	remaining = maxf(remaining + badge_extension, badge_extension)
 	mode_changed.emit(active_mode, remaining)
@@ -51,11 +57,15 @@ func extend_from_badge() -> void:
 func clear() -> void:
 	active_mode = Mode.NONE
 	remaining = 0.0
+	infinite = false
 	mode_changed.emit(active_mode, remaining)
 
 
 func tick(delta: float) -> void:
 	if active_mode == Mode.NONE:
+		return
+	if infinite:
+		mode_changed.emit(active_mode, remaining)
 		return
 	remaining = maxf(remaining - delta, 0.0)
 	if remaining <= 0.0:

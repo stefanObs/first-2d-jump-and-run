@@ -1,6 +1,6 @@
 extends BossArena
 
-## Midnight Coach: lasso three door handles in order while dodging defenses.
+## Midnight Coach: endless rightward chase — lasso doors 1-2-3 while racing.
 
 const COACH_FRAMES: Array[Texture2D] = [
 	preload("res://assets/world/boss_midnight_coach_0.png"),
@@ -9,34 +9,47 @@ const COACH_FRAMES: Array[Texture2D] = [
 	preload("res://assets/world/boss_midnight_coach_3.png"),
 ]
 
+const SCREEN_LAG := 1280.0
+const COACH_SPEED_RATIO := 0.75
+const ACCEL := 160.0
+
 var _coach: Node2D
 var _coach_sprite: Sprite2D
 var _horse_near: Sprite2D
 var _horse_far: Sprite2D
 var _driver_gun: RevolverOverlay
+var _ground: StaticBody2D
+var _ground_visual: ColorRect
+var _ground_shape: CollisionShape2D
+var _background: ColorRect
 var _doors: Array[BossLassoTarget] = []
 var _doors_done: int = 0
 var _next_door: int = 0
-var _dir: float = 1.0
-var _base_speed: float = 150.0
-var _speed: float = 150.0
+var _speed: float = 0.0
+var _target_speed: float = 200.0
+var _waiting: bool = false
 var _gallop_t: float = 0.0
 var _shot_timer: float = 2.0
-var _burst_timer: float = 4.5
 var _lantern_timer: float = 3.5
+var _burst_timer: float = 5.0
 var _bursting: bool = false
 var _shooting: bool = false
 var _shot_generation: int = 0
+var _ground_half_w: float = 800.0
 
 
 func _ready() -> void:
 	source_level = 7
-	boss_title = "Midnight Coach — dodge shots, dust, and lanterns!"
+	boss_title = "Midnight Coach — chase and lasso doors 1-2-3!"
 	super._ready()
 	_coach = $Coach as Node2D
 	_coach_sprite = $Coach/Sprite2D as Sprite2D
 	_horse_near = $Coach/HorseNear as Sprite2D
 	_horse_far = $Coach/HorseFar as Sprite2D
+	_ground = $Ground as StaticBody2D
+	_ground_visual = $Ground/Visual as ColorRect
+	_ground_shape = $Ground/CollisionShape2D as CollisionShape2D
+	_background = $Background as ColorRect
 	_driver_gun = RevolverOverlay.new()
 	_driver_gun.name = "DriverGun"
 	_driver_gun.z_index = 5
@@ -53,24 +66,41 @@ func _ready() -> void:
 			door.set_lasso_active(i == 0)
 			_doors.append(door)
 	_refresh_door_hints()
+	# Infinite Speed Star for the race.
+	if player != null:
+		player.activate_mode(ModeController.Mode.SPEED_STAR, 0.0, true)
+		var cam := player.get_node_or_null("Camera2D") as Camera2D
+		if cam != null:
+			cam.limit_right = 100000
+	# Remove the pickup — boost is granted for the whole fight.
+	var star := get_node_or_null("SpeedStar")
+	if star != null:
+		star.queue_free()
+	combat_started.connect(_on_combat_started)
 	if hud != null:
-		hud.show_toast("Driver shoots, coach surges, lanterns burn!", 2.6)
+		hud.show_toast("Keep up! Coach waits if you fall a screen behind.", 2.8)
+
+
+func _on_combat_started() -> void:
+	if player != null:
+		player.activate_mode(ModeController.Mode.SPEED_STAR, 0.0, true)
+	_speed = _player_run_speed() * COACH_SPEED_RATIO * 0.55
+	_waiting = false
+
+
+func _player_run_speed() -> float:
+	if player == null:
+		return 270.0 * 1.45
+	return player.move_speed * 1.45
 
 
 func _physics_process(delta: float) -> void:
-	if _won or _coach == null:
+	if _won or _coach == null or not combat_ready:
 		return
-	_coach.position.x += _dir * _speed * delta
-	if _coach.position.x > 1100.0:
-		_dir = -1.0
-	elif _coach.position.x < 560.0:
-		_dir = 1.0
-	_gallop_t += delta * (14.0 if _bursting else 10.0)
+	_update_chase(delta)
+	_ensure_world_ahead()
+	_gallop_t += delta * (14.0 if _bursting or not _waiting else 8.0)
 	_bob_horses()
-	if not _bursting:
-		_burst_timer -= delta
-		if _burst_timer <= 0.0:
-			_start_speed_burst()
 	_lantern_timer -= delta
 	if _lantern_timer <= 0.0:
 		_toss_lantern()
@@ -78,10 +108,56 @@ func _physics_process(delta: float) -> void:
 	_shot_timer -= delta
 	if _shot_timer <= 0.0 and not _shooting:
 		_try_driver_shot()
+	if not _bursting and not _waiting:
+		_burst_timer -= delta
+		if _burst_timer <= 0.0:
+			_start_speed_burst()
+
+
+func _update_chase(delta: float) -> void:
+	if player == null:
+		return
+	var lag := _coach.global_position.x - player.global_position.x
+	_target_speed = _player_run_speed() * COACH_SPEED_RATIO
+	if lag > SCREEN_LAG:
+		# More than one screen behind — coach stops and waits.
+		_waiting = true
+		_speed = 0.0
+		_bursting = false
+	elif _waiting:
+		# Player caught up enough to see the coach again — ease back up.
+		if lag < SCREEN_LAG * 0.85:
+			_waiting = false
+			report_progress("They're rolling again!")
+	if not _waiting:
+		var want := _target_speed * (1.35 if _bursting else 1.0)
+		_speed = move_toward(_speed, want, ACCEL * delta)
+	_coach.position.x += _speed * delta
+
+
+func _ensure_world_ahead() -> void:
+	if _ground == null or player == null:
+		return
+	var need_right := maxf(player.global_position.x, _coach.global_position.x) + 1600.0
+	var half := need_right * 0.5
+	if half <= _ground_half_w:
+		return
+	_ground_half_w = half
+	_ground.position.x = half
+	if _ground_visual != null:
+		_ground_visual.offset_left = -half
+		_ground_visual.offset_right = half
+	if _ground_shape != null and _ground_shape.shape is RectangleShape2D:
+		var rect := (_ground_shape.shape as RectangleShape2D).duplicate() as RectangleShape2D
+		rect.size = Vector2(half * 2.0, 64.0)
+		_ground_shape.shape = rect
+	if _background != null:
+		_background.offset_left = -400.0
+		_background.offset_right = need_right + 800.0
 
 
 func _bob_horses() -> void:
-	var amp := 5.0 if _bursting else 3.0
+	var amp := 5.0 if (not _waiting) else 1.5
 	if _horse_near != null:
 		_horse_near.position.y = -42.0 + sin(_gallop_t) * amp
 	if _horse_far != null:
@@ -93,7 +169,6 @@ func _apply_coach_frame(open_count: int) -> void:
 		return
 	var idx := clampi(open_count, 0, COACH_FRAMES.size() - 1)
 	_coach_sprite.texture = COACH_FRAMES[idx]
-	# Keep a stable on-screen size across door-state frames.
 	_coach_sprite.centered = true
 	_coach_sprite.scale = Vector2(0.92, 0.92)
 	_coach_sprite.position = Vector2(20, -78)
@@ -106,16 +181,15 @@ func _active_door() -> BossLassoTarget:
 
 
 func _try_driver_shot() -> void:
-	if player == null or _won:
+	if player == null or _won or _waiting:
 		_shot_timer = 1.0
 		return
 	var door := _active_door()
 	if door == null:
 		_shot_timer = 1.2
 		return
-	# Only shoot when the cowboy is closing in on the next door.
 	var dist := player.global_position.distance_to(door.global_position)
-	if dist > 220.0 or absf(player.global_position.y - door.global_position.y) > 120.0:
+	if dist > 240.0 or absf(player.global_position.y - door.global_position.y) > 120.0:
 		_shot_timer = 0.45
 		return
 	_fire_warning_shot()
@@ -125,7 +199,9 @@ func _fire_warning_shot() -> void:
 	_shooting = true
 	_shot_generation += 1
 	var shot_id := _shot_generation
-	var face := 1.0 if player.global_position.x >= _coach.global_position.x else -1.0
+	var face := -1.0  # Player approaches from behind (left).
+	if player != null and player.global_position.x > _coach.global_position.x:
+		face = 1.0
 	if _driver_gun != null:
 		_driver_gun.position = Vector2(-148.0 + 8.0 * face, -95.0)
 		_driver_gun.show_aim(face)
@@ -160,34 +236,31 @@ func _fire_warning_shot() -> void:
 
 
 func _start_speed_burst() -> void:
-	if _bursting or _won:
+	if _bursting or _won or _waiting:
 		return
 	_bursting = true
-	_speed = _base_speed * 2.15
 	report_progress("Dust surge!")
 	var dust := CoachDustCloud.new()
 	dust.name = "CoachDust"
-	dust.setup(_dir, 1.15)
+	dust.setup(1.0, 1.15)
 	dust.hit_player.connect(func(hit: Player) -> void:
 		if hit != null and not hit.is_invulnerable():
 			fail_soft()
 	)
 	add_child(dust)
-	# Trail just behind the coach body relative to travel direction.
-	dust.global_position = _coach.global_position + Vector2(-70.0 * _dir, -10.0)
+	dust.global_position = _coach.global_position + Vector2(-70.0, -10.0)
 	var follow_t := 0.0
 	while follow_t < 1.0 and is_instance_valid(dust) and not _won:
 		await get_tree().process_frame
 		follow_t += get_process_delta_time()
 		if is_instance_valid(dust) and _coach != null:
-			dust.global_position = _coach.global_position + Vector2(-55.0 * _dir, -10.0)
-	_speed = _base_speed
+			dust.global_position = _coach.global_position + Vector2(-55.0, -10.0)
 	_bursting = false
-	_burst_timer = randf_range(4.2, 6.0)
+	_burst_timer = randf_range(4.5, 6.5)
 
 
 func _toss_lantern() -> void:
-	if player == null or _won or _coach == null:
+	if player == null or _won or _coach == null or _waiting:
 		return
 	report_progress("Lantern!")
 	var lantern := CoachLantern.new()
@@ -202,8 +275,21 @@ func _toss_lantern() -> void:
 	add_child(lantern)
 
 
+func fail_soft() -> void:
+	if _won or player == null or not combat_ready:
+		return
+	# Stay in the chase — respawn just behind the coach.
+	var rx := 220.0
+	if _coach != null:
+		rx = _coach.global_position.x - 200.0
+	player.respawn_at(Vector2(rx, 320.0))
+	player.activate_mode(ModeController.Mode.SPEED_STAR, 0.0, true)
+	if hud != null:
+		hud.show_toast("Catch up!", 1.2)
+
+
 func on_door_lassoed(index: int) -> void:
-	if _won:
+	if _won or not combat_ready:
 		return
 	if index != _next_door:
 		report_progress("Wrong door — start with door %d!" % (_next_door + 1))
@@ -219,9 +305,7 @@ func on_door_lassoed(index: int) -> void:
 			door.set_lasso_active(false)
 	_apply_coach_frame(_doors_done)
 	_refresh_door_hints()
-	# Defenses get a bit fiercer as doors open.
 	_shot_timer = mini(_shot_timer, 1.0)
-	_burst_timer = mini(_burst_timer, 2.5)
 	if _doors_done >= 3:
 		_shot_generation += 1
 		_shooting = false

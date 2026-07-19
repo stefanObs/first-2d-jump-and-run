@@ -40,7 +40,7 @@ offset_right = 1000.0
 offset_bottom = 80.0
 theme_override_colors/font_color = Color(0.95, 0.9, 0.7, 1)
 theme_override_font_sizes/font_size = 20
-text = "Midnight Coach — lasso doors 1-2-3! Watch for shots, dust, and lanterns!"
+text = "Midnight Coach — chase the coach and lasso doors 1-2-3!"
 
 [node name="SpawnPoint" type="Marker2D" parent="."]
 position = Vector2(220, 320)
