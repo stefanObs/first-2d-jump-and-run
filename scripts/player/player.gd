@@ -352,6 +352,9 @@ func _apply_horizontal_movement(delta: float, on_floor: bool) -> void:
 	if absf(input_axis) > 0.01:
 		var accel := acceleration if on_floor else air_acceleration
 		velocity.x = move_toward(velocity.x, target_speed, accel * delta)
+		if on_floor and _modes.active_mode == ModeController.Mode.SPEED_STAR and absf(velocity.x) > 180.0:
+			if Engine.get_physics_frames() % 4 == 0:
+				_spawn_dust_puff()
 	else:
 		var drag := friction if on_floor else air_friction
 		velocity.x = move_toward(velocity.x, 0.0, drag * delta)

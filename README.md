@@ -228,16 +228,21 @@ Each cycle must maintain the following status block:
 
 ### Current development status
 
-- **Current iteration:** `v1.2.6` confetti celebrations and bandit JUMP hints
-- **Last completed step:** Confetti on clear, bandit JUMP! hints, glowing sun, mid-trail cheer toasts
+- **Current iteration:** `v1.2.7` badge pop, speed dust, glowing title sun
+- **Last completed step:** Badge counter bounce, speed-mode dust trail, pulsing save-select sun
 - **Currently in progress:** Ralph polish loop until 17:00 CEST (hard stop; credit % not readable)
 - **Next step:** Keep polishing playability/visuals in the ralph loop until stop time
 - **Completed features:** Long playable 10-level cowboy trail; 3 camps per level; animated cowboy; modes; Xbox-ready input; Chapter 14 QA green
 - **Remaining work:** Music/SFX; richer hand-drawn art; live Xbox verification; supervised child play-tests
 - **Tests last run:** `godot --headless --path . res://tests/test_runner.tscn` — all 16 tests passed
 - **Known issues or blockers:** Placeholder pixel art; no music/SFX yet; Xbox controller not physically verified on this machine
-- **Latest iteration tag:** `v1.2.6`
+- **Latest iteration tag:** `v1.2.7`
 - **Relevant commit:** `2941050`
+
+### Cycle notes — 2026-07-19 (v1.2.7)
+
+- Badge counter pops when a star is collected; Zoom mode kicks up dust.
+- Save select sun gently glows to make the title screen friendlier.
 
 ### Cycle notes — 2026-07-19 (v1.2.6)
 

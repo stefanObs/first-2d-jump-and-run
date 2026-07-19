@@ -23,6 +23,17 @@ func _ready() -> void:
 	_refresh()
 	_refresh_prompts()
 	_highlight()
+	_pulse_sun()
+
+
+func _pulse_sun() -> void:
+	var sun := get_node_or_null("Sun") as CanvasItem
+	if sun == null:
+		return
+	var tween := create_tween()
+	tween.set_loops()
+	tween.tween_property(sun, "modulate", Color(1.0, 1.0, 0.8, 1.0), 1.2)
+	tween.tween_property(sun, "modulate", Color(1.0, 0.9, 0.45, 1.0), 1.2)
 
 
 func _process(delta: float) -> void:
