@@ -174,6 +174,23 @@ func _test_boss_arenas() -> Variant:
 		king.queue_free()
 		return "Guards must stand in front (left) of the kingpin."
 	king.queue_free()
+
+	# Shared 5-heart boss logic lives on BossArena.
+	for packed in [bull_packed, coach_packed, king_packed]:
+		var arena: Node = packed.instantiate()
+		add_child(arena)
+		if not arena.has_method("lose_heart") or not arena.has_method("get_heart_drop_position"):
+			arena.queue_free()
+			return "Boss arenas must expose lose_heart / get_heart_drop_position."
+		if int(arena.get("max_hearts")) != 5:
+			arena.queue_free()
+			return "Boss arenas should start with 5 hearts."
+		arena.queue_free()
+	var player_probe := Player.new()
+	if not player_probe.has_method("play_boss_heart_recovery"):
+		player_probe.free()
+		return "Player needs play_boss_heart_recovery for boss heart drops."
+	player_probe.free()
 	return null
 
 

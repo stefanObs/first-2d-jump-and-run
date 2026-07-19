@@ -8,36 +8,30 @@ enum State { CHARGE, STUN, HIT }
 
 @export var hits_needed: int = 3
 @export var charge_speed: float = 300.0
-@export var max_hearts: int = 5
 
 var _bull: AnimatableBody2D
 var _ring: BossLassoTarget
 var _sprite: Sprite2D
 var _label: Label
 var _stars: Node2D
-var _hearts_label: Label
 var _hits: int = 0
-var _hearts: int = 5
 var _dir: float = 1.0
 var _state: State = State.CHARGE
 var _left_x: float = 460.0
 var _right_x: float = 1140.0
 var _charge_bob: float = 0.0
 var _stun_token: int = 0
-var _hit_cooldown: float = 0.0
 
 
 func _ready() -> void:
 	source_level = 3
 	boss_title = "Stampede Bull — bounce, then lasso the ring while stunned!"
 	super._ready()
-	_hearts = max_hearts
 	_bull = $Bull as AnimatableBody2D
 	_sprite = $Bull/Sprite2D as Sprite2D
 	_label = $Bull/Label as Label
 	_ring = $Bull/LassoRing as BossLassoTarget
 	_stars = $Bull/StunStars as Node2D
-	_build_hearts_ui()
 	if _sprite != null:
 		_sprite.texture = BULL_TEX
 	if _ring != null:
@@ -49,43 +43,19 @@ func _ready() -> void:
 	if hurt != null:
 		hurt.body_entered.connect(_on_bull_body)
 	_apply_facing()
-	_refresh_hearts()
 
 
-func _build_hearts_ui() -> void:
-	var layer := CanvasLayer.new()
-	layer.name = "HeartsLayer"
-	layer.layer = 40
-	add_child(layer)
-	_hearts_label = Label.new()
-	_hearts_label.name = "HeartsLabel"
-	_hearts_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_hearts_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	_hearts_label.offset_top = 16.0
-	_hearts_label.offset_bottom = 64.0
-	_hearts_label.add_theme_font_size_override(&"font_size", 36)
-	_hearts_label.add_theme_color_override(&"font_color", Color(0.9, 0.2, 0.25, 1))
-	_hearts_label.add_theme_color_override(&"font_outline_color", Color(0.2, 0.05, 0.05, 1))
-	_hearts_label.add_theme_constant_override(&"outline_size", 6)
-	layer.add_child(_hearts_label)
-
-
-func _refresh_hearts() -> void:
-	if _hearts_label == null:
-		return
-	var filled := ""
-	for i in range(max_hearts):
-		filled += "♥" if i < _hearts else "♡"
-		if i < max_hearts - 1:
-			filled += " "
-	_hearts_label.text = filled
+func get_heart_drop_position() -> Vector2:
+	var mid_x := (_left_x + _right_x) * 0.5
+	var drop_y := 200.0
+	if _bull != null:
+		drop_y = _bull.global_position.y - 170.0
+	return Vector2(mid_x, drop_y)
 
 
 func _physics_process(delta: float) -> void:
 	if _won or _bull == null or not combat_ready:
 		return
-	if _hit_cooldown > 0.0:
-		_hit_cooldown = maxf(_hit_cooldown - delta, 0.0)
 	match _state:
 		State.CHARGE:
 			_charge_bob += delta * 14.0
@@ -215,23 +185,6 @@ func _on_ring_lasso() -> void:
 func _on_bull_body(body: Node2D) -> void:
 	if not (body is Player) or _state != State.CHARGE or not combat_ready or _won:
 		return
-	if _hit_cooldown > 0.0:
+	if player != null and player.is_invulnerable():
 		return
-	_hit_cooldown = 1.1
-	_hearts = maxi(_hearts - 1, 0)
-	_refresh_hearts()
-	if player != null:
-		# Blink + drop into the arena middle from above the bull.
-		var mid_x := (_left_x + _right_x) * 0.5
-		var drop_y := _bull.global_position.y - 170.0
-		player.respawn_at(Vector2(mid_x, drop_y))
-		player.velocity = Vector2.ZERO
-	if _hearts_label != null:
-		var tw := create_tween()
-		tw.tween_property(_hearts_label, "modulate", Color(1.5, 0.4, 0.4, 1), 0.08)
-		tw.tween_property(_hearts_label, "modulate", Color.WHITE, 0.2)
-	report_progress("%d heart%s left!" % [_hearts, "" if _hearts == 1 else "s"])
-	if _hearts <= 0:
-		report_progress("Out of hearts — restarting!")
-		await get_tree().create_timer(0.85).timeout
-		restart_boss()
+	fail_soft()

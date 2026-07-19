@@ -58,7 +58,11 @@ func _run() -> void:
 	# Prefer silhouette sunset rider; fall back to trail horse frames.
 	rider.texture = RIDER_0 if RIDER_0 != null else RIDE_0
 	rider.centered = true
-	rider.scale = Vector2(1.15, 1.15)
+	# Silhouette frames are large (~1300px); keep a readable on-screen size.
+	var tex_h := float(rider.texture.get_height()) if rider.texture != null else 256.0
+	var target_h := view.y * 0.38
+	var s := target_h / maxf(tex_h, 1.0)
+	rider.scale = Vector2(s, s)
 	rider.position = Vector2(-220.0, ground_y)
 	rider.z_index = 2
 	add_child(rider)

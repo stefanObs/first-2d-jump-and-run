@@ -170,6 +170,42 @@ func respawn_at(world_position: Vector2) -> void:
 	respawned.emit(world_position)
 
 
+## Slow drop-back after losing a boss heart: float in from above with a long blink.
+func play_boss_heart_recovery(world_position: Vector2, duration: float = 1.15) -> void:
+	_ensure_jump_assist()
+	_ensure_modes()
+	input_enabled = false
+	_is_canyon_falling = false
+	collision_layer = 0
+	velocity = Vector2.ZERO
+	_jump_assist.reset()
+	_jump_cut_applied = false
+	var start := world_position + Vector2(0.0, -90.0)
+	global_position = start
+	if _sprite != null:
+		_sprite.rotation = 0.0
+		_sprite.scale = Vector2(1.5, 1.5)
+		_sprite.modulate = Color(1, 1, 1, 0.35)
+	var tween := create_tween()
+	tween.tween_property(self, "global_position", world_position, duration).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	var blink: Tween = null
+	if _sprite != null:
+		# Slower blink than normal respawn.
+		blink = create_tween()
+		blink.set_loops(maxi(int(duration / 0.2), 5))
+		blink.tween_property(_sprite, "modulate:a", 0.18, 0.1)
+		blink.tween_property(_sprite, "modulate:a", 0.9, 0.1)
+	await tween.finished
+	if blink != null and blink.is_valid():
+		blink.kill()
+	collision_layer = 2
+	if _sprite != null:
+		_sprite.modulate = Color.WHITE
+	_invulnerable_remaining = maxf(respawn_invulnerability_time, 1.15)
+	input_enabled = true
+	respawned.emit(world_position)
+
+
 func play_canyon_fall() -> void:
 	if _is_canyon_falling:
 		return

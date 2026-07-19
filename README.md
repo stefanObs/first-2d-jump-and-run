@@ -114,7 +114,7 @@ Each level introduces at most one new mechanic, demonstrates it safely, and then
 
 ### Boss encounters
 
-Boss arenas use the same jump, lasso, mode, and platform tools as the trail. Defeat is always nonviolent. Failing a boss returns the cowboy to the arena entrance with no lives lost.
+Boss arenas use the same jump, lasso, mode, and platform tools as the trail. Defeat is always nonviolent. Each boss gives the cowboy **5 hearts**; a hit costs one heart and returns him with a slower blink-drop. At zero hearts the arena restarts.
 
 **Active rollout (this iteration):**
 
@@ -268,17 +268,18 @@ Each cycle must maintain the following status block:
 ### Current development status
 
 - **Current iteration:** `v1.3.3` hazard variety, bounty bandits, and trail readability
-- **Last completed step:** Coach faces forward, infinite desert, shorter bull stun + drop respawn
+- **Last completed step:** Shared 5-heart boss logic + cleaned sunset rider sprites
 - **Currently in progress:** In-game visual play-test of bosses and polish
 - **Next step:** Play-test bosses, fences, clouds, and flight; then tag `v1.3.3`
 - **Completed features:** Long 10-level cowboy trail; animated nonviolent bandit lasso; seated tied bandits; warning-shot and bounty bandits; carrions and rattlesnakes; animated canyon recovery; reachable hazards; hand-drawn cowboy + world props; looping music; three custom editor slots; mid-trail saves; modes; Xbox-ready input; Stampede Bull / Midnight Coach / Outlaw Kingpin bosses; horizon victory scene
 - **Remaining work:** In-game visual/gameplay play-test; Xbox controller physical verification; supervised child play-tests; additional SFX
-- **Tests last run:** all automated tests passed after boss lasso and shortcut fixes
+- **Tests last run:** all automated tests passed after shared boss hearts + sunset rider cleanup
 - **Known issues or blockers:**
   - Boss arenas and new fence/cloud art still need an in-game visual play-test
   - Xbox controller not physically verified on this machine
 - **Latest iteration tag:** `v1.3.2`
-- **Relevant commit:** `5d55480`
+- **Relevant commit:** (pending push)
+
 
 ### Cycle notes — 2026-07-19 (v1.3.3)
 
@@ -298,7 +299,8 @@ Each cycle must maintain the following status block:
 - Bull arena spawn is inside the hand-drawn walls; stun lasts 7s; coach uses four door-state sprites with driver baked in; kingpin raises a hand-gun and plays a capture flourish on one lasso.
 - Midnight Coach defends with driver warning shots, dust speed surges, and tossed lantern puddles.
 - Coach door frames keep a stable size; lanterns use hand-drawn flight/ground art; kingpin hip-fires slower body-height shots; finale is a hand-drawn sunset ride.
-- Midnight Coach is an endless rightward chase (stops if you lag a screen; 3/4 player speed with infinite Speed); Bull has 5 hearts; every boss starts with a 3-2-1 countdown.
+- Midnight Coach is an endless rightward chase (stops if you lag a screen; 3/4 player speed with infinite Speed); every boss shares a 5-heart UI and slower heart-loss recovery; every boss starts with a 3-2-1 countdown.
+- Sunset victory rider frames were regenerated with transparent backgrounds (no white patches).
 - Canyon falls now stay recovering through respawn invulnerability, so holding left/right cannot restart the fall animation immediately.
 - Clouds on Wings routes are purposeful: canyon bridges, stepped climbs to high badges, cactus-clear platforms, and nest landings (some stay solid).
 - Rattlesnakes are larger, cast a ground shadow, and rise much higher when the cowboy approaches.

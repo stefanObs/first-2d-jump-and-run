@@ -368,17 +368,17 @@ func _toss_lantern() -> void:
 	add_child(lantern)
 
 
-func fail_soft() -> void:
-	if _won or player == null or not combat_ready:
-		return
-	# Stay in the chase — respawn just behind the coach.
+func get_heart_drop_position() -> Vector2:
 	var rx := 220.0
 	if _coach != null:
 		rx = _coach.global_position.x - 200.0
-	player.respawn_at(Vector2(rx, 320.0))
-	player.activate_mode(ModeController.Mode.SPEED_STAR, 0.0, true)
-	if hud != null:
-		hud.show_toast("Catch up!", 1.2)
+	return Vector2(rx, 320.0)
+
+
+func _on_heart_recovered() -> void:
+	if player != null:
+		player.activate_mode(ModeController.Mode.SPEED_STAR, 0.0, true)
+	report_progress("Catch up!")
 
 
 func on_door_lassoed(index: int) -> void:
