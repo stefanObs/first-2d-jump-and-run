@@ -58,7 +58,7 @@ The player can run left and right, jump, collect stars and mode items, activate 
 - Keyboard: arrow keys or `A`/`D` to move, `Space` to jump
 - `Alt`, `F`, or `L`: throw the lasso toward the cowboy's facing direction
 - Numpad `+` twice: move to the next campaign level
-- Numpad `.` twice (in a boss arena): jump to the next boss fight
+- Numpad `.` (or `.`) twice: jump to the boss for this trail stretch; in a boss arena, cycle to the next boss
 - `Escape`: pause
 
 ### Xbox controller support

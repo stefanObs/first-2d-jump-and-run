@@ -37,6 +37,7 @@ var _stored_mode_remaining: float = 0.0
 var _restoring_run_state: bool = false
 var _loaded_run_state: bool = false
 var _next_level_tap_time_msec: int = -1000
+var _next_boss_tap_time_msec: int = -1000
 var _is_recovering: bool = false
 
 
@@ -56,6 +57,9 @@ func _process(delta: float) -> void:
 		_handle_next_level_tap()
 		if _is_completing:
 			return
+	if Input.is_action_just_pressed(&"next_boss"):
+		_handle_next_boss_tap()
+		return
 	_play_time += delta
 	_update_trail_progress()
 	if (
@@ -183,6 +187,23 @@ func _handle_next_level_tap() -> void:
 	_next_level_tap_time_msec = now
 	if hud != null:
 		hud.show_toast("Press numpad + again for next trail", 1.0)
+
+
+func _handle_next_boss_tap() -> void:
+	if is_custom_level:
+		return
+	var now := Time.get_ticks_msec()
+	if now - _next_boss_tap_time_msec <= 450:
+		_is_completing = true
+		if player != null:
+			player.set_input_enabled(false)
+		# From a trail: jump into the next boss after this level's slot
+		# (or cycle starting from the first boss).
+		GameManager.load_next_boss_from_level(level_number)
+		return
+	_next_boss_tap_time_msec = now
+	if hud != null:
+		hud.show_toast("Press numpad . again for next boss", 1.0)
 
 
 func respawn_player() -> void:

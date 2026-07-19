@@ -51,6 +51,7 @@ func _ready() -> void:
 		&"next_boss",
 		[
 			_key(KEY_KP_PERIOD),
+			_key(KEY_PERIOD),
 		]
 	)
 	_ensure_action(

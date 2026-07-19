@@ -191,6 +191,23 @@ func load_next_boss(from_source_level: int) -> void:
 	load_boss_for_level(BOSS_ORDER[index])
 
 
+func load_next_boss_from_level(level_number: int) -> void:
+	## From a campaign trail: open the next boss at or after this level.
+	## Levels 1–3 → Bull, 4–7 → Coach, 8–10 → Kingpin; from a boss, use load_next_boss.
+	var target := BOSS_ORDER[0]
+	for boss_level in BOSS_ORDER:
+		if level_number <= boss_level:
+			target = boss_level
+			break
+		target = boss_level
+	# If already past the last boss level number while still on L10, still open Kingpin.
+	if level_number > BOSS_ORDER[BOSS_ORDER.size() - 1]:
+		target = BOSS_ORDER[BOSS_ORDER.size() - 1]
+	# Double-tap again from the matching boss level should advance to the next arena.
+	# First entry from trails always lands on the boss for that stretch.
+	load_boss_for_level(target)
+
+
 func finish_boss(source_level: int) -> void:
 	if source_level >= LEVEL_SCENES.size():
 		get_tree().change_scene_to_file("res://scenes/ui/victory_horizon.tscn")
