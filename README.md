@@ -209,7 +209,7 @@ Each cycle must maintain the following status block:
 - **Tests last run:** Not applicable; no game code exists yet
 - **Known issues or blockers:** None
 - **Latest iteration tag:** None
-- **Relevant commit:** 0f8f7db
+- **Relevant commit:** `6a96592`
 
 At the end of each cycle:
 
