@@ -19,6 +19,7 @@ static func validate_level_node(level: Node) -> PackedStringArray:
 	errors.append_array(_validate_no_plank_highway(level))
 	errors.append_array(_validate_ground_props_clear_of_raised_platforms(level))
 	errors.append_array(_validate_cactus_clear_of_springs(level))
+	errors.append_array(_validate_cactus_clear_of_canyons(level))
 	errors.append_array(_validate_mode_item_spacing(level))
 	errors.append_array(_validate_visuals(level))
 	return errors
@@ -293,6 +294,45 @@ static func _validate_cactus_clear_of_springs(level: Node) -> PackedStringArray:
 					"Cactus %s must never overlap spring %s."
 					% [cactus.name, spring.name]
 				)
+	return errors
+
+
+static func _validate_cactus_clear_of_canyons(level: Node) -> PackedStringArray:
+	var errors: PackedStringArray = []
+	var cacti: Array[Node2D] = []
+	var canyons: Array[Node2D] = []
+	var springs: Array[Node2D] = []
+	for node in level.find_children("*", "Area2D", true, false):
+		if node is Hazard:
+			if (node as Hazard).is_cactus():
+				cacti.append(node as Node2D)
+			else:
+				canyons.append(node as Node2D)
+		elif node is SpringPad:
+			springs.append(node as Node2D)
+	for cactus in cacti:
+		var cactus_rect := _approx_rect(cactus, Vector2(40, 48))
+		var has_launch_spring := false
+		for spring in springs:
+			var dx := cactus.global_position.x - spring.global_position.x
+			if dx >= 35.0 and dx <= 190.0 and absf(cactus.global_position.y - spring.global_position.y) <= 50.0:
+				has_launch_spring = true
+				break
+		if has_launch_spring:
+			continue
+		for canyon in canyons:
+			var canyon_rect := _approx_rect(canyon, Vector2(160, 56))
+			var clearance := INF
+			if cactus_rect.end.x <= canyon_rect.position.x:
+				clearance = canyon_rect.position.x - cactus_rect.end.x
+			elif cactus_rect.position.x >= canyon_rect.end.x:
+				clearance = cactus_rect.position.x - canyon_rect.end.x
+			if clearance < 130.0:
+				errors.append(
+					"Cactus %s is directly beside canyon %s without a launch spring."
+					% [cactus.name, canyon.name]
+				)
+				break
 	return errors
 
 
