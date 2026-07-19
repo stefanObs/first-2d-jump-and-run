@@ -18,6 +18,7 @@ static func validate_level_node(level: Node) -> PackedStringArray:
 	errors.append_array(_validate_checkpoints(level))
 	errors.append_array(_validate_no_plank_highway(level))
 	errors.append_array(_validate_ground_props_clear_of_raised_platforms(level))
+	errors.append_array(_validate_cactus_clear_of_springs(level))
 	errors.append_array(_validate_mode_item_spacing(level))
 	errors.append_array(_validate_visuals(level))
 	return errors
@@ -271,6 +272,27 @@ static func _validate_ground_props_clear_of_raised_platforms(level: Node) -> Pac
 					% [node.name, String(surface["name"])]
 				)
 				break
+	return errors
+
+
+static func _validate_cactus_clear_of_springs(level: Node) -> PackedStringArray:
+	var errors: PackedStringArray = []
+	var cacti: Array[Node2D] = []
+	var springs: Array[Node2D] = []
+	for node in level.find_children("*", "Area2D", true, false):
+		if node is Hazard and (node as Hazard).is_cactus():
+			cacti.append(node as Node2D)
+		elif node is SpringPad:
+			springs.append(node as Node2D)
+	for cactus in cacti:
+		var cactus_rect := _approx_rect(cactus, Vector2(40, 48)).grow(10.0)
+		for spring in springs:
+			var spring_rect := _approx_rect(spring, Vector2(64, 24)).grow(10.0)
+			if cactus_rect.intersects(spring_rect):
+				errors.append(
+					"Cactus %s must never overlap spring %s."
+					% [cactus.name, spring.name]
+				)
 	return errors
 
 

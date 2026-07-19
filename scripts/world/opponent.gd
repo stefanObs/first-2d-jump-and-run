@@ -137,32 +137,49 @@ func tie_up(award_bounty: bool = true) -> void:
 	var hurt_shape := get_node_or_null("HurtArea/CollisionShape2D") as CollisionShape2D
 	if hurt_shape != null:
 		hurt_shape.set_deferred("disabled", true)
-	if _sprite != null:
-		_sprite.pause()
-		var original_scale := _sprite.scale
-		var seated_scale := Vector2(original_scale.x * 1.08, original_scale.y * 0.72)
-		var tween := create_tween()
-		tween.tween_property(_sprite, "rotation", -0.14 * signf(original_scale.x), 0.08)
-		tween.parallel().tween_property(
-			_sprite,
-			"scale",
-			Vector2(original_scale.x * 1.12, original_scale.y * 0.82),
-			0.08
-		)
-		tween.tween_property(_sprite, "rotation", 0.0, 0.14)
-		tween.parallel().tween_property(_sprite, "scale", seated_scale, 0.14)
-		tween.parallel().tween_property(_sprite, "offset", Vector2(0, -25), 0.14)
-	var ropes := TiedBanditOverlay.new()
-	ropes.name = "TiedRopes"
-	ropes.z_index = 0
-	add_child(ropes)
-	# The whole captured bandit, including rope, stays behind the cowboy.
+	_show_floor_bound_pose()
+	if get_node_or_null("TiedRopes") == null:
+		var ropes := TiedBanditOverlay.new()
+		ropes.name = "TiedRopes"
+		ropes.z_index = 0
+		add_child(ropes)
+	# The whole captured bandit stays behind the cowboy.
 	z_index = -1
 	if _label != null:
 		_label.text = "TIED!"
 		_label.modulate = Color(0.55, 0.25, 0.06, 1.0)
+		_label.position.y = -78.0
 	if bounty_bandit and award_bounty:
 		bounty_caught.emit(self, 2)
+
+
+func _show_floor_bound_pose() -> void:
+	if _sprite == null:
+		return
+	_sprite.pause()
+	var path := (
+		"res://assets/world/bandit_tied_red.png"
+		if bounty_bandit
+		else "res://assets/world/bandit_tied.png"
+	)
+	var tex: Texture2D = load(path)
+	if tex == null:
+		return
+	var frames := SpriteFrames.new()
+	frames.add_animation(&"tied")
+	frames.set_animation_loop(&"tied", false)
+	frames.add_frame(&"tied", tex)
+	_sprite.sprite_frames = frames
+	_sprite.rotation = 0.0
+	var face := 1.0 if _facing >= 0.0 else -1.0
+	_sprite.flip_h = false
+	_sprite.scale = Vector2(1.05 * face, 1.05)
+	# Feet/seat on the desert top (collision bottom at local y=0).
+	_sprite.offset = Vector2(0, -52)
+	_sprite.play(&"tied")
+	var tween := create_tween()
+	_sprite.scale = Vector2(1.18 * face, 0.88)
+	tween.tween_property(_sprite, "scale", Vector2(1.05 * face, 1.05), 0.16)
 
 
 func _shoot_at(player: Player) -> void:

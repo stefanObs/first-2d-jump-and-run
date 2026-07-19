@@ -707,7 +707,7 @@ position = Vector2(3380, 330)
 
 
 [node name="Cactus22" parent="." instance=ExtResource("5_hazard")]
-position = Vector2(4490, 330)
+position = Vector2(4320, 330)
 
 
 [node name="Cactus34" parent="." instance=ExtResource("5_hazard")]

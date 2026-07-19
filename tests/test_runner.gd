@@ -334,6 +334,10 @@ func _test_lasso_ties_bandit() -> Variant:
 	if bandit.get_node_or_null("TiedRopes") == null:
 		node.queue_free()
 		return "Tied bandits should show rope artwork."
+	var walk := bandit.get_node_or_null("WalkSprite") as AnimatedSprite2D
+	if walk == null or walk.sprite_frames == null or not walk.sprite_frames.has_animation(&"tied"):
+		node.queue_free()
+		return "Tied bandits should switch to the floor-bound sprite."
 	if bandit.z_index >= 0:
 		node.queue_free()
 		return "Tied bandit and rope should render behind the cowboy."

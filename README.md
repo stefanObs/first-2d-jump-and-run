@@ -92,7 +92,7 @@ Only one special mode is active at a time. Collecting another mode item replaces
 
 ## Chapter 5: Opponents, obstacles, and damage
 
-Opponents use simple, repeating movement patterns, such as walking between two points or slowly flying up and down. Bandits occasionally raise a revolver with a clear warning animation and fire a slow, bright projectile that can be avoided. The cowboy has no weapon: the nonviolent lasso catches bandits instead. A lasso hit seats and ties the captured bandit with visible rope behind the cowboy; it stops moving and shooting and no longer blocks or hurts the player. Red-scarf bounty bandits shoot a little more often and award two badges when caught.
+Opponents use simple, repeating movement patterns, such as walking between two points or slowly flying up and down. Bandits occasionally raise a revolver with a clear warning animation and fire a slow, bright projectile that can be avoided. The cowboy has no weapon: the nonviolent lasso catches bandits instead. A lasso hit seats the captured bandit on the floor in a comic bound pose with thick rope coils around the torso; it stops moving and shooting and no longer blocks or hurts the player. Red-scarf bounty bandits shoot a little more often and award two badges when caught.
 
 Carrion birds challenge Wings routes at varied heights. Some cacti are replaced by lower, wider rattlesnakes with a visible bite animation. Harmful obstacles must remain readable and predictable. Falling into a canyon now plays a spinning fall animation before returning to camp; there is no health counter, life limit, or game-over screen.
 
@@ -240,20 +240,22 @@ Each cycle must maintain the following status block:
 ### Current development status
 
 - **Current iteration:** `v1.3.3` hazard variety, bounty bandits, and trail readability
-- **Last completed step:** Applied audit follow-ups: clear leftover rattlesnake/cloud overlap, clear bandit shots on respawn, clarify no-player-weapons wording
+- **Last completed step:** Floor-bound comic tied bandits; cactus/spring overlap ban
 - **Currently in progress:** In-game visual/gameplay play-test for this feature pass
-- **Next step:** Play-test projectile speed, bounty rewards, snake bites, carrion scale, canyon recovery, and boost placement; then tag `v1.3.3`
+- **Next step:** Play-test tied floor pose, cactus spacing, projectile speed, bounty rewards, and boost placement; then tag `v1.3.3`
 - **Completed features:** Long 10-level cowboy trail; animated nonviolent bandit lasso; seated tied bandits; warning-shot and bounty bandits; carrions and rattlesnakes; animated canyon recovery; reachable hazards; hand-drawn cowboy + world props; looping music; three custom editor slots; mid-trail saves; modes; Xbox-ready input
 - **Remaining work:** In-game visual/gameplay play-test; Xbox controller physical verification; supervised child play-tests; additional SFX
-- **Tests last run:** all automated tests passed after audit follow-ups (projectile cleanup + snake clearance)
+- **Tests last run:** all automated tests passed after floor-bound tied art and cactus/spring rule
 - **Known issues or blockers:**
   - Latest spring, bandit, camp, carrion, shield, and Rail Yard changes still need an in-game visual play-test
   - Xbox controller not physically verified on this machine
 - **Latest iteration tag:** `v1.3.2`
-- **Relevant commit:** `bf00c4c`
+- **Relevant commit:** pending
 
 ### Cycle notes — 2026-07-19 (v1.3.3)
 
+- Captured bandits now sit on the floor in a comic bound pose with thick torso rope coils (blue and red-scarf variants).
+- Cacti must never overlap springs; fixed Bronco Springs overlap and added an automated layout check.
 - Audit follow-up: moved leftover rattlesnakes out from under cloud boards on levels 9–10, clear bandit projectiles on camp respawn, and align accessibility wording with warning shots.
 - Tied bandits now sit with rope around their body; both bandit and rope render behind the cowboy.
 - Added `Alt` lasso input (Xbox remains `X`) and double-tap numpad `+` campaign level advance.
