@@ -1,3 +1,3 @@
 extends LevelController
 
-## Rainbow Castle
+## Rainbow Saloon

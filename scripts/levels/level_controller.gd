@@ -69,6 +69,7 @@ func setup_level() -> void:
 	if player != null and spawn_point != null:
 		player.respawn_at(spawn_point.global_position)
 	WildWestTheme.apply_to_level(self)
+	WildWestTheme.configure_player_camera(self, player)
 	if hud != null:
 		hud.set_level_title(level_title)
 		hud.set_prompt(_gameplay_prompt())

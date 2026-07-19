@@ -6,7 +6,7 @@ A small, friendly 2D platform game for children around six years old.
 
 ### Goal and design principles
 
-- Complete 10 short levels, each taking about 2–4 minutes.
+- Complete 10 long trail levels; a full clear should take about 45 minutes.
 - Keep controls simple, forgiving, and understandable without much reading.
 - Make every level slightly harder while avoiding sudden difficulty spikes.
 - Reward exploration and progress; do not punish failure.
@@ -17,7 +17,7 @@ A small, friendly 2D platform game for children around six years old.
 
 ### Core features
 
-- 10 short levels with a gradual difficulty curve
+- 10 long levels with a gradual difficulty curve (~45 minutes total)
 - Simple running and jumping with forgiving controls
 - Full keyboard and Xbox controller support on PC
 - Three numbered save slots with automatic saving
@@ -90,16 +90,16 @@ Harmful obstacles may include spikes, rolling objects, falling objects, and movi
 
 ## Chapter 6: Level progression
 
-1. **First Steps** – walking, jumping, and the goal
-2. **Star Meadow** – collecting stars and jumping over small gaps
-3. **Bouncy Woods** – spring pads and slightly higher platforms
-4. **River Run** – moving platforms over water
-5. **Checkpoint Cave** – checkpoints, simple opponents, and falling obstacles
-6. **Windy Hill** – Magic Boots, gentle wind zones, and longer jumps
-7. **Cloud Flight** – Wings activate a flying mode for most of the level
-8. **Friendly Factory** – Bubble Shields, slow conveyor belts, and timed doors
-9. **Moonlight Mountain** – Speed Stars and a combination of earlier mechanics
-10. **Rainbow Castle** – a celebratory final course using all learned skills
+1. **Dusty Trail** – walking, jumping, and the saloon goal
+2. **Badge Meadow** – collecting sheriff badges across a long meadow
+3. **Bronco Springs** – spring pads and higher ledges
+4. **Canyon Ferry** – moving rafts across canyon gaps
+5. **Outlaw Cave** – camps, simple outlaws, and careful jumps
+6. **Windy Mesa** – Magic Boots, gentle wind, and longer jumps
+7. **Sky Ranch** – Wings for a flying trail between cloud barns
+8. **Rail Yard** – Bubble Shields, conveyors, and timed yard gates
+9. **Moonlight Gulch** – Speed Stars mixed with earlier trail tricks
+10. **Rainbow Saloon** – a celebratory finale using all learned skills
 
 Each level introduces at most one new mechanic, demonstrates it safely, and then asks the player to use it. Optional stars provide an extra challenge but are never required to continue.
 
@@ -228,16 +228,24 @@ Each cycle must maintain the following status block:
 
 ### Current development status
 
-- **Current iteration:** `v1.1.1` complete-route, platform, and visual QA
-- **Last completed step:** Added explicit QA requirements and automated validation for level completion order, platform reachability, visible effects, and styled environments
-- **Currently in progress:** None
-- **Next step:** Optional extensions from the rated backlog; supervised child play-testing and live Xbox verification
-- **Completed features:** Wild-west themed 10-level trail; animated cowboy; safe stars; forward-completable levels; reachable/styled platforms; visible-effect validation; saves; modes; Xbox-ready input
-- **Remaining work:** Music/SFX; richer art pass; live Xbox verification; supervised child play-tests
-- **Tests last run:** `godot --headless --path . res://tests/test_runner.tscn` — all 16 tests passed; launcher smoke-launch succeeded
-- **Known issues or blockers:** Placeholder pixel art (not final production art); no music/SFX yet; Xbox controller not physically verified on this machine
-- **Latest iteration tag:** `v1.1.1`
-- **Relevant commit:** `5b34473`
+- **Current iteration:** `v1.2.0` long wild-west trail (~45 minutes)
+- **Last completed step:** Rebuilt all 10 levels as ~7200px multi-camp courses with richer desert scenery, camera limits, and child-friendly spacing
+- **Currently in progress:** Ralph polish loop until 17:00 CEST (hard stop; credit % not readable)
+- **Next step:** Continue visual/playability polish in the ralph loop; optional music/SFX later
+- **Completed features:** Long playable 10-level cowboy trail; 3 camps per level; animated cowboy; modes; Xbox-ready input; Chapter 14 QA green
+- **Remaining work:** Music/SFX; richer hand-drawn art; live Xbox verification; supervised child play-tests
+- **Tests last run:** `godot --headless --path . res://tests/test_runner.tscn` — all 16 tests passed
+- **Known issues or blockers:** Placeholder pixel art; no music/SFX yet; Xbox controller not physically verified on this machine
+- **Latest iteration tag:** `v1.2.0`
+- **Relevant commit:** *(set after tag)*
+
+### Cycle notes — 2026-07-19 (v1.2.0)
+
+- Expanded every level to a long multi-section trail (~7200px) aiming for ~45 minutes full clear.
+- Added sun, mesas, fence posts, grass-topped ground, brighter badges, and camp flag tips.
+- Three camps (checkpoints) per level; camera limits follow the saloon goal.
+- Renamed levels to Dusty Trail → Rainbow Saloon; updated GameManager titles.
+- Chapter 1/2/6 updated for the longer adventure.
 
 ### Cycle notes — 2026-07-19 (v1.1.1)
 

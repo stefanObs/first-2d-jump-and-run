@@ -20,16 +20,16 @@ const LEVEL_SCENES: PackedStringArray = [
 ]
 
 const LEVEL_NAMES: PackedStringArray = [
-	"First Steps",
-	"Star Meadow",
-	"Bouncy Woods",
-	"River Run",
-	"Checkpoint Cave",
-	"Windy Hill",
-	"Cloud Flight",
-	"Friendly Factory",
-	"Moonlight Mountain",
-	"Rainbow Castle",
+	"Dusty Trail",
+	"Badge Meadow",
+	"Bronco Springs",
+	"Canyon Ferry",
+	"Outlaw Cave",
+	"Windy Mesa",
+	"Sky Ranch",
+	"Rail Yard",
+	"Moonlight Gulch",
+	"Rainbow Saloon",
 ]
 
 signal saves_changed

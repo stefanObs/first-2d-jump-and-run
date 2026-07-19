@@ -1,3 +1,3 @@
 extends LevelController
 
-## Checkpoint Cave
+## Outlaw Cave

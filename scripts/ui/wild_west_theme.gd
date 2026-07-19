@@ -5,11 +5,15 @@ extends RefCounted
 
 
 static func desert_sky_color() -> Color:
-	return Color(0.98, 0.72, 0.42, 1.0)
+	return Color(0.98, 0.74, 0.45, 1.0)
 
 
 static func sand_color() -> Color:
 	return Color(0.86, 0.68, 0.38, 1.0)
+
+
+static func grass_color() -> Color:
+	return Color(0.45, 0.72, 0.28, 1.0)
 
 
 static func wood_color() -> Color:
@@ -20,12 +24,47 @@ static func apply_to_level(level: Node) -> void:
 	var background := level.get_node_or_null("Background") as ColorRect
 	if background != null:
 		background.color = desert_sky_color()
+
 	for node in level.find_children("*", "ColorRect", true, false):
 		var rect := node as ColorRect
-		var parent_name := str(rect.get_parent().name)
-		if parent_name.begins_with("Ground") or parent_name == "Ground":
-			rect.color = sand_color()
-		elif parent_name.begins_with("Platform") or parent_name.begins_with("StarPlatform") or parent_name.begins_with("High"):
-			rect.color = wood_color()
+		var rect_name := String(rect.name)
+		var parent_name := String(rect.get_parent().name)
+
+		# Keep decorative accents painted in the level scenes.
+		if rect_name in ["TopStripe", "Nail", "SkyBand", "Sun", "Mesa", "Fence"]:
+			continue
+		if rect_name.begins_with("Mesa") or rect_name.begins_with("Fence"):
+			continue
+
+		if parent_name.begins_with("Ground"):
+			if rect_name == "Visual":
+				rect.color = sand_color()
+		elif (
+			parent_name.begins_with("Platform")
+			or parent_name.begins_with("SpringLedge")
+			or parent_name.begins_with("WindLedge")
+			or parent_name.begins_with("StarPlatform")
+			or parent_name.begins_with("High")
+		):
+			if rect_name == "Visual":
+				rect.color = wood_color()
 		elif parent_name.begins_with("Gap") or parent_name.begins_with("Cloud"):
 			rect.color = Color(0.95, 0.88, 0.7, 1.0)
+
+
+static func configure_player_camera(level: Node, player: Player) -> void:
+	if player == null:
+		return
+	var camera := player.get_node_or_null("Camera2D") as Camera2D
+	if camera == null:
+		return
+	camera.position_smoothing_enabled = true
+	camera.position_smoothing_speed = 7.0
+	camera.limit_top = -220
+	camera.limit_bottom = 520
+	camera.limit_left = -80
+	var goal := level.find_child("Goal", true, false) as Node2D
+	if goal != null:
+		camera.limit_right = int(goal.global_position.x + 420.0)
+	else:
+		camera.limit_right = 8000
