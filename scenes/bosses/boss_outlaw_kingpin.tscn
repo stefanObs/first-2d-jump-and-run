@@ -4,13 +4,14 @@
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="3"]
 [ext_resource type="PackedScene" path="res://scenes/world/opponent.tscn" id="6"]
-[ext_resource type="Script" path="res://scripts/bosses/kingpin_body.gd" id="7"]
+[ext_resource type="Texture2D" path="res://assets/world/boss_outlaw_kingpin.png" id="7"]
+[ext_resource type="Script" path="res://scripts/bosses/kingpin_body.gd" id="8"]
 
 [sub_resource type="RectangleShape2D" id="Ground"]
 size = Vector2(1600, 64)
 
-[sub_resource type="RectangleShape2D" id="King"]
-size = Vector2(50, 96)
+[sub_resource type="RectangleShape2D" id="KingLasso"]
+size = Vector2(70, 110)
 
 [node name="BossOutlawKingpin" type="Node2D"]
 script = ExtResource("1")
@@ -38,10 +39,10 @@ offset_right = 1000.0
 offset_bottom = 80.0
 theme_override_colors/font_color = Color(0.95, 0.85, 0.65, 1)
 theme_override_font_sizes/font_size = 20
-text = "Outlaw Kingpin — lasso the guards, then the boss on LOOK OUT!"
+text = "Outlaw Kingpin — lasso the guards in front, then the boss on LOOK OUT!"
 
 [node name="SpawnPoint" type="Marker2D" parent="."]
-position = Vector2(220, 280)
+position = Vector2(220, 320)
 
 [node name="Ground" type="StaticBody2D" parent="."]
 position = Vector2(800, 352)
@@ -55,37 +56,41 @@ color = Color(0.55, 0.35, 0.2, 1)
 shape = SubResource("Ground")
 
 [node name="Guard0" parent="." instance=ExtResource("6")]
-position = Vector2(720, 320)
-point_b = Vector2(80, 0)
+position = Vector2(480, 320)
+point_b = Vector2(90, 0)
 
 [node name="Guard1" parent="." instance=ExtResource("6")]
-position = Vector2(980, 320)
-point_b = Vector2(-80, 0)
+position = Vector2(640, 320)
+point_b = Vector2(-90, 0)
 
-[node name="Kingpin" type="AnimatableBody2D" parent="."]
-position = Vector2(860, 300)
-collision_layer = 1
-collision_mask = 0
-script = ExtResource("7")
+[node name="Kingpin" type="Node2D" parent="."]
+position = Vector2(980, 320)
+z_index = -1
 
 [node name="Sprite2D" type="Sprite2D" parent="Kingpin"]
-position = Vector2(0, -55)
-scale = Vector2(0.95, 0.95)
+position = Vector2(0, -70)
+texture = ExtResource("7")
 
 [node name="Label" type="Label" parent="Kingpin"]
 offset_left = -55.0
-offset_top = -140.0
+offset_top = -170.0
 offset_right = 55.0
-offset_bottom = -110.0
+offset_bottom = -140.0
 theme_override_font_sizes/font_size = 16
 text = "KINGPIN"
 horizontal_alignment = 1
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Kingpin"]
-position = Vector2(0, -40)
-shape = SubResource("King")
+[node name="LassoTarget" type="Area2D" parent="Kingpin"]
+position = Vector2(0, -38)
+collision_layer = 1
+collision_mask = 0
+monitoring = false
+monitorable = false
+script = ExtResource("8")
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Kingpin/LassoTarget"]
+shape = SubResource("KingLasso")
 
 [node name="Player" parent="." instance=ExtResource("2")]
-position = Vector2(220, 280)
+position = Vector2(220, 320)
 
 [node name="Hud" parent="." instance=ExtResource("3")]

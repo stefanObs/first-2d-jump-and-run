@@ -8,6 +8,7 @@ const BULL_TEX := preload("res://assets/world/boss_stampede_bull.png")
 @export var charge_speed: float = 280.0
 
 var _bull: AnimatableBody2D
+var _ring: BossLassoTarget
 var _sprite: Sprite2D
 var _label: Label
 var _hits: int = 0
@@ -24,8 +25,12 @@ func _ready() -> void:
 	_bull = $Bull as AnimatableBody2D
 	_sprite = $Bull/Sprite2D as Sprite2D
 	_label = $Bull/Label as Label
+	_ring = $Bull/LassoRing as BossLassoTarget
 	if _sprite != null:
 		_sprite.texture = BULL_TEX
+	if _ring != null:
+		_ring.set_lasso_active(false)
+		_ring.lassoed.connect(_on_ring_lasso)
 	var hurt := $Bull/HurtArea as Area2D
 	if hurt != null:
 		hurt.body_entered.connect(_on_bull_body)
@@ -37,6 +42,9 @@ func _physics_process(delta: float) -> void:
 	_bull.position.x += _dir * charge_speed * delta
 	if _sprite != null:
 		_sprite.flip_h = _dir < 0.0
+		# Keep the ring on the trailing flank opposite the charge.
+		if _ring != null:
+			_ring.position.x = 24.0 if _dir < 0.0 else -24.0
 	if _bull.position.x >= _right_x:
 		_bull.position.x = _right_x
 		_stun()
@@ -48,12 +56,18 @@ func _physics_process(delta: float) -> void:
 func _stun() -> void:
 	_stunned = true
 	_dir *= -1.0
+	if _ring != null:
+		_ring.set_lasso_active(true)
 	if _label != null:
 		_label.text = "STUNNED!"
 		_label.modulate = Color(0.95, 0.75, 0.15, 1)
 	report_progress("Now! Lasso the ring!")
-	await get_tree().create_timer(1.6).timeout
+	await get_tree().create_timer(2.0).timeout
+	if not _stunned:
+		return
 	_stunned = false
+	if _ring != null:
+		_ring.set_lasso_active(false)
 	if _label != null and not _won:
 		_label.text = "BULL"
 		_label.modulate = Color(0.55, 0.2, 0.08, 1)
@@ -65,8 +79,11 @@ func _on_ring_lasso() -> void:
 	_hits += 1
 	report_progress("Ring caught! %d / %d" % [_hits, hits_needed])
 	_stunned = false
+	if _ring != null:
+		_ring.set_lasso_active(false)
 	if _label != null:
 		_label.text = "BULL"
+		_label.modulate = Color(0.55, 0.2, 0.08, 1)
 	if _hits >= hits_needed:
 		win_boss()
 

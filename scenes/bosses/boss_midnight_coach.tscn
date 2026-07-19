@@ -4,13 +4,14 @@
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="3"]
 [ext_resource type="PackedScene" path="res://scenes/world/mode_item.tscn" id="5"]
+[ext_resource type="Texture2D" path="res://assets/world/boss_midnight_coach.png" id="6"]
 [ext_resource type="Script" path="res://scripts/bosses/coach_door.gd" id="7"]
 
 [sub_resource type="RectangleShape2D" id="Ground"]
 size = Vector2(1600, 64)
 
 [sub_resource type="RectangleShape2D" id="Door"]
-size = Vector2(40, 72)
+size = Vector2(56, 100)
 
 [node name="BossMidnightCoach" type="Node2D"]
 script = ExtResource("1")
@@ -41,7 +42,7 @@ theme_override_font_sizes/font_size = 20
 text = "Midnight Coach — grab Speed, then lasso doors 1-2-3!"
 
 [node name="SpawnPoint" type="Marker2D" parent="."]
-position = Vector2(220, 280)
+position = Vector2(220, 320)
 
 [node name="Ground" type="StaticBody2D" parent="."]
 position = Vector2(800, 352)
@@ -58,43 +59,56 @@ shape = SubResource("Ground")
 position = Vector2(360, 275)
 mode = 3
 
-[node name="Coach" type="AnimatableBody2D" parent="."]
-position = Vector2(800, 280)
-collision_layer = 1
-collision_mask = 0
+[node name="Coach" type="Node2D" parent="."]
+position = Vector2(800, 320)
 
 [node name="Sprite2D" type="Sprite2D" parent="Coach"]
-position = Vector2(0, -40)
-scale = Vector2(0.9, 0.9)
+position = Vector2(0, -70)
+texture = ExtResource("6")
 
-[node name="Door0" type="AnimatableBody2D" parent="Coach"]
-position = Vector2(-70, -20)
+[node name="Door0" type="Area2D" parent="Coach"]
+position = Vector2(-70, -38)
 collision_layer = 1
 collision_mask = 0
+monitoring = false
+monitorable = true
 script = ExtResource("7")
 metadata/door_index = 0
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Coach/Door0"]
 shape = SubResource("Door")
+[node name="Handle" type="Polygon2D" parent="Coach/Door0"]
+color = Color(0.95, 0.75, 0.2, 1)
+polygon = PackedVector2Array(-10, -10, 10, -10, 10, 10, -10, 10)
 
-[node name="Door1" type="AnimatableBody2D" parent="Coach"]
-position = Vector2(0, -20)
+[node name="Door1" type="Area2D" parent="Coach"]
+position = Vector2(0, -38)
 collision_layer = 1
 collision_mask = 0
+monitoring = false
+monitorable = true
 script = ExtResource("7")
 metadata/door_index = 1
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Coach/Door1"]
 shape = SubResource("Door")
+[node name="Handle" type="Polygon2D" parent="Coach/Door1"]
+color = Color(0.95, 0.75, 0.2, 1)
+polygon = PackedVector2Array(-10, -10, 10, -10, 10, 10, -10, 10)
 
-[node name="Door2" type="AnimatableBody2D" parent="Coach"]
-position = Vector2(70, -20)
+[node name="Door2" type="Area2D" parent="Coach"]
+position = Vector2(70, -38)
 collision_layer = 1
 collision_mask = 0
+monitoring = false
+monitorable = true
 script = ExtResource("7")
 metadata/door_index = 2
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Coach/Door2"]
 shape = SubResource("Door")
+[node name="Handle" type="Polygon2D" parent="Coach/Door2"]
+color = Color(0.95, 0.75, 0.2, 1)
+polygon = PackedVector2Array(-10, -10, 10, -10, 10, 10, -10, 10)
 
 [node name="Player" parent="." instance=ExtResource("2")]
-position = Vector2(220, 280)
+position = Vector2(220, 320)
 
 [node name="Hud" parent="." instance=ExtResource("3")]

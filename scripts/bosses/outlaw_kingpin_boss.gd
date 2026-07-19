@@ -3,12 +3,11 @@ extends BossArena
 ## Outlaw Kingpin: tie bodyguards first, then lasso the boss during telegraph.
 
 const KING_TEX := preload("res://assets/world/boss_outlaw_kingpin.png")
-const GUARD_TEX := preload("res://assets/world/boss_bodyguard.png")
 
-var _king: AnimatableBody2D
+var _king: Node2D
+var _king_target: BossLassoTarget
 var _label: Label
 var _guards_left: int = 2
-var _telegraphing: bool = false
 var _vulnerable: bool = false
 
 
@@ -16,18 +15,18 @@ func _ready() -> void:
 	source_level = 10
 	boss_title = "Outlaw Kingpin — tie the guards, then the boss!"
 	super._ready()
-	_king = $Kingpin as AnimatableBody2D
+	_king = $Kingpin as Node2D
 	_label = $Kingpin/Label as Label
+	_king_target = $Kingpin/LassoTarget as BossLassoTarget
 	var kspr := $Kingpin/Sprite2D as Sprite2D
 	if kspr != null:
 		kspr.texture = KING_TEX
+	if _king_target != null:
+		_king_target.set_lasso_active(false)
 	for name in ["Guard0", "Guard1"]:
 		var guard := get_node_or_null(name) as Opponent
 		if guard != null:
 			guard.captured.connect(_on_guard_captured)
-			var gspr := guard.get_node_or_null("WalkSprite") as AnimatedSprite2D
-			if gspr == null:
-				gspr = guard.get_node_or_null("Sprite2D") as AnimatedSprite2D
 	_start_telegraph_loop()
 
 
@@ -43,14 +42,16 @@ func _start_telegraph_loop() -> void:
 		await get_tree().create_timer(2.4).timeout
 		if _won or _guards_left > 0:
 			continue
-		_telegraphing = true
 		_vulnerable = true
+		if _king_target != null:
+			_king_target.set_lasso_active(true)
 		if _label != null:
 			_label.text = "LOOK OUT!"
 			_label.modulate = Color(0.95, 0.2, 0.1, 1)
-		await get_tree().create_timer(1.35).timeout
+		await get_tree().create_timer(1.6).timeout
 		_vulnerable = false
-		_telegraphing = false
+		if _king_target != null and not _won:
+			_king_target.set_lasso_active(false)
 		if _label != null and not _won:
 			_label.text = "KINGPIN"
 			_label.modulate = Color(0.7, 0.15, 0.1, 1)

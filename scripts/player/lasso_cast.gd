@@ -1,10 +1,10 @@
 class_name LassoCast
 extends Area2D
 
-## Short, animated rope throw that ties the first bandit it reaches.
+## Short, animated rope throw that ties bandits and boss lasso targets.
 
-const MAX_REACH := 190.0
-const OUT_TIME := 0.18
+const MAX_REACH := 220.0
+const OUT_TIME := 0.2
 const RETURN_TIME := 0.16
 
 var _direction: float = 1.0
@@ -21,14 +21,17 @@ func setup(direction: float) -> void:
 
 func _ready() -> void:
 	collision_layer = 0
+	# Layer 1: world bodies / opponents. Detect Area2D targets via area_entered.
 	collision_mask = 1
+	monitoring = true
 	monitorable = false
 	_shape = CollisionShape2D.new()
 	var circle := CircleShape2D.new()
-	circle.radius = 22.0
+	circle.radius = 28.0
 	_shape.shape = circle
 	add_child(_shape)
 	body_entered.connect(_on_body_entered)
+	area_entered.connect(_on_area_entered)
 	queue_redraw()
 
 
@@ -78,23 +81,42 @@ func _draw() -> void:
 	draw_circle(end + Vector2(-4.0 * _direction, 0.0), 3.0, Color(0.45, 0.25, 0.08, 1.0))
 
 
-func _on_body_entered(body: Node2D) -> void:
-	if _caught:
-		return
-	if body.has_method("lasso_hit"):
+func _try_lasso_target(node: Node) -> bool:
+	if _caught or node == null:
+		return false
+	if node is BossLassoTarget:
+		var target := node as BossLassoTarget
+		if not target.active:
+			return false
 		_caught = true
 		monitoring = false
-		body.call("lasso_hit")
+		target.lasso_hit()
 		_returning = true
 		_elapsed = 0.0
-		return
-	if not (body is Opponent):
-		return
-	var opponent := body as Opponent
-	if opponent.is_tied():
-		return
-	_caught = true
-	monitoring = false
-	opponent.tie_up()
-	_returning = true
-	_elapsed = 0.0
+		return true
+	if node.has_method("lasso_hit") and not (node is Opponent):
+		_caught = true
+		monitoring = false
+		node.call("lasso_hit")
+		_returning = true
+		_elapsed = 0.0
+		return true
+	if node is Opponent:
+		var opponent := node as Opponent
+		if opponent.is_tied():
+			return false
+		_caught = true
+		monitoring = false
+		opponent.tie_up()
+		_returning = true
+		_elapsed = 0.0
+		return true
+	return false
+
+
+func _on_body_entered(body: Node2D) -> void:
+	_try_lasso_target(body)
+
+
+func _on_area_entered(area: Area2D) -> void:
+	_try_lasso_target(area)

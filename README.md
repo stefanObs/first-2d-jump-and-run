@@ -58,7 +58,7 @@ The player can run left and right, jump, collect stars and mode items, activate 
 - Keyboard: arrow keys or `A`/`D` to move, `Space` to jump
 - `Alt`, `F`, or `L`: throw the lasso toward the cowboy's facing direction
 - Numpad `+` twice: move to the next campaign level
-- Numpad `.` (or `.`) twice: jump to the boss for this trail stretch; in a boss arena, cycle to the next boss
+- Numpad `-` (or `-`) twice: jump to the boss for this trail stretch; in a boss arena, cycle to the next boss
 - `Escape`: pause
 
 ### Xbox controller support
@@ -268,17 +268,17 @@ Each cycle must maintain the following status block:
 ### Current development status
 
 - **Current iteration:** `v1.3.3` hazard variety, bounty bandits, and trail readability
-- **Last completed step:** Implemented saloon doorway pose, steep purposeful clouds, floor rattlesnakes, flight unstick, visible fence gates, L10 canyon carrion fix, bosses after L3/L7/L10, horizon victory ride
+- **Last completed step:** Fixed boss lasso targets, kingpin layout, hand-drawn boss art, and numpad `-` boss shortcut
 - **Currently in progress:** In-game visual play-test of bosses and polish
 - **Next step:** Play-test bosses, fences, clouds, and flight; then tag `v1.3.3`
 - **Completed features:** Long 10-level cowboy trail; animated nonviolent bandit lasso; seated tied bandits; warning-shot and bounty bandits; carrions and rattlesnakes; animated canyon recovery; reachable hazards; hand-drawn cowboy + world props; looping music; three custom editor slots; mid-trail saves; modes; Xbox-ready input; Stampede Bull / Midnight Coach / Outlaw Kingpin bosses; horizon victory scene
 - **Remaining work:** In-game visual/gameplay play-test; Xbox controller physical verification; supervised child play-tests; additional SFX
-- **Tests last run:** all automated tests passed after boss arenas and trail polish
+- **Tests last run:** all automated tests passed after boss lasso and shortcut fixes
 - **Known issues or blockers:**
   - Boss arenas and new fence/cloud art still need an in-game visual play-test
   - Xbox controller not physically verified on this machine
 - **Latest iteration tag:** `v1.3.2`
-- **Relevant commit:** `a76922f`
+- **Relevant commit:** (pending)
 
 ### Cycle notes — 2026-07-19 (v1.3.3)
 
@@ -289,6 +289,9 @@ Each cycle must maintain the following status block:
 - Fence gates are larger, post-framed, and swing open/closed clearly.
 - Rainbow Saloon no longer stacks a low carrion over a canyon; corridor moved to clear sky.
 - Bosses after levels 3 / 7 / 10: Stampede Bull, Midnight Coach, Outlaw Kingpin (matching art). Final boss leads to a horizon victory ride.
+- Boss lasso uses tall Area2D targets at rope height; bull ring and coach doors only count when active/glowing.
+- Kingpin guards stand in front of the boss; the kingpin no longer blocks the path with a solid body.
+- Double-tap numpad `-` (or `-`) enters/cycles boss fights from trails and arenas.
 - Canyon falls now stay recovering through respawn invulnerability, so holding left/right cannot restart the fall animation immediately.
 - Clouds on Wings routes are purposeful: canyon bridges, stepped climbs to high badges, cactus-clear platforms, and nest landings (some stay solid).
 - Rattlesnakes are larger, cast a ground shadow, and rise much higher when the cowboy approaches.

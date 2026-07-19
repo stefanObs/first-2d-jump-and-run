@@ -203,7 +203,7 @@ func _handle_next_boss_tap() -> void:
 		return
 	_next_boss_tap_time_msec = now
 	if hud != null:
-		hud.show_toast("Press numpad . again for next boss", 1.0)
+		hud.show_toast("Press numpad - again for next boss", 1.0)
 
 
 func respawn_player() -> void:

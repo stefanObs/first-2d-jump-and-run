@@ -50,6 +50,8 @@ func _ready() -> void:
 	_ensure_action(
 		&"next_boss",
 		[
+			_key(KEY_KP_SUBTRACT),
+			_key(KEY_MINUS),
 			_key(KEY_KP_PERIOD),
 			_key(KEY_PERIOD),
 		]

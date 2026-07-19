@@ -4,16 +4,17 @@
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="3"]
 [ext_resource type="PackedScene" path="res://scenes/world/spring_pad.tscn" id="4"]
+[ext_resource type="Texture2D" path="res://assets/world/boss_stampede_bull.png" id="5"]
 [ext_resource type="Script" path="res://scripts/bosses/bull_lasso_ring.gd" id="8"]
 
 [sub_resource type="RectangleShape2D" id="Ground"]
 size = Vector2(1600, 64)
 
 [sub_resource type="RectangleShape2D" id="BullBody"]
-size = Vector2(140, 70)
+size = Vector2(150, 70)
 
 [sub_resource type="RectangleShape2D" id="Ring"]
-size = Vector2(48, 36)
+size = Vector2(72, 90)
 
 [node name="BossStampedeBull" type="Node2D"]
 script = ExtResource("1")
@@ -44,7 +45,7 @@ theme_override_font_sizes/font_size = 20
 text = "Stampede Bull — bounce, then lasso the ring while stunned!"
 
 [node name="SpawnPoint" type="Marker2D" parent="."]
-position = Vector2(220, 280)
+position = Vector2(220, 320)
 
 [node name="Ground" type="StaticBody2D" parent="."]
 position = Vector2(800, 352)
@@ -66,25 +67,25 @@ position = Vector2(900, 320)
 bounce_velocity = -780.0
 
 [node name="Bull" type="AnimatableBody2D" parent="."]
-position = Vector2(800, 300)
+position = Vector2(800, 320)
 collision_layer = 1
 collision_mask = 0
 
 [node name="Sprite2D" type="Sprite2D" parent="Bull"]
-position = Vector2(0, -40)
-scale = Vector2(0.85, 0.85)
+position = Vector2(0, -55)
+texture = ExtResource("5")
 
 [node name="Label" type="Label" parent="Bull"]
 offset_left = -50.0
-offset_top = -120.0
+offset_top = -150.0
 offset_right = 50.0
-offset_bottom = -96.0
+offset_bottom = -126.0
 theme_override_font_sizes/font_size = 16
 text = "BULL"
 horizontal_alignment = 1
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Bull"]
-position = Vector2(0, -20)
+position = Vector2(0, -30)
 shape = SubResource("BullBody")
 
 [node name="HurtArea" type="Area2D" parent="Bull"]
@@ -92,18 +93,23 @@ collision_layer = 0
 collision_mask = 2
 monitorable = false
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Bull/HurtArea"]
-position = Vector2(0, -20)
+position = Vector2(0, -30)
 shape = SubResource("BullBody")
 
-[node name="LassoRing" type="AnimatableBody2D" parent="Bull"]
-position = Vector2(-20, -70)
+[node name="LassoRing" type="Area2D" parent="Bull"]
+position = Vector2(-24, -38)
 collision_layer = 1
 collision_mask = 0
+monitoring = false
+monitorable = false
 script = ExtResource("8")
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Bull/LassoRing"]
 shape = SubResource("Ring")
+[node name="RingVisual" type="Polygon2D" parent="Bull/LassoRing"]
+color = Color(0.95, 0.72, 0.18, 0.85)
+polygon = PackedVector2Array(-14, -14, 14, -14, 14, 14, -14, 14)
 
 [node name="Player" parent="." instance=ExtResource("2")]
-position = Vector2(220, 280)
+position = Vector2(220, 320)
 
 [node name="Hud" parent="." instance=ExtResource("3")]

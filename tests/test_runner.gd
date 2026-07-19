@@ -33,6 +33,7 @@ func _ready() -> void:
 	failures += _run("Mid-trail save data persists and loads", _test_mid_trail_save)
 	failures += _run("Saved camp and badges restore inside a level", _test_level_run_restore)
 	failures += _run("Pause menu exposes save, load, and restart from start", _test_pause_save_controls)
+	failures += _run("Boss arenas expose lasso targets and solvable kingpin layout", _test_boss_arenas)
 
 	if failures == 0:
 		print("All tests passed.")
@@ -94,6 +95,63 @@ func _test_input_bindings_actions() -> Variant:
 	for action in required:
 		if not InputMap.has_action(action) or InputMap.action_get_events(action).is_empty():
 			return "Missing input action: %s" % String(action)
+	var has_boss_minus := false
+	for event in InputMap.action_get_events(&"next_boss"):
+		if event is InputEventKey:
+			var key := event as InputEventKey
+			if key.physical_keycode == KEY_KP_SUBTRACT or key.keycode == KEY_KP_SUBTRACT:
+				has_boss_minus = true
+				break
+	if not has_boss_minus:
+		return "next_boss should include numpad minus (KEY_KP_SUBTRACT)."
+	return null
+
+
+func _test_boss_arenas() -> Variant:
+	var bull_packed: PackedScene = load("res://scenes/bosses/boss_stampede_bull.tscn")
+	var coach_packed: PackedScene = load("res://scenes/bosses/boss_midnight_coach.tscn")
+	var king_packed: PackedScene = load("res://scenes/bosses/boss_outlaw_kingpin.tscn")
+	if bull_packed == null or coach_packed == null or king_packed == null:
+		return "Missing one or more boss scenes."
+	var bull := bull_packed.instantiate()
+	add_child(bull)
+	var ring := bull.get_node_or_null("Bull/LassoRing")
+	if ring == null or not ring.has_method("lasso_hit") or not (ring is Area2D):
+		bull.queue_free()
+		return "Stampede Bull needs an Area2D lasso ring with lasso_hit."
+	bull.queue_free()
+
+	var coach := coach_packed.instantiate()
+	add_child(coach)
+	for i in range(3):
+		var door := coach.get_node_or_null("Coach/Door%d" % i)
+		if door == null or not door.has_method("lasso_hit") or not (door is Area2D):
+			coach.queue_free()
+			return "Midnight Coach door %d must be an Area2D lasso target." % i
+	if coach.get_node_or_null("Coach") is AnimatableBody2D:
+		coach.queue_free()
+		return "Coach root should not be a solid AnimatableBody2D."
+	coach.queue_free()
+
+	var king := king_packed.instantiate()
+	add_child(king)
+	var kingpin := king.get_node_or_null("Kingpin")
+	var target := king.get_node_or_null("Kingpin/LassoTarget")
+	var guard0 := king.get_node_or_null("Guard0") as Node2D
+	var guard1 := king.get_node_or_null("Guard1") as Node2D
+	if kingpin is AnimatableBody2D:
+		king.queue_free()
+		return "Kingpin must not be a solid AnimatableBody2D blocking the path."
+	if target == null or not target.has_method("lasso_hit") or not (target is Area2D):
+		king.queue_free()
+		return "Kingpin needs an Area2D lasso target."
+	if guard0 == null or guard1 == null or kingpin == null:
+		king.queue_free()
+		return "Kingpin arena missing guards or boss node."
+	if guard0.position.x >= (kingpin as Node2D).position.x or guard1.position.x >= (kingpin as Node2D).position.x:
+		king.queue_free()
+		return "Guards must stand in front (left) of the kingpin."
+	king.queue_free()
 	return null
 
 
