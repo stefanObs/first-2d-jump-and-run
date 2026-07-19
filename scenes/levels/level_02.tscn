@@ -87,11 +87,11 @@ color = Color(0.4, 0.55, 0.4, 1)
 shape = SubResource("Block")
 
 [node name="Star1" parent="." instance=ExtResource("9_star")]
-position = Vector2(380, 210)
+position = Vector2(380, 220)
 [node name="Star2" parent="." instance=ExtResource("9_star")]
-position = Vector2(700, 150)
+position = Vector2(700, 160)
 [node name="Star3" parent="." instance=ExtResource("9_star")]
-position = Vector2(980, 280)
+position = Vector2(1100, 280)
 
 [node name="Hazard" parent="." instance=ExtResource("5_hazard")]
 position = Vector2(980, 330)

@@ -57,7 +57,7 @@ func move_speed_multiplier() -> float:
 
 
 func jump_multiplier() -> float:
-	return 1.35 if active_mode == Mode.MAGIC_BOOTS else 1.0
+	return 1.45 if active_mode == Mode.MAGIC_BOOTS else 1.0
 
 
 func is_flying() -> bool:

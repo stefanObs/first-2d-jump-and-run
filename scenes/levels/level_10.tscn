@@ -89,11 +89,11 @@ mode = 3
 position = Vector2(760, 320)
 
 [node name="Star1" parent="." instance=ExtResource("9_star")]
-position = Vector2(680, 160)
+position = Vector2(680, 170)
 [node name="Star2" parent="." instance=ExtResource("9_star")]
-position = Vector2(1040, 90)
+position = Vector2(1040, 100)
 [node name="Star3" parent="." instance=ExtResource("9_star")]
-position = Vector2(1380, 220)
+position = Vector2(1380, 250)
 
 [node name="Goal" parent="." instance=ExtResource("4_goal")]
 position = Vector2(1550, 320)

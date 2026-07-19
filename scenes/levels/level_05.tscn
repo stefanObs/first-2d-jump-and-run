@@ -81,8 +81,20 @@ position = Vector2(760, 330)
 [node name="Checkpoint" parent="." instance=ExtResource("3_checkpoint")]
 position = Vector2(680, 320)
 
+
+[node name="StarPlatform" type="StaticBody2D" parent="."]
+position = Vector2(500, 270)
+[node name="Visual" type="ColorRect" parent="StarPlatform"]
+offset_left = -48.0
+offset_top = -12.0
+offset_right = 48.0
+offset_bottom = 12.0
+color = Color(0.45, 0.5, 0.55, 1)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StarPlatform"]
+shape = SubResource("Block")
+
 [node name="Star1" parent="." instance=ExtResource("9_star")]
-position = Vector2(500, 200)
+position = Vector2(500, 230)
 
 [node name="Goal" parent="." instance=ExtResource("4_goal")]
 position = Vector2(1450, 320)

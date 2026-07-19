@@ -82,7 +82,7 @@ position = Vector2(800, 380)
 scale = Vector2(4, 1)
 
 [node name="Star1" parent="." instance=ExtResource("9_star")]
-position = Vector2(780, 80)
+position = Vector2(780, 110)
 
 [node name="Checkpoint" parent="." instance=ExtResource("3_checkpoint")]
 position = Vector2(420, 320)

@@ -1,7 +1,7 @@
 class_name SpringPad
 extends Area2D
 
-@export var bounce_velocity: float = -700.0
+@export var bounce_velocity: float = -820.0
 
 
 func _ready() -> void:

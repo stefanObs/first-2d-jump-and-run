@@ -19,6 +19,7 @@ func _ready() -> void:
 	failures += _run("Goal completion disables player input", _test_goal_disables_input)
 	failures += _run("Bubble shield blocks opponent damage flag", _test_shield_blocks_damage_flag)
 	failures += _run("InputManager device prompts", _test_input_manager_prompts)
+	failures += _run("Star reachability heuristics", _test_star_reachability)
 
 	if failures == 0:
 		print("All tests passed.")
@@ -221,6 +222,27 @@ func _test_input_manager_prompts() -> Variant:
 	var controller_jump := InputManager.prompt_for(&"jump")
 	if keyboard_jump == controller_jump:
 		return "Keyboard and controller prompts should differ."
+	return null
+
+
+func _test_star_reachability() -> Variant:
+	var jump_h := StarReachability.max_jump_height()
+	var boots_h := StarReachability.max_boots_jump_height()
+	if jump_h < 80.0 or jump_h > 90.0:
+		return "Unexpected base jump height: %s" % str(jump_h)
+	if boots_h <= jump_h:
+		return "Boots jump should be higher than base jump."
+	# Ground top ~320; a star at 280 must be reachable by a normal jump.
+	if not StarReachability.is_star_reachable_from_surface(320.0, 280.0, jump_h):
+		return "Ground-adjacent star at y=280 should be reachable."
+	# A star 120px above ground should not be reachable without assists.
+	if StarReachability.is_star_reachable_from_surface(320.0, 200.0, jump_h):
+		return "Star 120px above ground should be unreachable without assists."
+	# Platform top 194 with boots should reach a star at 170.
+	if not StarReachability.is_star_reachable_from_surface(194.0, 170.0, jump_h):
+		return "Star above level 6 platform should be reachable once mounted."
+	if not StarReachability.is_star_reachable_from_surface(320.0, 194.0, boots_h, 12.0):
+		return "Magic Boots should be able to mount the level 6 platform."
 	return null
 
 

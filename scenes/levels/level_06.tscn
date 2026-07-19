@@ -73,7 +73,7 @@ position = Vector2(700, 220)
 wind_force = Vector2(220, -40)
 
 [node name="PlatformA" type="StaticBody2D" parent="."]
-position = Vector2(1040, 180)
+position = Vector2(1040, 210)
 [node name="Visual" type="ColorRect" parent="PlatformA"]
 offset_left = -64.0
 offset_top = -16.0
@@ -87,7 +87,7 @@ shape = SubResource("Block")
 position = Vector2(500, 320)
 
 [node name="Star1" parent="." instance=ExtResource("9_star")]
-position = Vector2(1040, 130)
+position = Vector2(1040, 170)
 
 [node name="Goal" parent="." instance=ExtResource("4_goal")]
 position = Vector2(1450, 320)

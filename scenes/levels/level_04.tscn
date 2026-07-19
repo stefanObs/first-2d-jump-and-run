@@ -82,7 +82,7 @@ point_b = Vector2(0, 80)
 position = Vector2(320, 320)
 
 [node name="Star1" parent="." instance=ExtResource("9_star")]
-position = Vector2(920, 140)
+position = Vector2(920, 150)
 
 [node name="Goal" parent="." instance=ExtResource("4_goal")]
 position = Vector2(1450, 320)
