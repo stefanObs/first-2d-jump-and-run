@@ -225,7 +225,7 @@ Each cycle must maintain the following status block:
 - **Tests last run:** `godot --headless --path . -s res://tests/run_tests.gd` — all 5 tests passed; main scene smoke-launch with `--quit-after 2` succeeded
 - **Known issues or blockers:** Visual gray-box only; goal is a marker without win logic; no menus or saves yet; Xbox controller not manually verified on this machine
 - **Latest iteration tag:** `v0.1.0`
-- **Relevant commit:** 
+- **Relevant commit:** `614228f`
 
 ### Cycle notes — 2026-07-19
 
