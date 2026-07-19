@@ -1095,12 +1095,16 @@ mode = 1
 
 
 [node name="Cloud0" parent="." instance=ExtResource("15_cloud")]
-position = Vector2(1400, 150)
+position = Vector2(1360, 250)
 start_delay = 0.0
+visible_time = 3.2
+hidden_time = 0.9
+always_solid = true
+purpose_label = "BRIDGE"
 
 
 [node name="CloudStar0" parent="." instance=ExtResource("9_star")]
-position = Vector2(1400, 95)
+position = Vector2(1360, 195)
 
 
 [node name="SkyPit0" parent="." instance=ExtResource("5_hazard")]
@@ -1109,12 +1113,23 @@ scale = Vector2(3.0, 1.4)
 
 
 [node name="Cloud1" parent="." instance=ExtResource("15_cloud")]
-position = Vector2(2300, 132)
-start_delay = 0.35
+position = Vector2(2140, 210)
+start_delay = 0.2
+visible_time = 2.6
+hidden_time = 1.1
+purpose_label = "STEP"
+
+
+[node name="Cloud1b" parent="." instance=ExtResource("15_cloud")]
+position = Vector2(2320, 140)
+start_delay = 0.45
+visible_time = 2.6
+hidden_time = 1.1
+purpose_label = "UP"
 
 
 [node name="CloudStar1" parent="." instance=ExtResource("9_star")]
-position = Vector2(2300, 77)
+position = Vector2(2320, 40)
 
 
 [node name="SkyPit1" parent="." instance=ExtResource("5_hazard")]
@@ -1123,12 +1138,16 @@ scale = Vector2(3.0, 1.4)
 
 
 [node name="Cloud2" parent="." instance=ExtResource("15_cloud")]
-position = Vector2(3200, 114)
-start_delay = 0.7
+position = Vector2(3160, 255)
+start_delay = 0.0
+visible_time = 3.5
+hidden_time = 0.8
+always_solid = true
+purpose_label = "OVER"
 
 
 [node name="CloudStar2" parent="." instance=ExtResource("9_star")]
-position = Vector2(3200, 59)
+position = Vector2(3320, -20)
 
 
 [node name="SkyPit2" parent="." instance=ExtResource("5_hazard")]
@@ -1137,12 +1156,15 @@ scale = Vector2(3.0, 1.4)
 
 
 [node name="Cloud3" parent="." instance=ExtResource("15_cloud")]
-position = Vector2(4100, 150)
-start_delay = 1.0499999999999998
+position = Vector2(4040, 235)
+start_delay = 0.6
+visible_time = 2.4
+hidden_time = 1.2
+purpose_label = "SAFE"
 
 
 [node name="CloudStar3" parent="." instance=ExtResource("9_star")]
-position = Vector2(4100, 95)
+position = Vector2(4040, 175)
 
 
 [node name="SkyPit3" parent="." instance=ExtResource("5_hazard")]
@@ -1151,12 +1173,23 @@ scale = Vector2(3.0, 1.4)
 
 
 [node name="Cloud4" parent="." instance=ExtResource("15_cloud")]
-position = Vector2(5000, 132)
-start_delay = 1.4
+position = Vector2(4980, 200)
+start_delay = 0.3
+visible_time = 2.8
+hidden_time = 1.0
+purpose_label = "NEST"
+
+
+[node name="Cloud4b" parent="." instance=ExtResource("15_cloud")]
+position = Vector2(5160, 95)
+start_delay = 0.55
+visible_time = 2.8
+hidden_time = 1.0
+purpose_label = "HIGH"
 
 
 [node name="CloudStar4" parent="." instance=ExtResource("9_star")]
-position = Vector2(5000, 77)
+position = Vector2(5160, -15)
 
 
 [node name="SkyPit4" parent="." instance=ExtResource("5_hazard")]
@@ -1165,12 +1198,16 @@ scale = Vector2(3.0, 1.4)
 
 
 [node name="Cloud5" parent="." instance=ExtResource("15_cloud")]
-position = Vector2(5900, 114)
-start_delay = 1.75
+position = Vector2(5840, 250)
+start_delay = 0.0
+visible_time = 3.0
+hidden_time = 1.0
+always_solid = true
+purpose_label = "LAND"
 
 
 [node name="CloudStar5" parent="." instance=ExtResource("9_star")]
-position = Vector2(5900, 59)
+position = Vector2(5980, 40)
 
 
 [node name="SkyPit5" parent="." instance=ExtResource("5_hazard")]

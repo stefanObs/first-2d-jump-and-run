@@ -17,7 +17,7 @@ var shield_duration: float = 15.0
 var badge_extension: float = 5.0
 
 
-func activate(mode: Mode) -> void:
+func activate(mode: Mode, duration_override: float = 0.0) -> void:
 	active_mode = mode
 	match mode:
 		Mode.WINGS:
@@ -30,6 +30,8 @@ func activate(mode: Mode) -> void:
 			remaining = shield_duration
 		_:
 			remaining = 0.0
+	if duration_override > 0.0:
+		remaining = duration_override
 	mode_changed.emit(active_mode, remaining)
 
 

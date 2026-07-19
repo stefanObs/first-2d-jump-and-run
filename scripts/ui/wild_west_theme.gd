@@ -143,6 +143,8 @@ static func _dress_platforms(level: Node) -> void:
 		if (
 			parent_name.begins_with("Platform")
 			or parent_name.begins_with("SpringLedge")
+			or parent_name.begins_with("JumpPlank")
+			or parent_name.begins_with("BoostPlank")
 			or parent_name.begins_with("WindLedge")
 			or parent_name.begins_with("StarPlatform")
 			or parent_name.begins_with("High")

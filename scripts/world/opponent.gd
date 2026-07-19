@@ -146,21 +146,63 @@ func tie_up(award_bounty: bool = true) -> void:
 	var hurt_shape := get_node_or_null("HurtArea/CollisionShape2D") as CollisionShape2D
 	if hurt_shape != null:
 		hurt_shape.set_deferred("disabled", true)
+	# Instantly safe/pass-through, then play a short rope flourish.
 	_show_floor_bound_pose()
 	if get_node_or_null("TiedRopes") == null:
 		var ropes := TiedBanditOverlay.new()
 		ropes.name = "TiedRopes"
 		ropes.z_index = 0
 		add_child(ropes)
-	# The whole captured bandit stays behind the cowboy.
+		_animate_rope_coils(ropes)
 	z_index = -1
 	if _label != null:
 		_label.text = "TIED!"
 		_label.modulate = Color(0.55, 0.25, 0.06, 1.0)
 		_label.position.y = -78.0
+	_play_tying_flourish()
 	captured.emit(self)
 	if bounty_bandit and award_bounty:
 		bounty_caught.emit(self, 2)
+
+
+func _play_tying_flourish() -> void:
+	if _sprite == null:
+		return
+	var face := 1.0 if _facing >= 0.0 else -1.0
+	var base_scale := _sprite.scale
+	var tween := create_tween()
+	tween.tween_property(_sprite, "scale", Vector2(0.9 * face, 0.55), 0.1)
+	tween.tween_property(_sprite, "scale", Vector2(0.78 * face, 0.78), 0.12)
+	tween.tween_property(_sprite, "scale", base_scale, 0.12)
+	if _label != null:
+		_label.text = "GOTCHA!"
+		var label_tween := create_tween()
+		label_tween.tween_interval(0.28)
+		label_tween.tween_callback(func() -> void:
+			if _label != null and _tied:
+				_label.text = "TIED!"
+		)
+
+
+func _animate_rope_coils(ropes: Node2D) -> void:
+	# Draw temporary rope loops that settle onto the tied bandit.
+	for i in range(3):
+		var loop := Line2D.new()
+		loop.width = 4.0
+		loop.default_color = Color(0.72, 0.5, 0.22, 1.0)
+		loop.z_index = 2
+		var radius := 28.0 + float(i) * 8.0
+		var points := PackedVector2Array()
+		for step in range(10):
+			var ang := TAU * float(step) / 9.0
+			points.append(Vector2(cos(ang) * radius * 0.55, -38.0 - float(i) * 10.0 + sin(ang) * radius * 0.28))
+		loop.points = points
+		loop.modulate.a = 0.0
+		ropes.add_child(loop)
+		var tween := create_tween()
+		tween.tween_property(loop, "modulate:a", 1.0, 0.08).set_delay(0.05 * float(i))
+		tween.tween_property(loop, "modulate:a", 0.0, 0.35).set_delay(0.22)
+		tween.tween_callback(loop.queue_free)
 
 
 func untie_for_respawn() -> void:

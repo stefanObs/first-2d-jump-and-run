@@ -726,6 +726,56 @@ position = Vector2(4050, 320)
 position = Vector2(5490, 320)
 
 
+[node name="JumpPlank0" type="StaticBody2D" parent="."]
+position = Vector2(6020, 280)
+[node name="Visual" type="ColorRect" parent="JumpPlank0"]
+offset_left = -70.0
+offset_top = -12.0
+offset_right = 70.0
+offset_bottom = 12.0
+color = Color(0.62, 0.4, 0.22, 1)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="JumpPlank0"]
+shape = SubResource("Block")
+
+[node name="JumpPlank1" type="StaticBody2D" parent="."]
+position = Vector2(6180, 230)
+[node name="Visual" type="ColorRect" parent="JumpPlank1"]
+offset_left = -70.0
+offset_top = -12.0
+offset_right = 70.0
+offset_bottom = 12.0
+color = Color(0.62, 0.4, 0.22, 1)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="JumpPlank1"]
+shape = SubResource("Block")
+
+[node name="JumpPlank2" type="StaticBody2D" parent="."]
+position = Vector2(6340, 180)
+[node name="Visual" type="ColorRect" parent="JumpPlank2"]
+offset_left = -70.0
+offset_top = -12.0
+offset_right = 70.0
+offset_bottom = 12.0
+color = Color(0.62, 0.4, 0.22, 1)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="JumpPlank2"]
+shape = SubResource("Block")
+
+[node name="JumpPlank3" type="StaticBody2D" parent="."]
+position = Vector2(6500, 130)
+[node name="Visual" type="ColorRect" parent="JumpPlank3"]
+offset_left = -70.0
+offset_top = -12.0
+offset_right = 70.0
+offset_bottom = 12.0
+color = Color(0.62, 0.4, 0.22, 1)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="JumpPlank3"]
+shape = SubResource("Block")
+
+[node name="BoostWings" parent="." instance=ExtResource("10_mode")]
+position = Vector2(6660, 85)
+mode = 1
+duration_override = 7.0
+
+
 [node name="TrailStar0" parent="." instance=ExtResource("9_star")]
 position = Vector2(650, 270)
 

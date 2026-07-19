@@ -143,6 +143,10 @@ func is_invulnerable() -> bool:
 	return _invulnerable_remaining > 0.0 or _modes.has_shield()
 
 
+func is_canyon_falling() -> bool:
+	return _is_canyon_falling
+
+
 func respawn_at(world_position: Vector2) -> void:
 	_ensure_jump_assist()
 	_ensure_modes()
@@ -178,9 +182,9 @@ func play_canyon_fall() -> void:
 	await tween.finished
 
 
-func activate_mode(mode: ModeController.Mode) -> void:
+func activate_mode(mode: ModeController.Mode, duration_override: float = 0.0) -> void:
 	_ensure_modes()
-	_modes.activate(mode)
+	_modes.activate(mode, duration_override)
 	mode_changed.emit(ModeController.mode_name(mode), _modes.remaining)
 
 

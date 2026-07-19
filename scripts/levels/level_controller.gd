@@ -58,7 +58,12 @@ func _process(delta: float) -> void:
 			return
 	_play_time += delta
 	_update_trail_progress()
-	if player != null and player.global_position.y > fall_recovery_y and not _is_recovering:
+	if (
+		player != null
+		and player.global_position.y > fall_recovery_y
+		and not _is_recovering
+		and not player.is_invulnerable()
+	):
 		_play_canyon_fall_and_respawn()
 		return
 	if Input.is_action_just_pressed(&"pause"):
@@ -478,6 +483,8 @@ func _on_hazard_hurt(hurt_player: Player, hazard: Hazard) -> void:
 		if hud != null:
 			hud.show_toast("Bounce! Bubble safe!", 1.4)
 		return
+	if hurt_player.is_invulnerable():
+		return
 	if hazard.is_canyon():
 		_play_canyon_fall_and_respawn()
 		return
@@ -487,9 +494,15 @@ func _on_hazard_hurt(hurt_player: Player, hazard: Hazard) -> void:
 func _play_canyon_fall_and_respawn() -> void:
 	if _is_recovering or player == null or _is_completing:
 		return
+	if player.is_invulnerable():
+		return
 	_is_recovering = true
 	await player.play_canyon_fall()
 	respawn_player()
+	# Keep recovering through respawn invulnerability so held move keys
+	# cannot immediately restart the canyon fall.
+	var grace := player.respawn_invulnerability_time if player != null else 0.85
+	await get_tree().create_timer(grace).timeout
 	_is_recovering = false
 
 

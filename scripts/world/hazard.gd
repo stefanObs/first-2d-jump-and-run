@@ -115,4 +115,7 @@ func align_canyon_to_gap(floor_top_y: float, gap_left: float, gap_right: float) 
 
 func _on_body_entered(body: Node2D) -> void:
 	if body is Player:
-		hurt.emit(body as Player)
+		var player := body as Player
+		if is_canyon() and (player.is_invulnerable() or player.is_canyon_falling()):
+			return
+		hurt.emit(player)

@@ -7,6 +7,8 @@ signal collected(mode: ModeController.Mode)
 
 @export var mode: ModeController.Mode = ModeController.Mode.WINGS
 @export var respawns_on_checkpoint: bool = true
+@export var duration_override: float = 0.0
+
 
 const TEX_WINGS := preload("res://assets/world/modes/wings.png")
 const TEX_BOOTS := preload("res://assets/world/modes/magic_boots.png")
@@ -54,7 +56,7 @@ func _on_body_entered(body: Node2D) -> void:
 	_collected = true
 	visible = false
 	monitoring = false
-	(body as Player).activate_mode(mode)
+	(body as Player).activate_mode(mode, duration_override)
 	collected.emit(mode)
 
 

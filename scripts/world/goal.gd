@@ -55,7 +55,7 @@ func _ensure_arrow() -> void:
 		return
 	_arrow = Label.new()
 	_arrow.name = "ApproachArrow"
-	_arrow.position = Vector2(-90, -190)
+	_arrow.position = Vector2(-90, -260)
 	_arrow.size = Vector2(180, 36)
 	_arrow.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_arrow.add_theme_color_override(&"font_color", Color(0.95, 0.35, 0.1, 1.0))
@@ -76,7 +76,7 @@ func _update_approach_arrow() -> void:
 	var near := dist < 900.0 and dist > 80.0 and player.global_position.x < global_position.x
 	_arrow.visible = near
 	if near:
-		_arrow.position.y = -190.0 + sin(_phase * 1.4) * 6.0
+		_arrow.position.y = -260.0 + sin(_phase * 1.4) * 6.0
 		_arrow.modulate.a = 0.65 + absf(sin(_phase * 2.0)) * 0.35
 
 

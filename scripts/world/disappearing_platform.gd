@@ -5,6 +5,8 @@ extends StaticBody2D
 @export var hidden_time: float = 1.5
 @export var start_delay: float = 0.0
 @export var warn_time: float = 0.75
+@export var always_solid: bool = false
+@export var purpose_label: String = "CLOUD"
 
 var _timer: float = 0.0
 var _solid: bool = true
@@ -31,6 +33,12 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	if always_solid:
+		_solid = true
+		_apply_state()
+		if _label != null:
+			_label.text = purpose_label if purpose_label != "" else "CLOUD"
+		return
 	_timer -= delta
 	_blink_phase += delta * 14.0
 	if not _started:
@@ -58,7 +66,8 @@ func _apply_state() -> void:
 	for item in _extras:
 		item.modulate = Color(1, 1, 1, alpha)
 	if _label != null:
-		_label.text = "CLOUD" if _solid else "..."
+		var text := purpose_label if purpose_label != "" else "CLOUD"
+		_label.text = text if _solid else "..."
 		_label.modulate = Color(1, 1, 1, alpha)
 
 
@@ -69,7 +78,7 @@ func _update_warning_blink() -> void:
 		for item in _extras:
 			item.modulate = Color(1, 1, 1, 1.0)
 		if _label != null:
-			_label.text = "CLOUD"
+			_label.text = purpose_label if purpose_label != "" else "CLOUD"
 			_label.modulate = Color(1, 1, 1, 1)
 		return
 	var pulse := 0.4 + absf(sin(_blink_phase)) * 0.6
