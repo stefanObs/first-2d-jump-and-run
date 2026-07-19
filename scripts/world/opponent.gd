@@ -173,13 +173,12 @@ func _show_floor_bound_pose() -> void:
 	_sprite.rotation = 0.0
 	var face := 1.0 if _facing >= 0.0 else -1.0
 	_sprite.flip_h = false
-	_sprite.scale = Vector2(1.05 * face, 1.05)
+	# The tied art is 130 px tall versus the 80 px standing art.
+	# Scale it to the same on-screen height instead of enlarging the capture.
+	_sprite.scale = Vector2(0.7 * face, 0.7)
 	# Feet/seat on the desert top (collision bottom at local y=0).
-	_sprite.offset = Vector2(0, -52)
+	_sprite.offset = Vector2(0, -45)
 	_sprite.play(&"tied")
-	var tween := create_tween()
-	_sprite.scale = Vector2(1.18 * face, 0.88)
-	tween.tween_property(_sprite, "scale", Vector2(1.05 * face, 1.05), 0.16)
 
 
 func _shoot_at(player: Player) -> void:

@@ -4,7 +4,7 @@
 [ext_resource type="Texture2D" path="res://assets/world/rattlesnake_idle.png" id="2_texture"]
 
 [sub_resource type="RectangleShape2D" id="BiteShape"]
-size = Vector2(142, 28)
+size = Vector2(104, 24)
 
 [node name="Rattlesnake" type="Area2D"]
 collision_layer = 0
@@ -13,8 +13,8 @@ monitorable = false
 script = ExtResource("1_script")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
-position = Vector2(0, -31)
-scale = Vector2(0.75, 0.58)
+position = Vector2(0, -22)
+scale = Vector2(0.54, 0.42)
 texture = ExtResource("2_texture")
 
 [node name="Label" type="Label" parent="."]
@@ -29,5 +29,5 @@ text = "HISS!"
 horizontal_alignment = 1
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-position = Vector2(0, -14)
+position = Vector2(0, -10)
 shape = SubResource("BiteShape")

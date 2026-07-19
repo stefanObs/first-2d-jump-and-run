@@ -240,12 +240,12 @@ Each cycle must maintain the following status block:
 ### Current development status
 
 - **Current iteration:** `v1.3.3` hazard variety, bounty bandits, and trail readability
-- **Last completed step:** Floor-bound comic tied bandits; cactus/spring overlap ban
+- **Last completed step:** Kept tied bandits at normal size; made rattlesnakes smaller, player-facing, and proximity-raised
 - **Currently in progress:** In-game visual/gameplay play-test for this feature pass
 - **Next step:** Play-test tied floor pose, cactus spacing, projectile speed, bounty rewards, and boost placement; then tag `v1.3.3`
 - **Completed features:** Long 10-level cowboy trail; animated nonviolent bandit lasso; seated tied bandits; warning-shot and bounty bandits; carrions and rattlesnakes; animated canyon recovery; reachable hazards; hand-drawn cowboy + world props; looping music; three custom editor slots; mid-trail saves; modes; Xbox-ready input
 - **Remaining work:** In-game visual/gameplay play-test; Xbox controller physical verification; supervised child play-tests; additional SFX
-- **Tests last run:** all automated tests passed after floor-bound tied art and cactus/spring rule
+- **Tests last run:** all automated tests passed after tied-bandit scale and rattlesnake behavior changes
 - **Known issues or blockers:**
   - Latest spring, bandit, camp, carrion, shield, and Rail Yard changes still need an in-game visual play-test
   - Xbox controller not physically verified on this machine
@@ -254,6 +254,8 @@ Each cycle must maintain the following status block:
 
 ### Cycle notes — 2026-07-19 (v1.3.3)
 
+- Tied bandits now keep the standing bandit's visual height instead of growing during capture.
+- Rattlesnakes are smaller, always face the nearby player, and rise with a visible rattle warning before biting.
 - Captured bandits now sit on the floor in a comic bound pose with thick torso rope coils (blue and red-scarf variants).
 - Cacti must never overlap springs; fixed Bronco Springs overlap and added an automated layout check.
 - Audit follow-up: moved leftover rattlesnakes out from under cloud boards on levels 9–10, clear bandit projectiles on camp respawn, and align accessibility wording with warning shots.
