@@ -176,9 +176,9 @@ func _setup_sprite_frames() -> void:
 	_add_anim(frames, &"celebrate", ["celebrate.png"], 5.0)
 	_sprite.sprite_frames = frames
 	_sprite.centered = true
-	# 64px frames, scale 1.5: soles are ~30.5px below center. Offset -46
-	# plants boots on the collision floor (y=0) instead of sinking into dirt.
-	_sprite.offset = Vector2(0, -46)
+	# Boots sit near the frame bottom. Offset is scaled with the sprite, so
+	# -30 (not -46) plants soles on the collision floor at 1.5x scale.
+	_sprite.offset = Vector2(0, -30)
 	_sprite.scale = Vector2(1.5, 1.5)
 
 

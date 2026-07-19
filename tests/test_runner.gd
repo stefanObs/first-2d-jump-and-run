@@ -339,11 +339,50 @@ func _test_art_and_music() -> Variant:
 	var texture: Texture2D = load("res://assets/player/celebrate.png")
 	if texture == null:
 		return "Hand-drawn celebration art did not load."
+	for path in [
+		"res://assets/world/sky_handdrawn.png",
+		"res://assets/world/trail_desert_tile.png",
+		"res://assets/world/horizon_hills_strip.png",
+		"res://assets/world/canyon_gap.png",
+	]:
+		if load(path) == null:
+			return "Missing hand-drawn world art: %s" % path
 	var music: AudioStream = load("res://assets/audio/cheerful_cowboy_trail.wav")
 	if music == null:
 		return "Cheerful trail music did not load."
 	if AudioServer.get_bus_index(&"Music") < 0:
 		return "Music bus was not created."
+	var level: Variant = _instantiate_level("res://scenes/levels/level_01.tscn")
+	if level is String:
+		return level
+	var controller := level as LevelController
+	if controller.get_node_or_null("SkyArt") == null:
+		controller.queue_free()
+		return "Level is missing hand-drawn sky art."
+	if controller.get_node_or_null("TrailFloor") == null:
+		controller.queue_free()
+		return "Level is missing hand-drawn trail floor."
+	if controller.get_node_or_null("HorizonHills") == null:
+		controller.queue_free()
+		return "Level is missing endless horizon hills."
+	var pit := controller.find_child("Pit3", true, false) as Hazard
+	if pit == null:
+		controller.queue_free()
+		return "Level fixture is missing Pit3."
+	var pit_mouth := pit.get_node_or_null("PitMouth") as Sprite2D
+	if pit_mouth == null or not pit_mouth.visible or pit_mouth.texture == null:
+		controller.queue_free()
+		return "Pit canyon mouth was not configured."
+	var floor_top := 320.0
+	var tex_h := float(pit_mouth.texture.get_height())
+	var world_top := (
+		pit.global_position.y
+		+ (pit_mouth.position.y - tex_h * 0.5 * pit_mouth.scale.y) * pit.scale.y
+	)
+	if absf(world_top - floor_top) > 3.0:
+		controller.queue_free()
+		return "Pit rim should meet the trail floor (top=%.1f, expected %.1f)." % [world_top, floor_top]
+	controller.queue_free()
 	return null
 
 
