@@ -1,0 +1,256 @@
+extends Node
+
+## Owns save slots, settings, and level progression.
+
+const SAVE_PATH := "user://save_data.json"
+const SAVE_VERSION := 1
+const SLOT_COUNT := 3
+
+const LEVEL_SCENES: PackedStringArray = [
+	"res://scenes/levels/level_01.tscn",
+	"res://scenes/levels/level_02.tscn",
+	"res://scenes/levels/level_03.tscn",
+	"res://scenes/levels/level_04.tscn",
+	"res://scenes/levels/level_05.tscn",
+	"res://scenes/levels/level_06.tscn",
+	"res://scenes/levels/level_07.tscn",
+	"res://scenes/levels/level_08.tscn",
+	"res://scenes/levels/level_09.tscn",
+	"res://scenes/levels/level_10.tscn",
+]
+
+const LEVEL_NAMES: PackedStringArray = [
+	"First Steps",
+	"Star Meadow",
+	"Bouncy Woods",
+	"River Run",
+	"Checkpoint Cave",
+	"Windy Hill",
+	"Cloud Flight",
+	"Friendly Factory",
+	"Moonlight Mountain",
+	"Rainbow Castle",
+]
+
+signal saves_changed
+signal settings_changed
+signal active_slot_changed(slot_index: int)
+
+var active_slot_index: int = -1
+var _data: Dictionary = {}
+
+
+func _ready() -> void:
+	_data = _default_data()
+	load_from_disk()
+	_apply_settings()
+
+
+func get_slot(slot_index: int) -> Dictionary:
+	_validate_slot(slot_index)
+	_ensure_data()
+	return (_data["slots"] as Array)[slot_index]
+
+
+func is_slot_empty(slot_index: int) -> bool:
+	return bool(get_slot(slot_index).get("empty", true))
+
+
+func start_or_continue_slot(slot_index: int) -> void:
+	_validate_slot(slot_index)
+	_ensure_data()
+	active_slot_index = slot_index
+	var slot: Dictionary = get_slot(slot_index)
+	if bool(slot.get("empty", true)):
+		slot["empty"] = false
+		slot["current_level"] = 1
+		slot["stars"] = 0
+		slot["play_time_sec"] = 0.0
+		(_data["slots"] as Array)[slot_index] = slot
+		save_to_disk()
+	active_slot_changed.emit(slot_index)
+	load_level(int(slot.get("current_level", 1)))
+
+
+func erase_slot(slot_index: int) -> void:
+	_validate_slot(slot_index)
+	_ensure_data()
+	(_data["slots"] as Array)[slot_index] = _empty_slot()
+	if active_slot_index == slot_index:
+		active_slot_index = -1
+	save_to_disk()
+	saves_changed.emit()
+
+
+func debug_set_slot(slot_index: int, slot_data: Dictionary) -> void:
+	_validate_slot(slot_index)
+	_ensure_data()
+	var slot := _empty_slot()
+	slot.merge(slot_data, true)
+	(_data["slots"] as Array)[slot_index] = slot
+
+
+func get_current_level_number() -> int:
+	if active_slot_index < 0:
+		return 1
+	return int(get_slot(active_slot_index).get("current_level", 1))
+
+
+func add_play_time(seconds: float) -> void:
+	if active_slot_index < 0:
+		return
+	var slot: Dictionary = get_slot(active_slot_index)
+	slot["play_time_sec"] = float(slot.get("play_time_sec", 0.0)) + maxf(seconds, 0.0)
+	(_data["slots"] as Array)[active_slot_index] = slot
+
+
+func collect_stars(amount: int) -> void:
+	if active_slot_index < 0 or amount <= 0:
+		return
+	var slot: Dictionary = get_slot(active_slot_index)
+	slot["stars"] = int(slot.get("stars", 0)) + amount
+	(_data["slots"] as Array)[active_slot_index] = slot
+
+
+func complete_level(level_number: int, stars_found: int) -> void:
+	if active_slot_index < 0:
+		return
+	var slot: Dictionary = get_slot(active_slot_index)
+	slot["stars"] = int(slot.get("stars", 0)) + max(stars_found, 0)
+	if level_number >= LEVEL_SCENES.size():
+		slot["current_level"] = LEVEL_SCENES.size()
+		slot["completed"] = true
+	else:
+		slot["current_level"] = max(level_number + 1, int(slot.get("current_level", 1)))
+	(_data["slots"] as Array)[active_slot_index] = slot
+	save_to_disk()
+	saves_changed.emit()
+
+
+func load_level(level_number: int) -> void:
+	var index := clampi(level_number, 1, LEVEL_SCENES.size()) - 1
+	get_tree().change_scene_to_file(LEVEL_SCENES[index])
+
+
+func return_to_save_select() -> void:
+	active_slot_index = -1
+	get_tree().change_scene_to_file("res://scenes/ui/save_select.tscn")
+
+
+func restart_current_level() -> void:
+	load_level(get_current_level_number())
+
+
+func get_settings() -> Dictionary:
+	_ensure_data()
+	return _data["settings"]
+
+
+func set_setting(key: String, value: Variant) -> void:
+	_ensure_data()
+	var settings: Dictionary = _data["settings"]
+	settings[key] = value
+	_data["settings"] = settings
+	_apply_settings()
+	save_to_disk()
+	settings_changed.emit()
+
+
+func save_to_disk() -> void:
+	_ensure_data()
+	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+	if file == null:
+		push_error("Could not write save file.")
+		return
+	file.store_string(JSON.stringify(_data, "\t"))
+
+
+func load_from_disk() -> void:
+	if not FileAccess.file_exists(SAVE_PATH):
+		_data = _default_data()
+		return
+	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
+	if file == null:
+		_data = _default_data()
+		return
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	if typeof(parsed) != TYPE_DICTIONARY:
+		_data = _default_data()
+		return
+	_data = _migrate_save(parsed as Dictionary)
+	_ensure_data()
+	saves_changed.emit()
+
+
+func level_scene_for(level_number: int) -> String:
+	var index := clampi(level_number, 1, LEVEL_SCENES.size()) - 1
+	return LEVEL_SCENES[index]
+
+
+func level_name_for(level_number: int) -> String:
+	var index := clampi(level_number, 1, LEVEL_NAMES.size()) - 1
+	return LEVEL_NAMES[index]
+
+
+func _ensure_data() -> void:
+	if typeof(_data) != TYPE_DICTIONARY or not _data.has("slots") or not _data.has("settings"):
+		_data = _default_data()
+
+
+func _apply_settings() -> void:
+	_ensure_data()
+	var settings: Dictionary = _data["settings"]
+	var music := float(settings.get("music_volume", 0.8))
+	var sfx := float(settings.get("sfx_volume", 0.8))
+	AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Master"), linear_to_db(clampf((music + sfx) * 0.5, 0.0, 1.0)))
+	if bool(settings.get("fullscreen", false)):
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+	else:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+
+
+func _default_data() -> Dictionary:
+	return {
+		"version": SAVE_VERSION,
+		"slots": [_empty_slot(), _empty_slot(), _empty_slot()],
+		"settings": {
+			"music_volume": 0.8,
+			"sfx_volume": 0.8,
+			"vibration": true,
+			"fullscreen": false,
+		},
+	}
+
+
+func _empty_slot() -> Dictionary:
+	return {
+		"empty": true,
+		"current_level": 1,
+		"stars": 0,
+		"play_time_sec": 0.0,
+		"completed": false,
+	}
+
+
+func _migrate_save(raw: Dictionary) -> Dictionary:
+	var data := _default_data()
+	if raw.has("settings") and typeof(raw["settings"]) == TYPE_DICTIONARY:
+		var merged: Dictionary = data["settings"]
+		merged.merge(raw["settings"] as Dictionary, true)
+		data["settings"] = merged
+	if raw.has("slots") and typeof(raw["slots"]) == TYPE_ARRAY:
+		var slots: Array = data["slots"]
+		var incoming: Array = raw["slots"]
+		for i in range(mini(SLOT_COUNT, incoming.size())):
+			if typeof(incoming[i]) == TYPE_DICTIONARY:
+				var slot: Dictionary = _empty_slot()
+				slot.merge(incoming[i] as Dictionary, true)
+				slots[i] = slot
+		data["slots"] = slots
+	data["version"] = SAVE_VERSION
+	return data
+
+
+func _validate_slot(slot_index: int) -> void:
+	if slot_index < 0 or slot_index >= SLOT_COUNT:
+		push_error("Invalid save slot: %d" % slot_index)

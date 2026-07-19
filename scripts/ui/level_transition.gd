@@ -14,12 +14,12 @@ func _ready() -> void:
 	layer = 100
 
 
-func play_celebration() -> void:
+func play_celebration(message: String = "Great job!") -> void:
 	visible = true
 	if _veil != null:
 		_veil.color = Color(0.2, 0.55, 1.0, 0.0)
 	if _banner != null:
-		_banner.text = "Great job!"
+		_banner.text = message
 		_banner.modulate.a = 0.0
 	var tween := create_tween()
 	tween.set_parallel(true)

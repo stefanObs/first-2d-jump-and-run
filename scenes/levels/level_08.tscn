@@ -1,7 +1,7 @@
-[gd_scene load_steps=18 format=3 uid="uid://clevel01"]
+[gd_scene load_steps=18 format=3 uid="uid://clevel08"]
 
 
-[ext_resource type="Script" path="res://scripts/levels/level_01.gd" id="1_level"]
+[ext_resource type="Script" path="res://scripts/levels/level_08.gd" id="1_level"]
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2_player"]
 [ext_resource type="PackedScene" path="res://scenes/world/checkpoint.tscn" id="3_checkpoint"]
 [ext_resource type="PackedScene" path="res://scenes/world/goal.tscn" id="4_goal"]
@@ -25,11 +25,11 @@ size = Vector2(1600, 64)
 [sub_resource type="RectangleShape2D" id="Block"]
 size = Vector2(128, 32)
 
-[node name="Level01" type="Node2D"]
+[node name="Level08" type="Node2D"]
 script = ExtResource("1_level")
-level_number = 1
+level_number = 8
 celebration_duration = 3.2
-level_title = "First Steps"
+level_title = "Friendly Factory"
 is_final_level = false
 
 [node name="Background" type="ColorRect" parent="."]
@@ -38,7 +38,7 @@ offset_left = -200.0
 offset_top = -500.0
 offset_right = 1900.0
 offset_bottom = 500.0
-color = Color(0.55, 0.78, 0.95, 1)
+color = Color(0.65, 0.6, 0.5, 1)
 
 [node name="SpawnPoint" type="Marker2D" parent="."]
 position = Vector2(120, 280)
@@ -49,7 +49,7 @@ offset_top = 120.0
 offset_right = 900.0
 offset_bottom = 160.0
 theme_override_font_sizes/font_size = 18
-text = "Learn to run, jump, and reach the goal."
+text = "Bubble Shields, conveyors, and timed doors."
 
 [node name="Ground" type="StaticBody2D" parent="."]
 position = Vector2(800, 352)
@@ -64,25 +64,30 @@ color = Color(0.35, 0.4, 0.45, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground"]
 shape = SubResource("Ground")
 
-[node name="PlatformA" type="StaticBody2D" parent="."]
-position = Vector2(420, 250)
-[node name="Visual" type="ColorRect" parent="PlatformA"]
-offset_left = -64.0
-offset_top = -16.0
-offset_right = 64.0
-offset_bottom = 16.0
-color = Color(0.45, 0.5, 0.55, 1)
-[node name="CollisionShape2D" type="CollisionShape2D" parent="PlatformA"]
-shape = SubResource("Block")
+[node name="Shield" parent="." instance=ExtResource("10_mode")]
+position = Vector2(300, 280)
+mode = 4
 
-[node name="Star1" parent="." instance=ExtResource("9_star")]
-position = Vector2(420, 200)
+[node name="Conveyor1" parent="." instance=ExtResource("16_conv")]
+position = Vector2(560, 320)
+[node name="Conveyor2" parent="." instance=ExtResource("16_conv")]
+position = Vector2(900, 320)
+push_right = false
+
+[node name="Door1" parent="." instance=ExtResource("17_door")]
+position = Vector2(740, 320)
+
+[node name="Opponent1" parent="." instance=ExtResource("13_opp")]
+position = Vector2(1100, 320)
 
 [node name="Checkpoint" parent="." instance=ExtResource("3_checkpoint")]
-position = Vector2(700, 320)
+position = Vector2(450, 320)
+
+[node name="Star1" parent="." instance=ExtResource("9_star")]
+position = Vector2(900, 250)
 
 [node name="Goal" parent="." instance=ExtResource("4_goal")]
-position = Vector2(1400, 320)
+position = Vector2(1450, 320)
 
 [node name="Player" parent="." instance=ExtResource("2_player")]
 position = Vector2(120, 280)

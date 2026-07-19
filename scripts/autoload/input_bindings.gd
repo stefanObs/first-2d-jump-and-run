@@ -53,6 +53,42 @@ func _ready() -> void:
 			_joy_button(JOY_BUTTON_B),
 		]
 	)
+	_ensure_action(
+		&"ui_up",
+		[
+			_key(KEY_UP),
+			_key(KEY_W),
+			_joy_button(JOY_BUTTON_DPAD_UP),
+			_joy_axis(JOY_AXIS_LEFT_Y, -1.0),
+		]
+	)
+	_ensure_action(
+		&"ui_down",
+		[
+			_key(KEY_DOWN),
+			_key(KEY_S),
+			_joy_button(JOY_BUTTON_DPAD_DOWN),
+			_joy_axis(JOY_AXIS_LEFT_Y, 1.0),
+		]
+	)
+	_ensure_action(
+		&"ui_left",
+		[
+			_key(KEY_LEFT),
+			_key(KEY_A),
+			_joy_button(JOY_BUTTON_DPAD_LEFT),
+			_joy_axis(JOY_AXIS_LEFT_X, -1.0),
+		]
+	)
+	_ensure_action(
+		&"ui_right",
+		[
+			_key(KEY_RIGHT),
+			_key(KEY_D),
+			_joy_button(JOY_BUTTON_DPAD_RIGHT),
+			_joy_axis(JOY_AXIS_LEFT_X, 1.0),
+		]
+	)
 
 
 func _ensure_action(action: StringName, events: Array[InputEvent]) -> void:

@@ -1,7 +1,7 @@
-[gd_scene load_steps=18 format=3 uid="uid://clevel01"]
+[gd_scene load_steps=18 format=3 uid="uid://clevel07"]
 
 
-[ext_resource type="Script" path="res://scripts/levels/level_01.gd" id="1_level"]
+[ext_resource type="Script" path="res://scripts/levels/level_07.gd" id="1_level"]
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2_player"]
 [ext_resource type="PackedScene" path="res://scenes/world/checkpoint.tscn" id="3_checkpoint"]
 [ext_resource type="PackedScene" path="res://scenes/world/goal.tscn" id="4_goal"]
@@ -25,11 +25,11 @@ size = Vector2(1600, 64)
 [sub_resource type="RectangleShape2D" id="Block"]
 size = Vector2(128, 32)
 
-[node name="Level01" type="Node2D"]
+[node name="Level07" type="Node2D"]
 script = ExtResource("1_level")
-level_number = 1
+level_number = 7
 celebration_duration = 3.2
-level_title = "First Steps"
+level_title = "Cloud Flight"
 is_final_level = false
 
 [node name="Background" type="ColorRect" parent="."]
@@ -38,7 +38,7 @@ offset_left = -200.0
 offset_top = -500.0
 offset_right = 1900.0
 offset_bottom = 500.0
-color = Color(0.55, 0.78, 0.95, 1)
+color = Color(0.75, 0.88, 1, 1)
 
 [node name="SpawnPoint" type="Marker2D" parent="."]
 position = Vector2(120, 280)
@@ -49,7 +49,7 @@ offset_top = 120.0
 offset_right = 900.0
 offset_bottom = 160.0
 theme_override_font_sizes/font_size = 18
-text = "Learn to run, jump, and reach the goal."
+text = "Use Wings to fly through the clouds."
 
 [node name="Ground" type="StaticBody2D" parent="."]
 position = Vector2(800, 352)
@@ -64,25 +64,31 @@ color = Color(0.35, 0.4, 0.45, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground"]
 shape = SubResource("Ground")
 
-[node name="PlatformA" type="StaticBody2D" parent="."]
-position = Vector2(420, 250)
-[node name="Visual" type="ColorRect" parent="PlatformA"]
-offset_left = -64.0
-offset_top = -16.0
-offset_right = 64.0
-offset_bottom = 16.0
-color = Color(0.45, 0.5, 0.55, 1)
-[node name="CollisionShape2D" type="CollisionShape2D" parent="PlatformA"]
-shape = SubResource("Block")
+[node name="Wings" parent="." instance=ExtResource("10_mode")]
+position = Vector2(280, 280)
+mode = 1
+
+[node name="Cloud1" parent="." instance=ExtResource("15_cloud")]
+position = Vector2(520, 220)
+[node name="Cloud2" parent="." instance=ExtResource("15_cloud")]
+position = Vector2(780, 160)
+start_delay = 0.8
+[node name="Cloud3" parent="." instance=ExtResource("15_cloud")]
+position = Vector2(1060, 120)
+start_delay = 1.4
+
+[node name="Pit" parent="." instance=ExtResource("5_hazard")]
+position = Vector2(800, 380)
+scale = Vector2(4, 1)
 
 [node name="Star1" parent="." instance=ExtResource("9_star")]
-position = Vector2(420, 200)
+position = Vector2(780, 80)
 
 [node name="Checkpoint" parent="." instance=ExtResource("3_checkpoint")]
-position = Vector2(700, 320)
+position = Vector2(420, 320)
 
 [node name="Goal" parent="." instance=ExtResource("4_goal")]
-position = Vector2(1400, 320)
+position = Vector2(1450, 200)
 
 [node name="Player" parent="." instance=ExtResource("2_player")]
 position = Vector2(120, 280)

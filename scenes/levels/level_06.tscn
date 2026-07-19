@@ -1,7 +1,7 @@
-[gd_scene load_steps=18 format=3 uid="uid://clevel01"]
+[gd_scene load_steps=18 format=3 uid="uid://clevel06"]
 
 
-[ext_resource type="Script" path="res://scripts/levels/level_01.gd" id="1_level"]
+[ext_resource type="Script" path="res://scripts/levels/level_06.gd" id="1_level"]
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2_player"]
 [ext_resource type="PackedScene" path="res://scenes/world/checkpoint.tscn" id="3_checkpoint"]
 [ext_resource type="PackedScene" path="res://scenes/world/goal.tscn" id="4_goal"]
@@ -25,11 +25,11 @@ size = Vector2(1600, 64)
 [sub_resource type="RectangleShape2D" id="Block"]
 size = Vector2(128, 32)
 
-[node name="Level01" type="Node2D"]
+[node name="Level06" type="Node2D"]
 script = ExtResource("1_level")
-level_number = 1
+level_number = 6
 celebration_duration = 3.2
-level_title = "First Steps"
+level_title = "Windy Hill"
 is_final_level = false
 
 [node name="Background" type="ColorRect" parent="."]
@@ -38,7 +38,7 @@ offset_left = -200.0
 offset_top = -500.0
 offset_right = 1900.0
 offset_bottom = 500.0
-color = Color(0.55, 0.78, 0.95, 1)
+color = Color(0.7, 0.8, 0.55, 1)
 
 [node name="SpawnPoint" type="Marker2D" parent="."]
 position = Vector2(120, 280)
@@ -49,7 +49,7 @@ offset_top = 120.0
 offset_right = 900.0
 offset_bottom = 160.0
 theme_override_font_sizes/font_size = 18
-text = "Learn to run, jump, and reach the goal."
+text = "Grab Magic Boots and ride the wind."
 
 [node name="Ground" type="StaticBody2D" parent="."]
 position = Vector2(800, 352)
@@ -64,25 +64,33 @@ color = Color(0.35, 0.4, 0.45, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground"]
 shape = SubResource("Ground")
 
+[node name="Boots" parent="." instance=ExtResource("10_mode")]
+position = Vector2(320, 280)
+mode = 2
+
+[node name="Wind1" parent="." instance=ExtResource("14_wind")]
+position = Vector2(700, 220)
+wind_force = Vector2(220, -40)
+
 [node name="PlatformA" type="StaticBody2D" parent="."]
-position = Vector2(420, 250)
+position = Vector2(1040, 180)
 [node name="Visual" type="ColorRect" parent="PlatformA"]
 offset_left = -64.0
 offset_top = -16.0
 offset_right = 64.0
 offset_bottom = 16.0
-color = Color(0.45, 0.5, 0.55, 1)
+color = Color(0.5, 0.55, 0.35, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="PlatformA"]
 shape = SubResource("Block")
 
-[node name="Star1" parent="." instance=ExtResource("9_star")]
-position = Vector2(420, 200)
-
 [node name="Checkpoint" parent="." instance=ExtResource("3_checkpoint")]
-position = Vector2(700, 320)
+position = Vector2(500, 320)
+
+[node name="Star1" parent="." instance=ExtResource("9_star")]
+position = Vector2(1040, 130)
 
 [node name="Goal" parent="." instance=ExtResource("4_goal")]
-position = Vector2(1400, 320)
+position = Vector2(1450, 320)
 
 [node name="Player" parent="." instance=ExtResource("2_player")]
 position = Vector2(120, 280)

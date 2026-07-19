@@ -1,7 +1,8 @@
 class_name Hazard
 extends Area2D
 
-## Harmful zone that returns the player to the latest checkpoint.
+## Harmful pit or spikes. Always returns the player to a checkpoint,
+## even while a Bubble Shield is active.
 
 signal hurt(player: Player)
 
@@ -12,7 +13,4 @@ func _ready() -> void:
 
 func _on_body_entered(body: Node2D) -> void:
 	if body is Player:
-		var player := body as Player
-		if player.is_invulnerable():
-			return
-		hurt.emit(player)
+		hurt.emit(body as Player)

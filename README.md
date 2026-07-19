@@ -143,6 +143,7 @@ The launch scripts locate Godot 4, set the project directory correctly, and forw
 
 - **Linux:** run `./run_linux.sh`
 - **Windows PC:** double-click `run_windows.bat` or run it from Command Prompt
+- **Tests:** `godot --headless --path . res://tests/test_runner.tscn`
 
 Godot must either be available on `PATH` or be specified with the `GODOT_BIN` environment variable. On Windows, the launcher also detects a `Godot_v*-stable_win64.exe` placed beside the script.
 
@@ -225,16 +226,37 @@ Each cycle must maintain the following status block:
 
 ### Current development status
 
-- **Current iteration:** `v0.2.1` Linux and Windows launchers
-- **Last completed step:** Added portable launch scripts for Linux and Windows PC and documented their Godot discovery behavior
+- **Current iteration:** `v1.0.0` planned feature complete release
+- **Last completed step:** Finished milestones 2–8: InputManager and pause/settings menus, mode items and flying, opponents, three save slots, all 10 levels, HUD prompts, and automated coverage
 - **Currently in progress:** None
-- **Next step:** Add InputManager device switching and basic pause menu navigation for keyboard and Xbox controller
-- **Completed features:** Named keyboard/Xbox input actions; forgiving jump assists; playable Level 01 with checkpoint/hazard/goal; celebration transition into Level 02 stub; headless test runner; Linux and Windows launchers
-- **Remaining work:** Development milestones 2 and 4–8 in Chapter 12 (milestone 3 partially complete: checkpoints/goals/transitions done; fuller damage variety still open)
-- **Tests last run:** `bash -n run_linux.sh`; Linux launcher smoke-launch; all 9 headless tests passed through `run_linux.sh`; Windows launcher static checks passed
-- **Known issues or blockers:** Gray-box visuals only; Level 02 is a stub; no save slots or pause menu yet; Xbox controller not manually verified on this machine
-- **Latest iteration tag:** `v0.2.1`
-- **Relevant commit:** `14fb12b`
+- **Next step:** Optional post-1.0 extensions from the rated backlog below; supervised child play-testing for fine tuning
+- **Completed features:** 10 gray-box levels; keyboard and Xbox actions with device-aware prompts; checkpoints/hazards/opponents; Wings/Magic Boots/Speed Star/Bubble Shield; 3 save slots; pause/settings; celebration transitions; Linux/Windows launchers
+- **Remaining work:** Optional extensions only; art/audio polish beyond gray-box placeholders; live Xbox controller verification on target PCs; supervised child play-tests
+- **Tests last run:** `godot --headless --path . res://tests/test_runner.tscn` — all 13 tests passed; main scene smoke-launch with `--quit-after 2` succeeded
+- **Known issues or blockers:** Visuals are gray-box placeholders; no bespoke music/SFX assets yet; Xbox controller not physically verified on this machine
+- **Latest iteration tag:** `v1.0.0`
+- **Relevant commit:** Pending
+
+### Rated possible extensions (post-v1.0.0)
+
+| Extension | Effort | Child value (1–5) | Risk | Priority (1–5) |
+| --- | --- | --- | --- | --- |
+| Hand-drawn character and level art pack | High | 5 | Medium | 5 |
+| Cheerful music and sound effects | Medium | 5 | Low | 5 |
+| Spoken animated tutorial tips | Medium | 4 | Medium | 4 |
+| Cooperative two-controller mode | High | 4 | High | 3 |
+| Photo-mode / sticker scrapbook of cleared levels | Medium | 4 | Low | 3 |
+| Seasonal costume unlocks | Low | 3 | Low | 2 |
+| Level editor for parents | High | 3 | High | 2 |
+
+### Cycle notes — 2026-07-19 (v1.0.0)
+
+- Added `GameManager`, `InputManager`, `ModeController`, pause/settings/save-select UI, HUD, and reusable world components.
+- Built all 10 specification levels with progressive mechanics.
+- Bubble Shield blocks opponent damage; pits still respawn to checkpoints.
+- Tests now run through `res://tests/test_runner.tscn`.
+- Run game: `./run_linux.sh` or `run_windows.bat`.
+- Run tests: `godot --headless --path . res://tests/test_runner.tscn`
 
 ### Cycle notes — 2026-07-19 (v0.2.1)
 

@@ -7,13 +7,15 @@ config_version=5
 
 config/name="First 2D Jump-and-Run"
 config/description="A child-friendly 2D jump-and-run game."
-run/main_scene="res://scenes/main.tscn"
+run/main_scene="res://scenes/ui/save_select.tscn"
 config/features=PackedStringArray("4.4", "Forward Plus")
 config/icon="res://icon.svg"
 
 [autoload]
 
 InputBindings="*res://scripts/autoload/input_bindings.gd"
+InputManager="*res://scripts/autoload/input_manager.gd"
+GameManager="*res://scripts/autoload/game_manager.gd"
 
 [display]
 
