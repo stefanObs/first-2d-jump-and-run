@@ -68,6 +68,7 @@ func setup_level() -> void:
 
 	if player != null and spawn_point != null:
 		player.respawn_at(spawn_point.global_position)
+	WildWestTheme.apply_to_level(self)
 	if hud != null:
 		hud.set_level_title(level_title)
 		hud.set_prompt(_gameplay_prompt())
@@ -100,7 +101,7 @@ func begin_completion() -> void:
 	if player != null:
 		player.set_input_enabled(false)
 	if transition != null:
-		var message := "You finished the game!" if is_final_level else "Great job!"
+		var message := "Trail complete!" if is_final_level else "Yeehaw!"
 		transition.play_celebration(message)
 	_completion.start()
 	level_completed.emit()

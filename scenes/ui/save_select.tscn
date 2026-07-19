@@ -13,30 +13,32 @@ script = ExtResource("1")
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-color = Color(0.45, 0.72, 0.95, 1)
+color = Color(0.98, 0.72, 0.42, 1)
 
 [node name="Title" type="Label" parent="."]
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -320.0
-offset_top = 48.0
-offset_right = 320.0
-offset_bottom = 110.0
-theme_override_font_sizes/font_size = 40
-text = "First 2D Jump-and-Run"
+offset_left = -360.0
+offset_top = 40.0
+offset_right = 360.0
+offset_bottom = 100.0
+theme_override_colors/font_color = Color(0.35, 0.16, 0.05, 1)
+theme_override_font_sizes/font_size = 42
+text = "Cowboy Trail"
 horizontal_alignment = 1
 
 [node name="Subtitle" type="Label" parent="."]
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -300.0
-offset_top = 110.0
-offset_right = 300.0
-offset_bottom = 150.0
+offset_left = -320.0
+offset_top = 100.0
+offset_right = 320.0
+offset_bottom = 140.0
+theme_override_colors/font_color = Color(0.45, 0.22, 0.08, 1)
 theme_override_font_sizes/font_size = 22
-text = "Choose a save"
+text = "Pick a trail save"
 horizontal_alignment = 1
 
 [node name="Slots" type="HBoxContainer" parent="."]

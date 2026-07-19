@@ -1,9 +1,10 @@
-[gd_scene load_steps=3 format=3 uid="uid://chazard01"]
+[gd_scene load_steps=4 format=3 uid="uid://chazard01"]
 
 [ext_resource type="Script" path="res://scripts/world/hazard.gd" id="1_hazard"]
+[ext_resource type="Texture2D" path="res://assets/world/cactus.png" id="2"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_area"]
-size = Vector2(128, 32)
+size = Vector2(36, 48)
 
 [node name="Hazard" type="Area2D"]
 collision_layer = 0
@@ -11,12 +12,18 @@ collision_mask = 2
 monitorable = false
 script = ExtResource("1_hazard")
 
-[node name="Visual" type="ColorRect" parent="."]
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(0, -8)
+texture = ExtResource("2")
+
+[node name="PitVisual" type="ColorRect" parent="."]
+visible = false
 offset_left = -64.0
 offset_top = -16.0
 offset_right = 64.0
 offset_bottom = 16.0
-color = Color(0.85, 0.25, 0.3, 1)
+color = Color(0.45, 0.28, 0.12, 1)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, -8)
 shape = SubResource("RectangleShape2D_area")

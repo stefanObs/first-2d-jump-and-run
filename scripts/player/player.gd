@@ -1,7 +1,7 @@
 class_name Player
 extends CharacterBody2D
 
-## Child-friendly platformer controller with forgiving jump assists and modes.
+## Child-friendly wild-west cowboy controller with movement animation.
 
 signal landed
 signal respawned(position: Vector2)
@@ -33,13 +33,17 @@ var _modes: ModeController
 var _was_on_floor: bool = false
 var _jump_cut_applied: bool = false
 var _invulnerable_remaining: float = 0.0
-var _body_visual: ColorRect
+var _sprite: AnimatedSprite2D
+var _facing: float = 1.0
 
 
 func _ready() -> void:
 	_ensure_jump_assist()
 	_ensure_modes()
-	_body_visual = get_node_or_null("Body") as ColorRect
+	_sprite = get_node_or_null("AnimatedSprite2D") as AnimatedSprite2D
+	_setup_sprite_frames()
+	if _sprite != null:
+		_sprite.play(&"idle")
 
 
 func _physics_process(delta: float) -> void:
@@ -75,6 +79,7 @@ func _physics_process(delta: float) -> void:
 	if on_floor and not _was_on_floor:
 		landed.emit()
 	_was_on_floor = on_floor
+	_update_animation(on_floor)
 	_update_mode_visual()
 
 
@@ -144,24 +149,73 @@ func _on_mode_changed(mode: ModeController.Mode, remaining: float) -> void:
 	mode_changed.emit(ModeController.mode_name(mode), remaining)
 
 
+func _setup_sprite_frames() -> void:
+	if _sprite == null:
+		return
+	var frames := SpriteFrames.new()
+	_add_anim(frames, &"idle", ["idle_0.png", "idle_1.png"], 4.0)
+	_add_anim(frames, &"run", ["run_0.png", "run_1.png", "run_2.png", "run_3.png"], 10.0)
+	_add_anim(frames, &"jump", ["jump.png"], 5.0, false)
+	_sprite.sprite_frames = frames
+	_sprite.centered = true
+	_sprite.offset = Vector2(0, -32)
+	_sprite.scale = Vector2(1.35, 1.35)
+
+
+func _add_anim(
+	frames: SpriteFrames,
+	anim_name: StringName,
+	files: Array,
+	fps: float,
+	loop: bool = true
+) -> void:
+	frames.add_animation(anim_name)
+	frames.set_animation_speed(anim_name, fps)
+	frames.set_animation_loop(anim_name, loop)
+	for file_name in files:
+		var texture: Texture2D = load("res://assets/player/%s" % file_name)
+		if texture != null:
+			frames.add_frame(anim_name, texture)
+
+
+func _update_animation(on_floor: bool) -> void:
+	if _sprite == null or _sprite.sprite_frames == null:
+		return
+	if absf(velocity.x) > 12.0:
+		_facing = signf(velocity.x)
+	_sprite.flip_h = _facing < 0.0
+
+	var next := &"idle"
+	if not on_floor or _modes.is_flying():
+		next = &"jump"
+	elif absf(velocity.x) > 20.0:
+		next = &"run"
+	if _sprite.animation != next:
+		_sprite.play(next)
+
+
 func _update_mode_visual() -> void:
-	if _body_visual == null:
+	if _sprite == null:
 		return
 	if _modes.has_shield():
-		_body_visual.color = Color(0.45, 0.85, 1.0, 1.0)
+		_sprite.modulate = Color(0.7, 0.95, 1.0, 1.0)
 	elif _modes.is_flying():
-		_body_visual.color = Color(0.75, 0.9, 1.0, 1.0)
+		_sprite.modulate = Color(0.85, 0.95, 1.0, 1.0)
 	elif _modes.active_mode == ModeController.Mode.SPEED_STAR:
-		_body_visual.color = Color(1.0, 0.85, 0.25, 1.0)
+		_sprite.modulate = Color(1.0, 0.92, 0.55, 1.0)
 	elif _modes.active_mode == ModeController.Mode.MAGIC_BOOTS:
-		_body_visual.color = Color(0.7, 0.45, 1.0, 1.0)
+		_sprite.modulate = Color(0.9, 0.75, 1.0, 1.0)
 	else:
-		_body_visual.color = Color(0.95, 0.55, 0.2, 1.0)
+		_sprite.modulate = Color(1, 1, 1, 1)
 
 
 func _apply_flight(delta: float) -> void:
 	var input_axis := Input.get_axis(&"move_left", &"move_right")
-	velocity.x = move_toward(velocity.x, input_axis * move_speed * _modes.move_speed_multiplier(), acceleration * delta)
+	velocity.x = move_toward(
+		velocity.x,
+		input_axis * move_speed * _modes.move_speed_multiplier(),
+		acceleration * delta
+	)
 	if Input.is_action_pressed(&"jump"):
 		velocity.y = -fly_rise_speed
 	else:

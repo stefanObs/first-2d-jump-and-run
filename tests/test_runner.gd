@@ -20,6 +20,8 @@ func _ready() -> void:
 	failures += _run("Bubble shield blocks opponent damage flag", _test_shield_blocks_damage_flag)
 	failures += _run("InputManager device prompts", _test_input_manager_prompts)
 	failures += _run("Star reachability heuristics", _test_star_reachability)
+	failures += _run("Stars are safe and levels are forward-only", _test_level_layout_rules)
+	failures += _run("Cowboy player has movement animations", _test_cowboy_animations)
 
 	if failures == 0:
 		print("All tests passed.")
@@ -232,17 +234,55 @@ func _test_star_reachability() -> Variant:
 		return "Unexpected base jump height: %s" % str(jump_h)
 	if boots_h <= jump_h:
 		return "Boots jump should be higher than base jump."
-	# Ground top ~320; a star at 280 must be reachable by a normal jump.
 	if not StarReachability.is_star_reachable_from_surface(320.0, 280.0, jump_h):
 		return "Ground-adjacent star at y=280 should be reachable."
-	# A star 120px above ground should not be reachable without assists.
 	if StarReachability.is_star_reachable_from_surface(320.0, 200.0, jump_h):
 		return "Star 120px above ground should be unreachable without assists."
-	# Platform top 194 with boots should reach a star at 170.
 	if not StarReachability.is_star_reachable_from_surface(194.0, 170.0, jump_h):
 		return "Star above level 6 platform should be reachable once mounted."
 	if not StarReachability.is_star_reachable_from_surface(320.0, 194.0, boots_h, 12.0):
 		return "Magic Boots should be able to mount the level 6 platform."
+	return null
+
+
+func _test_level_layout_rules() -> Variant:
+	for path in GameManager.LEVEL_SCENES:
+		var packed: PackedScene = load(path)
+		if packed == null:
+			return "Missing level: %s" % path
+		var level: Node = packed.instantiate()
+		add_child(level)
+		if level is LevelController:
+			(level as LevelController).setup_level()
+		var errors := LevelLayoutRules.validate_level_node(level)
+		level.queue_free()
+		if not errors.is_empty():
+			return "%s -> %s" % [path, ", ".join(errors)]
+	return null
+
+
+func _test_cowboy_animations() -> Variant:
+	var packed: PackedScene = load("res://scenes/player/player.tscn")
+	if packed == null:
+		return "Missing player scene."
+	var node := packed.instantiate()
+	add_child(node)
+	var cowboy := node as Player
+	if cowboy == null:
+		node.queue_free()
+		return "Player scene root is not Player."
+	var sprite := cowboy.get_node_or_null("AnimatedSprite2D") as AnimatedSprite2D
+	if sprite == null or sprite.sprite_frames == null:
+		node.queue_free()
+		return "Cowboy AnimatedSprite2D frames were not set up."
+	for anim_name in [&"idle", &"run", &"jump"]:
+		if not sprite.sprite_frames.has_animation(anim_name):
+			node.queue_free()
+			return "Missing cowboy animation: %s" % String(anim_name)
+		if sprite.sprite_frames.get_frame_count(anim_name) < 1:
+			node.queue_free()
+			return "Cowboy animation has no frames: %s" % String(anim_name)
+	node.queue_free()
 	return null
 
 

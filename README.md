@@ -11,6 +11,7 @@ A small, friendly 2D platform game for children around six years old.
 - Make every level slightly harder while avoiding sudden difficulty spikes.
 - Reward exploration and progress; do not punish failure.
 - Use cheerful visuals, clear sounds, large buttons, and no advertisements or online features.
+- Theme the adventure as a friendly wild-west cowboy journey with readable, colorful graphics suited to a six-year-old.
 
 ## Chapter 2: Feature list
 
@@ -133,7 +134,7 @@ Progress is saved automatically after every level. A parent-accessible hold-to-c
 - **Data:** Godot resources for level metadata; versioned JSON files for the three saves
 - **Audio:** OGG music and WAV/OGG sound effects
 - **Targets:** Windows PC first, followed by Linux and optional web export
-- **Testing:** GUT for logic tests plus manual keyboard, Xbox controller, and child play-testing
+- **Testing:** Scene-based headless suite plus manual keyboard, Xbox controller, and child play-testing
 
 Godot is well suited to a small 2D game, has a compact scene system, exports to the intended platforms, supports Xbox-compatible controllers without an additional input library, and does not require licensing fees. The Windows desktop build is the primary release because it provides the most predictable Xbox controller experience.
 
@@ -187,9 +188,10 @@ Development is organized into small, playable iterations. Every iteration follow
 3. Add or update automated tests for gameplay logic, save data, input handling, and transitions.
 4. Run the complete automated test suite and fix all failures.
 5. Start the game and test the affected behavior thoroughly with keyboard and Xbox controller.
-6. Play through all completed levels to check for regressions.
-7. Confirm that the iteration meets its acceptance criteria.
-8. Commit the finished work and create an annotated Git tag for the iteration.
+6. Confirm every touched level still has safe star collection and forward-only solvability (see Chapter 14).
+7. Play through all completed levels to check for regressions.
+8. Confirm that the iteration meets its acceptance criteria.
+9. Commit the finished work and create an annotated Git tag for the iteration.
 
 Iteration tags use semantic versioning, starting with `v0.1.0`. Minor versions mark playable feature iterations, patch versions mark fixes, and `v1.0.0` marks the first complete release. A tag is created only when tests pass and the iteration is playable.
 
@@ -226,16 +228,22 @@ Each cycle must maintain the following status block:
 
 ### Current development status
 
-- **Current iteration:** `v1.0.1` star reachability fixes
-- **Last completed step:** Repositioned unreachable stars, added missing platforms, strengthened springs/Magic Boots, and added reachability tests
+- **Current iteration:** `v1.1.0` wild-west cowboy visuals and stricter level QA
+- **Last completed step:** Added cowboy animated player, desert/saloon/cactus art, safe-star and forward-only layout tests, and README QA rules
 - **Currently in progress:** None
-- **Next step:** Optional post-1.0 extensions from the rated backlog; supervised child play-testing for fine tuning
-- **Completed features:** 10 gray-box levels with reachable stars; keyboard/Xbox prompts; modes; opponents; 3 save slots; pause/settings; launchers
-- **Remaining work:** Optional extensions; art/audio polish; live Xbox verification; supervised child play-tests
-- **Tests last run:** `godot --headless --path . res://tests/test_runner.tscn` — all 14 tests passed
-- **Known issues or blockers:** Visuals are gray-box placeholders; no bespoke music/SFX assets yet; Xbox controller not physically verified on this machine
-- **Latest iteration tag:** `v1.0.1`
-- **Relevant commit:** `5ef8416`
+- **Next step:** Optional extensions from the rated backlog; supervised child play-testing and live Xbox verification
+- **Completed features:** Wild-west themed 10-level trail; animated cowboy; safe/forward star-level QA; saves; modes; Xbox-ready input
+- **Remaining work:** Music/SFX; richer art pass; live Xbox verification; supervised child play-tests
+- **Tests last run:** `godot --headless --path . res://tests/test_runner.tscn` — all 16 tests passed; launcher smoke-launch succeeded
+- **Known issues or blockers:** Placeholder pixel art (not final production art); no music/SFX yet; Xbox controller not physically verified on this machine
+- **Latest iteration tag:** `v1.1.0`
+- **Relevant commit:** Pending
+
+### Cycle notes — 2026-07-19 (v1.1.0)
+
+- Documented mandatory QA: stars collectible without dying, levels solvable without backtracking behind checkpoints.
+- Added animated cowboy player frames and wild-west props (cactus, badge stars, saloon goal, desert UI).
+- Added `LevelLayoutRules` automated checks for all 10 levels.
 
 ### Cycle notes — 2026-07-19 (v1.0.1)
 
@@ -298,7 +306,19 @@ At the end of each cycle:
 
 Detailed cycle notes may be added below the status block under a dated heading. Keep only information needed to resume work; move obsolete details into Git history instead of allowing the README to become a long activity log.
 
-## Chapter 14: Definition of done
+## Chapter 14: Level QA and automated testing requirements
+
+Every iteration that changes levels, stars, hazards, checkpoints, or player movement must keep these checks green:
+
+1. **Safe star collection:** Every star can be collected without taking damage or falling into a hazard at the moment of collection. Stars must not overlap hazards or opponent hurt boxes, and collecting a star must not require standing inside a dangerous volume.
+2. **Forward-only solvability:** Every level can be finished without going back behind a mid-level checkpoint after that checkpoint has been activated. Required route objects stay ahead of or on the way to the next forward landmark (spawn → checkpoint → goal).
+3. **Reachable stars:** Every star remains within jump, spring, boots, flight, or clearly intended assist range from a standable surface.
+4. **Manual smoke:** After layout or movement changes, play each touched level with keyboard and, when available, an Xbox controller.
+
+Automated tests must encode rules 1–3. A tagged iteration is invalid if these tests fail.
+
+## Chapter 15: Definition of done
+
 
 - All 10 levels can be completed with keyboard and gamepad.
 - The complete game and every menu can be used with an Xbox controller connected to the PC.
@@ -311,3 +331,6 @@ Detailed cycle notes may be added below the status block under a dated heading. 
 - All three save slots load, save, display, and erase progress correctly.
 - Closing and reopening the game preserves completed levels and settings.
 - The game can be completed without reading instructions or losing progress.
+- Every star is reachable and collectible without dying on collection.
+- Every level is solvable without backtracking behind an activated mid-level checkpoint.
+- The player uses a wild-west cowboy appearance with visible movement animation.
