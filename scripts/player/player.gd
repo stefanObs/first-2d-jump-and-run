@@ -221,6 +221,7 @@ func _update_mode_visual() -> void:
 	_sprite.modulate = color
 	_update_shield_bubble()
 	_update_wings()
+	_update_boot_sparks()
 	_update_land_squash(get_physics_process_delta_time())
 
 
@@ -280,6 +281,25 @@ func _update_wings() -> void:
 		_wing_r.position.y = -40.0 - flap
 
 
+func _update_boot_sparks() -> void:
+	var spark := get_node_or_null("BootSpark") as ColorRect
+	if _modes.active_mode != ModeController.Mode.MAGIC_BOOTS:
+		if spark != null:
+			spark.visible = false
+		return
+	if spark == null:
+		spark = ColorRect.new()
+		spark.name = "BootSpark"
+		spark.size = Vector2(22, 8)
+		spark.position = Vector2(-11, -4)
+		spark.color = Color(0.85, 0.45, 1.0, 0.8)
+		spark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(spark)
+	spark.visible = true
+	spark.modulate.a = 0.45 + absf(sin(Time.get_ticks_msec() * 0.02)) * 0.55
+	spark.position.y = -4.0 + sin(Time.get_ticks_msec() * 0.03) * 2.0
+
+
 func _ensure_shield_bubble() -> void:
 	_shield_bubble = get_node_or_null("ShieldBubble") as ColorRect
 	if _shield_bubble != null:
@@ -310,7 +330,12 @@ func _spawn_dust_puff() -> void:
 	var dust := ColorRect.new()
 	dust.size = Vector2(28, 10)
 	dust.position = Vector2(-14, -6)
-	dust.color = Color(0.9, 0.75, 0.45, 0.7)
+	if _modes.active_mode == ModeController.Mode.SPEED_STAR:
+		dust.color = Color(1.0, 0.85, 0.25, 0.8)
+	elif _modes.active_mode == ModeController.Mode.MAGIC_BOOTS:
+		dust.color = Color(0.85, 0.55, 1.0, 0.75)
+	else:
+		dust.color = Color(0.9, 0.75, 0.45, 0.7)
 	dust.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(dust)
 	var tween := create_tween()

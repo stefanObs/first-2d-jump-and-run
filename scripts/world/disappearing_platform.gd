@@ -4,7 +4,7 @@ extends StaticBody2D
 @export var visible_time: float = 2.0
 @export var hidden_time: float = 1.5
 @export var start_delay: float = 0.0
-@export var warn_time: float = 0.55
+@export var warn_time: float = 0.75
 
 var _timer: float = 0.0
 var _solid: bool = true
