@@ -157,6 +157,7 @@ func _test_boss_arenas() -> Variant:
 		"res://assets/world/boss_midnight_coach_1.png",
 		"res://assets/world/boss_midnight_coach_2.png",
 		"res://assets/world/boss_midnight_coach_3.png",
+		"res://assets/world/boss_midnight_coach_surrender.png",
 	]:
 		if load(frame_path) == null:
 			coach.queue_free()

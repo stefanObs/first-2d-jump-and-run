@@ -211,11 +211,14 @@ func _play_capture_animation() -> void:
 		var rt := create_tween()
 		rt.tween_property(loop, "modulate:a", 1.0, 0.1).set_delay(0.06 * float(i))
 	await get_tree().create_timer(0.45).timeout
-	# Settle into a tied sit pose.
-	_king_sprite.flip_h = false
+	# Settle into a tied sit pose at the same on-screen size as the standing kingpin.
+	_king_sprite.flip_h = face < 0.0
 	_king_sprite.texture = TIED_TEX
-	_king_sprite.position = Vector2(0, -48)
-	_king_sprite.scale = Vector2(0.85 * face, 0.85)
+	var stand_h := float(KING_TEX.get_height()) if KING_TEX != null else 180.0
+	var tied_h := float(TIED_TEX.get_height()) if TIED_TEX != null else 130.0
+	var tied_scale := stand_h / maxf(tied_h, 1.0)
+	_king_sprite.position = Vector2(0, -stand_h * 0.28)
+	_king_sprite.scale = Vector2(tied_scale, tied_scale)
 	_king_sprite.rotation = 0.0
 	if _label != null:
 		_label.text = "TIED!"

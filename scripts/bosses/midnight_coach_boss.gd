@@ -8,6 +8,7 @@ const COACH_FRAMES: Array[Texture2D] = [
 	preload("res://assets/world/boss_midnight_coach_2.png"),
 	preload("res://assets/world/boss_midnight_coach_3.png"),
 ]
+const COACH_SURRENDER := preload("res://assets/world/boss_midnight_coach_surrender.png")
 
 const SCREEN_LAG := 1280.0
 const COACH_SPEED_RATIO := 0.75
@@ -402,7 +403,42 @@ func on_door_lassoed(index: int) -> void:
 	if _doors_done >= 3:
 		_shot_generation += 1
 		_shooting = false
-		win_boss()
+		await _play_win_animation()
+		await win_boss()
+
+
+func _play_win_animation() -> void:
+	## Driver raises both hands in surrender before the arena clears.
+	combat_ready = false
+	_waiting = true
+	_speed = 0.0
+	_target_speed = 0.0
+	_bursting = false
+	if player != null:
+		player.set_input_enabled(false)
+	if _driver_gun != null:
+		_driver_gun.hide_gun()
+	for door in _doors:
+		if door != null:
+			door.set_lasso_active(false)
+	report_progress("Driver gives up!")
+	if _coach_sprite != null and COACH_SURRENDER != null:
+		var base_scale := _coach_sprite.scale
+		var base_y := _coach_sprite.position.y
+		_coach_sprite.texture = COACH_SURRENDER
+		_face_coach_forward()
+		var bob := create_tween()
+		bob.tween_property(_coach_sprite, "position:y", base_y - 6.0, 0.18)
+		bob.tween_property(_coach_sprite, "position:y", base_y, 0.22)
+		var pulse := create_tween()
+		pulse.tween_property(_coach_sprite, "scale", base_scale * Vector2(1.04, 0.96), 0.15)
+		pulse.tween_property(_coach_sprite, "scale", base_scale, 0.2)
+	if _horse_near != null:
+		var horse_y := _horse_near.position.y
+		var ht := create_tween()
+		ht.tween_property(_horse_near, "position:y", horse_y - 4.0, 0.2)
+		ht.tween_property(_horse_near, "position:y", horse_y, 0.25)
+	await get_tree().create_timer(1.6).timeout
 
 
 func _refresh_door_hints() -> void:
