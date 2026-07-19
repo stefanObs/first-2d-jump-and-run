@@ -239,7 +239,7 @@ Each cycle must maintain the following status block:
 - **Tests last run:** `godot --headless --path . res://tests/test_runner.tscn` — all 19 tests passed; custom hub/editor/runtime smoke tests passed
 - **Known issues or blockers:** Xbox controller not physically verified on this machine
 - **Latest iteration tag:** `v1.3.0`
-- **Relevant commit:** 
+- **Relevant commit:** `6a3366d`
 
 ### Cycle notes — 2026-07-19 (v1.3.0)
 
