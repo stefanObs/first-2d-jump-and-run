@@ -3,8 +3,12 @@ extends BossArena
 ## Stampede Bull: bounce clear of horns, lasso the back ring while stunned.
 
 const BULL_TEX := preload("res://assets/world/boss_stampede_bull.png")
+const BULL_TIED_TEX := preload("res://assets/world/boss_stampede_bull_tied_legs.png")
+const BULL_DOWN_TEX := preload("res://assets/world/boss_stampede_bull_down.png")
 ## Keep the bull body clear of the solid arena walls.
 const WALL_CLEAR := 90.0
+const STAND_SPRITE_HEIGHT := 155.0
+const DOWN_SPRITE_HEIGHT := 118.0
 
 enum State { CHARGE, STUN, HIT }
 
@@ -229,14 +233,123 @@ func _on_ring_lasso() -> void:
 	report_progress("Ring caught! %d / %d" % [_hits, hits_needed])
 	if _hits >= hits_needed:
 		_state = State.HIT
-		_play_hit_reaction()
 		if _ring != null:
 			_ring.set_lasso_active(false)
 		if _stars != null:
 			_stars.visible = false
-		win_boss()
+		await _play_win_animation()
+		await win_boss()
 		return
 	await _end_stun(true)
+
+
+func _sprite_scale_for(texture: Texture2D, target_height: float) -> Vector2:
+	var tex_h := float(texture.get_height()) if texture != null else target_height
+	var s := target_height / maxf(tex_h, 1.0)
+	return Vector2(s, s)
+
+
+func _play_win_animation() -> void:
+	report_progress("Legs tied!")
+	if player != null:
+		player.set_input_enabled(false)
+	var hurt := $Bull/HurtArea as Area2D
+	if hurt != null:
+		hurt.set_deferred("monitoring", false)
+	if _label != null:
+		_label.text = "TIED!"
+		_label.modulate = Color(0.25, 0.75, 0.3, 1)
+	if _sprite == null:
+		await get_tree().create_timer(1.2).timeout
+		return
+
+	var face_left := _sprite.flip_h
+	# Rope coils whip around the standing bull's legs.
+	var ropes := Node2D.new()
+	ropes.name = "WinRopes"
+	ropes.z_index = 6
+	_bull.add_child(ropes)
+	for i in range(5):
+		var loop := Line2D.new()
+		loop.width = 6.0 - float(i) * 0.35
+		loop.default_color = Color(0.78, 0.58, 0.28, 1.0)
+		var radius := 18.0 + float(i) * 5.5
+		var points := PackedVector2Array()
+		for step in range(14):
+			var ang := TAU * float(step) / 13.0 + float(i) * 0.35
+			points.append(Vector2(
+				cos(ang) * radius * 0.7,
+				-8.0 - float(i) * 5.0 + sin(ang) * radius * 0.35
+			))
+		loop.points = points
+		loop.modulate.a = 0.0
+		ropes.add_child(loop)
+		var rt := create_tween()
+		rt.tween_property(loop, "modulate:a", 1.0, 0.12).set_delay(0.07 * float(i))
+		rt.parallel().tween_property(loop, "scale", Vector2(1.05, 1.05), 0.12).from(Vector2(0.4, 0.4)).set_delay(0.07 * float(i))
+
+	var squash := create_tween()
+	squash.tween_property(_sprite, "scale", Vector2(1.12, 0.82), 0.12)
+	squash.tween_property(_sprite, "scale", Vector2(0.92, 1.08), 0.1)
+	squash.tween_property(_sprite, "scale", Vector2.ONE, 0.1)
+	await get_tree().create_timer(0.55).timeout
+
+	# Standing pose with legs bound.
+	if ropes != null:
+		ropes.queue_free()
+	_sprite.texture = BULL_TIED_TEX
+	_sprite.flip_h = face_left
+	_sprite.rotation = 0.0
+	_sprite.position = Vector2(0, -70)
+	_sprite.scale = _sprite_scale_for(BULL_TIED_TEX, STAND_SPRITE_HEIGHT)
+	if _stars != null:
+		_stars.visible = true
+		_stars.position = Vector2(0, -130)
+	var wobble := create_tween()
+	wobble.tween_property(_sprite, "rotation", 0.12 if face_left else -0.12, 0.18)
+	wobble.tween_property(_sprite, "rotation", -0.1 if face_left else 0.1, 0.18)
+	wobble.tween_property(_sprite, "rotation", 0.0, 0.14)
+	await wobble.finished
+	await get_tree().create_timer(0.25).timeout
+
+	# Tip over onto its side.
+	if _stars != null:
+		_stars.visible = false
+	if _label != null:
+		_label.text = "DOWN!"
+		_label.modulate = Color(0.55, 0.3, 0.1, 1)
+	var tip_dir := -1.0 if face_left else 1.0
+	var tip := create_tween()
+	tip.set_parallel(true)
+	tip.tween_property(_sprite, "rotation", tip_dir * PI * 0.5, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	tip.tween_property(_sprite, "position:y", -40.0, 0.45)
+	await tip.finished
+
+	_sprite.texture = BULL_DOWN_TEX
+	_sprite.flip_h = face_left
+	_sprite.rotation = 0.0
+	_sprite.position = Vector2(0, -28)
+	_sprite.scale = _sprite_scale_for(BULL_DOWN_TEX, DOWN_SPRITE_HEIGHT)
+	# Soft dust puff when he lands.
+	var dust := Polygon2D.new()
+	dust.color = Color(0.82, 0.62, 0.38, 0.55)
+	dust.polygon = PackedVector2Array([
+		Vector2(-50, 0), Vector2(-10, -18), Vector2(30, -8), Vector2(55, 6), Vector2(10, 14), Vector2(-35, 10)
+	])
+	dust.position = Vector2(0, 10)
+	_bull.add_child(dust)
+	var dt := create_tween()
+	dt.tween_property(dust, "modulate:a", 0.0, 0.55)
+	dt.parallel().tween_property(dust, "scale", Vector2(1.4, 0.7), 0.55)
+	dt.tween_callback(dust.queue_free)
+
+	var settle := create_tween()
+	settle.tween_property(_sprite, "scale", _sprite_scale_for(BULL_DOWN_TEX, DOWN_SPRITE_HEIGHT) * Vector2(1.08, 0.9), 0.1)
+	settle.tween_property(_sprite, "scale", _sprite_scale_for(BULL_DOWN_TEX, DOWN_SPRITE_HEIGHT), 0.16)
+	if _label != null:
+		_label.text = "TIED!"
+		_label.modulate = Color(0.2, 0.7, 0.3, 1)
+	await get_tree().create_timer(1.35).timeout
 
 
 func _on_bull_body(body: Node2D) -> void:

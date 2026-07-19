@@ -123,6 +123,14 @@ func _test_boss_arenas() -> Variant:
 	if bull.get_node_or_null("WallLeft") == null or bull.get_node_or_null("WallRight") == null:
 		bull.queue_free()
 		return "Stampede Bull arena needs left and right walls."
+	for art_path in [
+		"res://assets/world/boss_stampede_bull.png",
+		"res://assets/world/boss_stampede_bull_tied_legs.png",
+		"res://assets/world/boss_stampede_bull_down.png",
+	]:
+		if load(art_path) == null:
+			bull.queue_free()
+			return "Missing bull art: %s" % art_path
 	var spawn := bull.get_node_or_null("SpawnPoint") as Marker2D
 	var wall_l := bull.get_node_or_null("WallLeft") as Node2D
 	var wall_r := bull.get_node_or_null("WallRight") as Node2D

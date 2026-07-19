@@ -120,7 +120,7 @@ Boss arenas use the same jump, lasso, mode, and platform tools as the trail. Def
 
 | After clearing | Boss | How to win |
 |----------------|------|------------|
-| Level 3 | **1. Stampede Bull** | Bounce on springs past the horns, then lasso the glowing rope ring on its back three times while it is stunned on wall bales. |
+| Level 3 | **1. Stampede Bull** | Bounce on springs past the horns, then lasso the glowing rope ring on its back three times while it is stunned on wall bales. On the last catch, its legs are tied and it tips onto its side. |
 | Level 7 | **3. Midnight Coach** | Grab a Speed Star (or stay quick on foot), race alongside, and lasso each door handle in order until all three doors are tied shut. |
 | Level 10 | **6. Outlaw Kingpin** | Lasso the two bodyguards first, then lasso the kingpin once to tie him. |
 
@@ -275,17 +275,17 @@ Each cycle must maintain the following status block:
 ### Current development status
 
 - **Current iteration:** `v1.3.3` hazard variety, bounty bandits, and trail readability
-- **Last completed step:** Cleared white fills from Midnight Coach wheel sprites
+- **Last completed step:** Bull win animation — legs tied, then lying on its side
 - **Currently in progress:** In-game visual play-test of bosses and polish
 - **Next step:** Play-test bosses, fences, clouds, and flight; then tag `v1.3.3`
 - **Completed features:** Long 10-level cowboy trail; animated nonviolent bandit lasso; seated tied bandits; warning-shot and bounty bandits; carrions and rattlesnakes; animated canyon recovery; reachable hazards; hand-drawn cowboy + world props; looping music; three custom editor slots; mid-trail saves; modes; Xbox-ready input; Stampede Bull / Midnight Coach / Outlaw Kingpin bosses; horizon victory scene
 - **Remaining work:** In-game visual/gameplay play-test; Xbox controller physical verification; supervised child play-tests; additional SFX
-- **Tests last run:** all automated tests passed after coach sprite transparency cleanup
+- **Tests last run:** all automated tests passed after bull tie-down win animation
 - **Known issues or blockers:**
   - Boss arenas and new fence/cloud art still need an in-game visual play-test
   - Xbox controller not physically verified on this machine
 - **Latest iteration tag:** `v1.3.2`
-- **Relevant commit:** `0299953`
+- **Relevant commit:** (pending push)
 
 
 ### Cycle notes — 2026-07-19 (v1.3.3)
