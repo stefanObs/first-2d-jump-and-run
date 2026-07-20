@@ -276,22 +276,23 @@ Each cycle must maintain the following status block:
 ### Current development status
 
 - **Current iteration:** `v1.3.3` hazard variety, bounty bandits, and trail readability
-- **Last completed step:** Head-stomp ties bandits; respawned bandits keep normal size
+- **Last completed step:** Sky Ranch high carrions block flying over the trail
 - **Currently in progress:** In-game visual play-test of bosses and polish
 - **Next step:** Play-test bosses, fences, clouds, and flight; then tag `v1.3.3`
 - **Completed features:** Long 10-level cowboy trail; animated nonviolent bandit lasso; seated tied bandits; warning-shot and bounty bandits; carrions and rattlesnakes; animated canyon recovery; reachable hazards; hand-drawn cowboy + world props; looping music; three custom editor slots; mid-trail saves; modes; Xbox-ready input; Stampede Bull / Midnight Coach / Outlaw Kingpin bosses; horizon victory scene
 - **Remaining work:** In-game visual/gameplay play-test; Xbox controller physical verification; supervised child play-tests; additional SFX
-- **Tests last run:** all automated tests passed after bandit stomp/size fixes
+- **Tests last run:** all automated tests passed after Sky Ranch top carrions
 - **Known issues or blockers:**
   - Boss arenas and new fence/cloud art still need an in-game visual play-test
   - Xbox controller not physically verified on this machine
 - **Latest iteration tag:** `v1.3.2`
-- **Relevant commit:** `ec6748e`
+- **Relevant commit:** (pending push)
 
 
 ### Cycle notes — 2026-07-19 (v1.3.3)
 
 - Jumping onto a bandit's head ties him (with a small bounce); respawned bandits no longer stay at the smaller tied scale.
+- Sky Ranch gets a high carrion line so Wings cannot skip the trail by flying over the top.
 - Flying over the saloon finishes the trail the same way as walking into the doorway (like camps on a high jump).
 - Celebration cowboy now stands centered on the saloon doorway before the horse arrives.
 - Clouds are steeper and only used as canyon bridges (wider), hazard-approach steps, or plank climbs.
