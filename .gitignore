@@ -24,8 +24,9 @@ build/
 # Player save data (campaign + custom trails) — kept local, never committed
 savegames/
 
-# Windows shortcuts are generated locally with absolute paths
+# Windows shortcuts / locally built play launcher
 *.lnk
+/Play Cowboy Trail.exe
 
 # Keep the bundled Windows engine so the game runs with no install.
 # (The .exe is unpacked from this zip on first launch and stays ignored.)

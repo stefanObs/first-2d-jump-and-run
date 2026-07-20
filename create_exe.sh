@@ -9,7 +9,7 @@ EXE_NAME="CowboyTrail.exe"
 EXPORT_PRESET="Windows Desktop"
 GODOT_VERSION="4.4.1.stable"
 TEMPLATE_VERSION="4.4.1-stable"
-TEMPLATE_URL="https://github.com/godotengine/godot-builds/releases/download/${TEMPLATE_VERSION}/Godot_v${TEMPLATE_VERSION}_export_templates.tpz"
+TEMPLATE_URL="https://github.com/godotengine/godot/releases/download/${TEMPLATE_VERSION}/Godot_v${TEMPLATE_VERSION}_export_templates.tpz"
 
 find_godot() {
 	if [[ -n "${GODOT_BIN:-}" ]]; then
@@ -121,8 +121,8 @@ application/modify_resources=true
 application/icon="res://icon.ico"
 application/console_wrapper_icon="res://icon.ico"
 application/icon_interpolation=0
-application/file_version="1.3.5.0"
-application/product_version="1.3.5.0"
+application/file_version="1.3.6.0"
+application/product_version="1.3.6.0"
 application/company_name="Cowboy Trail"
 application/product_name="Cowboy Trail"
 application/file_description="A friendly cowboy jump-and-run for kids"

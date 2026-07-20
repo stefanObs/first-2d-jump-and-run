@@ -185,10 +185,10 @@ Godot is well suited to a small 2D game, has a compact scene system, exports to 
 
 The launch scripts locate Godot 4, set the project directory correctly, and forward any additional command-line arguments to Godot.
 
-- **Windows PC (no install needed):** double-click **`Play Cowboy Trail.lnk`** (cowboy-head icon) or **`Play Cowboy Trail.bat`**. The first run creates the shortcut and refreshes assets after a git pull. Nothing has to be installed.
+- **Windows PC (no install needed):** double-click **`Play Cowboy Trail.exe`** (cowboy-head icon). The first run of `Play Cowboy Trail.bat` builds that exe if needed, unpacks the engine, and refreshes assets after a git pull. (`.bat` files cannot show a custom icon in Explorer.)
 - **Linux:** run `./run_linux.sh` (also refreshes assets when `content_version.txt` changes)
 - **Windows (with your own Godot):** double-click `run_windows.bat` or run it from Command Prompt
-- **Portable Windows exe:** run `./create_exe.sh` (Linux/macOS) or `create_exe.bat` (Windows). The build lands in `dist/windows/CowboyTrail.exe` with the game data embedded. Share that folder; progress appears in `savegames/` beside the exe. Rebuild the exe after pulling so the portable build matches current sources.
+- **Portable Windows exe:** run `./create_exe.sh` (Linux/macOS) or `create_exe.bat` (Windows). The build lands in `dist/windows/CowboyTrail.exe`. If `create_exe.bat` fails, open `dist\create_exe_log.txt`. Share that folder; progress appears in `savegames/` beside the exe.
 - **Tests:** `godot --headless --path . res://tests/test_runner.tscn`
 
 For the developer launch scripts (`run_*.bat`/`.sh`), Godot must be on `PATH` or set via `GODOT_BIN`. On Windows, `run_windows.bat` also detects a `Godot_v*-stable_win64.exe` beside the script or in the bundled `godot/` folder. The `Play Cowboy Trail.bat` launcher needs none of this — it uses the bundled engine.
@@ -276,17 +276,17 @@ Each cycle must maintain the following status block:
 ### Current development status
 
 - **Current iteration:** `v1.3.3` hazard variety, bounty bandits, and trail readability
-- **Last completed step:** Cowboy-head icon for taskbar, shortcuts, and Windows exe
+- **Last completed step:** Fixed Windows create_exe; Play Cowboy Trail.exe with cowboy icon
 - **Currently in progress:** In-game visual play-test of bosses and polish
 - **Next step:** Play-test bosses, fences, clouds, and flight; then tag `v1.3.3`
 - **Completed features:** Long 10-level cowboy trail; animated nonviolent bandit lasso; seated tied bandits; warning-shot and bounty bandits; carrions and rattlesnakes; animated canyon recovery; reachable hazards; hand-drawn cowboy + world props; looping music; three custom editor slots; mid-trail saves; modes; Xbox-ready input; Stampede Bull / Midnight Coach / Outlaw Kingpin bosses; horizon victory scene
 - **Remaining work:** In-game visual/gameplay play-test; Xbox controller physical verification; supervised child play-tests; additional SFX
-- **Tests last run:** all automated tests passed after cowboy icon branding
+- **Tests last run:** all automated tests passed after Windows launcher/export fixes
 - **Known issues or blockers:**
   - Boss arenas and new fence/cloud art still need an in-game visual play-test
   - Xbox controller not physically verified on this machine
 - **Latest iteration tag:** `v1.3.2`
-- **Relevant commit:** `68c43ca`
+- **Relevant commit:** (pending push)
 
 
 ### Cycle notes — 2026-07-19 (v1.3.3)

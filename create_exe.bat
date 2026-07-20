@@ -12,65 +12,73 @@ set "EXE_NAME=CowboyTrail.exe"
 set "EXPORT_PRESET=Windows Desktop"
 set "GODOT_VERSION=4.4.1.stable"
 set "TEMPLATE_VERSION=4.4.1-stable"
-set "TEMPLATE_URL=https://github.com/godotengine/godot-builds/releases/download/%TEMPLATE_VERSION%/Godot_v%TEMPLATE_VERSION%_export_templates.tpz"
+set "TEMPLATE_URL=https://github.com/godotengine/godot/releases/download/%TEMPLATE_VERSION%/Godot_v%TEMPLATE_VERSION%_export_templates.tpz"
 set "TEMPLATES_DIR=%APPDATA%\Godot\export_templates\%GODOT_VERSION%"
 set "GODOT_EXECUTABLE="
+set "LOG=%PROJECT_DIR%\dist\create_exe_log.txt"
+
+if not exist "%PROJECT_DIR%\dist" mkdir "%PROJECT_DIR%\dist"
+echo Cowboy Trail create_exe log > "%LOG%"
+echo. >> "%LOG%"
+
+call :log "Project: %PROJECT_DIR%"
+
+rem Also keep the cowboy-icon play launcher up to date.
+if exist "%PROJECT_DIR%\tools\build_play_launcher.bat" (
+	call "%PROJECT_DIR%\tools\build_play_launcher.bat" >> "%LOG%" 2>&1
+)
 
 if defined GODOT_BIN (
 	if exist "%GODOT_BIN%" set "GODOT_EXECUTABLE=%GODOT_BIN%"
-	if not defined GODOT_EXECUTABLE (
-		where "%GODOT_BIN%" >nul 2>nul && set "GODOT_EXECUTABLE=%GODOT_BIN%"
-	)
 )
 
 if not defined GODOT_EXECUTABLE (
-	where godot4.exe >nul 2>nul && set "GODOT_EXECUTABLE=godot4.exe"
-)
-if not defined GODOT_EXECUTABLE (
-	where godot.exe >nul 2>nul && set "GODOT_EXECUTABLE=godot.exe"
-)
-if not defined GODOT_EXECUTABLE (
-	for %%G in ("%PROJECT_DIR%\Godot_v*-stable_win64.exe") do (
-		if exist "%%~fG" if not defined GODOT_EXECUTABLE set "GODOT_EXECUTABLE=%%~fG"
-	)
-)
-if not defined GODOT_EXECUTABLE (
-	for %%G in ("%PROJECT_DIR%\godot\Godot_v*-stable_win64.exe") do (
-		if exist "%%~fG" if not defined GODOT_EXECUTABLE set "GODOT_EXECUTABLE=%%~fG"
-	)
+	if exist "%PROJECT_DIR%\godot\Godot_v4.4.1-stable_win64.exe" set "GODOT_EXECUTABLE=%PROJECT_DIR%\godot\Godot_v4.4.1-stable_win64.exe"
 )
 if not defined GODOT_EXECUTABLE (
 	if exist "%PROJECT_DIR%\godot\Godot_v4.4.1-stable_win64.exe.zip" (
-		echo Unpacking bundled Godot editor for export...
+		call :log "Unpacking bundled Godot editor..."
 		powershell -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -LiteralPath '%PROJECT_DIR%\godot\Godot_v4.4.1-stable_win64.exe.zip' -DestinationPath '%PROJECT_DIR%\godot' -Force"
 	)
-	for %%G in ("%PROJECT_DIR%\godot\Godot_v*-stable_win64.exe") do (
-		if exist "%%~fG" if not defined GODOT_EXECUTABLE set "GODOT_EXECUTABLE=%%~fG"
-	)
+	if exist "%PROJECT_DIR%\godot\Godot_v4.4.1-stable_win64.exe" set "GODOT_EXECUTABLE=%PROJECT_DIR%\godot\Godot_v4.4.1-stable_win64.exe"
+)
+if not defined GODOT_EXECUTABLE (
+	where godot.exe >nul 2>nul && for /f "delims=" %%G in ('where godot.exe') do if not defined GODOT_EXECUTABLE set "GODOT_EXECUTABLE=%%G"
 )
 
 if not defined GODOT_EXECUTABLE (
-	echo Godot 4 was not found. Install it, add it to PATH, place it in godot\, or set GODOT_BIN.
-	exit /b 1
+	call :fail "Godot 4 editor was not found. Keep godot\Godot_v4.4.1-stable_win64.exe.zip in the project, or set GODOT_BIN."
 )
 
-	if not exist "%TEMPLATES_DIR%\windows_release_x86_64.exe" (
-	echo Downloading Godot %GODOT_VERSION% Windows export templates...
+call :log "Using Godot: %GODOT_EXECUTABLE%"
+
+if not exist "%TEMPLATES_DIR%\windows_release_x86_64.exe" (
+	call :log "Downloading export templates for %GODOT_VERSION% ..."
 	if not exist "%TEMPLATES_DIR%" mkdir "%TEMPLATES_DIR%"
-	set "TMPDIR=%TEMP%\cowboy_trail_templates"
-	if exist "%TMPDIR%" rmdir /s /q "%TMPDIR%"
-	mkdir "%TMPDIR%"
+	set "TMPDIR=%TEMP%\cowboy_trail_templates_%RANDOM%"
+	mkdir "!TMPDIR!"
 	powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-		"$ProgressPreference='SilentlyContinue'; Invoke-WebRequest -Uri '%TEMPLATE_URL%' -OutFile '%TMPDIR%\templates.zip'; Expand-Archive -LiteralPath '%TMPDIR%\templates.zip' -DestinationPath '%TMPDIR%\extracted' -Force; Copy-Item -Path '%TMPDIR%\extracted\templates\*' -Destination '%TEMPLATES_DIR%' -Recurse -Force"
+		"$ErrorActionPreference='Stop'; $ProgressPreference='SilentlyContinue'; $zip='!TMPDIR!\templates.zip'; $url='%TEMPLATE_URL%'; try { Invoke-WebRequest -Uri $url -OutFile $zip } catch { Write-Error $_; exit 1 }; if (-not (Test-Path $zip)) { throw 'Download produced no file' }; Expand-Archive -LiteralPath $zip -DestinationPath '!TMPDIR!\extracted' -Force; if (-not (Test-Path '!TMPDIR!\extracted\templates')) { throw 'Template archive missing templates/ folder' }; Copy-Item -Path '!TMPDIR!\extracted\templates\*' -Destination '%TEMPLATES_DIR%' -Recurse -Force" >> "%LOG%" 2>&1
+	if errorlevel 1 (
+		call :fail "Could not download/extract export templates. See dist\create_exe_log.txt"
+	)
 	if not exist "%TEMPLATES_DIR%\windows_release_x86_64.exe" (
-		echo Failed to install Windows export templates into:
-		echo   %TEMPLATES_DIR%
-		exit /b 1
+		call :fail "Templates installed but windows_release_x86_64.exe is missing in:%TEMPLATES_DIR%"
 	)
 	echo %GODOT_VERSION%> "%TEMPLATES_DIR%\version.txt"
+	rmdir /s /q "!TMPDIR!" 2>nul
+)
+
+call :log "Importing project assets before export..."
+"%GODOT_EXECUTABLE%" --headless --path "%PROJECT_DIR%" --import >> "%LOG%" 2>&1
+if errorlevel 1 (
+	call :fail "Godot import failed. See dist\create_exe_log.txt"
 )
 
 if not exist "%DIST_DIR%" mkdir "%DIST_DIR%"
+
+set "EXPORT_PATH=%DIST_DIR%\%EXE_NAME%"
+set "EXPORT_PATH_POSIX=%EXPORT_PATH:\=/%"
 
 > "%PROJECT_DIR%\export_presets.cfg" (
 	echo [preset.0]
@@ -83,8 +91,8 @@ if not exist "%DIST_DIR%" mkdir "%DIST_DIR%"
 	echo custom_features=""
 	echo export_filter="all_resources"
 	echo include_filter=""
-	echo exclude_filter="savegames/*, dist/*, godot/*, *.bat, *.sh, tests/*, .git/*"
-	echo export_path="%DIST_DIR:\=/%/%EXE_NAME%"
+	echo exclude_filter="savegames/*, dist/*, godot/*, *.bat, *.sh, tests/*, .git/*, tools/*"
+	echo export_path="%EXPORT_PATH_POSIX%"
 	echo encryption_include_filters=""
 	echo encryption_exclude_filters=""
 	echo encrypt_pck=false
@@ -105,8 +113,8 @@ if not exist "%DIST_DIR%" mkdir "%DIST_DIR%"
 	echo application/icon="res://icon.ico"
 	echo application/console_wrapper_icon="res://icon.ico"
 	echo application/icon_interpolation=0
-	echo application/file_version="1.3.5.0"
-	echo application/product_version="1.3.5.0"
+	echo application/file_version="1.3.6.0"
+	echo application/product_version="1.3.6.0"
 	echo application/company_name="Cowboy Trail"
 	echo application/product_name="Cowboy Trail"
 	echo application/file_description="A friendly cowboy jump-and-run for kids"
@@ -128,23 +136,37 @@ if not exist "%DIST_DIR%" mkdir "%DIST_DIR%"
 	echo Copy the whole folder ^(exe + savegames^) to keep progress when moving PCs.
 )
 
-echo Exporting %EXE_NAME% ...
-"%GODOT_EXECUTABLE%" --headless --path "%PROJECT_DIR%" --export-release "%EXPORT_PRESET%" "%DIST_DIR%\%EXE_NAME%"
-if errorlevel 1 (
-	echo Export failed.
-	exit /b 1
+call :log "Exporting %EXE_NAME% ..."
+"%GODOT_EXECUTABLE%" --headless --path "%PROJECT_DIR%" --export-release "%EXPORT_PRESET%" "%EXPORT_PATH%" >> "%LOG%" 2>&1
+set "EXPORT_ERR=!ERRORLEVEL!"
+if not "!EXPORT_ERR!"=="0" (
+	call :fail "Godot export failed with exit !EXPORT_ERR!. See dist\create_exe_log.txt"
 )
-if not exist "%DIST_DIR%\%EXE_NAME%" (
-	echo Export failed: %DIST_DIR%\%EXE_NAME% not found.
-	exit /b 1
+if not exist "%EXPORT_PATH%" (
+	call :fail "Export finished but %EXPORT_PATH% was not created. See dist\create_exe_log.txt"
 )
 
 if exist "%PROJECT_DIR%\icon.ico" copy /Y "%PROJECT_DIR%\icon.ico" "%DIST_DIR%\icon.ico" >nul
-powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-	"$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('%DIST_DIR%\Cowboy Trail.lnk'); $s.TargetPath = '%DIST_DIR%\%EXE_NAME%'; $s.WorkingDirectory = '%DIST_DIR%'; $s.IconLocation = '%DIST_DIR%\icon.ico'; $s.Description = 'Cowboy Trail'; $s.Save()"
 
+call :log "Done: %EXPORT_PATH%"
 echo.
 echo Done.
-echo Portable build: %DIST_DIR%\%EXE_NAME%
+echo Portable build: %EXPORT_PATH%
+echo Log: %LOG%
 echo Saves will appear beside the exe in: savegames\
 exit /b 0
+
+:log
+echo %~1
+echo %~1 >> "%LOG%"
+exit /b 0
+
+:fail
+echo.
+echo ERROR: %~1
+echo %~1 >> "%LOG%"
+echo.
+echo Full log: %LOG%
+echo.
+pause
+exit /b 1
