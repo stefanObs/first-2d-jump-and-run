@@ -23,7 +23,7 @@ A small, friendly 2D platform game for children around six years old.
 - Three numbered save slots with automatic saving
 - Checkpoints and instant retries without limited lives
 - Stars to collect as an optional extra challenge
-- A nonviolent lasso that ties bandits and makes them safe to pass
+- A nonviolent lasso that ties bandits and makes them safe to pass (jumping on a bandit's head also ties him)
 - Collectible items that temporarily activate special player modes
 - A dedicated flying level
 - Simple opponents and obstacles that can hurt the player
@@ -93,7 +93,7 @@ Only one special mode is active at a time. Collecting another mode item replaces
 
 ## Chapter 5: Opponents, obstacles, and damage
 
-Opponents use simple, repeating movement patterns, such as walking between two points or slowly flying up and down. Bandits occasionally raise a revolver with a clear warning animation and fire a slow, bright projectile that can be avoided. The cowboy has no weapon: the nonviolent lasso catches bandits instead. A lasso hit seats the captured bandit on the floor in a comic bound pose with thick rope coils around the torso; it stops moving and shooting and no longer blocks or hurts the player. Red-scarf bounty bandits shoot a little more often and award two badges when caught.
+Opponents use simple, repeating movement patterns, such as walking between two points or slowly flying up and down. Bandits occasionally raise a revolver with a clear warning animation and fire a slow, bright projectile that can be avoided. The cowboy has no weapon: the nonviolent lasso catches bandits instead, and jumping onto a bandit's head ties him the same way. A capture seats the bandit on the floor in a comic bound pose with thick rope coils around the torso; it stops moving and shooting and no longer blocks or hurts the player. Red-scarf bounty bandits shoot a little more often and award two badges when caught.
 
 Carrion birds challenge Wings routes at varied heights. Some cacti are replaced by lower, wider rattlesnakes with a visible bite animation. Harmful obstacles must remain readable and predictable. Falling into a canyon now plays a spinning fall animation before returning to camp; there is no health counter, life limit, or game-over screen.
 
@@ -276,21 +276,22 @@ Each cycle must maintain the following status block:
 ### Current development status
 
 - **Current iteration:** `v1.3.3` hazard variety, bounty bandits, and trail readability
-- **Last completed step:** Flying over the saloon finishes the trail like walking in
+- **Last completed step:** Head-stomp ties bandits; respawned bandits keep normal size
 - **Currently in progress:** In-game visual play-test of bosses and polish
 - **Next step:** Play-test bosses, fences, clouds, and flight; then tag `v1.3.3`
 - **Completed features:** Long 10-level cowboy trail; animated nonviolent bandit lasso; seated tied bandits; warning-shot and bounty bandits; carrions and rattlesnakes; animated canyon recovery; reachable hazards; hand-drawn cowboy + world props; looping music; three custom editor slots; mid-trail saves; modes; Xbox-ready input; Stampede Bull / Midnight Coach / Outlaw Kingpin bosses; horizon victory scene
 - **Remaining work:** In-game visual/gameplay play-test; Xbox controller physical verification; supervised child play-tests; additional SFX
-- **Tests last run:** all automated tests passed after saloon flyover finish
+- **Tests last run:** all automated tests passed after bandit stomp/size fixes
 - **Known issues or blockers:**
   - Boss arenas and new fence/cloud art still need an in-game visual play-test
   - Xbox controller not physically verified on this machine
 - **Latest iteration tag:** `v1.3.2`
-- **Relevant commit:** `081ccb3`
+- **Relevant commit:** (pending push)
 
 
 ### Cycle notes — 2026-07-19 (v1.3.3)
 
+- Jumping onto a bandit's head ties him (with a small bounce); respawned bandits no longer stay at the smaller tied scale.
 - Flying over the saloon finishes the trail the same way as walking into the doorway (like camps on a high jump).
 - Celebration cowboy now stands centered on the saloon doorway before the horse arrives.
 - Clouds are steeper and only used as canyon bridges (wider), hazard-approach steps, or plank climbs.

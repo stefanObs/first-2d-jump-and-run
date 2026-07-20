@@ -29,6 +29,8 @@ func _ready() -> void:
 	)
 	failures += _run("Cowboy player has movement animations", _test_cowboy_animations)
 	failures += _run("Lasso ties bandits and makes them pass-through", _test_lasso_ties_bandit)
+	failures += _run("Jumping on a bandit head ties him", _test_stomp_ties_bandit)
+	failures += _run("Untied bandits restore normal standing size", _test_untie_restores_stand_scale)
 	failures += _run("Campaign hazards are no longer blocked by plank highways", _test_no_plank_highways)
 	failures += _run("Custom level store and builder work", _test_custom_level_builder)
 	failures += _run("Hand-drawn celebration art and cheerful music load", _test_art_and_music)
@@ -558,6 +560,50 @@ func _test_lasso_ties_bandit() -> Variant:
 		return "A red-scarf bounty bandit should award two badges."
 	node.queue_free()
 	return null
+
+
+func _test_stomp_ties_bandit() -> Variant:
+	var packed: PackedScene = load("res://scenes/world/opponent.tscn")
+	var bandit := packed.instantiate() as Opponent
+	bandit.position = Vector2(200, 400)
+	add_child(bandit)
+	var player := Player.new()
+	player.position = Vector2(200, 380)
+	add_child(player)
+	player.velocity = Vector2(0, 240)
+	var hurt := [false]
+	bandit.hurt_player.connect(func(_p: Player) -> void: hurt[0] = true)
+	bandit._on_body_entered(player)
+	var error: Variant = null
+	if not bandit.is_tied():
+		error = "Jumping onto a bandit's head should tie him."
+	elif hurt[0]:
+		error = "A head stomp should not hurt the cowboy."
+	elif player.velocity.y >= 0.0:
+		error = "A head stomp should bounce the cowboy upward."
+	player.queue_free()
+	bandit.queue_free()
+	return error
+
+
+func _test_untie_restores_stand_scale() -> Variant:
+	var packed: PackedScene = load("res://scenes/world/opponent.tscn")
+	var bandit := packed.instantiate() as Opponent
+	add_child(bandit)
+	var walk := bandit.get_node_or_null("WalkSprite") as AnimatedSprite2D
+	if walk == null:
+		bandit.queue_free()
+		return "Bandit walk sprite missing."
+	var stand := bandit.get_stand_scale()
+	bandit.tie_up(false)
+	bandit.untie_for_respawn()
+	var error: Variant = null
+	if not is_equal_approx(absf(walk.scale.y), stand):
+		error = "Respawned bandits should return to normal standing size."
+	elif not is_equal_approx(absf(walk.scale.x), stand):
+		error = "Respawned bandit width should match standing size."
+	bandit.queue_free()
+	return error
 
 
 func _test_no_plank_highways() -> Variant:

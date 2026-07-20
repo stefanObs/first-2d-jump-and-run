@@ -2,10 +2,15 @@ class_name Opponent
 extends AnimatableBody2D
 
 ## Slow predictable foe. Touching it hurts unless the player has a shield.
+## Jumping onto its head ties it, same as a lasso catch.
 
 signal hurt_player(player: Player)
 signal captured(opponent: Opponent)
 signal bounty_caught(opponent: Opponent, amount: int)
+
+const STAND_SCALE := 1.15
+const TIED_SCALE := 0.7
+const STOMP_BOUNCE := -420.0
 
 @export var point_a: Vector2 = Vector2(-80, 0)
 @export var point_b: Vector2 = Vector2(80, 0)
@@ -25,6 +30,7 @@ var _shooting: bool = false
 var _shot_timer: float = 0.0
 var _shot_generation: int = 0
 var _revolver: RevolverOverlay
+var _pose_tween: Tween
 
 
 func _ready() -> void:
@@ -51,7 +57,7 @@ func _setup_sprite() -> void:
 	_sprite.centered = true
 	# Feet on the desert top (collision bottom at local y=0).
 	_sprite.offset = Vector2(0, -35)
-	_sprite.scale = Vector2(1.15, 1.15)
+	_sprite.scale = Vector2(STAND_SCALE, STAND_SCALE)
 	_apply_facing(1.0)
 	_sprite.play(&"walk")
 	add_child(_sprite)
@@ -129,6 +135,10 @@ func is_tied() -> bool:
 	return _tied
 
 
+func get_stand_scale() -> float:
+	return STAND_SCALE
+
+
 func tie_up(award_bounty: bool = true) -> void:
 	if _tied:
 		return
@@ -168,12 +178,12 @@ func tie_up(award_bounty: bool = true) -> void:
 func _play_tying_flourish() -> void:
 	if _sprite == null:
 		return
+	_kill_pose_tween()
 	var face := 1.0 if _facing >= 0.0 else -1.0
-	var base_scale := _sprite.scale
-	var tween := create_tween()
-	tween.tween_property(_sprite, "scale", Vector2(0.9 * face, 0.55), 0.1)
-	tween.tween_property(_sprite, "scale", Vector2(0.78 * face, 0.78), 0.12)
-	tween.tween_property(_sprite, "scale", base_scale, 0.12)
+	_pose_tween = create_tween()
+	_pose_tween.tween_property(_sprite, "scale", Vector2(0.9 * face, 0.55), 0.1)
+	_pose_tween.tween_property(_sprite, "scale", Vector2(0.78 * face, 0.78), 0.12)
+	_pose_tween.tween_property(_sprite, "scale", Vector2(TIED_SCALE * face, TIED_SCALE), 0.12)
 	if _label != null:
 		_label.text = "GOTCHA!"
 		var label_tween := create_tween()
@@ -211,6 +221,7 @@ func untie_for_respawn() -> void:
 	_tied = false
 	_shot_generation += 1
 	_shooting = false
+	_kill_pose_tween()
 	collision_layer = 1
 	z_index = 0
 	global_position = _origin
@@ -232,7 +243,7 @@ func untie_for_respawn() -> void:
 		_sprite.sprite_frames = _make_walk_frames()
 		_sprite.rotation = 0.0
 		_sprite.offset = Vector2(0, -35)
-		_sprite.scale = Vector2(1.15, 1.15)
+		_sprite.scale = Vector2(STAND_SCALE, STAND_SCALE)
 		_apply_facing(_facing)
 		_sprite.play(&"walk")
 	if _label != null:
@@ -242,9 +253,16 @@ func untie_for_respawn() -> void:
 	_shot_timer = randf_range(1.8, 3.0) if bounty_bandit else randf_range(3.0, 5.0)
 
 
+func _kill_pose_tween() -> void:
+	if _pose_tween != null:
+		_pose_tween.kill()
+		_pose_tween = null
+
+
 func _show_floor_bound_pose() -> void:
 	if _sprite == null:
 		return
+	_kill_pose_tween()
 	_sprite.pause()
 	var path := (
 		"res://assets/world/bandit_tied_red.png"
@@ -264,7 +282,7 @@ func _show_floor_bound_pose() -> void:
 	_sprite.flip_h = false
 	# The tied art is 130 px tall versus the 80 px standing art.
 	# Scale it to the same on-screen height instead of enlarging the capture.
-	_sprite.scale = Vector2(0.7 * face, 0.7)
+	_sprite.scale = Vector2(TIED_SCALE * face, TIED_SCALE)
 	# Feet/seat on the desert top (collision bottom at local y=0).
 	_sprite.offset = Vector2(0, -45)
 	_sprite.play(&"tied")
@@ -342,9 +360,29 @@ func _find_nearby_player(radius: float) -> Player:
 	return null
 
 
+func _is_head_stomp(player: Player) -> bool:
+	# Cowboy feet are at global_position; bandit feet are too. A falling approach
+	# from above the bandit's midsection counts as landing on his head.
+	if player.velocity.y <= 20.0:
+		return false
+	return player.global_position.y <= global_position.y - 6.0
+
+
+func _bounce_after_stomp(player: Player) -> void:
+	player.velocity.y = STOMP_BOUNCE
+	if absf(player.velocity.x) < 40.0:
+		player.velocity.x = 0.0
+
+
 func _on_body_entered(body: Node2D) -> void:
+	if _tied:
+		return
 	if body is Player:
 		var player := body as Player
+		if _is_head_stomp(player):
+			tie_up()
+			_bounce_after_stomp(player)
+			return
 		if player.is_invulnerable():
 			return
 		hurt_player.emit(player)
