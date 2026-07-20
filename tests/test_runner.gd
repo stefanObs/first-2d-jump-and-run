@@ -29,6 +29,7 @@ func _ready() -> void:
 	)
 	failures += _run("Cowboy player has movement animations", _test_cowboy_animations)
 	failures += _run("Lasso ties bandits and makes them pass-through", _test_lasso_ties_bandit)
+	failures += _run("Lasso cast ties bandits via HurtArea", _test_lasso_cast_hits_hurt_area)
 	failures += _run("Jumping on a bandit head ties him", _test_stomp_ties_bandit)
 	failures += _run("Untied bandits restore normal standing size", _test_untie_restores_stand_scale)
 	failures += _run("Campaign hazards are no longer blocked by plank highways", _test_no_plank_highways)
@@ -534,6 +535,10 @@ func _test_lasso_ties_bandit() -> Variant:
 		node.queue_free()
 		return "Opponent scene root is not Opponent."
 	bandit.bounty_bandit = true
+	var hurt_area := bandit.get_node_or_null("HurtArea") as Area2D
+	if hurt_area == null or hurt_area.collision_layer == 0 or not hurt_area.monitorable:
+		node.queue_free()
+		return "Bandit HurtArea must be lasso-detectable on layer 1."
 	var bounty_amount := [0]
 	bandit.bounty_caught.connect(func(_opponent: Opponent, amount: int) -> void:
 		bounty_amount[0] = amount
@@ -560,6 +565,25 @@ func _test_lasso_ties_bandit() -> Variant:
 		return "A red-scarf bounty bandit should award two badges."
 	node.queue_free()
 	return null
+
+
+func _test_lasso_cast_hits_hurt_area() -> Variant:
+	var packed: PackedScene = load("res://scenes/world/opponent.tscn")
+	var bandit := packed.instantiate() as Opponent
+	bandit.position = Vector2(300, 400)
+	add_child(bandit)
+	var lasso := LassoCast.new()
+	lasso.position = Vector2(200, 360)
+	add_child(lasso)
+	lasso.setup(1.0)
+	var hurt := bandit.get_node_or_null("HurtArea") as Area2D
+	lasso._on_area_entered(hurt)
+	var error: Variant = null
+	if not bandit.is_tied():
+		error = "Lasso should tie a bandit when it hits HurtArea."
+	lasso.queue_free()
+	bandit.queue_free()
+	return error
 
 
 func _test_stomp_ties_bandit() -> Variant:

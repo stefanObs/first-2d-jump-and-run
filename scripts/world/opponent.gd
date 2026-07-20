@@ -152,6 +152,7 @@ func tie_up(award_bounty: bool = true) -> void:
 		body_shape.set_deferred("disabled", true)
 	if _area != null:
 		_area.set_deferred("monitoring", false)
+		_area.set_deferred("monitorable", false)
 	if _revolver != null:
 		_revolver.hide_gun()
 	var hurt_shape := get_node_or_null("HurtArea/CollisionShape2D") as CollisionShape2D
@@ -232,6 +233,7 @@ func untie_for_respawn() -> void:
 		body_shape.set_deferred("disabled", true)
 	if _area != null:
 		_area.set_deferred("monitoring", true)
+		_area.set_deferred("monitorable", true)
 	var hurt_shape := get_node_or_null("HurtArea/CollisionShape2D") as CollisionShape2D
 	if hurt_shape != null:
 		hurt_shape.set_deferred("disabled", false)

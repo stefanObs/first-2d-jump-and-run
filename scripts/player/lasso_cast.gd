@@ -101,8 +101,8 @@ func _try_lasso_target(node: Node) -> bool:
 		_returning = true
 		_elapsed = 0.0
 		return true
-	if node is Opponent:
-		var opponent := node as Opponent
+	var opponent := _resolve_opponent(node)
+	if opponent != null:
 		if opponent.is_tied():
 			return false
 		_caught = true
@@ -112,6 +112,15 @@ func _try_lasso_target(node: Node) -> bool:
 		_elapsed = 0.0
 		return true
 	return false
+
+
+func _resolve_opponent(node: Node) -> Opponent:
+	if node is Opponent:
+		return node as Opponent
+	var parent := node.get_parent()
+	if parent is Opponent:
+		return parent as Opponent
+	return null
 
 
 func _on_body_entered(body: Node2D) -> void:
