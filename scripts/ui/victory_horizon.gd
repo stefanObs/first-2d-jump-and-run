@@ -134,15 +134,31 @@ func _run() -> void:
 
 	var end_fade := ColorRect.new()
 	end_fade.set_anchors_preset(Control.PRESET_FULL_RECT)
-	end_fade.color = Color(0.15, 0.05, 0.02, 0.0)
+	end_fade.color = Color(0, 0, 0, 0.0)
 	end_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(end_fade)
+
+	var dedication := Label.new()
+	dedication.text = "VOM PAPI FÜR FINN"
+	dedication.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	dedication.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	dedication.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dedication.add_theme_font_size_override(&"font_size", 36)
+	dedication.add_theme_color_override(&"font_color", Color(1, 0.92, 0.75, 1))
+	dedication.modulate.a = 0.0
+	dedication.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(dedication)
+
 	var ft := create_tween()
 	ft.tween_property(end_fade, "color:a", 1.0, 0.9)
 	await ft.finished
+	var dt := create_tween()
+	dt.tween_property(dedication, "modulate:a", 1.0, 0.8)
+	await dt.finished
 	# Let the country theme finish if it is still going.
 	while AudioManager.is_finale_playing():
 		await get_tree().process_frame
+	await get_tree().create_timer(1.6).timeout
 	AudioManager.play_trail_music()
 	await get_tree().create_timer(0.35).timeout
 	GameManager.return_to_save_select()

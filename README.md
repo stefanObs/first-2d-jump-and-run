@@ -124,7 +124,7 @@ Boss arenas use the same jump, lasso, mode, and platform tools as the trail. Def
 | Level 7 | **3. Midnight Coach** | Grab a Speed Star (or stay quick on foot), race alongside, and lasso each door handle in order until all three doors are tied shut. |
 | Level 10 | **6. Outlaw Kingpin** | Lasso the two bodyguards first, then lasso the kingpin once to tie him. |
 
-After the Kingpin falls, play a **horizon victory ride**: the cowboy mounts and rides into the sunset before returning to save select.
+After the Kingpin falls, play a **horizon victory ride**: the cowboy mounts and rides into the sunset before returning to save select. After the fade to black, the dedication **VOM PAPI FÜR FINN** appears.
 
 ### Iteration instructions — 2026-07-19 (bosses & trail polish)
 
@@ -141,7 +141,7 @@ Status: **implemented** on `main` (see Chapter 13).
 
 ## Chapter 7: Level completion and progression
 
-Reaching the goal disables player input and starts a 3–5 second transition: the cowboy stands at the saloon door, a horse rides in from the left, the cowboy mounts, and they ride toward the next trail while the collected badge total remains displayed above them. Flying over the saloon counts the same as walking into the doorway. The next level starts automatically with the cowboy riding in and dismounting before control returns. After level 10 and the Outlaw Kingpin boss, the cowboy rides into the horizon, then returns to the save selection screen.
+Reaching the goal disables player input and starts a 3–5 second transition: the cowboy stands at the saloon door, a horse rides in from the left, the cowboy mounts, and they ride toward the next trail while the collected badge total remains displayed above them. Flying over the saloon counts the same as walking into the doorway. The next level starts automatically with the cowboy riding in and dismounting before control returns. After level 10 and the Outlaw Kingpin boss, the cowboy rides into the horizon; the screen fades to black with **VOM PAPI FÜR FINN**, then returns to the save selection screen.
 
 ## Chapter 8: Save system
 
@@ -276,23 +276,24 @@ Each cycle must maintain the following status block:
 ### Current development status
 
 - **Current iteration:** `v1.3.3` hazard variety, bounty bandits, and trail readability
-- **Last completed step:** Yard gates clearer open/closed swing with four posts
+- **Last completed step:** Sunset black screen dedication "VOM PAPI FÜR FINN"
 - **Currently in progress:** In-game visual play-test of bosses and polish
 - **Next step:** Play-test bosses, fences, clouds, and flight; then tag `v1.3.3`
 - **Completed features:** Long 10-level cowboy trail; animated nonviolent bandit lasso; seated tied bandits; warning-shot and bounty bandits; carrions and rattlesnakes; animated canyon recovery; reachable hazards; hand-drawn cowboy + world props; looping music; three custom editor slots; mid-trail saves; modes; Xbox-ready input; Stampede Bull / Midnight Coach / Outlaw Kingpin bosses; horizon victory scene
 - **Remaining work:** In-game visual/gameplay play-test; Xbox controller physical verification; supervised child play-tests; additional SFX
-- **Tests last run:** all automated tests passed after yard gate readability pass
+- **Tests last run:** all automated tests passed after finale dedication
 - **Known issues or blockers:**
   - Boss arenas and new fence/cloud art still need an in-game visual play-test
   - Xbox controller not physically verified on this machine
 - **Latest iteration tag:** `v1.3.2`
-- **Relevant commit:** `629c6b2`
+- **Relevant commit:** (pending push)
 
 
 ### Cycle notes — 2026-07-19 (v1.3.3)
 
 - Jumping onto a bandit's head ties him (with a small bounce); respawned bandits no longer stay at the smaller tied scale.
 - Yard gates use four fence posts plus side wings, a longer swing, and OPEN!/CLOSED labels so open vs shut is obvious.
+- Sunset finale fades to black with the dedication "VOM PAPI FÜR FINN".
 - Sky Ranch gets a high carrion line so Wings cannot skip the trail by flying over the top.
 - Flying over the saloon finishes the trail the same way as walking into the doorway (like camps on a high jump).
 - Celebration cowboy now stands centered on the saloon doorway before the horse arrives.

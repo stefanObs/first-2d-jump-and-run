@@ -674,6 +674,9 @@ func _test_art_and_music() -> Variant:
 	var country: AudioStream = load("res://assets/audio/country_version.mp3")
 	if country == null:
 		return "Country start/finale theme did not load."
+	var victory_script := FileAccess.get_file_as_string("res://scripts/ui/victory_horizon.gd")
+	if not victory_script.contains("VOM PAPI FÜR FINN"):
+		return "Sunset finale should dedicate the trail: VOM PAPI FÜR FINN."
 	if AudioServer.get_bus_index(&"Music") < 0:
 		return "Music bus was not created."
 	var level: Variant = _instantiate_level("res://scenes/levels/level_01.tscn")
