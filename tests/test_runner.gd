@@ -18,6 +18,7 @@ func _ready() -> void:
 	failures += _run("LevelController respawns at checkpoint", _test_respawn_uses_checkpoint)
 	failures += _run("Camp restores tied bandits and active bonuses", _test_camp_restores_state)
 	failures += _run("Goal completion disables player input", _test_goal_disables_input)
+	failures += _run("Flying over the saloon still finishes the trail", _test_goal_triggers_when_flying_over)
 	failures += _run("Bubble shield blocks opponent damage flag", _test_shield_blocks_damage_flag)
 	failures += _run("Bubble shield does not block canyon falls", _test_canyon_ignores_bubble_shield)
 	failures += _run("InputManager device prompts", _test_input_manager_prompts)
@@ -392,6 +393,26 @@ func _test_goal_disables_input() -> Variant:
 	elif controller.transition.get_node_or_null("CowboyHorse") == null:
 		error = "Horse transition should create the mounted cowboy."
 	_free_level(controller)
+	return error
+
+
+func _test_goal_triggers_when_flying_over() -> Variant:
+	var goal_scene: PackedScene = load("res://scenes/world/goal.tscn")
+	var goal := goal_scene.instantiate() as Goal
+	add_child(goal)
+	goal.global_position = Vector2(5000, 400)
+
+	var player := Player.new()
+	add_child(player)
+	# High above the doorway — would miss the collision box while flying.
+	player.global_position = Vector2(5000, 40)
+
+	goal._process(0.016)
+	var error: Variant = null
+	if not goal.is_triggered():
+		error = "Reaching the saloon's X while flying high should finish the trail."
+	player.queue_free()
+	goal.queue_free()
 	return error
 
 

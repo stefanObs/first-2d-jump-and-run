@@ -32,6 +32,12 @@ func _process(delta: float) -> void:
 		if _arrow != null:
 			_arrow.visible = false
 		return
+
+	# Crossing the saloon's place on the trail counts, even when flying high.
+	if _player_reached_saloon():
+		_trigger()
+		return
+
 	_phase += delta * 3.0
 	var pulse := 1.0 + sin(_phase) * 0.06
 	if _sprite != null:
@@ -47,6 +53,10 @@ func reset() -> void:
 	if _sprite != null:
 		_sprite.modulate = Color(1, 1, 1, 1)
 		_sprite.scale = _base_scale
+
+
+func is_triggered() -> bool:
+	return _triggered
 
 
 func _ensure_arrow() -> void:
@@ -84,9 +94,17 @@ func _find_player() -> Player:
 	var tree := get_tree()
 	if tree == null:
 		return null
+	var best: Player = null
+	var best_dist := INF
 	for node in tree.get_nodes_in_group("player"):
 		if node is Player:
-			return node as Player
+			var candidate := node as Player
+			var dist := global_position.distance_squared_to(candidate.global_position)
+			if dist < best_dist:
+				best_dist = dist
+				best = candidate
+	if best != null:
+		return best
 	var root := tree.current_scene
 	if root == null:
 		return null
@@ -94,16 +112,34 @@ func _find_player() -> Player:
 	return found as Player if found is Player else null
 
 
+func _player_reached_saloon() -> bool:
+	var tree := get_tree()
+	if tree == null:
+		return false
+	# Same idea as camps: the trail place matters, not touching the doorway.
+	# Any cowboy who has crossed the saloon's X counts (including flyovers).
+	for node in tree.get_nodes_in_group("player"):
+		if node is Player:
+			var player := node as Player
+			if player.global_position.x >= global_position.x - 64.0:
+				return true
+	return false
+
+
 func _on_body_entered(body: Node2D) -> void:
+	if body is Player:
+		_trigger()
+
+
+func _trigger() -> void:
 	if _triggered:
 		return
-	if body is Player:
-		_triggered = true
-		if _sprite != null:
-			_sprite.modulate = Color(1.0, 0.95, 0.55, 1.0)
-			_sprite.scale = _base_scale * 1.15
-		if _label != null:
-			_label.text = "YEEHAW!"
-		if _arrow != null:
-			_arrow.visible = false
-		reached.emit(self)
+	_triggered = true
+	if _sprite != null:
+		_sprite.modulate = Color(1.0, 0.95, 0.55, 1.0)
+		_sprite.scale = _base_scale * 1.15
+	if _label != null:
+		_label.text = "YEEHAW!"
+	if _arrow != null:
+		_arrow.visible = false
+	reached.emit(self)

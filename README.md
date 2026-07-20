@@ -141,7 +141,7 @@ Status: **implemented** on `main` (see Chapter 13).
 
 ## Chapter 7: Level completion and progression
 
-Reaching the goal disables player input and starts a 3–5 second transition: the cowboy stands at the saloon door, a horse rides in from the left, the cowboy mounts, and they ride toward the next trail while the collected badge total remains displayed above them. The next level starts automatically with the cowboy riding in and dismounting before control returns. After level 10 and the Outlaw Kingpin boss, the cowboy rides into the horizon, then returns to the save selection screen.
+Reaching the goal disables player input and starts a 3–5 second transition: the cowboy stands at the saloon door, a horse rides in from the left, the cowboy mounts, and they ride toward the next trail while the collected badge total remains displayed above them. Flying over the saloon counts the same as walking into the doorway. The next level starts automatically with the cowboy riding in and dismounting before control returns. After level 10 and the Outlaw Kingpin boss, the cowboy rides into the horizon, then returns to the save selection screen.
 
 ## Chapter 8: Save system
 
@@ -276,21 +276,22 @@ Each cycle must maintain the following status block:
 ### Current development status
 
 - **Current iteration:** `v1.3.3` hazard variety, bounty bandits, and trail readability
-- **Last completed step:** Fixed Windows create_exe; Play Cowboy Trail.exe with cowboy icon
+- **Last completed step:** Flying over the saloon finishes the trail like walking in
 - **Currently in progress:** In-game visual play-test of bosses and polish
 - **Next step:** Play-test bosses, fences, clouds, and flight; then tag `v1.3.3`
 - **Completed features:** Long 10-level cowboy trail; animated nonviolent bandit lasso; seated tied bandits; warning-shot and bounty bandits; carrions and rattlesnakes; animated canyon recovery; reachable hazards; hand-drawn cowboy + world props; looping music; three custom editor slots; mid-trail saves; modes; Xbox-ready input; Stampede Bull / Midnight Coach / Outlaw Kingpin bosses; horizon victory scene
 - **Remaining work:** In-game visual/gameplay play-test; Xbox controller physical verification; supervised child play-tests; additional SFX
-- **Tests last run:** all automated tests passed after Windows launcher/export fixes
+- **Tests last run:** all automated tests passed after saloon flyover finish
 - **Known issues or blockers:**
   - Boss arenas and new fence/cloud art still need an in-game visual play-test
   - Xbox controller not physically verified on this machine
 - **Latest iteration tag:** `v1.3.2`
-- **Relevant commit:** `ddceb7d`
+- **Relevant commit:** (pending push)
 
 
 ### Cycle notes — 2026-07-19 (v1.3.3)
 
+- Flying over the saloon finishes the trail the same way as walking into the doorway (like camps on a high jump).
 - Celebration cowboy now stands centered on the saloon doorway before the horse arrives.
 - Clouds are steeper and only used as canyon bridges (wider), hazard-approach steps, or plank climbs.
 - Rattlesnakes stay floor-sized; only the head rises to warn.
