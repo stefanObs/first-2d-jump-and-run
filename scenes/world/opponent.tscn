@@ -7,10 +7,10 @@
 size = Vector2(36, 36)
 
 [sub_resource type="RectangleShape2D" id="HurtShape"]
-size = Vector2(40, 40)
+size = Vector2(44, 72)
 
 [node name="Opponent" type="AnimatableBody2D"]
-collision_layer = 1
+collision_layer = 0
 collision_mask = 0
 script = ExtResource("1")
 
@@ -31,6 +31,7 @@ horizontal_alignment = 1
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 position = Vector2(0, -18)
+disabled = true
 shape = SubResource("BodyShape")
 
 [node name="HurtArea" type="Area2D" parent="."]
@@ -39,5 +40,5 @@ collision_mask = 2
 monitorable = false
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="HurtArea"]
-position = Vector2(0, -18)
+position = Vector2(0, -36)
 shape = SubResource("HurtShape")

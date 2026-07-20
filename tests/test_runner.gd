@@ -568,15 +568,16 @@ func _test_stomp_ties_bandit() -> Variant:
 	bandit.position = Vector2(200, 400)
 	add_child(bandit)
 	var player := Player.new()
-	player.position = Vector2(200, 380)
+	player.position = Vector2(200, 360)
 	add_child(player)
-	player.velocity = Vector2(0, 240)
+	# Landing on the bandit zeroes fall speed — stomps must still count by height.
+	player.velocity = Vector2.ZERO
 	var hurt := [false]
 	bandit.hurt_player.connect(func(_p: Player) -> void: hurt[0] = true)
 	bandit._on_body_entered(player)
 	var error: Variant = null
 	if not bandit.is_tied():
-		error = "Jumping onto a bandit's head should tie him."
+		error = "Jumping onto a bandit's head should tie him even after landing."
 	elif hurt[0]:
 		error = "A head stomp should not hurt the cowboy."
 	elif player.velocity.y >= 0.0:

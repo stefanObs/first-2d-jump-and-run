@@ -96,6 +96,7 @@ func _process(delta: float) -> void:
 func _physics_process(delta: float) -> void:
 	if _tied:
 		return
+	_try_stomp_from_overlap()
 	_shot_timer -= delta
 	if _shooting:
 		return
@@ -222,13 +223,13 @@ func untie_for_respawn() -> void:
 	_shot_generation += 1
 	_shooting = false
 	_kill_pose_tween()
-	collision_layer = 1
+	collision_layer = 0
 	z_index = 0
 	global_position = _origin
 	_going_to_b = true
 	var body_shape := get_node_or_null("CollisionShape2D") as CollisionShape2D
 	if body_shape != null:
-		body_shape.set_deferred("disabled", false)
+		body_shape.set_deferred("disabled", true)
 	if _area != null:
 		_area.set_deferred("monitoring", true)
 	var hurt_shape := get_node_or_null("HurtArea/CollisionShape2D") as CollisionShape2D
@@ -361,17 +362,31 @@ func _find_nearby_player(radius: float) -> Player:
 
 
 func _is_head_stomp(player: Player) -> bool:
-	# Cowboy feet are at global_position; bandit feet are too. A falling approach
-	# from above the bandit's midsection counts as landing on his head.
-	if player.velocity.y <= 20.0:
+	# Cowboy feet are at global_position; bandit feet are too.
+	# Landing on the bandit's solid body zeroes velocity.y before HurtArea fires,
+	# so stomps are judged by being above his chest — not by fall speed alone.
+	var chest_y := global_position.y - 24.0
+	if player.global_position.y > chest_y:
 		return false
-	return player.global_position.y <= global_position.y - 6.0
+	return true
 
 
 func _bounce_after_stomp(player: Player) -> void:
 	player.velocity.y = STOMP_BOUNCE
 	if absf(player.velocity.x) < 40.0:
 		player.velocity.x = 0.0
+
+
+func _try_stomp_from_overlap() -> void:
+	if _tied or _area == null:
+		return
+	for body in _area.get_overlapping_bodies():
+		if body is Player:
+			var player := body as Player
+			if _is_head_stomp(player):
+				tie_up()
+				_bounce_after_stomp(player)
+				return
 
 
 func _on_body_entered(body: Node2D) -> void:
