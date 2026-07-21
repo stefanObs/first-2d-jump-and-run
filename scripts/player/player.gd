@@ -418,7 +418,7 @@ func _ensure_wings() -> void:
 	_wing_sprite.texture = load("res://assets/world/modes/wings.png")
 	_wing_sprite.centered = true
 	_wing_sprite.position = Vector2(0, -42)
-	_wing_sprite.scale = Vector2(0.72, 0.72)
+	_wing_sprite.scale = Vector2(0.95, 0.95)
 	_wing_sprite.z_index = -1
 	_wing_sprite.visible = false
 	add_child(_wing_sprite)
@@ -433,7 +433,7 @@ func _update_wings() -> void:
 	_wing_sprite.visible = flying
 	if flying:
 		var flap := 1.0 + sin(Time.get_ticks_msec() * 0.02) * 0.08
-		_wing_sprite.scale = Vector2(0.72 * flap, 0.72 / flap)
+		_wing_sprite.scale = Vector2(0.95 * flap, 0.95 / flap)
 		_wing_sprite.rotation = sin(Time.get_ticks_msec() * 0.015) * 0.08
 		_wing_sprite.flip_h = _facing < 0.0
 

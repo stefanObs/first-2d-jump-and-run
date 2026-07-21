@@ -9,6 +9,7 @@ const HORSE_TEXTURE := preload("res://assets/world/trail_horse.png")
 const RIDE_TEXTURE_0 := preload("res://assets/world/cowboy_horse_ride_0.png")
 const RIDE_TEXTURE_1 := preload("res://assets/world/cowboy_horse_ride_1.png")
 const SALOON_TEXTURE := preload("res://assets/world/goal_saloon.png")
+const SALOON_CENTER_ABOVE_PLANK := 92.0
 
 var _veil: ColorRect
 var _banner: Label
@@ -58,7 +59,10 @@ func play_celebration(message: String = "Yeehaw!", stars: int = 0) -> void:
 	# Saloon sits on the boardwalk; cowboy starts centered on the doorway.
 	_saloon.visible = true
 	_saloon.modulate.a = 1.0
-	_saloon.position = Vector2(saloon_x, ground_y - 8.0)
+	# Align the painted brown boardwalk at the bottom of the saloon with the
+	# transition ground. Previously the saloon sat too low, making the cowboy
+	# appear to stand on its roof.
+	_saloon.position = Vector2(saloon_x, ground_y - SALOON_CENTER_ABOVE_PLANK)
 	_horse.visible = true
 	_horse.modulate.a = 1.0
 	_horse.flip_h = false
@@ -80,7 +84,7 @@ func set_progress(progress: float) -> void:
 	var saloon_x := view_size.x * 0.70
 	var door_x := saloon_x
 	var mount_x := view_size.x * 0.40
-	_saloon.position = Vector2(saloon_x, ground_y - 8.0)
+	_saloon.position = Vector2(saloon_x, ground_y - SALOON_CENTER_ABOVE_PLANK)
 	if progress < 0.28:
 		var arrival_ratio := progress / 0.28
 		_horse.visible = true

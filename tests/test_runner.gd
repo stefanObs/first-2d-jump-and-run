@@ -38,6 +38,7 @@ func _ready() -> void:
 	failures += _run("Timed door shows a clear open/closed barrier", _test_timed_door_states)
 	failures += _run("Untied bandits restore normal standing size", _test_untie_restores_stand_scale)
 	failures += _run("Campaign hazards are no longer blocked by plank highways", _test_no_plank_highways)
+	failures += _run("Canyon rafts travel on steep required routes", _test_steep_canyon_rafts)
 	failures += _run("Custom level store and builder work", _test_custom_level_builder)
 	failures += _run("Hand-drawn celebration art and cheerful music load", _test_art_and_music)
 	failures += _run("Mid-trail save data persists and loads", _test_mid_trail_save)
@@ -149,6 +150,17 @@ func _test_boss_arenas() -> Variant:
 	if spawn.position.x <= wall_l.position.x or spawn.position.x >= wall_r.position.x:
 		bull.queue_free()
 		return "Player spawn must be between the bull arena walls."
+	var bull_sprite := bull.get_node_or_null("Bull/Sprite2D") as Sprite2D
+	var tied_texture: Texture2D = load("res://assets/world/boss_stampede_bull_tied_legs.png")
+	if bull_sprite == null or bull_sprite.position.y > -75.0:
+		bull.queue_free()
+		return "Bull artwork should stand above the desert surface, not inside it."
+	var tied_scale: Vector2 = bull.call("_sprite_scale_for", tied_texture, 190.0)
+	var normal_width := float(bull_sprite.texture.get_width()) * absf(bull_sprite.scale.x)
+	var tied_width := float(tied_texture.get_width()) * absf(tied_scale.x)
+	if tied_width < normal_width * 0.85:
+		bull.queue_free()
+		return "Tied bull should remain close to his normal on-screen size."
 	bull.queue_free()
 
 	var coach := coach_packed.instantiate()
@@ -179,9 +191,14 @@ func _test_boss_arenas() -> Variant:
 	var target := king.get_node_or_null("Kingpin/LassoTarget")
 	var guard0 := king.get_node_or_null("Guard0") as Node2D
 	var guard1 := king.get_node_or_null("Guard1") as Node2D
-	if kingpin is AnimatableBody2D:
+	if not (kingpin is AnimatableBody2D):
 		king.queue_free()
-		return "Kingpin must not be a solid AnimatableBody2D blocking the path."
+		return "Kingpin must be solid so the cowboy cannot jump through him."
+	var king_shape := king.get_node_or_null("Kingpin/CollisionShape2D") as CollisionShape2D
+	var king_spring := king.get_node_or_null("KingpinJumpSpring") as SpringPad
+	if king_shape == null or king_shape.disabled or king_spring == null:
+		king.queue_free()
+		return "The solid kingpin needs a nearby spring so the cowboy can jump over him."
 	if target == null or not target.has_method("lasso_hit") or not (target is Area2D):
 		king.queue_free()
 		return "Kingpin needs an Area2D lasso target."
@@ -220,8 +237,8 @@ func _test_mode_controller() -> Variant:
 		return "Magic Boots should start at 30 seconds."
 	if not is_equal_approx(modes.speed_duration, 30.0):
 		return "Speed Star should start at 30 seconds."
-	if not is_equal_approx(modes.shield_duration, 15.0):
-		return "Bubble Shield should start at 15 seconds."
+	if not is_equal_approx(modes.shield_duration, 7.5):
+		return "Bubble Shield should start at 7.5 seconds."
 	modes.activate(ModeController.Mode.BUBBLE_SHIELD)
 	if not modes.has_shield():
 		return "Expected bubble shield."
@@ -573,6 +590,10 @@ func _test_cowboy_animations() -> Variant:
 		if sprite.sprite_frames.get_frame_count(anim_name) < 1:
 			node.queue_free()
 			return "Cowboy animation has no frames: %s" % String(anim_name)
+	var wings := cowboy.get_node_or_null("WingArt") as Sprite2D
+	if wings == null or wings.scale.x < 0.9:
+		node.queue_free()
+		return "Fly power should display large, clearly visible wings."
 	node.queue_free()
 	return null
 
@@ -700,7 +721,7 @@ func _test_controller_all_devices() -> Variant:
 
 
 func _test_flying_levels_top_guarded() -> Variant:
-	for lv in ["06", "07", "10"]:
+	for lv in ["07", "10"]:
 		var packed: PackedScene = load("res://scenes/levels/level_%s.tscn" % lv)
 		if packed == null:
 			return "Missing flying level %s." % lv
@@ -708,19 +729,20 @@ func _test_flying_levels_top_guarded() -> Variant:
 		add_child(level)
 		var top_guards := 0
 		for node in level.find_children("*", "Area2D", true, false):
-			if node is Carrion and (node as Node2D).global_position.y <= -200.0:
+			if node is Carrion and (node as Node2D).global_position.y <= -150.0:
 				top_guards += 1
 		level.queue_free()
-		if top_guards < 5:
-			return "Level %s needs carrions guarding the very top (found %d)." % [lv, top_guards]
-	var level_two_packed: PackedScene = load("res://scenes/levels/level_02.tscn")
-	var level_two: Node = level_two_packed.instantiate()
-	add_child(level_two)
-	for node in level_two.find_children("*", "Area2D", true, false):
-		if node is Carrion:
-			level_two.queue_free()
-			return "Level 2 should not contain carrions."
-	level_two.queue_free()
+		if top_guards < 1 or top_guards > 2:
+			return "Level %s should use only 1-2 top carrions (found %d)." % [lv, top_guards]
+	for lv in ["02", "06"]:
+		var no_bird_packed: PackedScene = load("res://scenes/levels/level_%s.tscn" % lv)
+		var no_bird_level: Node = no_bird_packed.instantiate()
+		add_child(no_bird_level)
+		for node in no_bird_level.find_children("*", "Area2D", true, false):
+			if node is Carrion:
+				no_bird_level.queue_free()
+				return "Level %s should not contain carrions." % lv
+		no_bird_level.queue_free()
 	return null
 
 
@@ -731,9 +753,12 @@ func _test_timed_door_states() -> Variant:
 	var door := packed.instantiate() as TimedDoor
 	add_child(door)
 	var barrier := door.get_node_or_null("Barrier") as ColorRect
+	var handmade_gate := door.get_node_or_null("HandmadeGate") as Sprite2D
 	var error: Variant = null
 	if barrier == null:
 		error = "Timed door needs a visible barrier fill so its state is clear."
+	elif handmade_gate == null or handmade_gate.texture == null:
+		error = "Timed door should use the hand-painted fence gate artwork."
 	else:
 		door._open = false
 		door._apply_state(false)
@@ -780,6 +805,30 @@ func _test_no_plank_highways() -> Variant:
 		level.free()
 		if numbered_planks > 12:
 			return "%s still has a blocking plank highway." % path
+	return null
+
+
+func _test_steep_canyon_rafts() -> Variant:
+	var packed: PackedScene = load("res://scenes/levels/level_04.tscn")
+	var level: Node = packed.instantiate()
+	var rafts: Array[MovingPlatform] = []
+	for node in level.find_children("*", "AnimatableBody2D", true, false):
+		if node is MovingPlatform:
+			rafts.append(node as MovingPlatform)
+	if rafts.size() < 4:
+		level.free()
+		return "Level 4 needs rafts for its ultra-wide canyon crossings."
+	for raft in rafts:
+		var route := raft.point_b - raft.point_a
+		var angle := rad_to_deg(atan2(absf(route.y), absf(route.x)))
+		if angle < 34.0 or angle > 36.0:
+			level.free()
+			return "Raft %s should travel at about 35 degrees (got %.1f)." % [raft.name, angle]
+	for removed_ground in ["Ground3", "Ground6", "Ground9", "Ground12"]:
+		if level.get_node_or_null(removed_ground) != null:
+			level.free()
+			return "Level 4 canyon at %s is still narrow enough to bypass its raft." % removed_ground
+	level.free()
 	return null
 
 
@@ -837,6 +886,27 @@ func _test_art_and_music() -> Variant:
 	var country: AudioStream = load("res://assets/audio/country_version.mp3")
 	if country == null:
 		return "Country start/finale theme did not load."
+	var wind_packed: PackedScene = load("res://scenes/world/wind_zone.tscn")
+	var wind: Node = wind_packed.instantiate()
+	var wind_background := wind.get_node_or_null("Visual") as ColorRect
+	if wind_background == null or wind_background.visible:
+		wind.free()
+		return "Wind animation background should be transparent."
+	wind.free()
+	var transition_packed: PackedScene = load("res://scenes/ui/level_transition.tscn")
+	var transition := transition_packed.instantiate() as LevelTransition
+	add_child(transition)
+	transition.play_celebration()
+	var saloon := transition.get_node_or_null("CelebrationSaloon") as Sprite2D
+	var celebration_cowboy := transition.get_node_or_null("CelebrationCowboy") as Sprite2D
+	if (
+		saloon == null
+		or celebration_cowboy == null
+		or celebration_cowboy.position.y < saloon.position.y + 35.0
+	):
+		transition.queue_free()
+		return "Level-transition cowboy should stand on the saloon's bottom plank, not its roof."
+	transition.queue_free()
 	var victory_script := FileAccess.get_file_as_string("res://scripts/ui/victory_horizon.gd")
 	if not victory_script.contains("VOM PAPI FÜR FINN"):
 		return "Sunset finale should dedicate the trail: VOM PAPI FÜR FINN."

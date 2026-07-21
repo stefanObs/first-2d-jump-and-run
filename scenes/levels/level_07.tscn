@@ -832,7 +832,7 @@ scale = Vector2(3.0, 1.4)
 
 
 [node name="WingsMid" parent="." instance=ExtResource("10_mode")]
-position = Vector2(3600, 275)
+position = Vector2(5080, 190)
 mode = 1
 
 
@@ -896,82 +896,10 @@ patrol_width = 150.0
 move_speed = 48.0
 
 
-[node name="Carrion10" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(1450, -175)
-patrol_width = 150.0
-move_speed = 52.0
-
-
-[node name="Carrion11" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(1850, -185)
-patrol_width = 150.0
-move_speed = 50.0
-
-
-[node name="Carrion12" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(2300, -170)
-patrol_width = 155.0
-move_speed = 54.0
-
-
-[node name="Carrion13" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(2750, -180)
-patrol_width = 150.0
-move_speed = 48.0
-
-
-[node name="Carrion14" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(3200, -175)
-patrol_width = 150.0
-move_speed = 56.0
-
-
-[node name="Carrion15" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(3650, -185)
-patrol_width = 155.0
-move_speed = 50.0
-
-
-[node name="Carrion16" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(4100, -170)
-patrol_width = 150.0
-move_speed = 52.0
-
-
-[node name="Carrion17" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(4550, -180)
-patrol_width = 150.0
-move_speed = 48.0
-
-
-[node name="Carrion18" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(5000, -175)
-patrol_width = 155.0
-move_speed = 54.0
-
-
-[node name="Carrion19" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(5450, -185)
-patrol_width = 150.0
-move_speed = 50.0
-
-
 [node name="Carrion20" parent="." instance=ExtResource("18_carrion")]
 position = Vector2(5900, -170)
 patrol_width = 150.0
 move_speed = 56.0
-
-
-[node name="Carrion21" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(6350, -180)
-patrol_width = 150.0
-move_speed = 52.0
-
-
-[node name="Carrion22" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(6750, -175)
-patrol_width = 130.0
-move_speed = 48.0
 
 
 [node name="FlightCeiling0" type="StaticBody2D" parent="."]
@@ -1010,112 +938,3 @@ position = Vector2(140, 280)
 [node name="Hud" parent="." instance=ExtResource("7_hud")]
 
 [node name="PauseMenu" parent="." instance=ExtResource("8_pause")]
-
-
-[node name="SkyGuardTop0" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(980, -225)
-patrol_width = 118.0
-move_speed = 62.0
-bob_height = 8.0
-
-[node name="SkyGuardTop1" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(1210, -235)
-patrol_width = 118.0
-move_speed = 71.0
-bob_height = 8.0
-
-[node name="SkyGuardTop3" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(1670, -235)
-patrol_width = 118.0
-move_speed = 89.0
-bob_height = 8.0
-
-[node name="SkyGuardTop4" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(1900, -225)
-patrol_width = 118.0
-move_speed = 98.0
-bob_height = 8.0
-
-[node name="SkyGuardTop6" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(2360, -225)
-patrol_width = 118.0
-move_speed = 71.0
-bob_height = 8.0
-
-[node name="SkyGuardTop7" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(2590, -235)
-patrol_width = 118.0
-move_speed = 80.0
-bob_height = 8.0
-
-[node name="SkyGuardTop9" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(3050, -235)
-patrol_width = 118.0
-move_speed = 98.0
-bob_height = 8.0
-
-[node name="SkyGuardTop10" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(3280, -225)
-patrol_width = 118.0
-move_speed = 62.0
-bob_height = 8.0
-
-[node name="SkyGuardTop12" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(3740, -225)
-patrol_width = 118.0
-move_speed = 80.0
-bob_height = 8.0
-
-[node name="SkyGuardTop13" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(3970, -235)
-patrol_width = 118.0
-move_speed = 89.0
-bob_height = 8.0
-
-[node name="SkyGuardTop15" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(4430, -235)
-patrol_width = 118.0
-move_speed = 62.0
-bob_height = 8.0
-
-[node name="SkyGuardTop16" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(4660, -225)
-patrol_width = 118.0
-move_speed = 71.0
-bob_height = 8.0
-
-[node name="SkyGuardTop18" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(5120, -225)
-patrol_width = 118.0
-move_speed = 89.0
-bob_height = 8.0
-
-[node name="SkyGuardTop19" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(5350, -235)
-patrol_width = 118.0
-move_speed = 98.0
-bob_height = 8.0
-
-[node name="SkyGuardTop21" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(5810, -235)
-patrol_width = 118.0
-move_speed = 71.0
-bob_height = 8.0
-
-[node name="SkyGuardTop22" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(6040, -225)
-patrol_width = 118.0
-move_speed = 80.0
-bob_height = 8.0
-
-[node name="SkyGuardTop24" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(6500, -225)
-patrol_width = 118.0
-move_speed = 98.0
-bob_height = 8.0
-
-[node name="SkyGuardTop25" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(6730, -235)
-patrol_width = 118.0
-move_speed = 62.0
-bob_height = 8.0

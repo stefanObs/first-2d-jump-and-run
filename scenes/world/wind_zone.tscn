@@ -13,6 +13,7 @@ monitorable = false
 script = ExtResource("1")
 
 [node name="Visual" type="ColorRect" parent="."]
+visible = false
 offset_left = -100.0
 offset_top = -75.0
 offset_right = 100.0

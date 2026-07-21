@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/bosses/outlaw_kingpin_boss.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2"]
@@ -6,12 +6,16 @@
 [ext_resource type="PackedScene" path="res://scenes/world/opponent.tscn" id="6"]
 [ext_resource type="Texture2D" path="res://assets/world/boss_outlaw_kingpin.png" id="7"]
 [ext_resource type="Script" path="res://scripts/bosses/kingpin_body.gd" id="8"]
+[ext_resource type="PackedScene" path="res://scenes/world/spring_pad.tscn" id="9_spring"]
 
 [sub_resource type="RectangleShape2D" id="Ground"]
 size = Vector2(1600, 64)
 
 [sub_resource type="RectangleShape2D" id="KingLasso"]
 size = Vector2(70, 110)
+
+[sub_resource type="RectangleShape2D" id="KingBody"]
+size = Vector2(82, 150)
 
 [node name="BossOutlawKingpin" type="Node2D"]
 script = ExtResource("1")
@@ -63,9 +67,11 @@ point_b = Vector2(90, 0)
 position = Vector2(640, 320)
 point_b = Vector2(-90, 0)
 
-[node name="Kingpin" type="Node2D" parent="."]
+[node name="Kingpin" type="AnimatableBody2D" parent="."]
 position = Vector2(980, 320)
 z_index = 1
+collision_layer = 1
+collision_mask = 0
 
 [node name="Sprite2D" type="Sprite2D" parent="Kingpin"]
 position = Vector2(0, -90)
@@ -89,6 +95,14 @@ monitorable = false
 script = ExtResource("8")
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Kingpin/LassoTarget"]
 shape = SubResource("KingLasso")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Kingpin"]
+position = Vector2(0, -75)
+shape = SubResource("KingBody")
+
+[node name="KingpinJumpSpring" parent="." instance=ExtResource("9_spring")]
+position = Vector2(750, 320)
+bounce_velocity = -820.0
 
 [node name="Player" parent="." instance=ExtResource("2")]
 position = Vector2(220, 320)

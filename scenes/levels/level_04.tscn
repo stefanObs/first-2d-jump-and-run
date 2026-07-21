@@ -445,24 +445,6 @@ position = Vector2(1360, 400)
 scale = Vector2(4.8, 1.8)
 
 
-[node name="Ground3" type="StaticBody2D" parent="."]
-position = Vector2(1650, 352)
-[node name="Visual" type="ColorRect" parent="Ground3"]
-offset_left = -210.0
-offset_top = -32.0
-offset_right = 210.0
-offset_bottom = 32.0
-color = Color(0.86, 0.68, 0.38, 1)
-[node name="TopStripe" type="ColorRect" parent="Ground3"]
-offset_left = -210.0
-offset_top = -32.0
-offset_right = 210.0
-offset_bottom = -18.0
-color = Color(0.45, 0.72, 0.28, 1)
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Ground3"]
-shape = SubResource("GroundSeg")
-
-
 [node name="Ground4" type="StaticBody2D" parent="."]
 position = Vector2(2080, 352)
 [node name="Visual" type="ColorRect" parent="Ground4"]
@@ -502,24 +484,6 @@ shape = SubResource("GroundSeg")
 [node name="Pit6" parent="." instance=ExtResource("5_hazard")]
 position = Vector2(2800, 400)
 scale = Vector2(4.8, 1.8)
-
-
-[node name="Ground6" type="StaticBody2D" parent="."]
-position = Vector2(3090, 352)
-[node name="Visual" type="ColorRect" parent="Ground6"]
-offset_left = -210.0
-offset_top = -32.0
-offset_right = 210.0
-offset_bottom = 32.0
-color = Color(0.86, 0.68, 0.38, 1)
-[node name="TopStripe" type="ColorRect" parent="Ground6"]
-offset_left = -210.0
-offset_top = -32.0
-offset_right = 210.0
-offset_bottom = -18.0
-color = Color(0.45, 0.72, 0.28, 1)
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Ground6"]
-shape = SubResource("GroundSeg")
 
 
 [node name="Ground7" type="StaticBody2D" parent="."]
@@ -563,24 +527,6 @@ position = Vector2(4240, 400)
 scale = Vector2(4.8, 1.8)
 
 
-[node name="Ground9" type="StaticBody2D" parent="."]
-position = Vector2(4530, 352)
-[node name="Visual" type="ColorRect" parent="Ground9"]
-offset_left = -210.0
-offset_top = -32.0
-offset_right = 210.0
-offset_bottom = 32.0
-color = Color(0.86, 0.68, 0.38, 1)
-[node name="TopStripe" type="ColorRect" parent="Ground9"]
-offset_left = -210.0
-offset_top = -32.0
-offset_right = 210.0
-offset_bottom = -18.0
-color = Color(0.45, 0.72, 0.28, 1)
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Ground9"]
-shape = SubResource("GroundSeg")
-
-
 [node name="Ground10" type="StaticBody2D" parent="."]
 position = Vector2(4960, 352)
 [node name="Visual" type="ColorRect" parent="Ground10"]
@@ -620,24 +566,6 @@ shape = SubResource("GroundSeg")
 [node name="Pit12" parent="." instance=ExtResource("5_hazard")]
 position = Vector2(5680, 400)
 scale = Vector2(4.8, 1.8)
-
-
-[node name="Ground12" type="StaticBody2D" parent="."]
-position = Vector2(5970, 352)
-[node name="Visual" type="ColorRect" parent="Ground12"]
-offset_left = -210.0
-offset_top = -32.0
-offset_right = 210.0
-offset_bottom = 32.0
-color = Color(0.86, 0.68, 0.38, 1)
-[node name="TopStripe" type="ColorRect" parent="Ground12"]
-offset_left = -210.0
-offset_top = -32.0
-offset_right = 210.0
-offset_bottom = -18.0
-color = Color(0.45, 0.72, 0.28, 1)
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Ground12"]
-shape = SubResource("GroundSeg")
 
 
 [node name="Ground13" type="StaticBody2D" parent="."]
@@ -703,11 +631,11 @@ position = Vector2(2270, 330)
 
 
 [node name="Cactus16" parent="." instance=ExtResource("5_hazard")]
-position = Vector2(3380, 330)
+position = Vector2(3650, 330)
 
 
 [node name="Cactus22" parent="." instance=ExtResource("5_hazard")]
-position = Vector2(4560, 330)
+position = Vector2(5000, 330)
 
 
 [node name="Cactus34" parent="." instance=ExtResource("5_hazard")]
@@ -727,9 +655,10 @@ position = Vector2(5490, 320)
 
 
 [node name="Moving0" parent="." instance=ExtResource("12_move")]
-position = Vector2(1100, 250)
-point_a = Vector2(-50, 0)
-point_b = Vector2(100, -25)
+position = Vector2(1360, 250)
+point_a = Vector2(-220, 70)
+point_b = Vector2(220, -238)
+move_speed = 82.0
 
 
 [node name="MoveStar0" parent="." instance=ExtResource("9_star")]
@@ -737,9 +666,10 @@ position = Vector2(1130, 200)
 
 
 [node name="Moving1" parent="." instance=ExtResource("12_move")]
-position = Vector2(2500, 250)
-point_a = Vector2(-50, 0)
-point_b = Vector2(100, -25)
+position = Vector2(2800, 250)
+point_a = Vector2(-220, 70)
+point_b = Vector2(220, -238)
+move_speed = 82.0
 
 
 [node name="MoveStar1" parent="." instance=ExtResource("9_star")]
@@ -747,9 +677,10 @@ position = Vector2(2530, 200)
 
 
 [node name="Moving2" parent="." instance=ExtResource("12_move")]
-position = Vector2(3900, 250)
-point_a = Vector2(-50, 0)
-point_b = Vector2(100, -25)
+position = Vector2(4240, 250)
+point_a = Vector2(-220, 70)
+point_b = Vector2(220, -238)
+move_speed = 82.0
 
 
 [node name="MoveStar2" parent="." instance=ExtResource("9_star")]
@@ -757,19 +688,21 @@ position = Vector2(3930, 200)
 
 
 [node name="Moving3" parent="." instance=ExtResource("12_move")]
-position = Vector2(5200, 250)
-point_a = Vector2(-50, 0)
-point_b = Vector2(100, -25)
+position = Vector2(5680, 250)
+point_a = Vector2(-220, 70)
+point_b = Vector2(220, -238)
+move_speed = 82.0
 
 
 [node name="MoveStar3" parent="." instance=ExtResource("9_star")]
-position = Vector2(5230, 200)
+position = Vector2(5600, 200)
 
 
 [node name="Moving4" parent="." instance=ExtResource("12_move")]
 position = Vector2(6400, 250)
-point_a = Vector2(-50, 0)
-point_b = Vector2(100, -25)
+point_a = Vector2(-220, 70)
+point_b = Vector2(220, -238)
+move_speed = 82.0
 
 
 [node name="MoveStar4" parent="." instance=ExtResource("9_star")]
@@ -781,7 +714,7 @@ position = Vector2(650, 270)
 
 
 [node name="TrailStar1" parent="." instance=ExtResource("9_star")]
-position = Vector2(1790, 270)
+position = Vector2(2080, 270)
 
 
 [node name="TrailStar2" parent="." instance=ExtResource("9_star")]
@@ -789,7 +722,7 @@ position = Vector2(2550, 270)
 
 
 [node name="TrailStar3" parent="." instance=ExtResource("9_star")]
-position = Vector2(3690, 270)
+position = Vector2(3950, 270)
 
 
 [node name="TrailStar4" parent="." instance=ExtResource("9_star")]
@@ -805,7 +738,7 @@ position = Vector2(5210, 270)
 
 
 [node name="TrailStar7" parent="." instance=ExtResource("9_star")]
-position = Vector2(5970, 270)
+position = Vector2(6350, 270)
 
 
 [node name="TrailStar8" parent="." instance=ExtResource("9_star")]

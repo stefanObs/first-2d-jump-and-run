@@ -421,6 +421,10 @@ func _play_win_animation() -> void:
 	for door in _doors:
 		if door != null:
 			door.set_lasso_active(false)
+			# The surrender painting already contains its own open doors.
+			# Hide the separate gameplay overlays so they do not double up into
+			# a broken-looking coach after the cowboy wins.
+			door.visible = false
 	report_progress("Driver gives up!")
 	if _coach_sprite != null and COACH_SURRENDER != null:
 		var base_scale := _coach_sprite.scale

@@ -14,7 +14,7 @@ var infinite: bool = false
 var wings_duration: float = 30.0
 var boots_duration: float = 30.0
 var speed_duration: float = 30.0
-var shield_duration: float = 15.0
+var shield_duration: float = 7.5
 var badge_extension: float = 5.0
 
 

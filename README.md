@@ -277,12 +277,12 @@ Each cycle must maintain the following status block:
 ### Current development status
 
 - **Current iteration:** `v1.3.3` hazard variety, bounty bandits, and trail readability
-- **Last completed step:** Numbered campaign level names as `<number>: <name>` in the HUD and save cards, and removed all carrions and related flight-ceiling helpers from Level 2
+- **Last completed step:** Rebalanced bosses, powers, rafts, canyon/cloud routes, carrion density, saloon transitions, wind visuals, and the handmade timed gate from the latest play-test feedback
 - **Currently in progress:** In-game visual play-test of bosses and polish
 - **Next step:** Play-test bosses, fences, clouds, and flight; then tag `v1.3.3`
 - **Completed features:** Long 10-level cowboy trail; animated nonviolent bandit lasso; seated tied bandits; warning-shot and bounty bandits; carrions and rattlesnakes; animated canyon recovery; reachable hazards; hand-drawn cowboy + world props; looping music; three custom editor slots; mid-trail saves; modes; Xbox-ready input; Stampede Bull / Midnight Coach / Outlaw Kingpin bosses; horizon victory scene
 - **Remaining work:** In-game visual/gameplay play-test; Xbox controller physical verification; supervised child play-tests; additional SFX
-- **Tests last run:** all automated tests passed (incl. numbered level names and verification that Level 2 contains no carrions)
+- **Tests last run:** all automated tests passed (incl. 35-degree required canyon rafts, sparse/no-carrion level rules, solid Kingpin spring route, Bull sizing, large Wings, transparent wind, handmade gate, and saloon-plank transition placement)
 - **Known issues or blockers:**
   - Boss arenas and new fence/cloud art still need an in-game visual play-test
   - Xbox controller not physically verified on this machine

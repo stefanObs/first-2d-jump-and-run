@@ -7,7 +7,8 @@ const BULL_TIED_TEX := preload("res://assets/world/boss_stampede_bull_tied_legs.
 const BULL_DOWN_TEX := preload("res://assets/world/boss_stampede_bull_down.png")
 ## Keep the bull body clear of the solid arena walls.
 const WALL_CLEAR := 90.0
-const STAND_SPRITE_HEIGHT := 155.0
+const BULL_FOOT_Y := -78.0
+const TIED_SPRITE_HEIGHT := 190.0
 const DOWN_SPRITE_HEIGHT := 118.0
 
 enum State { CHARGE, STUN, HIT }
@@ -89,7 +90,7 @@ func _physics_process(delta: float) -> void:
 			_charge_bob += delta * 14.0
 			_bull.position.x += _dir * charge_speed * delta
 			if _sprite != null:
-				_sprite.position.y = -55.0 + sin(_charge_bob) * 4.0
+				_sprite.position.y = BULL_FOOT_Y + sin(_charge_bob) * 4.0
 				_sprite.rotation = sin(_charge_bob * 0.5) * 0.04 * _dir
 			_apply_facing()
 			if _charge_grace > 0.0:
@@ -168,7 +169,7 @@ func _animate_stun_idle(delta: float) -> void:
 	if _sprite == null:
 		return
 	_charge_bob += delta * 8.0
-	_sprite.position.y = -55.0 + sin(_charge_bob) * 2.0
+	_sprite.position.y = BULL_FOOT_Y + sin(_charge_bob) * 2.0
 	_sprite.rotation = sin(_charge_bob) * 0.08
 	if _stars != null:
 		_stars.rotation += delta * 2.5
@@ -300,8 +301,8 @@ func _play_win_animation() -> void:
 	_sprite.texture = BULL_TIED_TEX
 	_sprite.flip_h = face_left
 	_sprite.rotation = 0.0
-	_sprite.position = Vector2(0, -70)
-	_sprite.scale = _sprite_scale_for(BULL_TIED_TEX, STAND_SPRITE_HEIGHT)
+	_sprite.position = Vector2(0, -95)
+	_sprite.scale = _sprite_scale_for(BULL_TIED_TEX, TIED_SPRITE_HEIGHT)
 	if _stars != null:
 		_stars.visible = true
 		_stars.position = Vector2(0, -130)
@@ -328,7 +329,7 @@ func _play_win_animation() -> void:
 	_sprite.texture = BULL_DOWN_TEX
 	_sprite.flip_h = face_left
 	_sprite.rotation = 0.0
-	_sprite.position = Vector2(0, -28)
+	_sprite.position = Vector2(0, -59)
 	_sprite.scale = _sprite_scale_for(BULL_DOWN_TEX, DOWN_SPRITE_HEIGHT)
 	# Soft dust puff when he lands.
 	var dust := Polygon2D.new()
