@@ -2,6 +2,7 @@ class_name MovingPlatform
 extends AnimatableBody2D
 
 enum VisualStyle {
+	## Handmade wooden plank (default). Kept as RAFT for scene compatibility.
 	RAFT,
 	CLOUD,
 }
@@ -13,7 +14,7 @@ enum VisualStyle {
 ## Starts at point B and travels toward point A. Useful for paired platforms
 ## that share a period but begin at opposite endpoints.
 @export var start_at_point_b: bool = false
-## One-way platform: the cowboy jumps up through the raft/cloud from below and
+## One-way platform: the cowboy jumps up through the plank/cloud from below and
 ## lands on top. Turn off only for platforms that must act as solid walls.
 @export var one_way: bool = true
 @export var one_way_margin: float = 8.0
@@ -24,6 +25,8 @@ enum VisualStyle {
 ## paired endpoint handoffs stay in sync (clouds approach by route, not bounce).
 @export var obstruction_include_movers: bool = true
 
+const PLANK_TEXTURE := preload("res://assets/world/wood_plank.png")
+const CLOUD_TEXTURE := preload("res://assets/world/moving_cloud.svg")
 ## "world" physics layer holding floor/terrain and other moving platforms.
 ## The player is on the "player" layer and bandit bodies collide on no solid
 ## layer, so a layer-1 sweep naturally ignores every rider we must not turn on.
@@ -70,9 +73,19 @@ func _configure_visual_style() -> void:
 		_cloud_visual = get_node_or_null("CloudVisual") as Sprite2D
 	var cloud_style := visual_style == VisualStyle.CLOUD
 	if _raft_visual != null:
+		# Never leave the old ferry/raft cloud graphic on plank movers.
+		if _raft_visual.texture == null or not _is_plank_texture(_raft_visual.texture):
+			_raft_visual.texture = PLANK_TEXTURE
 		_raft_visual.visible = not cloud_style
 	if _cloud_visual != null:
+		if _cloud_visual.texture == null:
+			_cloud_visual.texture = CLOUD_TEXTURE
 		_cloud_visual.visible = cloud_style
+
+
+func _is_plank_texture(texture: Texture2D) -> bool:
+	var path := texture.resource_path
+	return path.ends_with("wood_plank.png") or path.ends_with("wood_plank.tres")
 
 
 func _configure_one_way() -> void:
@@ -190,6 +203,9 @@ func _update_label() -> void:
 		return
 	var delta := point_b - point_a
 	if absf(delta.x) >= absf(delta.y):
-		_label.text = "RAFT >>" if (_to_b and delta.x >= 0.0) or (not _to_b and delta.x < 0.0) else "<< RAFT"
+		_label.text = "PLANK >>" if (_to_b and delta.x >= 0.0) or (not _to_b and delta.x < 0.0) else "<< PLANK"
 	else:
-		_label.text = "RAFT"
+		_label.text = "PLANK"
+
+func is_plank_style() -> bool:
+	return visual_style != VisualStyle.CLOUD and _raft_visual != null and _raft_visual.visible and _is_plank_texture(_raft_visual.texture)

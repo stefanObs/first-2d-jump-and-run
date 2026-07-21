@@ -148,6 +148,10 @@ static func _dress_platforms(level: Node) -> void:
 			or parent_name.begins_with("WindLedge")
 			or parent_name.begins_with("StarPlatform")
 			or parent_name.begins_with("High")
+			or parent_name.begins_with("FerryStep")
+			or parent_name.begins_with("FerryIsle")
+			or parent_name.begins_with("PlankStep")
+			or parent_name.begins_with("PlankIsle")
 		):
 			_replace_block_art(node, "res://assets/world/wood_plank.png", false)
 
@@ -193,12 +197,12 @@ static func _make_contiguous_floors(level: Node) -> void:
 		floor_top = minf(floor_top, float(strip["top"]))
 		floor_height = maxf(floor_height, float(strip["bottom"]) - float(strip["top"]))
 
-	# Deep warm underworld so gaps never flash sky; canyon art paints over pits.
+	# Deep underworld safety fill only — canyon art must paint over pit openings.
 	var abyss := ColorRect.new()
 	abyss.name = "FloorAbyss"
 	abyss.position = Vector2(level_left, floor_top)
 	abyss.size = Vector2(level_right - level_left, 900.0)
-	abyss.color = Color(0.14, 0.06, 0.08, 1.0)
+	abyss.color = Color(0.22, 0.10, 0.12, 1.0)
 	abyss.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	abyss.z_index = -2
 	floor_root.add_child(abyss)

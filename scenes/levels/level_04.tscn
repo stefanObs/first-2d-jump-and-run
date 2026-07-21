@@ -73,7 +73,7 @@ offset_right = 1100.0
 offset_bottom = 130.0
 theme_override_colors/font_color = Color(0.35, 0.16, 0.05, 1)
 theme_override_font_sizes/font_size = 22
-text = "Wait for paired clouds to meet, then hop across the canyon."
+text = "Wait for paired clouds to meet, then hop the wooden planks across the canyon."
 
 
 [node name="Mesa0" type="ColorRect" parent="."]

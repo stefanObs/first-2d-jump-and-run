@@ -1,7 +1,7 @@
 [gd_scene load_steps=5 format=3 uid="uid://cmovplat01"]
 
 [ext_resource type="Script" path="res://scripts/world/moving_platform.gd" id="1"]
-[ext_resource type="Texture2D" path="res://assets/world/raft.png" id="2"]
+[ext_resource type="Texture2D" path="res://assets/world/wood_plank.png" id="2"]
 [ext_resource type="Texture2D" path="res://assets/world/moving_cloud.svg" id="3_cloud"]
 
 [sub_resource type="RectangleShape2D" id="Shape"]
@@ -28,7 +28,7 @@ offset_right = 40.0
 offset_bottom = -18.0
 theme_override_colors/font_color = Color(0.35, 0.18, 0.08, 1)
 theme_override_font_sizes/font_size = 12
-text = "RAFT"
+text = "PLANK"
 horizontal_alignment = 1
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]

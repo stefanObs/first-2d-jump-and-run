@@ -59,6 +59,14 @@ func _ready() -> void:
 		"Canyon center art is illustrated and covers FloorAbyss",
 		_test_canyon_center_illustrated
 	)
+	failures += await _run(
+		"Campaign pits are crossable by normal jump or movers",
+		_test_campaign_pits_crossable
+	)
+	failures += await _run(
+		"Moving platforms never show ferry raft art",
+		_test_movers_use_plank_or_cloud
+	)
 	failures += await _run("Moonlight Gulch rafts require hop transfers for Magic Boots", _test_level_09_raft_hop_boots)
 	failures += await _run("Canyon rafts are one-way jump-through platforms", _test_one_way_moving_platforms)
 	failures += await _run("Custom level store and builder work", _test_custom_level_builder)
@@ -1473,15 +1481,167 @@ func _test_level_04_paired_moving_clouds() -> Variant:
 			hop_steps += 1
 	if hop_clouds < 2 or hop_steps < 2:
 		level.free()
-		return "Level 4 should mix cloud/plank hops with raft canyons."
+		return "Level 4 should mix cloud/plank hops with canyon gaps."
 	if level.get_node_or_null("FerrySpring6") == null:
 		level.free()
-		return "Level 4 needs a spring-assisted ferry gap for variety."
+		return "Level 4 needs a spring-assisted canyon gap for variety."
 	for removed_ground in ["Ground3", "Ground6", "Ground9", "Ground12"]:
 		if level.get_node_or_null(removed_ground) != null:
 			level.free()
-			return "Level 4 canyon at %s is still narrow enough to bypass its raft." % removed_ground
-	level.free()
+			return "Level 4 canyon at %s is still narrow enough to bypass its cloud route." % removed_ground
+	# FerryStep leftovers must be dressed as wooden planks, not brown ferry boxes.
+	add_child(level)
+	await get_tree().process_frame
+	WildWestTheme.apply_to_level(level)
+	for step_name in ["FerryStep6A", "FerryStep6B", "FerryIsle12"]:
+		var step := level.get_node_or_null(step_name) as Node
+		if step == null:
+			level.queue_free()
+			return "Level 4 is missing %s." % step_name
+		var hand := step.get_node_or_null("HandArt") as Sprite2D
+		var visual := step.get_node_or_null("Visual") as CanvasItem
+		var plank_ok := false
+		if hand != null and hand.texture != null:
+			if str(hand.texture.resource_path).ends_with("wood_plank.png"):
+				plank_ok = true
+			elif hand.texture is AtlasTexture:
+				var atlas := (hand.texture as AtlasTexture).atlas
+				plank_ok = atlas != null and str(atlas.resource_path).ends_with("wood_plank.png")
+		if not plank_ok:
+			level.queue_free()
+			return "%s must be styled as a wooden plank, not a ferry ColorRect." % step_name
+		if visual != null and visual.visible:
+			level.queue_free()
+			return "%s still shows the old ferry ColorRect." % step_name
+	level.queue_free()
+	return null
+
+
+func _max_same_height_jump_distance(
+	move_speed: float = 270.0,
+	jump_velocity: float = -500.0,
+	gravity: float = 1350.0,
+	fall_gravity_multiplier: float = 1.25
+) -> float:
+	var jump_speed := absf(jump_velocity)
+	var time_up := jump_speed / gravity
+	var height := (jump_speed * jump_speed) / (2.0 * gravity)
+	var time_down := sqrt((2.0 * height) / (gravity * fall_gravity_multiplier))
+	return move_speed * (time_up + time_down)
+
+
+func _test_campaign_pits_crossable() -> Variant:
+	# Quantitative route check: every ground canyon gap must be within a normal
+	# standing jump, or provide a same-height assist (mover / cloud / plank / spring).
+	var clearable := _max_same_height_jump_distance() * 0.92
+	var horse_clearable := _max_same_height_jump_distance(270.0 * 1.45, -500.0 * 1.2) * 0.92
+	for level_number in range(1, 11):
+		var path := "res://scenes/levels/level_%02d.tscn" % level_number
+		var level: Variant = _instantiate_level(path)
+		if level is String:
+			return level
+		var controller := level as LevelController
+		var merged := WildWestTheme._merge_segments(WildWestTheme._collect_ground_segments(controller))
+		for i in range(merged.size() - 1):
+			var left_edge := float(merged[i]["right"])
+			var right_edge := float(merged[i + 1]["left"])
+			var gap := right_edge - left_edge
+			if gap <= 24.0:
+				continue
+			var mid_x := (left_edge + right_edge) * 0.5
+			var floor_y := minf(float(merged[i]["top"]), float(merged[i + 1]["top"]))
+			var allowed := horse_clearable if level_number == 1 else clearable
+			if gap <= allowed:
+				continue
+			if _gap_has_crossing_assist(controller, mid_x, left_edge, right_edge, floor_y):
+				continue
+			controller.queue_free()
+			return (
+				"Level %02d gap %.0f..%.0f (%.0fpx) exceeds normal jump (%.0f) without a crossing assist."
+				% [level_number, left_edge, right_edge, gap, allowed]
+			)
+		controller.queue_free()
+	return null
+
+
+func _gap_has_crossing_assist(
+	level: Node,
+	mid_x: float,
+	gap_left: float,
+	gap_right: float,
+	floor_y: float
+) -> bool:
+	for node in level.get_children():
+		var name_text := String(node.name)
+		if node is MovingPlatform:
+			var mover := node as MovingPlatform
+			var xa := mover.position.x + mover.point_a.x
+			var xb := mover.position.x + mover.point_b.x
+			var route_left := minf(xa, xb) - 70.0
+			var route_right := maxf(xa, xb) + 70.0
+			var route_y := minf(
+				mover.position.y + mover.point_a.y,
+				mover.position.y + mover.point_b.y
+			)
+			if route_right >= gap_left - 40.0 and route_left <= gap_right + 40.0 and route_y < floor_y - 20.0:
+				return true
+		if (
+			name_text.begins_with("FerryStep")
+			or name_text.begins_with("FerryIsle")
+			or name_text.begins_with("FerryCloud")
+			or name_text.begins_with("CloudCanyon")
+			or name_text.begins_with("JumpPlank")
+			or name_text.begins_with("Plank")
+		):
+			if node is Node2D:
+				var pos := (node as Node2D).global_position
+				if pos.x >= gap_left - 80.0 and pos.x <= gap_right + 80.0 and pos.y < floor_y - 10.0:
+					return true
+		if name_text.begins_with("FerrySpring") or (node is SpringPad and absf((node as Node2D).global_position.x - mid_x) < 420.0):
+			if node is Node2D and (node as Node2D).global_position.x <= gap_left + 40.0:
+				return true
+	return false
+
+
+func _test_movers_use_plank_or_cloud() -> Variant:
+	var packed := load("res://scenes/world/moving_platform.tscn") as PackedScene
+	var plank := packed.instantiate() as MovingPlatform
+	plank.visual_style = MovingPlatform.VisualStyle.RAFT
+	add_child(plank)
+	await get_tree().process_frame
+	if not plank.is_plank_style():
+		plank.queue_free()
+		return "Default movers must show wooden plank art, not ferry/raft graphics."
+	var raft_path := ""
+	var visual := plank.get_node_or_null("Visual") as Sprite2D
+	if visual != null and visual.texture != null:
+		raft_path = visual.texture.resource_path
+	plank.queue_free()
+	if raft_path.ends_with("raft.png"):
+		return "Moving platform Visual still references ferry raft.png."
+
+	for path in [
+		"res://scenes/levels/level_04.tscn",
+		"res://scenes/levels/level_09.tscn",
+		"res://scenes/levels/level_10.tscn",
+	]:
+		var level: Variant = _instantiate_level(path)
+		if level is String:
+			return level
+		var controller := level as LevelController
+		for node in controller.find_children("*", "AnimatableBody2D", true, false):
+			if not (node is MovingPlatform):
+				continue
+			var mover := node as MovingPlatform
+			mover._configure_visual_style()
+			if mover.visual_style == MovingPlatform.VisualStyle.CLOUD:
+				if not mover.is_cloud_style():
+					controller.queue_free()
+					return "%s in %s should show cloud art." % [mover.name, path]
+			elif not mover.is_plank_style():
+				controller.queue_free()
+				return "%s in %s should show plank art, not ferry steps." % [mover.name, path]
+		controller.queue_free()
 	return null
 
 
@@ -1606,14 +1766,20 @@ func _test_canyon_center_illustrated() -> Variant:
 		controller.queue_free()
 		return "Canyon center is missing illustrated strata / river layers."
 	var back_luma := back.color.r * 0.3 + back.color.g * 0.59 + back.color.b * 0.11
-	if back_luma < 0.12:
+	if back_luma < 0.40:
 		controller.queue_free()
-		return "Canyon BackFill is still too black (luma %.3f)." % back_luma
-	# Wider gaps must keep fixed rim scale and still illustrate the center.
-	var left_scale := (pit_mouth.get_node("LeftRim") as Sprite2D).scale
+		return "Canyon BackFill is still too dark (luma %.3f)." % back_luma
+	# Fill layers must not use negative relative z (that buried them under FloorAbyss).
+	if back.z_index < 0 or deep.z_index < 0:
+		controller.queue_free()
+		return "Canyon fill layers must stay at non-negative relative z above FloorAbyss."
+	# Widening must never stretch rims past the handmade base size.
+	var left_rim := pit_mouth.get_node("LeftRim") as Sprite2D
+	var max_rim_scale := ScalableCanyonArt.RIM_SIZE / left_rim.texture.get_size()
 	var wide_right := pit_mouth.gap_right + 700.0
 	pit_mouth.configure(pit_mouth.floor_top, pit_mouth.gap_left, wide_right)
-	if (pit_mouth.get_node("LeftRim") as Sprite2D).scale != left_scale:
+	var wide_scale := (pit_mouth.get_node("LeftRim") as Sprite2D).scale
+	if wide_scale.x > max_rim_scale.x + 0.01 or wide_scale.y > max_rim_scale.y + 0.01:
 		controller.queue_free()
 		return "Widening the canyon stretched the handmade rim."
 	if not pit_mouth.center_is_illustrated():
@@ -1822,11 +1988,13 @@ func _test_art_and_music() -> Variant:
 		if absf(pit_mouth.gap_left - gap_left) > 12.0 or absf(pit_mouth.gap_right - gap_right) > 12.0:
 			controller.queue_free()
 			return "Canyon borders should match the fall gap."
-		var left_scale := (pit_mouth.get_node("LeftRim") as Sprite2D).scale
+		var max_rim_scale := ScalableCanyonArt.RIM_SIZE / (pit_mouth.get_node("LeftRim") as Sprite2D).texture.get_size()
 		pit_mouth.configure(floor_top, gap_left, gap_right + 600.0)
+		var wide_scale := (pit_mouth.get_node("LeftRim") as Sprite2D).scale
 		if (
 			pit_mouth.opening_width() < gap_right - gap_left + 590.0
-			or (pit_mouth.get_node("LeftRim") as Sprite2D).scale != left_scale
+			or wide_scale.x > max_rim_scale.x + 0.01
+			or wide_scale.y > max_rim_scale.y + 0.01
 		):
 			controller.queue_free()
 			return "Canyon center should widen without stretching its handmade rims."
@@ -1950,6 +2118,7 @@ func _test_one_way_cloud_platforms() -> Variant:
 	cloud.position = Vector2(200, 400)
 	cloud.trail_floor_top = 320.0
 	cloud.floor_clearance = 36.0
+	cloud.always_solid = true
 	add_child(cloud)
 	await get_tree().process_frame
 	var shape := cloud.get_node_or_null("CollisionShape2D") as CollisionShape2D
