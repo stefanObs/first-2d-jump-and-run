@@ -186,12 +186,13 @@ Godot is well suited to a small 2D game, has a compact scene system, exports to 
 The launch scripts locate Godot 4, set the project directory correctly, and forward any additional command-line arguments to Godot.
 
 - **Windows PC (no install needed):** double-click **`Play Cowboy Trail.exe`** (cowboy-head icon). The first run of `Play Cowboy Trail.bat` builds that exe if needed, unpacks the engine, and refreshes assets after a git pull. (`.bat` files cannot show a custom icon in Explorer.)
+- **macOS (no install needed):** double-click **`Play Cowboy Trail.command`**. On its first run it downloads the official universal Godot 4.4.1 engine (about 127 MB), imports the game, and starts it. No Godot installation is required; later starts use the cached engine. If macOS blocks the first launch, Control-click the file and choose **Open**.
 - **Linux:** run `./run_linux.sh` (also refreshes assets when `content_version.txt` changes)
 - **Windows (with your own Godot):** double-click `run_windows.bat` or run it from Command Prompt
 - **Portable Windows exe:** run `./create_exe.sh` (Linux/macOS) or `create_exe.bat` (Windows). The build lands in `dist/windows/CowboyTrail.exe`. If `create_exe.bat` fails, open `dist\create_exe_log.txt`. Share that folder; progress appears in `savegames/` beside the exe.
 - **Tests:** `godot --headless --path . res://tests/test_runner.tscn`
 
-For the developer launch scripts (`run_*.bat`/`.sh`), Godot must be on `PATH` or set via `GODOT_BIN`. On Windows, `run_windows.bat` also detects a `Godot_v*-stable_win64.exe` beside the script or in the bundled `godot/` folder. The `Play Cowboy Trail.bat` launcher needs none of this — it uses the bundled engine.
+For the developer launch scripts (`run_*.bat`/`.sh`), Godot must be on `PATH` or set via `GODOT_BIN`. On Windows, `run_windows.bat` also detects a `Godot_v*-stable_win64.exe` beside the script or in the bundled `godot/` folder. The Windows and macOS `Play Cowboy Trail` launchers need no preinstalled engine. The macOS engine cannot be committed because its archive exceeds GitHub's 100 MB file limit, so the `.command` launcher downloads it once from the official Godot release.
 
 ## Chapter 11: Implementation approach
 
@@ -276,21 +277,22 @@ Each cycle must maintain the following status block:
 ### Current development status
 
 - **Current iteration:** `v1.3.3` hazard variety, bounty bandits, and trail readability
-- **Last completed step:** Restore lasso tying after stomp collision change
+- **Last completed step:** Added no-install macOS double-click launcher
 - **Currently in progress:** In-game visual play-test of bosses and polish
 - **Next step:** Play-test bosses, fences, clouds, and flight; then tag `v1.3.3`
 - **Completed features:** Long 10-level cowboy trail; animated nonviolent bandit lasso; seated tied bandits; warning-shot and bounty bandits; carrions and rattlesnakes; animated canyon recovery; reachable hazards; hand-drawn cowboy + world props; looping music; three custom editor slots; mid-trail saves; modes; Xbox-ready input; Stampede Bull / Midnight Coach / Outlaw Kingpin bosses; horizon victory scene
 - **Remaining work:** In-game visual/gameplay play-test; Xbox controller physical verification; supervised child play-tests; additional SFX
-- **Tests last run:** all automated tests passed after lasso HurtArea restore
+- **Tests last run:** all automated tests passed; clean macOS first-launch flow simulated successfully
 - **Known issues or blockers:**
   - Boss arenas and new fence/cloud art still need an in-game visual play-test
   - Xbox controller not physically verified on this machine
 - **Latest iteration tag:** `v1.3.2`
-- **Relevant commit:** `c329dd0`
+- **Relevant commit:** (pending push)
 
 
 ### Cycle notes — 2026-07-19 (v1.3.3)
 
+- macOS can launch with `Play Cowboy Trail.command`; it downloads and caches the official universal Godot engine on first start, with no installation required.
 - Jumping onto a bandit's head ties him (with a small bounce); respawned bandits no longer stay at the smaller tied scale.
 - Yard gates use four fence posts plus side wings, a longer swing, and OPEN!/CLOSED labels so open vs shut is obvious.
 - Bandit head-stomps now tie even after landing (no longer require fall speed); bandits are no longer solid floors.

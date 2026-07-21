@@ -32,5 +32,9 @@ savegames/
 # (The .exe is unpacked from this zip on first launch and stays ignored.)
 !godot/Godot_v4.4.1-stable_win64.exe.zip
 
+# The 127 MB universal macOS engine exceeds GitHub's per-file limit.
+# Play Cowboy Trail.command downloads and caches it on first launch.
+/godot/macos/
+
 # Godot import sidecars for raw assets
 *.import
