@@ -9,6 +9,7 @@ const HORSE_TEXTURE := preload("res://assets/world/trail_horse.png")
 const RIDE_TEXTURE_0 := preload("res://assets/world/cowboy_horse_ride_0.png")
 const RIDE_TEXTURE_1 := preload("res://assets/world/cowboy_horse_ride_1.png")
 const SALOON_TEXTURE := preload("res://assets/world/goal_saloon.png")
+## Screen-space fallback when no goal/floor anchor exists (tuned for default trail zoom).
 const SALOON_CENTER_ABOVE_PLANK := 92.0
 const TRANSITION_GROUND_RATIO := 0.69
 ## Cowboy stands this far below the saloon sprite center (doorway / boardwalk).
@@ -16,6 +17,10 @@ const COWBOY_BELOW_SALOON := 50.0
 ## Horse mounts just left of the doorway, then rides off-screen.
 const MOUNT_LEFT_OF_DOOR := 36.0
 const HORSE_APPROACH_DISTANCE := 280.0
+## Matches Player MountedHorse local Y so hooves sit on the trail floor.
+const MOUNTED_SPRITE_OFFSET_Y := -64.0
+const PLAYER_IDLE_SCALE := 1.35
+const GOAL_SALOON_WORLD_SCALE := 1.85
 
 var _veil: ColorRect
 var _skyline: TextureRect
@@ -32,6 +37,10 @@ var _saloon_screen_pos: Vector2 = Vector2.ZERO
 var _has_saloon_anchor: bool = false
 ## True when the finished level's Goal saloon is still visible behind us.
 var _uses_live_level_saloon: bool = false
+var _floor_screen_y: float = 0.0
+var _has_floor_baseline: bool = false
+## Canvas/camera scale so overlay sprites match in-world gameplay size.
+var _world_to_screen_scale: float = 1.0
 
 
 func _ready() -> void:
@@ -56,7 +65,9 @@ func _process(delta: float) -> void:
 func play_celebration(
 	message: String = "Yeehaw!",
 	stars: int = 0,
-	saloon_screen_position: Vector2 = Vector2.INF
+	saloon_screen_position: Vector2 = Vector2.INF,
+	floor_screen_y: float = INF,
+	world_to_screen_scale: float = INF
 ) -> void:
 	_arrival_active = false
 	_animating_rider = false
@@ -72,8 +83,9 @@ func play_celebration(
 		_subtitle.modulate.a = 1.0
 	if _banner != null and _subtitle != null:
 		Narrator.speak("%s %s" % [_banner.text, _subtitle.text])
-	_resolve_saloon_anchor(view_size, saloon_screen_position)
-	var ground_y := _ground_y_for_saloon()
+	_resolve_presentation(view_size, saloon_screen_position, floor_screen_y, world_to_screen_scale)
+	_apply_ride_scales()
+	var ride_y := _ride_center_y()
 	var door_pos := _cowboy_door_position()
 	# Keep the finished trail visible; only draw a fallback saloon when no live Goal exists.
 	_saloon.visible = not _uses_live_level_saloon
@@ -82,11 +94,10 @@ func play_celebration(
 	_horse.visible = true
 	_horse.modulate.a = 1.0
 	_horse.flip_h = false
-	_horse.position = Vector2(_horse_start_x(), ground_y)
+	_horse.position = Vector2(_horse_start_x(), ride_y)
 	_cowboy.visible = true
 	_cowboy.modulate.a = 1.0
 	_cowboy.position = door_pos
-	_cowboy.scale = Vector2(1.55, 1.55)
 	_rider.visible = false
 	_rider.modulate.a = 0.0
 
@@ -96,8 +107,9 @@ func set_progress(progress: float) -> void:
 		return
 	_ensure_horse_art()
 	_apply_transparent_backdrop()
+	_apply_ride_scales()
 	var view_size := get_viewport().get_visible_rect().size
-	var ground_y := _ground_y_for_saloon()
+	var ride_y := _ride_center_y()
 	var door_pos := _cowboy_door_position()
 	var mount_x := _mount_x()
 	_saloon.position = _saloon_screen_pos
@@ -106,7 +118,7 @@ func set_progress(progress: float) -> void:
 		var arrival_ratio := progress / 0.28
 		_horse.visible = true
 		_horse.modulate.a = 1.0
-		_horse.position = Vector2(lerpf(_horse_start_x(), mount_x, arrival_ratio), ground_y)
+		_horse.position = Vector2(lerpf(_horse_start_x(), mount_x, arrival_ratio), ride_y)
 		_cowboy.visible = true
 		_cowboy.modulate.a = 1.0
 		_cowboy.position = door_pos
@@ -115,14 +127,14 @@ func set_progress(progress: float) -> void:
 	elif progress < 0.48:
 		var mount_ratio := (progress - 0.28) / 0.20
 		_horse.visible = true
-		_horse.position = Vector2(mount_x, ground_y)
+		_horse.position = Vector2(mount_x, ride_y)
 		_horse.modulate.a = 1.0
-		var jump_y := door_pos.y - sin(mount_ratio * PI) * 78.0
+		var jump_y := door_pos.y - sin(mount_ratio * PI) * 78.0 * _world_to_screen_scale
 		_cowboy.visible = true
 		_cowboy.position = Vector2(lerpf(door_pos.x, mount_x + 6.0, mount_ratio), jump_y)
 		_cowboy.modulate.a = 1.0 - mount_ratio
 		_rider.visible = mount_ratio > 0.55
-		_rider.position = Vector2(mount_x, ground_y)
+		_rider.position = Vector2(mount_x, ride_y)
 		_rider.modulate.a = clampf((mount_ratio - 0.55) / 0.45, 0.0, 1.0)
 		_animating_rider = _rider.visible
 	else:
@@ -131,7 +143,7 @@ func set_progress(progress: float) -> void:
 		_cowboy.visible = false
 		_rider.visible = true
 		_rider.modulate.a = 1.0
-		_rider.position = Vector2(lerpf(mount_x, view_size.x + 240.0, ride_ratio), ground_y)
+		_rider.position = Vector2(lerpf(mount_x, view_size.x + 240.0, ride_ratio), ride_y)
 		_animating_rider = true
 
 
@@ -140,7 +152,29 @@ func play_arrival() -> void:
 	visible = true
 	_ensure_horse_art()
 	_apply_transparent_backdrop()
+	_world_to_screen_scale = _detect_world_to_screen_scale()
+	_has_floor_baseline = false
+	_apply_ride_scales()
 	_run_arrival()
+
+
+func _resolve_presentation(
+	view_size: Vector2,
+	saloon_screen_position: Vector2,
+	floor_screen_y: float,
+	world_to_screen_scale: float
+) -> void:
+	_resolve_saloon_anchor(view_size, saloon_screen_position)
+	if is_finite(world_to_screen_scale) and world_to_screen_scale > 0.0:
+		_world_to_screen_scale = world_to_screen_scale
+	else:
+		_world_to_screen_scale = _detect_world_to_screen_scale()
+	if is_finite(floor_screen_y):
+		_floor_screen_y = floor_screen_y
+		_has_floor_baseline = true
+	else:
+		_has_floor_baseline = false
+		_floor_screen_y = _saloon_screen_pos.y + SALOON_CENTER_ABOVE_PLANK
 
 
 func _resolve_saloon_anchor(view_size: Vector2, saloon_screen_position: Vector2) -> void:
@@ -158,8 +192,33 @@ func _resolve_saloon_anchor(view_size: Vector2, saloon_screen_position: Vector2)
 	_uses_live_level_saloon = false
 
 
-func _ground_y_for_saloon() -> float:
+func _detect_world_to_screen_scale() -> float:
+	var canvas := get_viewport().get_canvas_transform()
+	var scale := canvas.get_scale()
+	if absf(scale.y) > 0.001:
+		return absf(scale.y)
+	if absf(scale.x) > 0.001:
+		return absf(scale.x)
+	return 1.0
+
+
+func _ground_y() -> float:
+	if _has_floor_baseline:
+		return _floor_screen_y
 	return _saloon_screen_pos.y + SALOON_CENTER_ABOVE_PLANK
+
+
+func _ride_center_y() -> float:
+	## Sprite center sits above the feet baseline, matching MountedHorse.
+	return _ground_y() + MOUNTED_SPRITE_OFFSET_Y * _world_to_screen_scale
+
+
+func _ride_visual_scale() -> float:
+	return Player.HORSE_VISUAL_SCALE * _world_to_screen_scale
+
+
+func _cowboy_visual_scale() -> float:
+	return PLAYER_IDLE_SCALE * _world_to_screen_scale
 
 
 func _cowboy_door_position() -> Vector2:
@@ -178,8 +237,33 @@ func get_saloon_screen_position() -> Vector2:
 	return _saloon_screen_pos
 
 
+func get_floor_screen_y() -> float:
+	return _ground_y()
+
+
+func get_ride_center_y() -> float:
+	return _ride_center_y()
+
+
+func get_ride_visual_scale() -> float:
+	return _ride_visual_scale()
+
+
 func uses_live_level_saloon() -> bool:
 	return _uses_live_level_saloon
+
+
+func _apply_ride_scales() -> void:
+	var horse_scale := Vector2.ONE * _ride_visual_scale()
+	var cowboy_scale := Vector2.ONE * _cowboy_visual_scale()
+	if _horse != null:
+		_horse.scale = horse_scale
+	if _rider != null:
+		_rider.scale = horse_scale
+	if _cowboy != null and _cowboy.texture != null:
+		_cowboy.scale = cowboy_scale
+	if _saloon != null:
+		_saloon.scale = Vector2.ONE * (GOAL_SALOON_WORLD_SCALE * _world_to_screen_scale)
 
 
 func _apply_transparent_backdrop() -> void:
@@ -195,7 +279,10 @@ func _apply_transparent_backdrop() -> void:
 func _run_arrival() -> void:
 	var view_size := get_viewport().get_visible_rect().size
 	var ground_y := view_size.y * TRANSITION_GROUND_RATIO
-	var center := Vector2(view_size.x * 0.45, ground_y)
+	_floor_screen_y = ground_y
+	_has_floor_baseline = true
+	var ride_y := _ride_center_y()
+	var center := Vector2(view_size.x * 0.45, ride_y)
 	_apply_transparent_backdrop()
 	if _banner != null:
 		_banner.text = tr("Next trail!")
@@ -210,7 +297,7 @@ func _run_arrival() -> void:
 	_horse.visible = false
 	_rider.visible = true
 	_rider.modulate.a = 1.0
-	_rider.position = Vector2(-240.0, ground_y)
+	_rider.position = Vector2(-240.0, ride_y)
 	_animating_rider = true
 	var ride_in := create_tween()
 	ride_in.tween_property(_rider, "position", center, 0.85).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
@@ -219,7 +306,7 @@ func _run_arrival() -> void:
 	_horse.position = center
 	_horse.modulate.a = 0.0
 	_cowboy.visible = true
-	_cowboy.position = center + Vector2(8.0, -36.0)
+	_cowboy.position = center + Vector2(8.0, -36.0 * _world_to_screen_scale)
 	_cowboy.modulate.a = 0.0
 	var dismount := create_tween()
 	dismount.set_parallel(true)
@@ -247,14 +334,12 @@ func _ensure_horse_art() -> void:
 		_saloon = Sprite2D.new()
 		_saloon.name = "CelebrationSaloon"
 		_saloon.texture = SALOON_TEXTURE
-		_saloon.scale = Vector2(1.55, 1.55)
 		_saloon.z_index = 1
 		add_child(_saloon)
 	if _horse == null:
 		_horse = Sprite2D.new()
 		_horse.name = "TrailHorse"
 		_horse.texture = HORSE_TEXTURE
-		_horse.scale = Vector2(0.82, 0.82)
 		_horse.z_index = 2
 		add_child(_horse)
 	if _cowboy == null:
@@ -267,9 +352,9 @@ func _ensure_horse_art() -> void:
 		_rider = Sprite2D.new()
 		_rider.name = "CowboyHorse"
 		_rider.texture = RIDE_TEXTURE_0
-		_rider.scale = Vector2(0.82, 0.82)
 		_rider.z_index = 4
 		add_child(_rider)
+	_apply_ride_scales()
 
 
 func _load_cowboy_idle_texture() -> void:
@@ -278,10 +363,8 @@ func _load_cowboy_idle_texture() -> void:
 		walk = load("res://assets/player/run_0.png")
 	if walk != null:
 		_cowboy.texture = walk
-		_cowboy.scale = Vector2(1.55, 1.55)
 	else:
 		_cowboy.texture = RIDE_TEXTURE_0
-		_cowboy.scale = Vector2(0.55, 0.55)
 
 
 func _place_badge_labels() -> void:

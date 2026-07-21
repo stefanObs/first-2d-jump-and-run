@@ -870,6 +870,30 @@ func _test_goal_disables_input() -> Variant:
 		error = "Horse transition should create the saddle horse."
 	elif controller.transition.get_node_or_null("CowboyHorse") == null:
 		error = "Horse transition should create the mounted cowboy."
+	else:
+		var horse := controller.transition.get_node_or_null("TrailHorse") as Sprite2D
+		var canvas_scale := absf(controller.get_viewport().get_canvas_transform().get_scale().y)
+		var expected_scale := Player.HORSE_VISUAL_SCALE * canvas_scale
+		var goal := controller.find_child("Goal", true, false) as Node2D
+		var floor_y := (
+			controller.get_viewport().get_canvas_transform() * goal.global_position
+		).y if goal != null else INF
+		if absf(horse.scale.x - expected_scale) > 0.02:
+			error = (
+				"Transition horse should match gameplay scale (got %.3f, want %.3f)."
+				% [horse.scale.x, expected_scale]
+			)
+		elif goal != null and absf(controller.transition.get_floor_screen_y() - floor_y) > 2.0:
+			error = "Transition floor baseline should match the goal trail plank."
+		elif (
+			goal != null
+			and absf(
+				horse.position.y
+				- (floor_y + LevelTransition.MOUNTED_SPRITE_OFFSET_Y * canvas_scale)
+			)
+			> 2.0
+		):
+			error = "Transition horse should ride with MountedHorse foot alignment."
 	_free_level(controller)
 	return error
 
@@ -2268,18 +2292,35 @@ func _test_saloon_transition_anchor() -> Variant:
 	var transition := packed.instantiate() as LevelTransition
 	add_child(transition)
 	var anchor := Vector2(640, 220)
-	transition.play_celebration("Yeehaw!", 2, anchor)
+	var floor_y := 320.0
+	var screen_scale := 0.84
+	transition.play_celebration("Yeehaw!", 2, anchor, floor_y, screen_scale)
 	var saloon := transition.get_node_or_null("CelebrationSaloon") as Sprite2D
 	var cowboy := transition.get_node_or_null("CelebrationCowboy") as Sprite2D
+	var horse := transition.get_node_or_null("TrailHorse") as Sprite2D
+	var rider := transition.get_node_or_null("CowboyHorse") as Sprite2D
+	var expected_scale := Player.HORSE_VISUAL_SCALE * screen_scale
+	var expected_ride_y := floor_y + LevelTransition.MOUNTED_SPRITE_OFFSET_Y * screen_scale
 	var error: Variant = null
-	if saloon == null or cowboy == null:
-		error = "Celebration needs saloon and cowboy sprites."
+	if saloon == null or cowboy == null or horse == null or rider == null:
+		error = "Celebration needs saloon, cowboy, horse, and rider sprites."
 	elif saloon.position.distance_to(anchor) > 1.0:
 		error = "Celebration saloon should stay at the passed goal screen position."
 	elif absf(cowboy.position.y - (saloon.position.y + 50.0)) > 1.0:
 		error = "Cowboy should keep the doorway stance relative to the saloon."
 	elif transition.get_saloon_screen_position().distance_to(anchor) > 1.0:
 		error = "Transition should expose the anchored saloon screen position."
+	elif absf(transition.get_floor_screen_y() - floor_y) > 1.0:
+		error = "Transition should use the passed trail floor baseline."
+	elif absf(horse.scale.x - expected_scale) > 0.01 or absf(rider.scale.x - expected_scale) > 0.01:
+		error = (
+			"Transition horse should match gameplay horse scale (got %.3f, want %.3f)."
+			% [horse.scale.x, expected_scale]
+		)
+	elif absf(horse.position.y - expected_ride_y) > 1.0:
+		error = "Transition horse center should sit above the floor like MountedHorse."
+	elif absf(transition.get_ride_center_y() - expected_ride_y) > 1.0:
+		error = "Transition should expose the mounted ride baseline."
 	transition.queue_free()
 	return error
 

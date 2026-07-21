@@ -171,6 +171,11 @@ func begin_completion() -> void:
 	if _is_completing:
 		return
 	_is_completing = true
+	# Capture screen anchors before freezing the camera/player so the ride-off
+	# keeps the live saloon position and the trail floor baseline.
+	var saloon_screen := _goal_saloon_screen_position()
+	var floor_screen_y := _trail_floor_screen_y()
+	var screen_scale := _world_to_screen_scale()
 	if player != null:
 		player.set_input_enabled(false)
 		player.visible = false
@@ -186,7 +191,13 @@ func begin_completion() -> void:
 		var message := tr("Trail complete!") if is_final_level else tr("Yeehaw!")
 		if stars > 0:
 			message = tr("%s  %d badges!") % [message, stars]
-		transition.play_celebration(message, stars, _goal_saloon_screen_position())
+		transition.play_celebration(
+			message,
+			stars,
+			saloon_screen,
+			floor_screen_y,
+			screen_scale
+		)
 	_completion.start()
 	level_completed.emit()
 
@@ -201,6 +212,27 @@ func _goal_saloon_screen_position() -> Vector2:
 	var world_center: Vector2 = sprite.global_position if sprite != null else goal.global_position
 	var canvas := get_viewport().get_canvas_transform()
 	return canvas * world_center
+
+
+func _trail_floor_screen_y() -> float:
+	## Goal origin sits on the trail plank; prefer that over the cowboy's current
+	## height so flyover completions still ride on the floor line.
+	var canvas := get_viewport().get_canvas_transform()
+	var goal := find_child("Goal", true, false) as Node2D
+	if goal != null:
+		return (canvas * goal.global_position).y
+	if player != null:
+		return (canvas * player.global_position).y
+	return INF
+
+
+func _world_to_screen_scale() -> float:
+	var scale := get_viewport().get_canvas_transform().get_scale()
+	if absf(scale.y) > 0.001:
+		return absf(scale.y)
+	if absf(scale.x) > 0.001:
+		return absf(scale.x)
+	return 1.0
 
 
 func _handle_next_level_tap() -> void:
