@@ -80,6 +80,21 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 18
 text = "Save 3"
 
+[node name="DeleteSaveButton" type="Button" parent="."]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -140.0
+offset_top = 130.0
+offset_right = 140.0
+offset_bottom = 180.0
+theme_override_colors/font_color = Color(0.55, 0.08, 0.04, 1)
+theme_override_colors/font_disabled_color = Color(0.5, 0.4, 0.35, 1)
+theme_override_font_sizes/font_size = 19
+text = "Delete Save 1"
+
 [node name="BuildTrailButton" type="Button" parent="."]
 anchors_preset = 7
 anchor_left = 0.5

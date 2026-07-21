@@ -70,7 +70,7 @@ layout_mode = 2
 custom_minimum_size = Vector2(0, 52)
 theme_override_colors/font_color = Color(0.28, 0.12, 0.04, 1)
 theme_override_font_sizes/font_size = 22
-text = "Restart from Start"
+text = "Restart Trail at Level 1"
 
 [node name="SaveSelectButton" type="Button" parent="Panel/Margin/VBox"]
 layout_mode = 2

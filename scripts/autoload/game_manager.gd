@@ -270,9 +270,24 @@ func load_saved_run(level_number: int) -> bool:
 	return true
 
 
-func restart_level_from_start(level_number: int) -> void:
-	clear_run_state()
-	load_level(level_number)
+func restart_campaign_from_start() -> void:
+	reset_campaign_to_start()
+	load_level(1)
+
+
+func reset_campaign_to_start() -> void:
+	## Return the active save to Level 1 without deleting earned badges or time.
+	## This makes "Restart from Start" genuinely restart the whole trail instead
+	## of merely restarting whichever level happens to be open.
+	if active_slot_index >= 0:
+		var slot := get_slot(active_slot_index)
+		slot["empty"] = false
+		slot["current_level"] = 1
+		slot["completed"] = false
+		slot["resume"] = {}
+		(_data["slots"] as Array)[active_slot_index] = slot
+		save_to_disk()
+		saves_changed.emit()
 
 
 func clear_run_state() -> void:

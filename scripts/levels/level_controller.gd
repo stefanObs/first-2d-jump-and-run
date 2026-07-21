@@ -597,7 +597,7 @@ func _on_restart_pressed() -> void:
 	if is_custom_level:
 		GameManager.play_custom_level(GameManager.active_custom_slot, GameManager.custom_return_to_editor)
 		return
-	GameManager.restart_level_from_start(level_number)
+	GameManager.restart_campaign_from_start()
 
 
 func _on_save_select_pressed() -> void:

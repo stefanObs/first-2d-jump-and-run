@@ -7,11 +7,25 @@ var _index: int = 0
 var _erase_hold: float = 0.0
 var _prompt: Label
 var _hint: Label
+var _delete_button: Button
+var _delete_armed_slot: int = -1
+var _delete_selected: bool = false
 
 
 func _ready() -> void:
 	_prompt = get_node_or_null("PromptLabel") as Label
 	_hint = get_node_or_null("HintLabel") as Label
+	_delete_button = get_node_or_null("DeleteSaveButton") as Button
+	if _delete_button != null:
+		_delete_button.pressed.connect(_request_delete)
+		_delete_button.mouse_entered.connect(func() -> void:
+			_delete_selected = true
+			_highlight()
+		)
+		_delete_button.focus_entered.connect(func() -> void:
+			_delete_selected = true
+			_highlight()
+		)
 	var builder := get_node_or_null("BuildTrailButton") as Button
 	if builder != null:
 		builder.pressed.connect(func() -> void:
@@ -24,6 +38,18 @@ func _ready() -> void:
 			_cards.append(card)
 			var captured := i
 			card.pressed.connect(func() -> void: _select_slot(captured))
+			card.mouse_entered.connect(func() -> void:
+				_index = captured
+				_delete_selected = false
+				_cancel_delete_confirmation()
+				_highlight()
+			)
+			card.focus_entered.connect(func() -> void:
+				_index = captured
+				_delete_selected = false
+				_cancel_delete_confirmation()
+				_highlight()
+			)
 	GameManager.saves_changed.connect(_refresh)
 	InputManager.device_changed.connect(func(_d: Variant) -> void: _refresh_prompts())
 	_refresh()
@@ -69,19 +95,55 @@ func _process(delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed(&"ui_right") or event.is_action_pressed(&"move_right"):
+	if event.is_action_pressed(&"ui_down"):
+		_delete_selected = true
+		_highlight()
+	elif event.is_action_pressed(&"ui_up"):
+		_delete_selected = false
+		_highlight()
+	elif event.is_action_pressed(&"ui_right") or event.is_action_pressed(&"move_right"):
 		_index = wrapi(_index + 1, 0, _cards.size())
+		_delete_selected = false
+		_cancel_delete_confirmation()
 		_highlight()
 	elif event.is_action_pressed(&"ui_left") or event.is_action_pressed(&"move_left"):
 		_index = wrapi(_index - 1, 0, _cards.size())
+		_delete_selected = false
+		_cancel_delete_confirmation()
 		_highlight()
 	elif event.is_action_pressed(&"confirm") or event.is_action_pressed(&"jump"):
-		_select_slot(_index)
+		if _delete_selected:
+			_request_delete()
+		else:
+			_select_slot(_index)
 
 
 func _select_slot(slot_index: int) -> void:
+	_cancel_delete_confirmation()
 	AudioManager.ensure_gameplay_music()
 	GameManager.start_or_continue_slot(slot_index)
+
+
+func _request_delete() -> void:
+	if GameManager.is_slot_empty(_index):
+		return
+	if _delete_armed_slot == _index:
+		_delete_armed_slot = -1
+		GameManager.erase_slot(_index)
+		_refresh()
+		_refresh_prompts()
+		return
+	_delete_armed_slot = _index
+	_update_delete_button()
+	if _hint != null:
+		_hint.text = "Press the red button again to delete Save %d" % (_index + 1)
+
+
+func _cancel_delete_confirmation() -> void:
+	if _delete_armed_slot < 0:
+		return
+	_delete_armed_slot = -1
+	_update_delete_button()
 
 
 func _refresh() -> void:
@@ -104,15 +166,41 @@ func _refresh() -> void:
 				seconds / 60,
 				seconds % 60,
 			]
+	_update_delete_button()
+
+
+func _update_delete_button() -> void:
+	if _delete_button == null:
+		return
+	var empty := GameManager.is_slot_empty(_index)
+	_delete_button.disabled = empty
+	if empty:
+		_delete_button.text = "Delete Save %d (empty)" % (_index + 1)
+	elif _delete_armed_slot == _index:
+		_delete_button.text = "CONFIRM DELETE SAVE %d" % (_index + 1)
+	else:
+		_delete_button.text = "Delete Save %d" % (_index + 1)
 
 
 func _refresh_prompts() -> void:
 	if _prompt:
 		_prompt.text = InputManager.menu_prompt_line()
 	if _hint and _erase_hold <= 0.0:
-		_hint.text = "Hold Back + Pause to erase the highlighted save"
+		if _delete_armed_slot == _index:
+			_hint.text = "Press the red button again to delete Save %d" % (_index + 1)
+		else:
+			_hint.text = "Select a save, then use the Delete Save button below"
 
 
 func _highlight() -> void:
 	for i in range(_cards.size()):
-		_cards[i].modulate = Color(1, 1, 0.55, 1) if i == _index else Color(1, 1, 1, 1)
+		_cards[i].modulate = (
+			Color(1, 1, 0.55, 1)
+			if i == _index and not _delete_selected
+			else Color(1, 1, 1, 1)
+		)
+	if _delete_button != null:
+		_delete_button.modulate = (
+			Color(1, 1, 0.55, 1) if _delete_selected else Color(1, 1, 1, 1)
+		)
+	_update_delete_button()

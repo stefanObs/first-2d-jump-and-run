@@ -325,13 +325,31 @@ func _test_save_select_scene() -> Variant:
 	var packed: PackedScene = load("res://scenes/ui/save_select.tscn")
 	if packed == null:
 		return "Missing save select scene."
+	GameManager.erase_slot(0)
+	GameManager.debug_set_slot(0, {"empty": false, "current_level": 4})
 	var scene := packed.instantiate()
 	add_child(scene)
+	var error: Variant = null
 	if scene.get_node_or_null("Slots/Slot1") == null:
-		scene.queue_free()
-		return "Save select missing slots."
+		error = "Save select missing slots."
+	var delete_button := scene.get_node_or_null("DeleteSaveButton") as Button
+	if error == null and delete_button == null:
+		error = "Save select needs a visible Delete Save button."
+	elif error == null and delete_button.disabled:
+		error = "Delete Save should be enabled for a non-empty highlighted slot."
+	if error == null:
+		scene._request_delete()
+		if GameManager.is_slot_empty(0):
+			error = "Delete Save must ask for confirmation before erasing."
+		elif not delete_button.text.contains("CONFIRM"):
+			error = "Delete Save confirmation should be explicit."
+	if error == null:
+		scene._request_delete()
+		if not GameManager.is_slot_empty(0):
+			error = "Confirming Delete Save should erase the highlighted slot."
 	scene.queue_free()
-	return null
+	GameManager.erase_slot(0)
+	return error
 
 
 func _test_level_01_world_objects() -> Variant:
@@ -915,12 +933,30 @@ func _test_pause_save_controls() -> Variant:
 			error = "Pause menu missing %s." % path
 			break
 	var restart := menu.get_node_or_null("Panel/Margin/VBox/RestartButton") as Button
-	if error == null and restart != null and restart.text != "Restart from Start":
-		error = "Restart action should clearly say it starts over."
+	if error == null and restart != null and restart.text != "Restart Trail at Level 1":
+		error = "Restart action should clearly say it returns to Level 1."
 	var start_screen := menu.get_node_or_null("Panel/Margin/VBox/SaveSelectButton") as Button
 	if error == null and start_screen != null and start_screen.text != "Back to Start Screen":
 		error = "Pause menu should offer a clear return to the start screen."
 	menu.queue_free()
+	GameManager.erase_slot(0)
+	GameManager.debug_set_slot(0, {
+		"empty": false,
+		"current_level": 8,
+		"stars": 12,
+		"completed": true,
+		"resume": {"level_number": 8, "checkpoint_name": "CheckpointB"},
+	})
+	GameManager.active_slot_index = 0
+	GameManager.reset_campaign_to_start()
+	var reset_slot := GameManager.get_slot(0)
+	if error == null and int(reset_slot.get("current_level", -1)) != 1:
+		error = "Restart from Start must reset the active save to Level 1."
+	elif error == null and not (reset_slot.get("resume", {}) as Dictionary).is_empty():
+		error = "Restart from Start must clear the later-level checkpoint."
+	elif error == null and int(reset_slot.get("stars", 0)) != 12:
+		error = "Restarting at Level 1 should keep previously earned badges."
+	GameManager.erase_slot(0)
 	return error
 
 
