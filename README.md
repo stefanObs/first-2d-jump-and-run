@@ -150,7 +150,7 @@ The start screen displays three large save cards numbered **1**, **2**, and **3*
 Progress is saved automatically after every level. A parent-accessible hold-to-confirm action can erase a save, preventing accidental deletion. Saves are stored locally in a **`savegames/`** folder and the game works fully offline.
 
 - **While developing / using Play Cowboy Trail:** `savegames/` sits next to the project files.
-- **Portable Windows exe:** `savegames/` is created next to `CowboyTrail.exe`.
+- **Portable Windows exe:** `savegames/` is created next to `CowboyTrail.exe`, so the exe stays fully self-contained (the game data is embedded) and works when copied anywhere writable. If the exe is run from a read-only or protected location (e.g. `Program Files`), progress automatically falls back to the per-user data folder instead of silently failing.
 - The folder is gitignored so each player keeps their own progress.
 - Save files include a format version (`SAVE_VERSION`). Saves from older game versions are discarded and do not load.
 
@@ -277,12 +277,12 @@ Each cycle must maintain the following status block:
 ### Current development status
 
 - **Current iteration:** `v1.3.3` hazard variety, bounty bandits, and trail readability
-- **Last completed step:** Added no-install macOS double-click launcher
+- **Last completed step:** Made the portable Windows exe robust when copied outside its folder (embedded data confirmed self-contained; per-user save fallback for read-only locations; clearer message when the source launcher is moved out)
 - **Currently in progress:** In-game visual play-test of bosses and polish
 - **Next step:** Play-test bosses, fences, clouds, and flight; then tag `v1.3.3`
 - **Completed features:** Long 10-level cowboy trail; animated nonviolent bandit lasso; seated tied bandits; warning-shot and bounty bandits; carrions and rattlesnakes; animated canyon recovery; reachable hazards; hand-drawn cowboy + world props; looping music; three custom editor slots; mid-trail saves; modes; Xbox-ready input; Stampede Bull / Midnight Coach / Outlaw Kingpin bosses; horizon victory scene
 - **Remaining work:** In-game visual/gameplay play-test; Xbox controller physical verification; supervised child play-tests; additional SFX
-- **Tests last run:** all automated tests passed; clean macOS first-launch flow simulated successfully
+- **Tests last run:** all automated tests passed; verified a real embedded export runs standalone from an unrelated folder and that a read-only exe folder falls back to the per-user save location
 - **Known issues or blockers:**
   - Boss arenas and new fence/cloud art still need an in-game visual play-test
   - Xbox controller not physically verified on this machine

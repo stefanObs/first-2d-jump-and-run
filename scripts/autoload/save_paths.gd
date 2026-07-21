@@ -2,13 +2,17 @@ extends RefCounted
 
 ## Resolves where campaign and custom-trail saves live.
 ## Editor / Godot CLI → <project>/savegames/
-## Exported exe → <exe folder>/savegames/
+## Exported exe → <exe folder>/savegames/ when that folder is writable,
+##   otherwise the per-user data folder (user://savegames) so a copied exe in a
+##   protected location such as Program Files can still save progress.
 
 const FOLDER_NAME := "savegames"
 const CAMPAIGN_FILE := "save_data.json"
 const CUSTOM_SUBDIR := "custom_levels"
 const LEGACY_USER_SAVE := "user://save_data.json"
 const LEGACY_USER_CUSTOM := "user://custom_levels"
+
+static var _cached_root: String = ""
 
 
 static func root_dir() -> String:
@@ -45,9 +49,33 @@ static func migrate_legacy_if_needed() -> void:
 
 
 static func _preferred_root() -> String:
+	if _cached_root != "":
+		return _cached_root
 	if OS.has_feature("editor") or _is_godot_tools_binary():
-		return ProjectSettings.globalize_path("res://").path_join(FOLDER_NAME)
-	return OS.get_executable_path().get_base_dir().path_join(FOLDER_NAME)
+		_cached_root = ProjectSettings.globalize_path("res://").path_join(FOLDER_NAME)
+		return _cached_root
+	# Portable build: keep saves next to the exe so the folder can be copied around,
+	# but only when that location is writable. If the exe was copied into a read-only
+	# or protected folder (e.g. Program Files), fall back to the per-user data folder.
+	var beside_exe := OS.get_executable_path().get_base_dir().path_join(FOLDER_NAME)
+	if _dir_is_writable(beside_exe):
+		_cached_root = beside_exe
+	else:
+		_cached_root = ProjectSettings.globalize_path("user://").path_join(FOLDER_NAME)
+	return _cached_root
+
+
+static func _dir_is_writable(dir_path: String) -> bool:
+	if DirAccess.make_dir_recursive_absolute(dir_path) != OK and not DirAccess.dir_exists_absolute(dir_path):
+		return false
+	var probe := dir_path.path_join(".write_test")
+	var file := FileAccess.open(probe, FileAccess.WRITE)
+	if file == null:
+		return false
+	file.store_8(0)
+	file.close()
+	DirAccess.remove_absolute(probe)
+	return true
 
 
 static func _is_godot_tools_binary() -> bool:

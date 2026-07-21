@@ -19,6 +19,17 @@ internal static class Program
 			string root = AppDomain.CurrentDomain.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 			Directory.SetCurrentDirectory(root);
 
+			// This launcher runs the game from the project files next to it, so it must
+			// stay inside the Cowboy Trail folder. If it was copied out on its own, the
+			// game files are missing — explain that instead of failing on the engine.
+			if (!File.Exists(Path.Combine(root, "project.godot")))
+			{
+				Fail("The Cowboy Trail game files were not found next to this launcher.\n\n"
+					+ "Keep \"Play Cowboy Trail.exe\" inside the Cowboy Trail folder.\n\n"
+					+ "To play from anywhere, build the portable game with create_exe.bat and copy CowboyTrail.exe instead.");
+				return;
+			}
+
 			string engine = Path.Combine(root, "godot", "Godot_v4.4.1-stable_win64.exe");
 			string engineZip = Path.Combine(root, "godot", "Godot_v4.4.1-stable_win64.exe.zip");
 			string stampFile = Path.Combine(root, "content_version.txt");

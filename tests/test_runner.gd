@@ -12,6 +12,7 @@ func _ready() -> void:
 	failures += _run("InputBindings registers required actions", _test_input_bindings_actions)
 	failures += _run("ModeController durations and shield", _test_mode_controller)
 	failures += _run("GameManager save slots persist", _test_save_slots)
+	failures += _run("Portable saves fall back when exe folder is read-only", _test_save_paths_writable_fallback)
 	failures += _run("Save select scene loads", _test_save_select_scene)
 	failures += _run("Level 01 contains core objects", _test_level_01_world_objects)
 	failures += _run("Level catalog has ten scenes", _test_ten_levels_exist)
@@ -288,6 +289,31 @@ func _test_save_slots() -> Variant:
 	if int(GameManager.get_slot(0).get("current_level", 0)) == 9:
 		return "Old save progress must not remain after a version bump."
 	GameManager.erase_slot(0)
+	return null
+
+
+func _test_save_paths_writable_fallback() -> Variant:
+	var save_paths := preload("res://scripts/autoload/save_paths.gd")
+	var root: String = save_paths.root_dir()
+	if not root.contains(save_paths.FOLDER_NAME):
+		return "Save root should live under a savegames folder, got: %s" % root
+	# A fresh directory in a writable place is reported writable.
+	var writable := OS.get_user_data_dir().path_join("write_probe_%d" % Time.get_ticks_usec())
+	if not save_paths._dir_is_writable(writable):
+		return "Expected a fresh user directory to be writable: %s" % writable
+	DirAccess.remove_absolute(writable)
+	# A location that cannot be created (nested inside a file) is not writable —
+	# this is what triggers the per-user fallback for a read-only exe folder.
+	var blocker := OS.get_user_data_dir().path_join("blocker_%d" % Time.get_ticks_usec())
+	var handle := FileAccess.open(blocker, FileAccess.WRITE)
+	if handle == null:
+		return "Could not create blocker file for writability test."
+	handle.store_8(0)
+	handle = null
+	var not_writable: bool = save_paths._dir_is_writable(blocker.path_join(save_paths.FOLDER_NAME))
+	DirAccess.remove_absolute(blocker)
+	if not_writable:
+		return "A directory nested inside a file must not be reported writable."
 	return null
 
 

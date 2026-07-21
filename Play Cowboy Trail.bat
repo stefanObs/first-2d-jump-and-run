@@ -10,6 +10,20 @@ set "STAMP_FILE=%ROOT%\content_version.txt"
 set "CACHE_STAMP=%ROOT%\.godot\cowboy_trail_content_version.txt"
 set "LAUNCHER=%ROOT%\Play Cowboy Trail.exe"
 
+rem --- This launcher runs the game from the project files beside it, so it must
+rem --- stay inside the Cowboy Trail folder. Explain clearly if it was copied out. ---
+if not exist "%ROOT%\project.godot" (
+	echo.
+	echo The Cowboy Trail game files were not found next to this launcher.
+	echo Keep "Play Cowboy Trail.bat" inside the Cowboy Trail folder.
+	echo.
+	echo To play from anywhere, build the portable game with create_exe.bat
+	echo and copy CowboyTrail.exe instead.
+	echo.
+	pause
+	exit /b 1
+)
+
 rem --- Prefer the cowboy-icon .exe launcher (.bat files cannot show custom icons) ---
 if not exist "%LAUNCHER%" (
 	if exist "%ROOT%\tools\build_play_launcher.bat" (
