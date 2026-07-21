@@ -106,14 +106,17 @@ func setup_level() -> void:
 	WildWestTheme.configure_player_camera(self, player)
 	_animate_sun()
 	if hud != null:
-		hud.set_level_title(level_title)
+		var display_title := (
+			level_title if is_custom_level else GameManager.level_name_for(level_number)
+		)
+		hud.set_level_title(display_title)
 		hud.set_prompt(_gameplay_prompt())
 		var hint := get_node_or_null("HintLabel") as Label
 		var tip := (
 			"Loaded! Back at your saved camp."
 			if _loaded_run_state
 			else hint.text if hint != null and not String(hint.text).is_empty()
-			else "Let's go: %s!" % level_title
+			else "Let's go: %s!" % display_title
 		)
 		hud.show_toast(tip, 4.5)
 		if hint != null:

@@ -157,10 +157,9 @@ func _refresh() -> void:
 			var stars := int(slot.get("stars", 0))
 			var seconds := int(slot.get("play_time_sec", 0.0))
 			var done := " DONE" if bool(slot.get("completed", false)) else ""
-			_cards[i].text = "%s%s\nTrail %d: %s\nBadges %d | Time %dm %ds" % [
+			_cards[i].text = "%s%s\nTrail %s\nBadges %d | Time %dm %ds" % [
 				title,
 				done,
-				level,
 				GameManager.level_name_for(level),
 				stars,
 				seconds / 60,

@@ -1,4 +1,4 @@
-[gd_scene load_steps=21 format=3 uid="uid://clevel02"]
+[gd_scene load_steps=19 format=3 uid="uid://clevel02"]
 
 [ext_resource type="Script" path="res://scripts/levels/level_02.gd" id="1_level"]
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2_player"]
@@ -17,7 +17,6 @@
 [ext_resource type="PackedScene" path="res://scenes/world/disappearing_platform.tscn" id="15_cloud"]
 [ext_resource type="PackedScene" path="res://scenes/world/conveyor_belt.tscn" id="16_conv"]
 [ext_resource type="PackedScene" path="res://scenes/world/timed_door.tscn" id="17_door"]
-[ext_resource type="PackedScene" path="res://scenes/world/carrion.tscn" id="90_carrion"]
 
 [sub_resource type="RectangleShape2D" id="GroundSeg"]
 size = Vector2(420, 64)
@@ -28,9 +27,6 @@ size = Vector2(160, 32)
 [sub_resource type="RectangleShape2D" id="BlockWide"]
 size = Vector2(220, 32)
 
-
-[sub_resource type="RectangleShape2D" id="SkyCeilShape"]
-size = Vector2(6600, 40)
 
 [node name="Level02" type="Node2D"]
 script = ExtResource("1_level")
@@ -827,132 +823,3 @@ position = Vector2(140, 280)
 [node name="Hud" parent="." instance=ExtResource("7_hud")]
 
 [node name="PauseMenu" parent="." instance=ExtResource("8_pause")]
-
-
-[node name="SkyGuardTop0" parent="." instance=ExtResource("90_carrion")]
-position = Vector2(820, -225)
-patrol_width = 118.0
-move_speed = 62.0
-bob_height = 8.0
-
-[node name="SkyGuardTop1" parent="." instance=ExtResource("90_carrion")]
-position = Vector2(1050, -235)
-patrol_width = 118.0
-move_speed = 71.0
-bob_height = 8.0
-
-[node name="SkyGuardTop3" parent="." instance=ExtResource("90_carrion")]
-position = Vector2(1510, -235)
-patrol_width = 118.0
-move_speed = 89.0
-bob_height = 8.0
-
-[node name="SkyGuardTop4" parent="." instance=ExtResource("90_carrion")]
-position = Vector2(1740, -225)
-patrol_width = 118.0
-move_speed = 98.0
-bob_height = 8.0
-
-[node name="SkyGuardTop6" parent="." instance=ExtResource("90_carrion")]
-position = Vector2(2200, -225)
-patrol_width = 118.0
-move_speed = 71.0
-bob_height = 8.0
-
-[node name="SkyGuardTop7" parent="." instance=ExtResource("90_carrion")]
-position = Vector2(2430, -235)
-patrol_width = 118.0
-move_speed = 80.0
-bob_height = 8.0
-
-[node name="SkyGuardTop9" parent="." instance=ExtResource("90_carrion")]
-position = Vector2(2890, -235)
-patrol_width = 118.0
-move_speed = 98.0
-bob_height = 8.0
-
-[node name="SkyGuardTop10" parent="." instance=ExtResource("90_carrion")]
-position = Vector2(3120, -225)
-patrol_width = 118.0
-move_speed = 62.0
-bob_height = 8.0
-
-[node name="SkyGuardTop12" parent="." instance=ExtResource("90_carrion")]
-position = Vector2(3580, -225)
-patrol_width = 118.0
-move_speed = 80.0
-bob_height = 8.0
-
-[node name="SkyGuardTop13" parent="." instance=ExtResource("90_carrion")]
-position = Vector2(3810, -235)
-patrol_width = 118.0
-move_speed = 89.0
-bob_height = 8.0
-
-[node name="SkyGuardTop15" parent="." instance=ExtResource("90_carrion")]
-position = Vector2(4270, -235)
-patrol_width = 118.0
-move_speed = 62.0
-bob_height = 8.0
-
-[node name="SkyGuardTop16" parent="." instance=ExtResource("90_carrion")]
-position = Vector2(4500, -225)
-patrol_width = 118.0
-move_speed = 71.0
-bob_height = 8.0
-
-[node name="SkyGuardTop18" parent="." instance=ExtResource("90_carrion")]
-position = Vector2(4960, -225)
-patrol_width = 118.0
-move_speed = 89.0
-bob_height = 8.0
-
-[node name="SkyGuardTop19" parent="." instance=ExtResource("90_carrion")]
-position = Vector2(5190, -235)
-patrol_width = 118.0
-move_speed = 98.0
-bob_height = 8.0
-
-[node name="SkyGuardTop21" parent="." instance=ExtResource("90_carrion")]
-position = Vector2(5650, -235)
-patrol_width = 118.0
-move_speed = 71.0
-bob_height = 8.0
-
-[node name="SkyGuardTop22" parent="." instance=ExtResource("90_carrion")]
-position = Vector2(5880, -225)
-patrol_width = 118.0
-move_speed = 80.0
-bob_height = 8.0
-
-[node name="SkyGuardTop24" parent="." instance=ExtResource("90_carrion")]
-position = Vector2(6340, -225)
-patrol_width = 118.0
-move_speed = 98.0
-bob_height = 8.0
-
-[node name="SkyGuardTop25" parent="." instance=ExtResource("90_carrion")]
-position = Vector2(6570, -235)
-patrol_width = 118.0
-move_speed = 62.0
-bob_height = 8.0
-
-[node name="SkyCorridorHigh" parent="." instance=ExtResource("90_carrion")]
-position = Vector2(2000, -218)
-patrol_width = 118.0
-move_speed = 54.0
-bob_height = 8.0
-
-[node name="SkyCorridorLow" parent="." instance=ExtResource("90_carrion")]
-position = Vector2(2000, -44)
-patrol_width = 118.0
-move_speed = 54.0
-bob_height = 8.0
-
-[node name="FlightCeiling0" type="StaticBody2D" parent="."]
-position = Vector2(3630, -40)
-collision_layer = 0
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="FlightCeiling0"]
-shape = SubResource("SkyCeilShape")

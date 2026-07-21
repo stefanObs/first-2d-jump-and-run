@@ -382,8 +382,8 @@ func level_scene_for(level_number: int) -> String:
 
 
 func level_name_for(level_number: int) -> String:
-	var index := clampi(level_number, 1, LEVEL_NAMES.size()) - 1
-	return LEVEL_NAMES[index]
+	var number := clampi(level_number, 1, LEVEL_NAMES.size())
+	return "%d: %s" % [number, LEVEL_NAMES[number - 1]]
 
 
 func _ensure_data() -> void:

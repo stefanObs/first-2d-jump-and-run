@@ -337,6 +337,9 @@ func _test_save_select_scene() -> Variant:
 		error = "Save select needs a visible Delete Save button."
 	elif error == null and delete_button.disabled:
 		error = "Delete Save should be enabled for a non-empty highlighted slot."
+	var first_card := scene.get_node_or_null("Slots/Slot1") as Button
+	if error == null and first_card != null and not first_card.text.contains("4: Canyon Ferry"):
+		error = "Save cards should show level names as '<number>: <name>'."
 	if error == null:
 		scene._request_delete()
 		if GameManager.is_slot_empty(0):
@@ -373,6 +376,8 @@ func _test_level_01_world_objects() -> Variant:
 func _test_ten_levels_exist() -> Variant:
 	if GameManager.LEVEL_SCENES.size() != 10:
 		return "Expected 10 levels."
+	if GameManager.level_name_for(2) != "2: Badge Meadow":
+		return "Level names should use the '<number>: <name>' format."
 	for path in GameManager.LEVEL_SCENES:
 		if load(path) == null:
 			return "Missing scene: %s" % path
@@ -695,7 +700,7 @@ func _test_controller_all_devices() -> Variant:
 
 
 func _test_flying_levels_top_guarded() -> Variant:
-	for lv in ["02", "06", "07", "10"]:
+	for lv in ["06", "07", "10"]:
 		var packed: PackedScene = load("res://scenes/levels/level_%s.tscn" % lv)
 		if packed == null:
 			return "Missing flying level %s." % lv
@@ -708,6 +713,14 @@ func _test_flying_levels_top_guarded() -> Variant:
 		level.queue_free()
 		if top_guards < 5:
 			return "Level %s needs carrions guarding the very top (found %d)." % [lv, top_guards]
+	var level_two_packed: PackedScene = load("res://scenes/levels/level_02.tscn")
+	var level_two: Node = level_two_packed.instantiate()
+	add_child(level_two)
+	for node in level_two.find_children("*", "Area2D", true, false):
+		if node is Carrion:
+			level_two.queue_free()
+			return "Level 2 should not contain carrions."
+	level_two.queue_free()
 	return null
 
 
