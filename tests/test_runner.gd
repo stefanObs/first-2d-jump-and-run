@@ -16,6 +16,7 @@ func _ready() -> void:
 	failures += await _run("Portable saves fall back when exe folder is read-only", _test_save_paths_writable_fallback)
 	failures += await _run("Save select scene loads", _test_save_select_scene)
 	failures += await _run("German text and spoken-instruction settings work", _test_localization_settings)
+	failures += await _run("Narrator falls back to any installed voice", _test_narrator_voice_fallback)
 	failures += await _run("Settings language dropdown persists and supports controller use", _test_settings_language_dropdown)
 	failures += await _run("Translation CSV parses and round-trips safely", _test_translation_csv_round_trip)
 	failures += await _run("Translation placeholders render and validate", _test_translation_placeholders)
@@ -580,6 +581,37 @@ func _test_localization_settings() -> Variant:
 		return "Spoken instructions setting should be saved."
 	GameManager.set_setting("narration", previous_narration)
 	GameManager.set_setting("language", previous_language)
+	return null
+
+
+func _test_narrator_voice_fallback() -> Variant:
+	# Windows ships English SAPI voices but usually no German one. A German trail
+	# must still speak by falling back English -> any voice, never returning "".
+	var narrator := preload("res://scripts/autoload/narrator.gd")
+	var windows_default := [
+		{"id": "sapi_david", "name": "Microsoft David Desktop", "language": "en-US"},
+		{"id": "sapi_zira", "name": "Microsoft Zira Desktop", "language": "en-US"},
+	]
+	# German requested, only English installed -> should pick an English voice.
+	if narrator.select_voice(windows_default, "de") != "sapi_david":
+		return "German narration should fall back to an installed English voice, not go silent."
+	# German requested and installed -> should prefer the German (male) voice.
+	var with_german := windows_default + [
+		{"id": "sapi_hedda", "name": "Microsoft Hedda Desktop", "language": "de-DE"},
+		{"id": "sapi_stefan", "name": "Microsoft Stefan Desktop", "language": "de-DE"},
+	]
+	if narrator.select_voice(with_german, "de") != "sapi_stefan":
+		return "A male German voice should be preferred when German is installed."
+	# English requested with English installed -> pick English (David via male hint).
+	if narrator.select_voice(windows_default, "en") != "sapi_david":
+		return "English narration should pick an English voice."
+	# Only non-matching languages installed -> still speak with the first voice.
+	var only_french := [{"id": "sapi_hortense", "name": "Hortense", "language": "fr-FR"}]
+	if narrator.select_voice(only_french, "de") != "sapi_hortense":
+		return "With no language match, narration should still use any installed voice."
+	# No voices installed at all -> the one legitimate silent case.
+	if narrator.select_voice([], "en") != "":
+		return "With zero installed voices, voice selection must report none available."
 	return null
 
 
