@@ -74,7 +74,7 @@ offset_right = 1100.0
 offset_bottom = 130.0
 theme_override_colors/font_color = Color(0.35, 0.16, 0.05, 1)
 theme_override_font_sizes/font_size = 22
-text = "Use every trail trick on this long gulch ride."
+text = "Hop the moonlight rafts for Magic Boots — or ride the gulch below."
 
 
 [node name="Mesa0" type="ColorRect" parent="."]
@@ -696,11 +696,11 @@ shape = SubResource("GroundSeg")
 
 
 [node name="Rattlesnake10" parent="." instance=ExtResource("18_snake")]
-position = Vector2(2290, 330)
+position = Vector2(3180, 330)
 
 
 [node name="Cactus16" parent="." instance=ExtResource("5_hazard")]
-position = Vector2(3380, 330)
+position = Vector2(3780, 330)
 
 
 [node name="Rattlesnake22" parent="." instance=ExtResource("18_snake")]
@@ -778,12 +778,12 @@ position = Vector2(1940, 150)
 
 
 [node name="Spring2" parent="." instance=ExtResource("11_spring")]
-position = Vector2(2960, 320)
+position = Vector2(3320, 320)
 bounce_velocity = -820.0
 
 
 [node name="SpringLedge2" type="StaticBody2D" parent="."]
-position = Vector2(3140, 200)
+position = Vector2(3500, 200)
 [node name="Visual" type="ColorRect" parent="SpringLedge2"]
 offset_left = -110.0
 offset_top = -16.0
@@ -801,7 +801,7 @@ shape = SubResource("BlockWide")
 
 
 [node name="SpringStar2" parent="." instance=ExtResource("9_star")]
-position = Vector2(3140, 150)
+position = Vector2(3500, 150)
 
 
 [node name="Spring3" parent="." instance=ExtResource("11_spring")]
@@ -885,54 +885,88 @@ shape = SubResource("BlockWide")
 position = Vector2(6800, 150)
 
 
-[node name="Moving0" parent="." instance=ExtResource("12_move")]
-position = Vector2(1100, 250)
-point_a = Vector2(-50, 0)
-point_b = Vector2(100, -25)
+[node name="BootsHopLedge" type="StaticBody2D" parent="."]
+position = Vector2(2260, 245)
+[node name="Visual" type="ColorRect" parent="BootsHopLedge"]
+offset_left = -80.0
+offset_top = -16.0
+offset_right = 80.0
+offset_bottom = 16.0
+color = Color(0.62, 0.4, 0.22, 1)
+[node name="Nail" type="ColorRect" parent="BootsHopLedge"]
+offset_left = -72.0
+offset_top = -8.0
+offset_right = -60.0
+offset_bottom = 4.0
+color = Color(0.95, 0.82, 0.35, 1)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="BootsHopLedge"]
+shape = SubResource("Block")
 
 
-[node name="MoveStar0" parent="." instance=ExtResource("9_star")]
-position = Vector2(1130, 200)
+[node name="MovingHopA" parent="." instance=ExtResource("12_move")]
+position = Vector2(2360, 200)
+point_a = Vector2(-65, 45)
+point_b = Vector2(95, -60)
+move_speed = 72.0
 
 
-[node name="Moving1" parent="." instance=ExtResource("12_move")]
-position = Vector2(2500, 250)
-point_a = Vector2(-50, 0)
-point_b = Vector2(100, -25)
+[node name="MovingHopB" parent="." instance=ExtResource("12_move")]
+position = Vector2(2520, 125)
+point_a = Vector2(85, 50)
+point_b = Vector2(-100, -55)
+move_speed = 68.0
 
 
-[node name="MoveStar1" parent="." instance=ExtResource("9_star")]
-position = Vector2(2530, 200)
+[node name="MovingHopC" parent="." instance=ExtResource("12_move")]
+position = Vector2(2680, 55)
+point_a = Vector2(-75, 45)
+point_b = Vector2(90, -60)
+move_speed = 70.0
 
 
-[node name="Moving2" parent="." instance=ExtResource("12_move")]
-position = Vector2(3900, 250)
-point_a = Vector2(-50, 0)
-point_b = Vector2(100, -25)
+[node name="MovingHopD" parent="." instance=ExtResource("12_move")]
+position = Vector2(2840, -15)
+point_a = Vector2(-90, 40)
+point_b = Vector2(80, -65)
+move_speed = 66.0
 
 
-[node name="MoveStar2" parent="." instance=ExtResource("9_star")]
-position = Vector2(3930, 200)
+[node name="BootsRewardLedge" type="StaticBody2D" parent="."]
+position = Vector2(3000, -90)
+[node name="Visual" type="ColorRect" parent="BootsRewardLedge"]
+offset_left = -80.0
+offset_top = -16.0
+offset_right = 80.0
+offset_bottom = 16.0
+color = Color(0.55, 0.34, 0.18, 1)
+[node name="Nail" type="ColorRect" parent="BootsRewardLedge"]
+offset_left = -72.0
+offset_top = -8.0
+offset_right = -60.0
+offset_bottom = 4.0
+color = Color(0.95, 0.82, 0.35, 1)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="BootsRewardLedge"]
+shape = SubResource("Block")
 
 
-[node name="Moving3" parent="." instance=ExtResource("12_move")]
-position = Vector2(5200, 250)
-point_a = Vector2(-50, 0)
-point_b = Vector2(100, -25)
+[node name="MovingHopStarA" parent="." instance=ExtResource("9_star")]
+position = Vector2(2360, 120)
 
 
-[node name="MoveStar3" parent="." instance=ExtResource("9_star")]
-position = Vector2(5230, 200)
+[node name="MovingHopStarB" parent="." instance=ExtResource("9_star")]
+position = Vector2(2520, 40)
 
 
-[node name="Moving4" parent="." instance=ExtResource("12_move")]
-position = Vector2(6400, 250)
-point_a = Vector2(-50, 0)
-point_b = Vector2(100, -25)
+[node name="MovingHopStarC" parent="." instance=ExtResource("9_star")]
+position = Vector2(2680, -30)
 
 
-[node name="MoveStar4" parent="." instance=ExtResource("9_star")]
-position = Vector2(6430, 200)
+[node name="MovingHopStarD" parent="." instance=ExtResource("9_star")]
+position = Vector2(2840, -95)
+
+
+[node name="BootsRewardStar" parent="." instance=ExtResource("9_star")]
+position = Vector2(3000, -160)
 
 
 [node name="Opponent0" parent="." instance=ExtResource("13_opp")]
@@ -973,13 +1007,13 @@ move_speed = 48.0
 
 
 [node name="Boots" parent="." instance=ExtResource("10_mode")]
-position = Vector2(500, 275)
+position = Vector2(3000, -135)
 mode = 2
 
 
 [node name="Wind0" parent="." instance=ExtResource("14_wind")]
 position = Vector2(1900, 220)
-wind_force = Vector2(190, -25)
+wind_force = Vector2(2100, -560)
 
 
 [node name="WindLedge0" type="StaticBody2D" parent="."]
@@ -1006,7 +1040,7 @@ position = Vector2(2100, 145)
 
 [node name="Wind1" parent="." instance=ExtResource("14_wind")]
 position = Vector2(3400, 220)
-wind_force = Vector2(190, -25)
+wind_force = Vector2(2100, -560)
 
 
 [node name="WindLedge1" type="StaticBody2D" parent="."]
@@ -1033,7 +1067,7 @@ position = Vector2(3600, 145)
 
 [node name="Wind2" parent="." instance=ExtResource("14_wind")]
 position = Vector2(4900, 220)
-wind_force = Vector2(190, -25)
+wind_force = Vector2(2100, -560)
 
 
 [node name="WindLedge2" type="StaticBody2D" parent="."]
@@ -1060,7 +1094,7 @@ position = Vector2(5100, 145)
 
 [node name="Wind3" parent="." instance=ExtResource("14_wind")]
 position = Vector2(6200, 220)
-wind_force = Vector2(190, -25)
+wind_force = Vector2(2100, -560)
 
 
 [node name="WindLedge3" type="StaticBody2D" parent="."]

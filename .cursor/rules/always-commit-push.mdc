@@ -1,0 +1,14 @@
+---
+description: Always commit and push completed work to the default branch
+alwaysApply: true
+---
+
+# Always Commit And Push
+
+After finishing a coherent set of code or asset changes for a user request:
+
+1. Commit the relevant changes on the current branch (this repo's default branch is `main`, not `master`).
+2. Push to the tracked remote (`origin`) with the normal push; never force-push.
+3. Use a concise commit message focused on why.
+4. Do not wait for an extra "please commit" prompt when work for a request is complete.
+5. Still never commit secrets, and never use `--no-verify` or force push unless the user explicitly asks.

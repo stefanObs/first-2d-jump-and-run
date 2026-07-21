@@ -3,7 +3,19 @@ extends Area2D
 
 signal first_touch
 
-@export var wind_force: Vector2 = Vector2(180, 0)
+## Sideways gust. The X sign sets the push direction and the magnitude is the
+## sideways acceleration in px/s^2 applied while the cowboy is inside.
+## Opposing movement gets a reduced push so the cowboy always retains control.
+## The Y component is a gentle upward acceleration that only helps while airborne.
+@export var wind_force: Vector2 = Vector2(2100, -560)
+
+## Hard cap (px/s) on how fast the wind alone can push the cowboy sideways, so it
+## can never keep accelerating forever. Player input can still push past this.
+@export var max_wind_speed: float = 45.0
+
+## Hard cap (px/s) on the upward drift the wind can add mid-jump. Keeps the gust
+## helping long jumps without launching the cowboy off the screen.
+@export var max_wind_lift: float = 140.0
 
 var _gusts: Array[Node2D] = []
 var _phase: float = 0.0
@@ -35,12 +47,39 @@ func _process(delta: float) -> void:
 		gust.scale.x = absf(gust.scale.y) * direction
 
 
-func _physics_process(_delta: float) -> void:
-	# Apply full force each physics tick while overlapping the gust zone
-	# (same pattern as conveyors). Leaving the area stops the push immediately.
+func _physics_process(delta: float) -> void:
+	# Apply the gust as a gentle, speed-capped acceleration each physics tick
+	# while overlapping. Leaving the area stops the push immediately, and the
+	# cowboy's own friction decays the drift.
 	for body in get_overlapping_bodies():
 		if body is Player:
-			(body as Player).external_velocity += wind_force
+			_apply_wind(body as Player, delta)
+
+
+func _apply_wind(player: Player, delta: float) -> void:
+	# Sideways push: ramp up slowly and never drive the wind-direction speed past
+	# max_wind_speed, so it stays controllable and can't runaway-accelerate.
+	var dir_x := signf(wind_force.x)
+	if dir_x != 0.0:
+		var speed_with_wind := player.velocity.x * dir_x
+		if speed_with_wind < max_wind_speed:
+			var step := absf(wind_force.x) * delta
+			# Full gust strength beats idle friction and settles at the cap, but
+			# a cowboy already moving against it must keep making headway.
+			if speed_with_wind < 0.0:
+				step = minf(step, player.acceleration * delta * 0.75)
+			step = minf(step, max_wind_speed - speed_with_wind)
+			player.external_velocity.x += dir_x * step
+
+	# Upward lift: only while airborne (no ground jitter) and capped so it just
+	# floats long jumps a touch.
+	if wind_force.y != 0.0 and not player.is_on_floor():
+		var dir_y := signf(wind_force.y)
+		var lift_with_wind := player.velocity.y * dir_y
+		if lift_with_wind < max_wind_lift:
+			var step_y := absf(wind_force.y) * delta
+			step_y = minf(step_y, max_wind_lift - lift_with_wind)
+			player.external_velocity.y += dir_y * step_y
 
 
 func _on_body_entered(body: Node2D) -> void:

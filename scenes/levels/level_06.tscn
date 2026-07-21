@@ -734,7 +734,7 @@ mode = 2
 
 [node name="Wind0" parent="." instance=ExtResource("14_wind")]
 position = Vector2(1900, 220)
-wind_force = Vector2(190, -25)
+wind_force = Vector2(2100, -560)
 
 
 [node name="WindLedge0" type="StaticBody2D" parent="."]
@@ -761,7 +761,7 @@ position = Vector2(2100, 145)
 
 [node name="Wind1" parent="." instance=ExtResource("14_wind")]
 position = Vector2(3400, 220)
-wind_force = Vector2(190, -25)
+wind_force = Vector2(2100, -560)
 
 
 [node name="WindLedge1" type="StaticBody2D" parent="."]
@@ -788,7 +788,7 @@ position = Vector2(3600, 145)
 
 [node name="Wind2" parent="." instance=ExtResource("14_wind")]
 position = Vector2(4900, 220)
-wind_force = Vector2(190, -25)
+wind_force = Vector2(2100, -560)
 
 
 [node name="WindLedge2" type="StaticBody2D" parent="."]
@@ -815,7 +815,7 @@ position = Vector2(5100, 145)
 
 [node name="Wind3" parent="." instance=ExtResource("14_wind")]
 position = Vector2(6200, 220)
-wind_force = Vector2(190, -25)
+wind_force = Vector2(2100, -560)
 
 
 [node name="WindLedge3" type="StaticBody2D" parent="."]

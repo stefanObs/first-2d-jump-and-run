@@ -14,6 +14,7 @@ const ANIM_SEC := 0.5
 const OPENING_HALF := 40.0
 const GATE_TOP := -104.0
 const GATE_TEX := preload("res://assets/world/fence_gate.png")
+const LANTERN_SCRIPT := preload("res://scripts/world/hand_drawn_lantern.gd")
 const CLOSED_GATE_SCALE := Vector2(0.62, 0.62)
 const OPEN_GATE_SCALE := Vector2(0.12, 0.62)
 
@@ -22,7 +23,8 @@ var _timer: float = 0.0
 var _shape: CollisionShape2D
 var _gate_art: Sprite2D
 var _label: Label
-var _status_lantern: Polygon2D
+var _status_lantern: Node2D
+var _lanterns: Array[Node2D] = []
 var _blink_phase: float = 0.0
 var _warned: bool = false
 var _gate_tween: Tween
@@ -72,15 +74,24 @@ func _setup_visual() -> void:
 	_gate_art.z_index = 3
 	add_child(_gate_art)
 
-	# Small irregular lantern above the gate — open/closed without flat plates.
-	_status_lantern = Polygon2D.new()
+	# Twin lanterns hook over the upper rail instead of floating above the gate.
+	# Their colored glass preserves the old open/closed warning at a glance.
+	_status_lantern = Node2D.new()
 	_status_lantern.name = "StatusLantern"
-	_status_lantern.polygon = PackedVector2Array([
-		Vector2(-10, -8), Vector2(11, -6), Vector2(8, 9), Vector2(-9, 7),
-	])
-	_status_lantern.position = Vector2(0, GATE_TOP - 28.0)
+	_status_lantern.position = Vector2(0, GATE_TOP - 1.0)
 	_status_lantern.z_index = 5
 	add_child(_status_lantern)
+	_lanterns.clear()
+	for spec in [
+		{"name": "LeftLantern", "x": -27.0, "rotation": -0.035},
+		{"name": "RightLantern", "x": 27.0, "rotation": 0.045},
+	]:
+		var lantern := LANTERN_SCRIPT.new() as Node2D
+		lantern.name = spec["name"]
+		lantern.position = Vector2(float(spec["x"]), 0)
+		lantern.rotation = float(spec["rotation"])
+		_status_lantern.add_child(lantern)
+		_lanterns.append(lantern)
 
 	# Collision matches the visible opening exactly.
 	if _shape != null:
@@ -107,16 +118,18 @@ func _apply_state(animate: bool) -> void:
 		_snap_gates()
 
 
-func _refresh_status_visual(warning: bool) -> void:
-	if _status_lantern == null:
+func _refresh_status_visual(warning: bool, strength: float = 1.0) -> void:
+	if _lanterns.is_empty():
 		return
+	var color: Color
 	if warning:
-		_status_lantern.color = Color(1.0, 0.82, 0.18, 0.95)
-		return
-	if _open:
-		_status_lantern.color = Color(0.45, 0.88, 0.35, 0.92)
+		color = Color(1.0, 0.66, 0.12, 1.0)
+	elif _open:
+		color = Color(0.45, 0.88, 0.35, 1.0)
 	else:
-		_status_lantern.color = Color(0.82, 0.18, 0.10, 0.95)
+		color = Color(0.92, 0.24, 0.10, 1.0)
+	for lantern in _lanterns:
+		lantern.call("set_glow", color, strength)
 
 
 func _snap_gates() -> void:
@@ -153,7 +166,7 @@ func _update_warning_blink() -> void:
 	var pulse := 0.55 + absf(sin(_blink_phase)) * 0.45
 	if _gate_art != null:
 		_gate_art.modulate.a = pulse
-	_refresh_status_visual(true)
+	_refresh_status_visual(true, pulse)
 
 
 func is_open() -> bool:

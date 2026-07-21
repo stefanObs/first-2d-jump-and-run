@@ -174,6 +174,13 @@ func begin_completion() -> void:
 	if player != null:
 		player.set_input_enabled(false)
 		player.visible = false
+		# Freeze the cowboy so the camera (and saloon screen anchor) stay put
+		# while the transparent ride-off plays over the finished trail.
+		player.velocity = Vector2.ZERO
+		player.set_physics_process(false)
+		var camera := player.get_node_or_null("Camera2D") as Camera2D
+		if camera != null:
+			camera.position_smoothing_enabled = false
 	if transition != null:
 		var stars := player.stars_collected if player != null else 0
 		var message := tr("Trail complete!") if is_final_level else tr("Yeehaw!")

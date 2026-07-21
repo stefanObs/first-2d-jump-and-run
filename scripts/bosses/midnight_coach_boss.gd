@@ -8,11 +8,12 @@ const COACH_FRAMES: Array[Texture2D] = [
 	preload("res://assets/world/boss_midnight_coach_2.png"),
 	preload("res://assets/world/boss_midnight_coach_3.png"),
 ]
-const COACH_SURRENDER := preload("res://assets/world/boss_midnight_coach_surrender.png")
 
 const SCREEN_LAG := 1280.0
 const COACH_SPEED_RATIO := 0.75
 const ACCEL := 160.0
+const EARTH_TOP := 312.0
+const EARTH_DEPTH := 1200.0
 
 var _coach: Node2D
 var _coach_sprite: Sprite2D
@@ -25,6 +26,7 @@ var _ground: StaticBody2D
 var _ground_visual: ColorRect
 var _ground_shape: CollisionShape2D
 var _background: ColorRect
+var _earth_underfill: ColorRect
 var _doors: Array[BossLassoTarget] = []
 var _doors_done: int = 0
 var _next_door: int = 0
@@ -123,6 +125,17 @@ func _face_coach_forward() -> void:
 
 
 func _setup_desert_floor() -> void:
+	# The textured trail strips are deliberately shallow.  Keep a deep,
+	# opaque earth layer behind them so the camera can never reveal the blue
+	# clear colour below the race course, even at wide aspect ratios.
+	_earth_underfill = ColorRect.new()
+	_earth_underfill.name = "EarthUnderfill"
+	_earth_underfill.z_index = -14
+	_earth_underfill.position = Vector2(-400.0, EARTH_TOP)
+	_earth_underfill.size = Vector2(3200.0, EARTH_DEPTH)
+	_earth_underfill.color = Color(0.20, 0.075, 0.025, 1.0)
+	_earth_underfill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_earth_underfill)
 	_desert_root = Node2D.new()
 	_desert_root.name = "DesertFloor"
 	_desert_root.z_index = -12
@@ -257,6 +270,9 @@ func _ensure_world_ahead() -> void:
 		_background.offset_left = -400.0
 		_background.offset_right = need_right + 800.0
 		_background.color = WildWestTheme.desert_sky_color()
+	if _earth_underfill != null:
+		_earth_underfill.position.x = -400.0
+		_earth_underfill.size.x = need_right + 1200.0
 
 
 func _bob_horses() -> void:
@@ -437,7 +453,8 @@ func on_door_lassoed(index: int) -> void:
 
 
 func _play_win_animation() -> void:
-	## Driver raises both hands in surrender before the arena clears.
+	## Keep the established coach, team, and harness together while the driver
+	## raises a bright surrender flag before the arena clears.
 	combat_ready = false
 	_waiting = true
 	_speed = 0.0
@@ -450,28 +467,60 @@ func _play_win_animation() -> void:
 	for door in _doors:
 		if door != null:
 			door.set_lasso_active(false)
-			# The surrender painting already contains its own open doors.
-			# Hide the separate gameplay overlays so they do not double up into
-			# a broken-looking coach after the cowboy wins.
+			# The last handmade coach frame already shows all three open doors.
 			door.visible = false
 	report_progress("Driver gives up!")
-	if _coach_sprite != null and COACH_SURRENDER != null:
-		var base_scale := _coach_sprite.scale
-		var base_y := _coach_sprite.position.y
-		_coach_sprite.texture = COACH_SURRENDER
-		_face_coach_forward()
-		var bob := create_tween()
-		bob.tween_property(_coach_sprite, "position:y", base_y - 6.0, 0.18)
-		bob.tween_property(_coach_sprite, "position:y", base_y, 0.22)
-		var pulse := create_tween()
-		pulse.tween_property(_coach_sprite, "scale", base_scale * Vector2(1.04, 0.96), 0.15)
-		pulse.tween_property(_coach_sprite, "scale", base_scale, 0.2)
-	if _horse_near != null:
-		var horse_y := _horse_near.position.y
-		var ht := create_tween()
-		ht.tween_property(_horse_near, "position:y", horse_y - 4.0, 0.2)
-		ht.tween_property(_horse_near, "position:y", horse_y, 0.25)
+	_apply_coach_frame(COACH_FRAMES.size() - 1)
+	_show_surrender_flag()
+	if _coach != null:
+		# Settle the complete rig as one silhouette. Moving only the carriage
+		# made its wheels, horses, and reins look detached in the old finale.
+		var base_y := _coach.position.y
+		var settle := create_tween()
+		settle.tween_property(_coach, "position:y", base_y - 5.0, 0.16)
+		settle.tween_property(_coach, "position:y", base_y + 2.0, 0.20)
+		settle.tween_property(_coach, "position:y", base_y, 0.18)
 	await get_tree().create_timer(1.6).timeout
+
+
+func _show_surrender_flag() -> void:
+	if _coach == null or _coach.get_node_or_null("SurrenderFlag") != null:
+		return
+	var flag := Node2D.new()
+	flag.name = "SurrenderFlag"
+	flag.position = Vector2(82.0, -184.0)
+	flag.z_index = 6
+	_coach.add_child(flag)
+
+	var pole := Line2D.new()
+	pole.name = "Pole"
+	pole.points = PackedVector2Array([Vector2(0, 72), Vector2(0, 0)])
+	pole.width = 5.0
+	pole.default_color = Color(0.28, 0.12, 0.04, 1.0)
+	flag.add_child(pole)
+
+	var cloth := Polygon2D.new()
+	cloth.name = "Cloth"
+	cloth.polygon = PackedVector2Array([
+		Vector2(3, 3), Vector2(58, 10), Vector2(48, 27), Vector2(3, 31)
+	])
+	cloth.color = Color(1.0, 0.94, 0.72, 1.0)
+	flag.add_child(cloth)
+
+	var seam := Line2D.new()
+	seam.name = "Seam"
+	seam.points = PackedVector2Array([
+		Vector2(3, 3), Vector2(58, 10), Vector2(48, 27), Vector2(3, 31)
+	])
+	seam.closed = true
+	seam.width = 2.0
+	seam.default_color = Color(0.45, 0.22, 0.08, 1.0)
+	flag.add_child(seam)
+
+	flag.rotation = -0.10
+	var wave := create_tween().set_loops()
+	wave.tween_property(flag, "rotation", 0.08, 0.24).set_trans(Tween.TRANS_SINE)
+	wave.tween_property(flag, "rotation", -0.10, 0.24).set_trans(Tween.TRANS_SINE)
 
 
 func _refresh_door_hints() -> void:

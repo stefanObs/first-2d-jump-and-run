@@ -73,7 +73,7 @@ offset_right = 1100.0
 offset_bottom = 130.0
 theme_override_colors/font_color = Color(0.35, 0.16, 0.05, 1)
 theme_override_font_sizes/font_size = 22
-text = "Ride wooden rafts across the long canyon river."
+text = "Wait for paired clouds to meet, then hop across the canyon."
 
 
 [node name="Mesa0" type="ColorRect" parent="."]
@@ -712,10 +712,22 @@ position = Vector2(5490, 320)
 
 
 [node name="Moving0" parent="." instance=ExtResource("12_move")]
-position = Vector2(1360, 250)
-point_a = Vector2(-220, 70)
-point_b = Vector2(220, -238)
-move_speed = 82.0
+position = Vector2(1350, 240)
+point_a = Vector2(0, 0)
+point_b = Vector2(160, 0)
+move_speed = 80.0
+visual_style = 1
+obstruction_include_movers = false
+
+
+[node name="Moving1" parent="." instance=ExtResource("12_move")]
+position = Vector2(1670, 240)
+point_a = Vector2(0, 0)
+point_b = Vector2(160, 0)
+move_speed = 80.0
+visual_style = 1
+start_at_point_b = true
+obstruction_include_movers = false
 
 
 [node name="MoveStar0" parent="." instance=ExtResource("9_star")]
@@ -727,10 +739,22 @@ position = Vector2(2900, 175)
 
 
 [node name="Moving2" parent="." instance=ExtResource("12_move")]
-position = Vector2(4240, 250)
-point_a = Vector2(-220, 70)
-point_b = Vector2(220, -238)
-move_speed = 82.0
+position = Vector2(4230, 240)
+point_a = Vector2(0, 0)
+point_b = Vector2(160, 0)
+move_speed = 80.0
+visual_style = 1
+obstruction_include_movers = false
+
+
+[node name="Moving3" parent="." instance=ExtResource("12_move")]
+position = Vector2(4550, 240)
+point_a = Vector2(0, 0)
+point_b = Vector2(160, 0)
+move_speed = 80.0
+visual_style = 1
+start_at_point_b = true
+obstruction_include_movers = false
 
 
 [node name="MoveStar2" parent="." instance=ExtResource("9_star")]
@@ -742,10 +766,11 @@ position = Vector2(5720, 230)
 
 
 [node name="Moving4" parent="." instance=ExtResource("12_move")]
-position = Vector2(6550, 280)
-point_a = Vector2(-90, 40)
-point_b = Vector2(90, -120)
+position = Vector2(6550, 240)
+point_a = Vector2(-90, 0)
+point_b = Vector2(90, 0)
 move_speed = 70.0
+visual_style = 1
 
 
 [node name="MoveStar4" parent="." instance=ExtResource("9_star")]

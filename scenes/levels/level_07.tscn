@@ -935,6 +935,27 @@ move_speed = 46.0
 bob_height = 10.0
 
 
+[node name="Carrion14" parent="." instance=ExtResource("18_carrion")]
+position = Vector2(2100, -215)
+patrol_width = 115.0
+move_speed = 60.0
+bob_height = 8.0
+
+
+[node name="Carrion15" parent="." instance=ExtResource("18_carrion")]
+position = Vector2(4450, -175)
+patrol_width = 125.0
+move_speed = 52.0
+bob_height = 11.0
+
+
+[node name="Carrion16" parent="." instance=ExtResource("18_carrion")]
+position = Vector2(6750, -225)
+patrol_width = 105.0
+move_speed = 66.0
+bob_height = 7.0
+
+
 [node name="Carrion20" parent="." instance=ExtResource("18_carrion")]
 position = Vector2(5900, -170)
 patrol_width = 150.0

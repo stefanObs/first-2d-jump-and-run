@@ -193,12 +193,12 @@ static func _make_contiguous_floors(level: Node) -> void:
 		floor_top = minf(floor_top, float(strip["top"]))
 		floor_height = maxf(floor_height, float(strip["bottom"]) - float(strip["top"]))
 
-	# Solid black underworld so nothing below the trail shows sky.
+	# Deep warm underworld so gaps never flash sky; canyon art paints over pits.
 	var abyss := ColorRect.new()
 	abyss.name = "FloorAbyss"
 	abyss.position = Vector2(level_left, floor_top)
 	abyss.size = Vector2(level_right - level_left, 900.0)
-	abyss.color = Color(0.04, 0.02, 0.01, 1.0)
+	abyss.color = Color(0.14, 0.06, 0.08, 1.0)
 	abyss.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	abyss.z_index = -2
 	floor_root.add_child(abyss)

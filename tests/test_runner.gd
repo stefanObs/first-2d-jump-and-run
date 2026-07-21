@@ -47,7 +47,20 @@ func _ready() -> void:
 	failures += await _run("Gameplay obstacles do not display floating text", _test_obstacle_labels_hidden)
 	failures += await _run("Untied bandits restore normal standing size", _test_untie_restores_stand_scale)
 	failures += await _run("Campaign hazards are no longer blocked by plank highways", _test_no_plank_highways)
-	failures += await _run("Canyon rafts travel on steep required routes", _test_steep_canyon_rafts)
+	failures += await _run(
+		"Canyon ferry uses synchronized opposite-phase cloud pairs",
+		_test_level_04_paired_moving_clouds
+	)
+	failures += await _run(
+		"Paired Level 4 clouds approach from opposite sides at runtime",
+		_test_level_04_cloud_phase_runtime
+	)
+	failures += await _run(
+		"Canyon center art is illustrated and covers FloorAbyss",
+		_test_canyon_center_illustrated
+	)
+	failures += await _run("Moonlight Gulch rafts require hop transfers for Magic Boots", _test_level_09_raft_hop_boots)
+	failures += await _run("Canyon rafts are one-way jump-through platforms", _test_one_way_moving_platforms)
 	failures += await _run("Custom level store and builder work", _test_custom_level_builder)
 	failures += await _run("Campaign workshop edits and inserts levels", _test_campaign_workshop)
 	failures += await _run("Hand-drawn celebration art and cheerful music load", _test_art_and_music)
@@ -56,7 +69,7 @@ func _ready() -> void:
 	failures += await _run("Pause menu exposes save, load, and restart from start", _test_pause_save_controls)
 	failures += await _run("Boss arenas expose lasso targets and solvable kingpin layout", _test_boss_arenas)
 	failures += await _run("Clouds are one-way platforms that stay above the floor", _test_one_way_cloud_platforms)
-	failures += await _run("Wind zones push while overlapping gusts", _test_wind_zone_force_overlap)
+	failures += await _run("Wind zones give a gentle capped push you can walk against", _test_wind_zone_force_overlap)
 	failures += await _run("HUD uses handmade western sign boards", _test_handmade_hud_signs)
 	failures += await _run("Celebration saloon keeps the goal screen position", _test_saloon_transition_anchor)
 	failures += await _run("Canyon clouds include two-cloud hop chains", _test_two_cloud_canyon_chains)
@@ -301,6 +314,29 @@ func _test_boss_arenas() -> Variant:
 	if coach.get_node_or_null("Coach") is AnimatableBody2D:
 		coach.queue_free()
 		return "Coach root should not be a solid AnimatableBody2D."
+	var earth := coach.get_node_or_null("EarthUnderfill") as ColorRect
+	if (
+		earth == null
+		or earth.position.y > 320.0
+		or earth.position.y + earth.size.y < 900.0
+		or earth.color.b >= earth.color.r
+		or earth.color.a < 1.0
+	):
+		coach.queue_free()
+		return "Midnight Coach ground needs deep, opaque earth below every camera view."
+	coach.call("_apply_coach_frame", 3)
+	coach.call("_show_surrender_flag")
+	var coach_sprite := coach.get_node_or_null("Coach/Sprite2D") as Sprite2D
+	var surrender_flag := coach.get_node_or_null("Coach/SurrenderFlag") as Node2D
+	if (
+		coach_sprite == null
+		or coach_sprite.texture == null
+		or not coach_sprite.texture.resource_path.ends_with("boss_midnight_coach_3.png")
+		or surrender_flag == null
+		or surrender_flag.get_node_or_null("Cloth") == null
+	):
+		coach.queue_free()
+		return "Coach victory art should keep the final handmade rig and add a clear surrender flag."
 	for frame_path in [
 		"res://assets/world/boss_midnight_coach_0.png",
 		"res://assets/world/boss_midnight_coach_1.png",
@@ -920,9 +956,9 @@ func _test_cowboy_animations() -> Variant:
 			node.queue_free()
 			return "Cowboy animation has no frames: %s" % String(anim_name)
 	var wings := cowboy.get_node_or_null("WingArt") as Sprite2D
-	if wings == null or wings.scale.x < 0.9:
+	if wings == null or wings.scale.x < 1.0 or wings.scale.x > 1.1:
 		node.queue_free()
-		return "Fly power should display large, clearly visible wings."
+		return "Fly power should display visible wings at the expected size."
 	cowboy.mount_horse()
 	var mounted := cowboy.get_node_or_null("MountedHorse") as Sprite2D
 	cowboy._update_animation(false)
@@ -1093,6 +1129,7 @@ func _test_controller_all_devices() -> Variant:
 
 
 func _test_flying_levels_top_guarded() -> Variant:
+	var expected_top_guards := {"07": 6, "10": 3}
 	for lv in ["07", "10"]:
 		var packed: PackedScene = load("res://scenes/levels/level_%s.tscn" % lv)
 		if packed == null:
@@ -1106,8 +1143,10 @@ func _test_flying_levels_top_guarded() -> Variant:
 				top_guards += 1
 				top_xs.append((node as Node2D).global_position.x)
 		level.queue_free()
-		if top_guards < 2 or top_guards > 3:
-			return "Level %s should use 2-3 top-route carrions (found %d)." % [lv, top_guards]
+		if top_guards != int(expected_top_guards[lv]):
+			return "Level %s should use %d top-route carrions (found %d)." % [
+				lv, expected_top_guards[lv], top_guards
+			]
 		top_xs.sort()
 		if top_xs.size() >= 2 and top_xs[top_xs.size() - 1] - top_xs[0] < 1200.0:
 			return "Level %s top carrions should be spread across the trail, not one cluster." % lv
@@ -1130,25 +1169,31 @@ func _test_timed_door_states() -> Variant:
 	var door := packed.instantiate() as TimedDoor
 	add_child(door)
 	var handmade_gate := door.get_node_or_null("HandmadeGate") as Sprite2D
-	var lantern := door.get_node_or_null("StatusLantern") as Polygon2D
+	var lantern_rig := door.get_node_or_null("StatusLantern") as Node2D
+	var left_lantern := door.get_node_or_null("StatusLantern/LeftLantern") as Node2D
+	var right_lantern := door.get_node_or_null("StatusLantern/RightLantern") as Node2D
 	var error: Variant = null
 	if handmade_gate == null or handmade_gate.texture == null:
 		error = "Timed door should use the hand-painted fence gate artwork."
 	elif door.get_node_or_null("StatusPlate") != null or door.get_node_or_null("Barrier") != null:
 		error = "Timed doors should not use generic status plates or barrier rectangles."
-	elif lantern == null:
-		error = "Timed door needs a status lantern so open and closed states are clear."
+	elif lantern_rig == null or left_lantern == null or right_lantern == null:
+		error = "Timed door needs two hand-drawn hanging lanterns."
+	elif lantern_rig.position.y < -110.0 or left_lantern.position.x >= 0.0 or right_lantern.position.x <= 0.0:
+		error = "Timed door lanterns should hang from both sides of its upper rail."
 	else:
 		door._open = false
 		door._apply_state(false)
 		var closed_scale := handmade_gate.scale
-		var closed_color := lantern.color
+		var closed_color: Color = left_lantern.get("glow_color")
 		door._open = true
 		door._apply_state(false)
 		var open_scale := handmade_gate.scale
-		var open_color := lantern.color
+		var open_color: Color = left_lantern.get("glow_color")
 		if closed_color.is_equal_approx(open_color):
-			error = "Open and closed gates must look clearly different."
+			error = "Lantern glass must preserve distinct open and closed status colors."
+		elif not open_color.is_equal_approx(right_lantern.get("glow_color")):
+			error = "Both timed door lanterns should communicate the same state."
 		elif closed_scale.x <= open_scale.x:
 			error = "A closed gate should look wider and solid while the open gate turns edge-on."
 	door.queue_free()
@@ -1212,25 +1257,211 @@ func _test_no_plank_highways() -> Variant:
 	return null
 
 
-func _test_steep_canyon_rafts() -> Variant:
+func _test_one_way_moving_platforms() -> Variant:
+	# Rafts/clouds like Moving0 in Canyon Ferry must let the cowboy jump up
+	# through them from below and land on top.
+	var packed := load("res://scenes/world/moving_platform.tscn") as PackedScene
+	if packed == null:
+		return "Missing moving platform scene."
+	var platform := packed.instantiate() as MovingPlatform
+	add_child(platform)
+	var shape := platform.get_node_or_null("CollisionShape2D") as CollisionShape2D
+	var error: Variant = null
+	if shape == null or not shape.one_way_collision:
+		error = "Moving platforms must use Godot one-way collision so the cowboy can jump through."
+	elif not platform.is_one_way():
+		error = "Moving platforms should report one-way configuration."
+	platform.queue_free()
+	if error == null:
+		var level := (load("res://scenes/levels/level_04.tscn") as PackedScene).instantiate()
+		var moving0 := level.get_node_or_null("Moving0") as MovingPlatform
+		if moving0 == null:
+			error = "Canyon Ferry should still contain Moving0."
+		level.free()
+	return error
+
+
+func _test_level_09_raft_hop_boots() -> Variant:
+	var packed: PackedScene = load("res://scenes/levels/level_09.tscn")
+	if packed == null:
+		return "Missing Level 09 scene."
+	var level: Node = packed.instantiate()
+	var hop_names := ["MovingHopA", "MovingHopB", "MovingHopC", "MovingHopD"]
+	var hops: Array[MovingPlatform] = []
+	for hop_name in hop_names:
+		var raft := level.get_node_or_null(hop_name) as MovingPlatform
+		if raft == null:
+			level.free()
+			return "Level 09 needs transfer raft %s." % hop_name
+		hops.append(raft)
+	var boots := level.get_node_or_null("Boots") as ModeItem
+	var reward := level.get_node_or_null("BootsRewardLedge") as StaticBody2D
+	var boarding := level.get_node_or_null("BootsHopLedge") as StaticBody2D
+	if boots == null or boots.mode != ModeController.Mode.MAGIC_BOOTS:
+		level.free()
+		return "Level 09 Magic Boots item is missing."
+	if reward == null or boarding == null:
+		level.free()
+		return "Level 09 needs BootsHopLedge boarding and BootsRewardLedge reward."
+
+	# Reward ledge must sit well above normal/spring reach from the gulch floor.
+	var ground_top := 320.0
+	var reward_top := reward.global_position.y - 16.0
+	var rise_from_ground := ground_top - reward_top
+	if rise_from_ground < 360.0:
+		level.free()
+		return "Magic Boots reward ledge must stay above spring reach from the floor."
+	if boots.global_position.y > reward.global_position.y:
+		level.free()
+		return "Magic Boots must rest on/above the elevated reward ledge."
+
+	# Neighboring hop rafts must have a timing window where a normal jump can transfer.
+	for index in range(hops.size() - 1):
+		var left := hops[index]
+		var right := hops[index + 1]
+		var left_candidates: Array[Vector2] = [
+			left.global_position + left.point_a,
+			left.global_position + left.point_b,
+		]
+		var right_candidates: Array[Vector2] = [
+			right.global_position + right.point_a,
+			right.global_position + right.point_b,
+		]
+		var best_gap := INF
+		var best_rise := INF
+		for left_pos in left_candidates:
+			for right_pos in right_candidates:
+				var edge_gap: float = absf(right_pos.x - left_pos.x) - 140.0
+				var rise: float = absf(left_pos.y - right_pos.y)
+				if edge_gap < best_gap:
+					best_gap = edge_gap
+					best_rise = rise
+		# Allow overlap (negative gap) or a modest clear gap within unpowered jump range.
+		if best_gap > 160.0 or best_rise > 100.0:
+			level.free()
+			return (
+				"Raft hop %s -> %s is not a fair transfer window (gap %.0f, rise %.0f)."
+				% [hop_names[index], hop_names[index + 1], best_gap, best_rise]
+			)
+
+	# Final raft must get close enough to the reward ledge for an unpowered hop.
+	var final_raft := hops[hops.size() - 1]
+	var end_a := final_raft.global_position + final_raft.point_a
+	var end_b := final_raft.global_position + final_raft.point_b
+	var approach := end_b if end_b.y < end_a.y else end_a
+	var reward_left := reward.global_position.x - 80.0
+	var approach_right := approach.x + 70.0
+	var approach_gap := reward_left - approach_right
+	var approach_rise := (approach.y - 15.0) - reward_top
+	if approach_gap > 140.0 or approach_rise > 100.0:
+		level.free()
+		return (
+			"Final raft must approach BootsRewardLedge within normal jump range (gap %.0f, rise %.0f)."
+			% [approach_gap, approach_rise]
+		)
+
+	# No other static ledges may sit within easy spring/unpowered reach of the boots reward.
+	for node in level.find_children("*", "StaticBody2D", true, false):
+		if node == reward or node == boarding:
+			continue
+		var name_text := String(node.name)
+		if not (
+			name_text.contains("Ledge")
+			or name_text.begins_with("Ground")
+			or name_text.contains("Platform")
+		):
+			continue
+		var surface := LevelLayoutRules._surface_for(node as Node2D)
+		if surface.is_empty():
+			continue
+		var reward_right := reward.global_position.x + 80.0
+		var gap := 0.0
+		if float(surface["left"]) > reward_right:
+			gap = float(surface["left"]) - reward_right
+		elif reward_left > float(surface["right"]):
+			gap = reward_left - float(surface["right"])
+		var rise: float = float(surface["top"]) - reward_top
+		if gap <= 200.0 and rise <= 250.0 and rise >= 0.0:
+			level.free()
+			return "Static platform %s can still bypass the raft hop to Magic Boots." % name_text
+
+	level.free()
+	return null
+
+
+func _test_level_04_paired_moving_clouds() -> Variant:
 	var packed: PackedScene = load("res://scenes/levels/level_04.tscn")
 	var level: Node = packed.instantiate()
-	var rafts: Array[MovingPlatform] = []
-	for node in level.find_children("*", "AnimatableBody2D", true, false):
-		if node is MovingPlatform:
-			rafts.append(node as MovingPlatform)
-	if rafts.size() < 2:
-		level.free()
-		return "Level 4 should keep at least two steep canyon rafts."
-	var steep_rafts := 0
-	for raft in rafts:
-		var route := raft.point_b - raft.point_a
-		var angle := rad_to_deg(atan2(absf(route.y), absf(route.x)))
-		if angle >= 34.0 and angle <= 36.0:
-			steep_rafts += 1
-	if steep_rafts < 2:
-		level.free()
-		return "Level 4 needs at least two ~35-degree raft crossings (found %d)." % steep_rafts
+	var cloud_names := ["Moving0", "Moving1", "Moving2", "Moving3", "Moving4"]
+	for cloud_name in cloud_names:
+		var cloud := level.get_node_or_null(cloud_name) as MovingPlatform
+		if cloud == null:
+			level.free()
+			return "Level 4 is missing moving cloud %s." % cloud_name
+		cloud._configure_visual_style()
+		var cloud_visual := cloud.get_node_or_null("CloudVisual") as Sprite2D
+		var raft_visual := cloud.get_node_or_null("Visual") as Sprite2D
+		var shape := cloud.get_node_or_null("CollisionShape2D") as CollisionShape2D
+		if (
+			not cloud.is_cloud_style()
+			or cloud_visual == null
+			or cloud_visual.texture == null
+			or not cloud_visual.texture.resource_path.ends_with("moving_cloud.svg")
+			or raft_visual == null
+			or raft_visual.visible
+		):
+			level.free()
+			return "%s should show dedicated cloud art, not raft planks." % cloud_name
+		if shape == null or not shape.one_way_collision:
+			level.free()
+			return "%s must stay jump-through from below and landable from above." % cloud_name
+		var route_low_y := maxf(
+			cloud.position.y + cloud.point_a.y,
+			cloud.position.y + cloud.point_b.y
+		)
+		var half_height := (shape.shape as RectangleShape2D).size.y * 0.5
+		if route_low_y + half_height > 280.0:
+			level.free()
+			return "%s sinks too close to the trail floor." % cloud_name
+
+	for pair_names in [["Moving0", "Moving1"], ["Moving2", "Moving3"]]:
+		var part_1 := level.get_node(pair_names[0]) as MovingPlatform
+		var part_2 := level.get_node(pair_names[1]) as MovingPlatform
+		if part_1.start_at_point_b or not part_2.start_at_point_b:
+			level.free()
+			return "%s and %s must start at opposite endpoints." % pair_names
+		var part_1_distance := part_1.point_a.distance_to(part_1.point_b)
+		var part_2_distance := part_2.point_a.distance_to(part_2.point_b)
+		var part_1_period := part_1_distance / part_1.move_speed
+		var part_2_period := part_2_distance / part_2.move_speed
+		if (
+			not is_equal_approx(part_1.move_speed, part_2.move_speed)
+			or not is_equal_approx(part_1_period, part_2_period)
+			or part_1_period > 2.5
+		):
+			level.free()
+			return "%s and %s need a shared short movement period." % pair_names
+		var part_1_handoff := part_1.position + part_1.point_b
+		var part_2_handoff := part_2.position + part_2.point_a
+		var part_1_shape := part_1.get_node("CollisionShape2D").shape as RectangleShape2D
+		var part_2_shape := part_2.get_node("CollisionShape2D").shape as RectangleShape2D
+		var edge_gap := (
+			absf(part_2_handoff.x - part_1_handoff.x)
+			- (part_1_shape.size.x + part_2_shape.size.x) * 0.5
+		)
+		var height_difference := absf(part_2_handoff.y - part_1_handoff.y)
+		if edge_gap < 8.0 or edge_gap > 120.0 or height_difference > 80.0:
+			level.free()
+			return (
+				"%s -> %s handoff is not a fair normal jump (gap %.0f, height %.0f)."
+				% [pair_names[0], pair_names[1], edge_gap, height_difference]
+			)
+		if part_1.obstruction_include_movers or part_2.obstruction_include_movers:
+			level.free()
+			return (
+				"%s/%s must ignore mover obstruction so the handoff stays in sync."
+				% [pair_names[0], pair_names[1]]
+			)
 	# Varied platforming identity: not every canyon is an ultra-wide raft-only gap.
 	var hop_clouds := 0
 	var hop_steps := 0
@@ -1251,6 +1482,144 @@ func _test_steep_canyon_rafts() -> Variant:
 			level.free()
 			return "Level 4 canyon at %s is still narrow enough to bypass its raft." % removed_ground
 	level.free()
+	return null
+
+
+func _test_level_04_cloud_phase_runtime() -> Variant:
+	var packed: PackedScene = load("res://scenes/levels/level_04.tscn")
+	var level: Node = packed.instantiate()
+	add_child(level)
+	# Snapshot far-side starts immediately after _ready, before any motion.
+
+	var pairs: Array = [["Moving0", "Moving1"], ["Moving2", "Moving3"]]
+	var start_gaps: Dictionary = {}
+	for pair_names in pairs:
+		var left := level.get_node(pair_names[0]) as MovingPlatform
+		var right := level.get_node(pair_names[1]) as MovingPlatform
+		var left_start := left.start_world_position()
+		var right_start := right.start_world_position()
+		if absf(left.global_position.x - left_start.x) > 1.0:
+			level.queue_free()
+			return "%s did not snap to its far-side start (at %.1f, expected %.1f)." % [
+				pair_names[0], left.global_position.x, left_start.x
+			]
+		if absf(right.global_position.x - right_start.x) > 1.0:
+			level.queue_free()
+			return "%s did not snap to its far-side start (at %.1f, expected %.1f)." % [
+				pair_names[1], right.global_position.x, right_start.x
+			]
+		if left.is_moving_toward_b() == right.is_moving_toward_b():
+			level.queue_free()
+			return "%s and %s must begin moving in opposite directions." % pair_names
+		start_gaps[pair_names[0]] = absf(right.global_position.x - left.global_position.x)
+
+	# Both pairs share the same period; simulate once and sample both.
+	var sample := level.get_node("Moving0") as MovingPlatform
+	var half_period := sample.point_a.distance_to(sample.point_b) / sample.move_speed
+	var frames := int(ceil(half_period / get_physics_process_delta_time())) + 4
+	var closest_gaps: Dictionary = {}
+	for pair_names in pairs:
+		closest_gaps[pair_names[0]] = float(start_gaps[pair_names[0]])
+
+	for _i in range(frames):
+		await get_tree().physics_frame
+		for pair_names in pairs:
+			var left := level.get_node(pair_names[0]) as MovingPlatform
+			var right := level.get_node(pair_names[1]) as MovingPlatform
+			var center_gap := absf(right.global_position.x - left.global_position.x)
+			closest_gaps[pair_names[0]] = minf(float(closest_gaps[pair_names[0]]), center_gap)
+
+	for pair_names in pairs:
+		var left := level.get_node(pair_names[0]) as MovingPlatform
+		var left_shape := left.get_node("CollisionShape2D").shape as RectangleShape2D
+		var right_shape := (
+			level.get_node(pair_names[1]).get_node("CollisionShape2D").shape as RectangleShape2D
+		)
+		var half_w := (left_shape.size.x + right_shape.size.x) * 0.5
+		var start_gap: float = float(start_gaps[pair_names[0]])
+		var closest_gap: float = float(closest_gaps[pair_names[0]])
+		var edge_gap := closest_gap - half_w
+		if closest_gap >= start_gap - 8.0:
+			level.queue_free()
+			return "%s/%s never approached each other (start %.1f, closest %.1f)." % [
+				pair_names[0], pair_names[1], start_gap, closest_gap
+			]
+		if edge_gap < 8.0 or edge_gap > 120.0:
+			level.queue_free()
+			return "%s/%s closest edge gap %.1f is not a fair handoff." % [
+				pair_names[0], pair_names[1], edge_gap
+			]
+
+	var meet_gaps: Dictionary = closest_gaps.duplicate()
+	for _j in range(frames):
+		await get_tree().physics_frame
+	for pair_names in pairs:
+		var left := level.get_node(pair_names[0]) as MovingPlatform
+		var right := level.get_node(pair_names[1]) as MovingPlatform
+		var apart_gap := absf(right.global_position.x - left.global_position.x)
+		if apart_gap < float(meet_gaps[pair_names[0]]) + 40.0:
+			level.queue_free()
+			return "%s/%s did not reverse apart after the handoff." % pair_names
+
+	level.queue_free()
+	return null
+
+
+func _test_canyon_center_illustrated() -> Variant:
+	var level: Variant = _instantiate_level("res://scenes/levels/level_01.tscn")
+	if level is String:
+		return level
+	var controller := level as LevelController
+	var pit := controller.find_child("Pit3", true, false) as Hazard
+	if pit == null:
+		controller.queue_free()
+		return "Level 01 is missing Pit3."
+	var pit_mouth := pit.get_node_or_null("PitMouth") as ScalableCanyonArt
+	if pit_mouth == null:
+		controller.queue_free()
+		return "Pit3 needs ScalableCanyonArt (PitMouth)."
+	if not pit_mouth.center_is_illustrated():
+		controller.queue_free()
+		return "Canyon center is still flat/near-black instead of illustrated depth."
+	var trail := controller.get_node_or_null("TrailFloor") as Node2D
+	var abyss := trail.get_node_or_null("FloorAbyss") as CanvasItem if trail != null else null
+	if abyss == null:
+		controller.queue_free()
+		return "TrailFloor/FloorAbyss missing; canyon cover order cannot be verified."
+	# PitMouth must sit above the global FloorAbyss fill inside the gap.
+	if pit_mouth.z_index <= abyss.z_index and not pit_mouth.top_level:
+		controller.queue_free()
+		return "Canyon art must draw above FloorAbyss."
+	if pit_mouth.z_index < 0 and abyss.z_index >= pit_mouth.z_index and not pit_mouth.top_level:
+		controller.queue_free()
+		return "Canyon art z-order does not cover FloorAbyss."
+	# With top_level canyon at -1 and FloorAbyss at -2 (relative to TrailFloor 0),
+	# the illustrated pit must win inside the gap.
+	if not pit_mouth.top_level or pit_mouth.z_index <= -2:
+		controller.queue_free()
+		return "PitMouth must be top_level above FloorAbyss (z > -2)."
+	var back := pit_mouth.get_node_or_null("BackFill") as Polygon2D
+	var deep := pit_mouth.get_node_or_null("GradientDeep") as Polygon2D
+	var river := pit_mouth.get_node_or_null("DryRiver") as Polygon2D
+	var walls := pit_mouth.get_node_or_null("LeftInnerWalls") as Node2D
+	if back == null or deep == null or river == null or walls == null or walls.get_child_count() < 3:
+		controller.queue_free()
+		return "Canyon center is missing illustrated strata / river layers."
+	var back_luma := back.color.r * 0.3 + back.color.g * 0.59 + back.color.b * 0.11
+	if back_luma < 0.12:
+		controller.queue_free()
+		return "Canyon BackFill is still too black (luma %.3f)." % back_luma
+	# Wider gaps must keep fixed rim scale and still illustrate the center.
+	var left_scale := (pit_mouth.get_node("LeftRim") as Sprite2D).scale
+	var wide_right := pit_mouth.gap_right + 700.0
+	pit_mouth.configure(pit_mouth.floor_top, pit_mouth.gap_left, wide_right)
+	if (pit_mouth.get_node("LeftRim") as Sprite2D).scale != left_scale:
+		controller.queue_free()
+		return "Widening the canyon stretched the handmade rim."
+	if not pit_mouth.center_is_illustrated():
+		controller.queue_free()
+		return "Wide canyon lost illustrated center treatment."
+	controller.queue_free()
 	return null
 
 
@@ -1357,6 +1726,7 @@ func _test_art_and_music() -> Variant:
 		"res://assets/world/transition_desert_skyline.png",
 		"res://assets/world/canyon_gap.png",
 		"res://assets/world/canyon_rim_left.png",
+		"res://assets/world/canyon_depth_tile.png",
 		"res://assets/world/trail_horse.png",
 		"res://assets/world/cowboy_horse_ride_0.png",
 		"res://assets/world/cowboy_horse_ride_1.png",
@@ -1597,7 +1967,6 @@ func _test_one_way_cloud_platforms() -> Variant:
 func _test_wind_zone_force_overlap() -> Variant:
 	var packed: PackedScene = load("res://scenes/world/wind_zone.tscn")
 	var wind := packed.instantiate() as WindZone
-	wind.wind_force = Vector2(180, -25)
 	add_child(wind)
 	var player_packed: PackedScene = load("res://scenes/player/player.tscn")
 	var player := player_packed.instantiate() as Player
@@ -1605,14 +1974,72 @@ func _test_wind_zone_force_overlap() -> Variant:
 	player.global_position = wind.global_position
 	await get_tree().physics_frame
 	await get_tree().physics_frame
-	player.external_velocity = Vector2.ZERO
-	wind._physics_process(0.016)
-	var after := player.external_velocity
+
+	var delta := 1.0 / 60.0
 	var error: Variant = null
-	if after.x < 100.0:
-		error = "Wind should apply a strong push while the cowboy overlaps the gust zone."
-	elif not is_equal_approx(after.y, wind.wind_force.y):
-		error = "Wind should apply its full indicated direction (including upward lift)."
+
+	# 1) A single tick must now beat the old 20 px/s nudge, without slamming.
+	player.velocity = Vector2.ZERO
+	player.external_velocity = Vector2.ZERO
+	wind._physics_process(delta)
+	var one_tick := player.external_velocity.x
+	if one_tick < 34.0:
+		error = "Wind should be stronger than the old barely noticeable 20 px/s nudge."
+	elif one_tick > 36.0:
+		error = "Wind should only accelerate gently per tick, not slam the cowboy."
+
+	# 2) Sustained overlap must settle at a noticeable 35-50 px/s, never runaway.
+	# Emulate the player's own per-frame handling: idle friction, then the wind
+	# push folded into velocity (mirrors Player._physics_process order).
+	if error == null:
+		player.velocity = Vector2.ZERO
+		for _i in range(300):
+			player.velocity.x = move_toward(player.velocity.x, 0.0, player.friction * delta)
+			player.external_velocity = Vector2.ZERO
+			wind._physics_process(delta)
+			player.velocity += player.external_velocity
+		if player.velocity.x < 35.0 or player.velocity.x > 50.0:
+			error = "Wind should settle at a clearly felt 35-50 px/s sideways drift."
+		elif player.velocity.x > wind.max_wind_speed + 1.0:
+			error = "Wind must never push the cowboy past its speed cap (no runaway)."
+
+	# 3) The cowboy can still walk against the wind: strong opposing input wins.
+	if error == null:
+		player.velocity = Vector2(-player.move_speed, 0.0)
+		for _j in range(120):
+			# Player pushing hard against the wind each frame.
+			player.velocity.x = move_toward(
+				player.velocity.x, -player.move_speed, player.acceleration * delta
+			)
+			player.external_velocity = Vector2.ZERO
+			wind._physics_process(delta)
+			player.velocity += player.external_velocity
+		if player.velocity.x >= 0.0:
+			error = "Wind should be counterable: walking against it must still make headway."
+
+	# 4) Every authored wind zone must use the tuned values rather than stale overrides.
+	if error == null:
+		for level_path in [
+			"res://scenes/levels/level_06.tscn",
+			"res://scenes/levels/level_09.tscn",
+			"res://scenes/levels/level_10.tscn",
+		]:
+			var level := (load(level_path) as PackedScene).instantiate()
+			for wind_name in ["Wind0", "Wind1", "Wind2", "Wind3"]:
+				var authored_wind := level.get_node_or_null(wind_name) as WindZone
+				if authored_wind == null:
+					error = "%s is missing %s." % [level_path, wind_name]
+					break
+				if (
+					authored_wind.wind_force != wind.wind_force
+					or authored_wind.max_wind_speed != wind.max_wind_speed
+				):
+					error = "%s/%s has stale wind tuning." % [level_path, wind_name]
+					break
+			level.free()
+			if error != null:
+				break
+
 	player.queue_free()
 	wind.queue_free()
 	return error

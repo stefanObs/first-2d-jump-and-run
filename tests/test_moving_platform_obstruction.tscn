@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://bmpobstrn01"]
+
+[ext_resource type="Script" path="res://tests/test_moving_platform_obstruction.gd" id="1"]
+
+[node name="TestMovingPlatformObstruction" type="Node"]
+script = ExtResource("1")

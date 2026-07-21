@@ -1,7 +1,7 @@
 class_name LevelTransition
 extends CanvasLayer
 
-## Horse rides in from the left; cowboy leaves the saloon and mounts for the trail.
+## Transparent overlay: cowboy leaves the finished trail's saloon and rides onward.
 
 signal arrival_finished
 
@@ -13,8 +13,12 @@ const SALOON_CENTER_ABOVE_PLANK := 92.0
 const TRANSITION_GROUND_RATIO := 0.69
 ## Cowboy stands this far below the saloon sprite center (doorway / boardwalk).
 const COWBOY_BELOW_SALOON := 50.0
+## Horse mounts just left of the doorway, then rides off-screen.
+const MOUNT_LEFT_OF_DOOR := 36.0
+const HORSE_APPROACH_DISTANCE := 280.0
 
 var _veil: ColorRect
+var _skyline: TextureRect
 var _banner: Label
 var _subtitle: Label
 var _horse: Sprite2D
@@ -26,14 +30,18 @@ var _arrival_active: bool = false
 var _animating_rider: bool = false
 var _saloon_screen_pos: Vector2 = Vector2.ZERO
 var _has_saloon_anchor: bool = false
+## True when the finished level's Goal saloon is still visible behind us.
+var _uses_live_level_saloon: bool = false
 
 
 func _ready() -> void:
 	_veil = get_node_or_null("Veil") as ColorRect
+	_skyline = get_node_or_null("HandmadeSkyline") as TextureRect
 	_banner = get_node_or_null("Banner") as Label
 	_subtitle = get_node_or_null("Subtitle") as Label
 	_ensure_horse_art()
 	_place_badge_labels()
+	_apply_transparent_backdrop()
 	visible = false
 	layer = 100
 
@@ -54,9 +62,8 @@ func play_celebration(
 	_animating_rider = false
 	visible = true
 	_ensure_horse_art()
+	_apply_transparent_backdrop()
 	var view_size := get_viewport().get_visible_rect().size
-	if _veil != null:
-		_veil.color = Color(1.0, 0.82, 0.48, 0.38)
 	if _banner != null:
 		_banner.text = tr(message)
 		_banner.modulate.a = 1.0
@@ -67,17 +74,18 @@ func play_celebration(
 		Narrator.speak("%s %s" % [_banner.text, _subtitle.text])
 	_resolve_saloon_anchor(view_size, saloon_screen_position)
 	var ground_y := _ground_y_for_saloon()
-	# Saloon stays where it appeared on the trail; cowboy keeps doorway stance.
-	_saloon.visible = true
+	var door_pos := _cowboy_door_position()
+	# Keep the finished trail visible; only draw a fallback saloon when no live Goal exists.
+	_saloon.visible = not _uses_live_level_saloon
 	_saloon.modulate.a = 1.0
 	_saloon.position = _saloon_screen_pos
 	_horse.visible = true
 	_horse.modulate.a = 1.0
 	_horse.flip_h = false
-	_horse.position = Vector2(-220.0, ground_y)
+	_horse.position = Vector2(_horse_start_x(), ground_y)
 	_cowboy.visible = true
 	_cowboy.modulate.a = 1.0
-	_cowboy.position = _cowboy_door_position()
+	_cowboy.position = door_pos
 	_cowboy.scale = Vector2(1.55, 1.55)
 	_rider.visible = false
 	_rider.modulate.a = 0.0
@@ -87,16 +95,18 @@ func set_progress(progress: float) -> void:
 	if not visible or _arrival_active:
 		return
 	_ensure_horse_art()
+	_apply_transparent_backdrop()
 	var view_size := get_viewport().get_visible_rect().size
 	var ground_y := _ground_y_for_saloon()
 	var door_pos := _cowboy_door_position()
-	var mount_x := view_size.x * 0.40
+	var mount_x := _mount_x()
 	_saloon.position = _saloon_screen_pos
+	_saloon.visible = not _uses_live_level_saloon
 	if progress < 0.28:
 		var arrival_ratio := progress / 0.28
 		_horse.visible = true
 		_horse.modulate.a = 1.0
-		_horse.position = Vector2(lerpf(-220.0, mount_x, arrival_ratio), ground_y)
+		_horse.position = Vector2(lerpf(_horse_start_x(), mount_x, arrival_ratio), ground_y)
 		_cowboy.visible = true
 		_cowboy.modulate.a = 1.0
 		_cowboy.position = door_pos
@@ -123,14 +133,13 @@ func set_progress(progress: float) -> void:
 		_rider.modulate.a = 1.0
 		_rider.position = Vector2(lerpf(mount_x, view_size.x + 240.0, ride_ratio), ground_y)
 		_animating_rider = true
-	if _veil != null:
-		_veil.color.a = lerpf(0.38, 0.72, progress)
 
 
 func play_arrival() -> void:
 	_arrival_active = true
 	visible = true
 	_ensure_horse_art()
+	_apply_transparent_backdrop()
 	_run_arrival()
 
 
@@ -138,6 +147,7 @@ func _resolve_saloon_anchor(view_size: Vector2, saloon_screen_position: Vector2)
 	if saloon_screen_position != Vector2.INF and saloon_screen_position.is_finite():
 		_saloon_screen_pos = saloon_screen_position
 		_has_saloon_anchor = true
+		_uses_live_level_saloon = true
 		return
 	if _has_saloon_anchor:
 		return
@@ -145,6 +155,7 @@ func _resolve_saloon_anchor(view_size: Vector2, saloon_screen_position: Vector2)
 	var ground_y := view_size.y * TRANSITION_GROUND_RATIO
 	_saloon_screen_pos = Vector2(view_size.x * 0.70, ground_y - SALOON_CENTER_ABOVE_PLANK)
 	_has_saloon_anchor = true
+	_uses_live_level_saloon = false
 
 
 func _ground_y_for_saloon() -> float:
@@ -155,16 +166,37 @@ func _cowboy_door_position() -> Vector2:
 	return _saloon_screen_pos + Vector2(0.0, COWBOY_BELOW_SALOON)
 
 
+func _mount_x() -> float:
+	return _cowboy_door_position().x - MOUNT_LEFT_OF_DOOR
+
+
+func _horse_start_x() -> float:
+	return _mount_x() - HORSE_APPROACH_DISTANCE
+
+
 func get_saloon_screen_position() -> Vector2:
 	return _saloon_screen_pos
+
+
+func uses_live_level_saloon() -> bool:
+	return _uses_live_level_saloon
+
+
+func _apply_transparent_backdrop() -> void:
+	if _skyline != null:
+		_skyline.visible = false
+		_skyline.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if _veil != null:
+		# Fully transparent input blocker so the finished (or next) level stays visible.
+		_veil.color = Color(0.0, 0.0, 0.0, 0.0)
+		_veil.mouse_filter = Control.MOUSE_FILTER_STOP
 
 
 func _run_arrival() -> void:
 	var view_size := get_viewport().get_visible_rect().size
 	var ground_y := view_size.y * TRANSITION_GROUND_RATIO
 	var center := Vector2(view_size.x * 0.45, ground_y)
-	if _veil != null:
-		_veil.color = Color(1.0, 0.82, 0.48, 0.62)
+	_apply_transparent_backdrop()
 	if _banner != null:
 		_banner.text = tr("Next trail!")
 		_banner.modulate.a = 1.0

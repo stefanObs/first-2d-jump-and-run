@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="140" height="52" viewBox="0 0 140 52">
+  <defs>
+    <linearGradient id="cloudFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fffdf1"/>
+      <stop offset="0.72" stop-color="#e8f6ff"/>
+      <stop offset="1" stop-color="#b9ddef"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-30%" width="140%" height="170%">
+      <feDropShadow dx="0" dy="3" stdDeviation="2" flood-color="#39799a" flood-opacity="0.38"/>
+    </filter>
+  </defs>
+  <path
+    d="M12 39
+       C5 37 4 28 11 24
+       C14 22 18 22 22 24
+       C22 15 30 9 39 11
+       C44 3 58 2 65 10
+       C74 2 90 5 93 16
+       C101 10 114 14 115 24
+       C125 20 136 27 133 37
+       C131 44 124 47 116 46
+       L22 46
+       C17 46 13 44 12 39 Z"
+    fill="url(#cloudFill)"
+    stroke="#4d7895"
+    stroke-width="3"
+    stroke-linejoin="round"
+    filter="url(#softShadow)"/>
+  <path
+    d="M21 37 C35 42 50 38 61 40 C75 44 91 38 105 41 C113 43 121 42 128 38"
+    fill="none"
+    stroke="#91c5dc"
+    stroke-width="2"
+    stroke-linecap="round"/>
+  <path
+    d="M31 27 C33 19 41 16 48 19 M70 17 C77 10 88 13 90 22 M104 28 C108 23 115 23 120 27"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="2.5"
+    stroke-linecap="round"
+    opacity="0.9"/>
+</svg>

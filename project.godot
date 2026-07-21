@@ -17,6 +17,10 @@ boot_splash/fullsize=true
 boot_splash/use_filter=true
 boot_splash/minimum_display_time=1200
 
+[audio]
+
+general/text_to_speech=true
+
 [autoload]
 
 InputBindings="*res://scripts/autoload/input_bindings.gd"

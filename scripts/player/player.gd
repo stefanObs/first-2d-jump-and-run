@@ -28,6 +28,7 @@ signal star_collected(total: int)
 const HORSE_SPEED_MULTIPLIER := 1.45
 const HORSE_JUMP_DISTANCE_MULTIPLIER := 1.2
 const HORSE_VISUAL_SCALE := 0.48
+const WING_BASE_SCALE := 1.05
 const HORSE_RIDE_0 := preload("res://assets/world/cowboy_horse_ride_0.png")
 const HORSE_RIDE_1 := preload("res://assets/world/cowboy_horse_ride_1.png")
 const HORSE_JUMP := preload("res://assets/world/cowboy_horse_jump.png")
@@ -543,7 +544,7 @@ func _ensure_wings() -> void:
 	_wing_sprite.texture = load("res://assets/world/modes/wings.png")
 	_wing_sprite.centered = true
 	_wing_sprite.position = Vector2(0, -42)
-	_wing_sprite.scale = Vector2(0.95, 0.95)
+	_wing_sprite.scale = Vector2(WING_BASE_SCALE, WING_BASE_SCALE)
 	_wing_sprite.z_index = -1
 	_wing_sprite.visible = false
 	add_child(_wing_sprite)
@@ -558,7 +559,7 @@ func _update_wings() -> void:
 	_wing_sprite.visible = flying
 	if flying:
 		var flap := 1.0 + sin(Time.get_ticks_msec() * 0.02) * 0.08
-		_wing_sprite.scale = Vector2(0.95 * flap, 0.95 / flap)
+		_wing_sprite.scale = Vector2(WING_BASE_SCALE * flap, WING_BASE_SCALE / flap)
 		_wing_sprite.rotation = sin(Time.get_ticks_msec() * 0.015) * 0.08
 		_wing_sprite.flip_h = _facing < 0.0
 
