@@ -21,12 +21,36 @@ var _cells: Array[Button] = []
 var _status: Label
 var _title_edit: LineEdit
 var _preview: LevelPreview
+var _save_button: Button
+var _reset_button: Button
+var _reset_dialog: ConfirmationDialog
+var _saved_data: Dictionary
+var _initial_data: Dictionary
+var _has_saved_state := false
+var _dirty := false
 
 
 func _ready() -> void:
-	_data = CustomLevelStore.load_level(GameManager.active_custom_slot)
+	var draft: Dictionary = GameManager.custom_level_draft
+	if (
+		not draft.is_empty()
+		and int(draft.get("slot", -1)) == GameManager.active_custom_slot
+	):
+		_data = draft.duplicate(true)
+		GameManager.custom_level_draft = {}
+	else:
+		_data = CustomLevelStore.load_level(GameManager.active_custom_slot)
+	_initial_data = _data.duplicate(true)
+	_has_saved_state = CustomLevelStore.exists(GameManager.active_custom_slot)
+	_saved_data = (
+		CustomLevelStore.load_level(GameManager.active_custom_slot)
+		if _has_saved_state
+		else _initial_data.duplicate(true)
+	)
+	_dirty = not _has_saved_state
 	_build_ui()
 	_refresh_grid()
+	_update_action_state()
 
 
 func _build_ui() -> void:
@@ -53,10 +77,9 @@ func _build_ui() -> void:
 	heading.add_child(title)
 	_title_edit = LineEdit.new()
 	_title_edit.text = str(_data.get("title", "Family Trail"))
-	_title_edit.placeholder_text = "Trail name"
+	_title_edit.placeholder_text = tr("Trail name")
 	_title_edit.custom_minimum_size = Vector2(360, 44)
-	_title_edit.text_submitted.connect(_on_title_changed)
-	_title_edit.focus_exited.connect(func() -> void: _on_title_changed(_title_edit.text))
+	_title_edit.text_changed.connect(_on_title_changed)
 	heading.add_child(_title_edit)
 
 	var instructions := Label.new()
@@ -115,24 +138,45 @@ func _build_ui() -> void:
 
 	var actions := HBoxContainer.new()
 	actions.alignment = BoxContainer.ALIGNMENT_CENTER
-	actions.add_theme_constant_override(&"separation", 18)
+	actions.add_theme_constant_override(&"separation", 12)
 	root.add_child(actions)
-	_add_action(actions, "Save Trail", _save)
-	_add_action(actions, "Play Test", _play_test)
-	_add_action(actions, "Back to Campaign Workshop", GameManager.open_custom_level_hub)
+	_save_button = _add_action(actions, tr("Save Trail"), _save, "SaveButton")
+	_reset_button = _add_action(actions, tr("Reset Changes"), _request_reset, "ResetButton")
+	_add_action(actions, tr("Play Test"), _play_test, "PlayTestButton")
+	_add_action(
+		actions,
+		tr("Back to Campaign Workshop"),
+		GameManager.open_custom_level_hub,
+		"BackButton"
+	)
+
+	_reset_dialog = ConfirmationDialog.new()
+	_reset_dialog.name = "ResetConfirmation"
+	_reset_dialog.title = tr("Reset trail?")
+	_reset_dialog.dialog_text = tr("Discard unsaved changes and return to the last saved trail?")
+	_reset_dialog.ok_button_text = tr("Reset")
+	_reset_dialog.cancel_button_text = tr("Keep editing")
+	_reset_dialog.confirmed.connect(_reset)
+	add_child(_reset_dialog)
 
 
-func _add_action(parent: Control, text: String, action: Callable) -> void:
+func _add_action(
+	parent: Control, text: String, action: Callable, node_name: String
+) -> Button:
 	var button := Button.new()
+	button.name = node_name
 	button.text = text
-	button.custom_minimum_size = Vector2(250, 56)
+	button.custom_minimum_size = Vector2(210, 56)
 	button.add_theme_font_size_override(&"font_size", 20)
+	button.add_theme_color_override(&"font_color", Color(0.35, 0.16, 0.05))
 	button.pressed.connect(action)
 	parent.add_child(button)
+	return button
 
 
 func _place(x: int, y: int) -> void:
 	var objects := _objects()
+	var before := objects.duplicate(true)
 	if _selected_type == "erase":
 		_erase_at(objects, x, y)
 	elif _selected_type == "pit":
@@ -148,8 +192,10 @@ func _place(x: int, y: int) -> void:
 				if str(objects[i].get("type", "")) == "goal":
 					objects.remove_at(i)
 		objects.append({"type": _selected_type, "x": x, "y": y})
+	if objects == before:
+		return
 	_data["objects"] = objects
-	CustomLevelStore.save(GameManager.active_custom_slot, _data)
+	_mark_dirty()
 	_refresh_grid()
 
 
@@ -248,15 +294,62 @@ func _type_color(type_name: String) -> Color:
 
 func _on_title_changed(value: String) -> void:
 	_data["title"] = value.strip_edges().left(40) if not value.strip_edges().is_empty() else "Family Trail"
-	_save()
+	_mark_dirty()
 
 
 func _save() -> void:
-	_data["title"] = _title_edit.text.strip_edges().left(40)
+	var title := _title_edit.text.strip_edges().left(40)
+	_data["title"] = title if not title.is_empty() else "Family Trail"
+	_title_edit.set_block_signals(true)
+	_title_edit.text = str(_data["title"])
+	_title_edit.set_block_signals(false)
 	if CustomLevelStore.save(GameManager.active_custom_slot, _data):
-		_status.text = "Trail saved!"
+		_data = CustomLevelStore.load_level(GameManager.active_custom_slot)
+		_saved_data = _data.duplicate(true)
+		_has_saved_state = true
+		_dirty = false
+		_status.text = tr("Trail saved!")
+		_update_action_state()
 	else:
-		_status.text = "Could not save the trail."
+		_status.text = tr("Could not save the trail.")
+
+
+func _request_reset() -> void:
+	if not _dirty:
+		_status.text = tr("No unsaved changes to reset.")
+		return
+	_reset_dialog.popup_centered(Vector2i(560, 190))
+
+
+func _reset() -> void:
+	_data = (
+		_saved_data.duplicate(true)
+		if _has_saved_state
+		else _initial_data.duplicate(true)
+	)
+	_title_edit.set_block_signals(true)
+	_title_edit.text = str(_data.get("title", "Family Trail"))
+	_title_edit.set_block_signals(false)
+	_dirty = false
+	_refresh_grid()
+	_update_action_state()
+	_status.text = (
+		tr("Trail reset to the last saved version.")
+		if _has_saved_state
+		else tr("New trail reset to its starting layout.")
+	)
+
+
+func _mark_dirty() -> void:
+	_dirty = _data != _saved_data
+	_update_action_state()
+
+
+func _update_action_state() -> void:
+	if _save_button != null:
+		_save_button.disabled = not _dirty and _has_saved_state
+	if _reset_button != null:
+		_reset_button.disabled = not _dirty
 
 
 func _play_test() -> void:

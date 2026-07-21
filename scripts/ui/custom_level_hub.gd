@@ -121,6 +121,6 @@ func _add_extra_row(parent: VBoxContainer, entry: Dictionary) -> void:
 
 
 func _add_extra(insert_position: int) -> void:
-	var slot := CustomLevelStore.create_extra(insert_position)
-	if slot >= 0:
-		GameManager.edit_custom_level(slot)
+	var draft := CustomLevelStore.new_extra_draft(insert_position)
+	if not draft.is_empty():
+		GameManager.edit_new_custom_level(int(draft["slot"]), draft)

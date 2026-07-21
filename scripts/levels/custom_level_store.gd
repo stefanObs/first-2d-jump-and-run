@@ -91,6 +91,15 @@ static func override_slot_for(level_number: int) -> int:
 
 
 static func create_extra(insert_position: int) -> int:
+	var data := new_extra_draft(insert_position)
+	if data.is_empty():
+		return -1
+	var slot := int(data["slot"])
+	save(slot, data)
+	return slot
+
+
+static func new_extra_draft(insert_position: int) -> Dictionary:
 	for slot in range(EXTRA_SLOT_START, SLOT_COUNT):
 		if exists(slot):
 			continue
@@ -98,9 +107,8 @@ static func create_extra(insert_position: int) -> int:
 		data["kind"] = "extra"
 		data["insert_position"] = clampi(insert_position, 1, BUILTIN_COUNT + 1)
 		data["title"] = "Extra Trail"
-		save(slot, data)
-		return slot
-	return -1
+		return data
+	return {}
 
 
 static func campaign_entries() -> Array[Dictionary]:
@@ -252,7 +260,7 @@ static func sanitize(source: Dictionary, slot_index: int) -> Dictionary:
 				objects.append((value as Dictionary).duplicate(true))
 				if objects.size() >= 900:
 					break
-	if not objects.is_empty():
+	if source_objects is Array:
 		result["objects"] = objects
 	return result
 

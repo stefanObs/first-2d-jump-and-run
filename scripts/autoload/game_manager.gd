@@ -39,6 +39,7 @@ signal active_slot_changed(slot_index: int)
 
 var active_slot_index: int = -1
 var active_custom_slot: int = 0
+var custom_level_draft: Dictionary = {}
 var custom_return_to_editor: bool = true
 var active_campaign_position: int = 1
 var active_campaign_source_level: int = 1
@@ -331,6 +332,14 @@ func clear_run_state() -> void:
 
 func edit_custom_level(slot_index: int) -> void:
 	active_custom_slot = clampi(slot_index, 0, CUSTOM_LEVEL_STORE.SLOT_COUNT - 1)
+	custom_level_draft = {}
+	get_tree().change_scene_to_file("res://scenes/ui/level_editor.tscn")
+
+
+func edit_new_custom_level(slot_index: int, draft: Dictionary) -> void:
+	active_custom_slot = clampi(slot_index, 0, CUSTOM_LEVEL_STORE.SLOT_COUNT - 1)
+	custom_level_draft = draft.duplicate(true)
+	custom_level_draft["slot"] = active_custom_slot
 	get_tree().change_scene_to_file("res://scenes/ui/level_editor.tscn")
 
 

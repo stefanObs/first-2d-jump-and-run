@@ -72,6 +72,7 @@ func _ready() -> void:
 	failures += await _run("Canyon rafts are one-way jump-through platforms", _test_one_way_moving_platforms)
 	failures += await _run("Custom level store and builder work", _test_custom_level_builder)
 	failures += await _run("Campaign workshop edits and inserts levels", _test_campaign_workshop)
+	failures += await _run("Trail editor saves and resets explicit snapshots", _test_trail_editor_save_reset)
 	failures += await _run("Hand-drawn celebration art and cheerful music load", _test_art_and_music)
 	failures += await _run("Mid-trail save data persists and loads", _test_mid_trail_save)
 	failures += await _run("Saved camp and badges restore inside a level", _test_level_run_restore)
@@ -1933,6 +1934,76 @@ func _test_campaign_workshop() -> Variant:
 			var restore := FileAccess.open(paths[i], FileAccess.WRITE)
 			if restore != null:
 				restore.store_buffer(backups[i])
+	return error
+
+
+func _test_trail_editor_save_reset() -> Variant:
+	var slot := CustomLevelStore.SLOT_COUNT - 1
+	var path := CustomLevelStore.SavePaths.custom_level_path(slot)
+	var existed := FileAccess.file_exists(path)
+	var backup := FileAccess.get_file_as_bytes(path) if existed else PackedByteArray()
+	if existed:
+		DirAccess.remove_absolute(path)
+	var draft := CustomLevelStore.default_level(slot)
+	draft["kind"] = "extra"
+	draft["insert_position"] = 4
+	draft["title"] = "Unsaved Test Trail"
+	GameManager.active_custom_slot = slot
+	GameManager.custom_level_draft = draft
+	var packed: PackedScene = load("res://scenes/ui/level_editor.tscn")
+	var editor = packed.instantiate()
+	add_child(editor)
+	var error: Variant = null
+	var save_button := editor.find_child("SaveButton", true, false) as Button
+	var reset_button := editor.find_child("ResetButton", true, false) as Button
+	var preview := editor.find_child("LevelPreview", true, false) as LevelPreview
+	if save_button == null or reset_button == null:
+		error = "Trail editor should expose visible Save and Reset buttons."
+	elif save_button.disabled:
+		error = "A new unsaved trail must be saveable even before its first edit."
+	editor._selected_type = "star"
+	editor._place(0, 0)
+	if error == null and (not editor._dirty or reset_button.disabled):
+		error = "Grid edits should mark the trail dirty and enable Reset."
+	editor._reset()
+	if error == null and FileAccess.file_exists(path):
+		error = "Resetting a new unsaved trail must not create or delete a saved level."
+	elif error == null and editor._display_type_at(0, 0) != "":
+		error = "Reset should restore a new trail's starting layout."
+	elif error == null and (editor._dirty or preview._data != editor._data):
+		error = "Reset should clear dirty state and refresh the live preview."
+	editor._on_title_changed("First Saved Name")
+	editor._title_edit.text = "First Saved Name"
+	editor._save()
+	if error == null and not FileAccess.file_exists(path):
+		error = "Save should persist a new trail in its reserved slot."
+	editor._selected_type = "star"
+	editor._place(1, 1)
+	editor._reset()
+	if error == null and editor._display_type_at(1, 1) != "":
+		error = "Reset should restore the last successfully saved document."
+	editor._on_title_changed("Updated Saved Name")
+	editor._title_edit.text = "Updated Saved Name"
+	editor._save()
+	var matching_entries := 0
+	for entry in CustomLevelStore.campaign_entries():
+		if int(entry.get("custom_slot", -1)) == slot:
+			matching_entries += 1
+	var loaded := CustomLevelStore.load_level(slot)
+	if error == null and str(loaded.get("title", "")) != "Updated Saved Name":
+		error = "Saving an existing trail should overwrite that same level."
+	elif error == null and matching_entries != 1:
+		error = "Repeated saves must not duplicate campaign playlist entries."
+	elif error == null and (editor._dirty or not save_button.disabled):
+		error = "A successful save should clear dirty state and disable no-op Save."
+	editor.queue_free()
+	GameManager.custom_level_draft = {}
+	if FileAccess.file_exists(path):
+		DirAccess.remove_absolute(path)
+	if existed:
+		var restore := FileAccess.open(path, FileAccess.WRITE)
+		if restore != null:
+			restore.store_buffer(backup)
 	return error
 
 
