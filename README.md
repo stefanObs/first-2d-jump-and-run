@@ -277,12 +277,12 @@ Each cycle must maintain the following status block:
 ### Current development status
 
 - **Current iteration:** `v1.3.3` hazard variety, bounty bandits, and trail readability
-- **Last completed step:** Made the portable Windows exe robust when copied outside its folder (embedded data confirmed self-contained; per-user save fallback for read-only locations; clearer message when the source launcher is moved out)
+- **Last completed step:** Fixed four reported bugs — bandit side-contact now always sends the cowboy to camp (only head stomps tie), the Xbox controller works on any device id (`device=-1` bindings), flying levels now have carrions guarding the very top of the screen, and the timed gate reads clearly as open (green passage) vs closed (solid red barrier)
 - **Currently in progress:** In-game visual play-test of bosses and polish
 - **Next step:** Play-test bosses, fences, clouds, and flight; then tag `v1.3.3`
 - **Completed features:** Long 10-level cowboy trail; animated nonviolent bandit lasso; seated tied bandits; warning-shot and bounty bandits; carrions and rattlesnakes; animated canyon recovery; reachable hazards; hand-drawn cowboy + world props; looping music; three custom editor slots; mid-trail saves; modes; Xbox-ready input; Stampede Bull / Midnight Coach / Outlaw Kingpin bosses; horizon victory scene
 - **Remaining work:** In-game visual/gameplay play-test; Xbox controller physical verification; supervised child play-tests; additional SFX
-- **Tests last run:** all automated tests passed; verified a real embedded export runs standalone from an unrelated folder and that a read-only exe folder falls back to the per-user save location
+- **Tests last run:** all automated tests passed (incl. new coverage for bandit side-contact, all-device controller bindings, top-of-screen flight guards, and the timed-gate open/closed barrier)
 - **Known issues or blockers:**
   - Boss arenas and new fence/cloud art still need an in-game visual play-test
   - Xbox controller not physically verified on this machine

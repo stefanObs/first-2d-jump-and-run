@@ -96,7 +96,9 @@ func _process(delta: float) -> void:
 func _physics_process(delta: float) -> void:
 	if _tied:
 		return
-	_try_stomp_from_overlap()
+	_resolve_player_overlap()
+	if _tied:
+		return
 	_shot_timer -= delta
 	if _shooting:
 		return
@@ -379,27 +381,35 @@ func _bounce_after_stomp(player: Player) -> void:
 		player.velocity.x = 0.0
 
 
-func _try_stomp_from_overlap() -> void:
+func _resolve_player_overlap() -> void:
+	# Runs every physics frame so ANY contact resolves, even if the player first
+	# overlapped while briefly invulnerable (a body_entered check alone would miss
+	# that and let the cowboy walk through the bandit unharmed).
 	if _tied or _area == null:
 		return
 	for body in _area.get_overlapping_bodies():
 		if body is Player:
-			var player := body as Player
-			if _is_head_stomp(player):
-				tie_up()
-				_bounce_after_stomp(player)
+			if _handle_player_contact(body as Player):
 				return
 
 
+func _handle_player_contact(player: Player) -> bool:
+	# Top contact ties the bandit; any other contact sends the cowboy to camp.
+	if _tied:
+		return false
+	if _is_head_stomp(player):
+		tie_up()
+		_bounce_after_stomp(player)
+		return true
+	if player.is_invulnerable():
+		return false
+	hurt_player.emit(player)
+	return true
+
+
 func _on_body_entered(body: Node2D) -> void:
+	# Immediate response on entry; the per-frame overlap check is the safety net.
 	if _tied:
 		return
 	if body is Player:
-		var player := body as Player
-		if _is_head_stomp(player):
-			tie_up()
-			_bounce_after_stomp(player)
-			return
-		if player.is_invulnerable():
-			return
-		hurt_player.emit(player)
+		_handle_player_contact(body as Player)

@@ -32,6 +32,10 @@ func _ready() -> void:
 	failures += _run("Lasso ties bandits and makes them pass-through", _test_lasso_ties_bandit)
 	failures += _run("Lasso cast ties bandits via HurtArea", _test_lasso_cast_hits_hurt_area)
 	failures += _run("Jumping on a bandit head ties him", _test_stomp_ties_bandit)
+	failures += _run("Side contact with a bandit sends the cowboy to camp", _test_side_contact_hurts)
+	failures += _run("Controller bindings match every gamepad device", _test_controller_all_devices)
+	failures += _run("Flying levels guard the very top of the screen", _test_flying_levels_top_guarded)
+	failures += _run("Timed door shows a clear open/closed barrier", _test_timed_door_states)
 	failures += _run("Untied bandits restore normal standing size", _test_untie_restores_stand_scale)
 	failures += _run("Campaign hazards are no longer blocked by plank highways", _test_no_plank_highways)
 	failures += _run("Custom level store and builder work", _test_custom_level_builder)
@@ -634,6 +638,83 @@ func _test_stomp_ties_bandit() -> Variant:
 		error = "A head stomp should bounce the cowboy upward."
 	player.queue_free()
 	bandit.queue_free()
+	return error
+
+
+func _test_side_contact_hurts() -> Variant:
+	var packed: PackedScene = load("res://scenes/world/opponent.tscn")
+	var bandit := packed.instantiate() as Opponent
+	bandit.position = Vector2(200, 400)
+	add_child(bandit)
+	var player := Player.new()
+	# Same feet height as the bandit = a side bump, not a head stomp.
+	player.position = Vector2(200, 400)
+	add_child(player)
+	var hurt := [false]
+	bandit.hurt_player.connect(func(_p: Player) -> void: hurt[0] = true)
+	bandit._on_body_entered(player)
+	var error: Variant = null
+	if bandit.is_tied():
+		error = "Walking into a bandit's side must not tie him."
+	elif not hurt[0]:
+		error = "Any non-stomp contact should send the cowboy back to camp."
+	player.queue_free()
+	bandit.queue_free()
+	return error
+
+
+func _test_controller_all_devices() -> Variant:
+	for action in [&"jump", &"move_left", &"move_right", &"lasso", &"pause"]:
+		var found := false
+		for event in InputMap.action_get_events(action):
+			if event is InputEventJoypadButton or event is InputEventJoypadMotion:
+				found = true
+				if event.device != -1:
+					return "Controller binding for %s must match all devices (device=-1)." % String(action)
+		if not found:
+			return "Action %s has no controller binding." % String(action)
+	return null
+
+
+func _test_flying_levels_top_guarded() -> Variant:
+	for lv in ["02", "06", "07", "10"]:
+		var packed: PackedScene = load("res://scenes/levels/level_%s.tscn" % lv)
+		if packed == null:
+			return "Missing flying level %s." % lv
+		var level := packed.instantiate()
+		add_child(level)
+		var top_guards := 0
+		for node in level.find_children("*", "Area2D", true, false):
+			if node is Carrion and (node as Node2D).global_position.y <= -200.0:
+				top_guards += 1
+		level.queue_free()
+		if top_guards < 5:
+			return "Level %s needs carrions guarding the very top (found %d)." % [lv, top_guards]
+	return null
+
+
+func _test_timed_door_states() -> Variant:
+	var packed: PackedScene = load("res://scenes/world/timed_door.tscn")
+	if packed == null:
+		return "Missing timed door scene."
+	var door := packed.instantiate() as TimedDoor
+	add_child(door)
+	var barrier := door.get_node_or_null("Barrier") as ColorRect
+	var error: Variant = null
+	if barrier == null:
+		error = "Timed door needs a visible barrier fill so its state is clear."
+	else:
+		door._open = false
+		door._apply_state(false)
+		var closed_color := barrier.color
+		door._open = true
+		door._apply_state(false)
+		var open_color := barrier.color
+		if closed_color.is_equal_approx(open_color):
+			error = "Open and closed gates must look clearly different."
+		elif closed_color.a <= open_color.a:
+			error = "A closed gate should read as a solid, blocking barrier."
+	door.queue_free()
 	return error
 
 

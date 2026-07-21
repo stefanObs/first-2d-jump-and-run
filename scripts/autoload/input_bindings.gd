@@ -139,6 +139,9 @@ func _key(physical_keycode: Key) -> InputEventKey:
 func _joy_button(button_index: JoyButton) -> InputEventJoypadButton:
 	var event := InputEventJoypadButton.new()
 	event.button_index = button_index
+	# -1 = all devices. Without this the event only matches gamepad id 0, so an
+	# Xbox pad that enumerates as any other id (common on Linux) does nothing.
+	event.device = -1
 	return event
 
 
@@ -146,4 +149,5 @@ func _joy_axis(axis: JoyAxis, axis_value: float) -> InputEventJoypadMotion:
 	var event := InputEventJoypadMotion.new()
 	event.axis = axis
 	event.axis_value = axis_value
+	event.device = -1
 	return event
