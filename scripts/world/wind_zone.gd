@@ -12,7 +12,11 @@ var _label: Label
 
 
 func _ready() -> void:
+	monitoring = true
+	monitorable = false
 	_label = get_node_or_null("Label") as Label
+	if _label != null:
+		_label.visible = false
 	for child in get_children():
 		if child is Node2D and String(child.name).begins_with("Gust"):
 			_gusts.append(child as Node2D)
@@ -32,9 +36,11 @@ func _process(delta: float) -> void:
 
 
 func _physics_process(_delta: float) -> void:
+	# Apply full force each physics tick while overlapping the gust zone
+	# (same pattern as conveyors). Leaving the area stops the push immediately.
 	for body in get_overlapping_bodies():
 		if body is Player:
-			(body as Player).external_velocity += wind_force * get_physics_process_delta_time()
+			(body as Player).external_velocity += wind_force
 
 
 func _on_body_entered(body: Node2D) -> void:

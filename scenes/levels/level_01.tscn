@@ -73,7 +73,7 @@ offset_right = 1100.0
 offset_bottom = 130.0
 theme_override_colors/font_color = Color(0.35, 0.16, 0.05, 1)
 theme_override_font_sizes/font_size = 22
-text = "Run and jump along the long dusty trail to the saloon!"
+text = "Ride and jump with your horse along the dusty trail to the saloon!"
 
 
 [node name="Mesa0" type="ColorRect" parent="."]
@@ -767,6 +767,7 @@ position = Vector2(7060, 320)
 
 [node name="Player" parent="." instance=ExtResource("2_player")]
 position = Vector2(140, 280)
+start_mounted = true
 
 [node name="LevelTransition" parent="." instance=ExtResource("6_transition")]
 

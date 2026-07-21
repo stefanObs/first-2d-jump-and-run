@@ -9,6 +9,7 @@ extends RefCounted
 const FOLDER_NAME := "savegames"
 const CAMPAIGN_FILE := "save_data.json"
 const CUSTOM_SUBDIR := "custom_levels"
+const TRANSLATION_EXPORT_FILE := "game_text_edited.csv"
 const LEGACY_USER_SAVE := "user://save_data.json"
 const LEGACY_USER_CUSTOM := "user://custom_levels"
 
@@ -32,7 +33,11 @@ static func custom_levels_dir() -> String:
 
 
 static func custom_level_path(slot_index: int) -> String:
-	return custom_levels_dir().path_join("trail_%d.json" % (clampi(slot_index, 0, 2) + 1))
+	return custom_levels_dir().path_join("trail_%d.json" % (clampi(slot_index, 0, 19) + 1))
+
+
+static func translation_export_path() -> String:
+	return root_dir().path_join(TRANSLATION_EXPORT_FILE)
 
 
 static func migrate_legacy_if_needed() -> void:

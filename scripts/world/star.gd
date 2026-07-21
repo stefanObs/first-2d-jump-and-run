@@ -37,6 +37,7 @@ func _on_body_entered(body: Node2D) -> void:
 		return
 	_taken = true
 	monitoring = false
+	AudioManager.play_sfx(&"collect")
 	(body as Player).collect_star()
 	collected.emit()
 	var sprite := get_node_or_null("Sprite2D") as Node2D

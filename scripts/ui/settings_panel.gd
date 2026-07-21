@@ -11,6 +11,8 @@ var _music: HSlider
 var _sfx: HSlider
 var _vibration: CheckButton
 var _fullscreen: CheckButton
+var _narration: CheckButton
+var _language: OptionButton
 var _index: int = 0
 var _controls: Array[Control] = []
 
@@ -21,6 +23,8 @@ func _ready() -> void:
 	_sfx = get_node_or_null("Margin/VBox/SfxSlider") as HSlider
 	_vibration = get_node_or_null("Margin/VBox/VibrationToggle") as CheckButton
 	_fullscreen = get_node_or_null("Margin/VBox/FullscreenToggle") as CheckButton
+	_narration = get_node_or_null("Margin/VBox/NarrationToggle") as CheckButton
+	_language = get_node_or_null("Margin/VBox/LanguageDropdown") as OptionButton
 	var back := get_node_or_null("Margin/VBox/BackButton") as Button
 	# Fallback for older scene layouts without the Margin wrapper.
 	if _music == null:
@@ -31,9 +35,13 @@ func _ready() -> void:
 		_vibration = get_node_or_null("VBox/VibrationToggle") as CheckButton
 	if _fullscreen == null:
 		_fullscreen = get_node_or_null("VBox/FullscreenToggle") as CheckButton
+	if _narration == null:
+		_narration = get_node_or_null("VBox/NarrationToggle") as CheckButton
+	if _language == null:
+		_language = get_node_or_null("VBox/LanguageDropdown") as OptionButton
 	if back == null:
 		back = get_node_or_null("VBox/BackButton") as Button
-	_controls = [_music, _sfx, _vibration, _fullscreen, back]
+	_controls = [_music, _sfx, _vibration, _fullscreen, _narration, _language, back]
 	_controls = _controls.filter(func(c: Control) -> bool: return c != null)
 	_style_readable()
 	_load_values()
@@ -45,8 +53,13 @@ func _ready() -> void:
 		_vibration.toggled.connect(func(v: bool) -> void: GameManager.set_setting("vibration", v))
 	if _fullscreen:
 		_fullscreen.toggled.connect(func(v: bool) -> void: GameManager.set_setting("fullscreen", v))
+	if _narration:
+		_narration.toggled.connect(func(v: bool) -> void: GameManager.set_setting("narration", v))
+	if _language:
+		_language.item_selected.connect(_select_language)
 	if back:
 		back.pressed.connect(func() -> void: closed.emit())
+	GameManager.settings_changed.connect(_load_values)
 
 
 func _style_readable() -> void:
@@ -65,15 +78,17 @@ func _style_readable() -> void:
 		"Margin/VBox/Title",
 		"Margin/VBox/MusicLabel",
 		"Margin/VBox/SfxLabel",
+		"Margin/VBox/LanguageLabel",
 		"VBox/Title",
 		"VBox/MusicLabel",
 		"VBox/SfxLabel",
+		"VBox/LanguageLabel",
 	]:
 		var label := get_node_or_null(path) as Label
 		if label != null:
 			label.add_theme_color_override(&"font_color", ink)
 			label.add_theme_font_size_override(&"font_size", maxi(label.get_theme_font_size("font_size"), 22))
-	for control in [_vibration, _fullscreen]:
+	for control in [_vibration, _fullscreen, _narration]:
 		if control == null:
 			continue
 		control.add_theme_color_override(&"font_color", ink)
@@ -105,6 +120,34 @@ func _style_readable() -> void:
 		back.add_theme_stylebox_override(&"focus", hover)
 	_style_slider(_music)
 	_style_slider(_sfx)
+	_style_language_dropdown()
+
+
+func _style_language_dropdown() -> void:
+	if _language == null:
+		return
+	_language.add_theme_color_override(&"font_color", TEXT_COLOR)
+	_language.add_theme_color_override(&"font_hover_color", Color(0.45, 0.2, 0.06, 1.0))
+	_language.add_theme_color_override(&"font_pressed_color", TEXT_COLOR)
+	_language.add_theme_font_size_override(&"font_size", 22)
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = Color(0.95, 0.78, 0.42, 1)
+	normal.set_corner_radius_all(10)
+	normal.set_border_width_all(3)
+	normal.border_color = Color(0.45, 0.24, 0.08, 1)
+	normal.content_margin_left = 12
+	normal.content_margin_right = 12
+	normal.content_margin_top = 7
+	normal.content_margin_bottom = 7
+	var hover := normal.duplicate() as StyleBoxFlat
+	hover.bg_color = Color(1.0, 0.86, 0.5, 1)
+	_language.add_theme_stylebox_override(&"normal", normal)
+	_language.add_theme_stylebox_override(&"hover", hover)
+	_language.add_theme_stylebox_override(&"pressed", hover)
+	_language.add_theme_stylebox_override(&"focus", hover)
+	var popup := _language.get_popup()
+	popup.add_theme_color_override(&"font_color", TEXT_COLOR)
+	popup.add_theme_font_size_override(&"font_size", 22)
 
 
 func _style_slider(slider: HSlider) -> void:
@@ -175,12 +218,26 @@ func _load_values() -> void:
 		_vibration.button_pressed = bool(settings.get("vibration", true))
 	if _fullscreen:
 		_fullscreen.button_pressed = bool(settings.get("fullscreen", false))
+	if _narration:
+		_narration.button_pressed = bool(settings.get("narration", true))
+	if _language:
+		var current := String(settings.get("language", "en"))
+		_language.select(1 if current.begins_with("de") else 0)
+
+
+func _select_language(item_index: int) -> void:
+	if _language == null or item_index < 0:
+		return
+	var locale := "de" if item_index == 1 else "en"
+	GameManager.set_setting("language", locale)
 
 
 func _activate() -> void:
 	var control := _controls[_index]
 	if control is CheckButton:
 		(control as CheckButton).button_pressed = not (control as CheckButton).button_pressed
+	elif control is OptionButton:
+		(control as OptionButton).show_popup()
 	elif control is Button:
 		(control as Button).pressed.emit()
 

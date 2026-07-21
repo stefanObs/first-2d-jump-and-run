@@ -10,6 +10,9 @@ const RIDE_TEXTURE_0 := preload("res://assets/world/cowboy_horse_ride_0.png")
 const RIDE_TEXTURE_1 := preload("res://assets/world/cowboy_horse_ride_1.png")
 const SALOON_TEXTURE := preload("res://assets/world/goal_saloon.png")
 const SALOON_CENTER_ABOVE_PLANK := 92.0
+const TRANSITION_GROUND_RATIO := 0.69
+## Cowboy stands this far below the saloon sprite center (doorway / boardwalk).
+const COWBOY_BELOW_SALOON := 50.0
 
 var _veil: ColorRect
 var _banner: Label
@@ -21,6 +24,8 @@ var _saloon: Sprite2D
 var _ride_phase: float = 0.0
 var _arrival_active: bool = false
 var _animating_rider: bool = false
+var _saloon_screen_pos: Vector2 = Vector2.ZERO
+var _has_saloon_anchor: bool = false
 
 
 func _ready() -> void:
@@ -40,7 +45,11 @@ func _process(delta: float) -> void:
 	_rider.texture = RIDE_TEXTURE_0 if int(_ride_phase / 0.14) % 2 == 0 else RIDE_TEXTURE_1
 
 
-func play_celebration(message: String = "Yeehaw!", stars: int = 0) -> void:
+func play_celebration(
+	message: String = "Yeehaw!",
+	stars: int = 0,
+	saloon_screen_position: Vector2 = Vector2.INF
+) -> void:
 	_arrival_active = false
 	_animating_rider = false
 	visible = true
@@ -49,27 +58,26 @@ func play_celebration(message: String = "Yeehaw!", stars: int = 0) -> void:
 	if _veil != null:
 		_veil.color = Color(1.0, 0.82, 0.48, 0.38)
 	if _banner != null:
-		_banner.text = message
+		_banner.text = tr(message)
 		_banner.modulate.a = 1.0
 	if _subtitle != null:
-		_subtitle.text = "Badges found: %d" % stars
+		_subtitle.text = tr("Badges found: %d") % stars
 		_subtitle.modulate.a = 1.0
-	var ground_y := view_size.y * 0.64
-	var saloon_x := view_size.x * 0.70
-	# Saloon sits on the boardwalk; cowboy starts centered on the doorway.
+	if _banner != null and _subtitle != null:
+		Narrator.speak("%s %s" % [_banner.text, _subtitle.text])
+	_resolve_saloon_anchor(view_size, saloon_screen_position)
+	var ground_y := _ground_y_for_saloon()
+	# Saloon stays where it appeared on the trail; cowboy keeps doorway stance.
 	_saloon.visible = true
 	_saloon.modulate.a = 1.0
-	# Align the painted brown boardwalk at the bottom of the saloon with the
-	# transition ground. Previously the saloon sat too low, making the cowboy
-	# appear to stand on its roof.
-	_saloon.position = Vector2(saloon_x, ground_y - SALOON_CENTER_ABOVE_PLANK)
+	_saloon.position = _saloon_screen_pos
 	_horse.visible = true
 	_horse.modulate.a = 1.0
 	_horse.flip_h = false
 	_horse.position = Vector2(-220.0, ground_y)
 	_cowboy.visible = true
 	_cowboy.modulate.a = 1.0
-	_cowboy.position = Vector2(saloon_x, ground_y - 42.0)
+	_cowboy.position = _cowboy_door_position()
 	_cowboy.scale = Vector2(1.55, 1.55)
 	_rider.visible = false
 	_rider.modulate.a = 0.0
@@ -80,11 +88,10 @@ func set_progress(progress: float) -> void:
 		return
 	_ensure_horse_art()
 	var view_size := get_viewport().get_visible_rect().size
-	var ground_y := view_size.y * 0.64
-	var saloon_x := view_size.x * 0.70
-	var door_x := saloon_x
+	var ground_y := _ground_y_for_saloon()
+	var door_pos := _cowboy_door_position()
 	var mount_x := view_size.x * 0.40
-	_saloon.position = Vector2(saloon_x, ground_y - SALOON_CENTER_ABOVE_PLANK)
+	_saloon.position = _saloon_screen_pos
 	if progress < 0.28:
 		var arrival_ratio := progress / 0.28
 		_horse.visible = true
@@ -92,7 +99,7 @@ func set_progress(progress: float) -> void:
 		_horse.position = Vector2(lerpf(-220.0, mount_x, arrival_ratio), ground_y)
 		_cowboy.visible = true
 		_cowboy.modulate.a = 1.0
-		_cowboy.position = Vector2(door_x, ground_y - 42.0)
+		_cowboy.position = door_pos
 		_rider.visible = false
 		_animating_rider = false
 	elif progress < 0.48:
@@ -100,9 +107,9 @@ func set_progress(progress: float) -> void:
 		_horse.visible = true
 		_horse.position = Vector2(mount_x, ground_y)
 		_horse.modulate.a = 1.0
-		var jump_y := ground_y - 42.0 - sin(mount_ratio * PI) * 78.0
+		var jump_y := door_pos.y - sin(mount_ratio * PI) * 78.0
 		_cowboy.visible = true
-		_cowboy.position = Vector2(lerpf(door_x, mount_x + 6.0, mount_ratio), jump_y)
+		_cowboy.position = Vector2(lerpf(door_pos.x, mount_x + 6.0, mount_ratio), jump_y)
 		_cowboy.modulate.a = 1.0 - mount_ratio
 		_rider.visible = mount_ratio > 0.55
 		_rider.position = Vector2(mount_x, ground_y)
@@ -119,6 +126,7 @@ func set_progress(progress: float) -> void:
 	if _veil != null:
 		_veil.color.a = lerpf(0.38, 0.72, progress)
 
+
 func play_arrival() -> void:
 	_arrival_active = true
 	visible = true
@@ -126,18 +134,45 @@ func play_arrival() -> void:
 	_run_arrival()
 
 
+func _resolve_saloon_anchor(view_size: Vector2, saloon_screen_position: Vector2) -> void:
+	if saloon_screen_position != Vector2.INF and saloon_screen_position.is_finite():
+		_saloon_screen_pos = saloon_screen_position
+		_has_saloon_anchor = true
+		return
+	if _has_saloon_anchor:
+		return
+	# Fallback when no goal position was passed (tests / custom callers).
+	var ground_y := view_size.y * TRANSITION_GROUND_RATIO
+	_saloon_screen_pos = Vector2(view_size.x * 0.70, ground_y - SALOON_CENTER_ABOVE_PLANK)
+	_has_saloon_anchor = true
+
+
+func _ground_y_for_saloon() -> float:
+	return _saloon_screen_pos.y + SALOON_CENTER_ABOVE_PLANK
+
+
+func _cowboy_door_position() -> Vector2:
+	return _saloon_screen_pos + Vector2(0.0, COWBOY_BELOW_SALOON)
+
+
+func get_saloon_screen_position() -> Vector2:
+	return _saloon_screen_pos
+
+
 func _run_arrival() -> void:
 	var view_size := get_viewport().get_visible_rect().size
-	var ground_y := view_size.y * 0.62
+	var ground_y := view_size.y * TRANSITION_GROUND_RATIO
 	var center := Vector2(view_size.x * 0.45, ground_y)
 	if _veil != null:
 		_veil.color = Color(1.0, 0.82, 0.48, 0.62)
 	if _banner != null:
-		_banner.text = "Next trail!"
+		_banner.text = tr("Next trail!")
 		_banner.modulate.a = 1.0
 	if _subtitle != null:
-		_subtitle.text = "The cowboy rides in..."
+		_subtitle.text = tr("The cowboy rides in...")
 		_subtitle.modulate.a = 1.0
+	if _banner != null and _subtitle != null:
+		Narrator.speak("%s %s" % [_banner.text, _subtitle.text])
 	_saloon.visible = false
 	_cowboy.visible = false
 	_horse.visible = false
@@ -163,7 +198,7 @@ func _run_arrival() -> void:
 	_rider.visible = false
 	_animating_rider = false
 	if _subtitle != null:
-		_subtitle.text = "Ready!"
+		_subtitle.text = tr("Ready!")
 	var horse_exit := create_tween()
 	horse_exit.tween_interval(0.18)
 	horse_exit.set_parallel(true)

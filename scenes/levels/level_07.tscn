@@ -739,10 +739,17 @@ position = Vector2(480, 275)
 mode = 1
 
 
-[node name="CloudCanyon0" parent="." instance=ExtResource("15_cloud")]
-position = Vector2(1360, 255)
+[node name="CloudCanyon0A" parent="." instance=ExtResource("15_cloud")]
+position = Vector2(1280, 250)
 always_solid = true
-platform_width_scale = 2.2
+platform_width_scale = 1.05
+purpose_label = "BRIDGE"
+
+
+[node name="CloudCanyon0B" parent="." instance=ExtResource("15_cloud")]
+position = Vector2(1480, 235)
+always_solid = true
+platform_width_scale = 1.05
 purpose_label = "BRIDGE"
 
 
@@ -783,10 +790,17 @@ always_solid = true
 purpose_label = "OVER"
 
 
-[node name="CloudCanyon2" parent="." instance=ExtResource("15_cloud")]
-position = Vector2(4240, 255)
+[node name="CloudCanyon2A" parent="." instance=ExtResource("15_cloud")]
+position = Vector2(4140, 250)
 always_solid = true
-platform_width_scale = 2.2
+platform_width_scale = 1.0
+purpose_label = "BRIDGE"
+
+
+[node name="CloudCanyon2B" parent="." instance=ExtResource("15_cloud")]
+position = Vector2(4340, 240)
+always_solid = true
+platform_width_scale = 1.0
 purpose_label = "BRIDGE"
 
 
@@ -894,6 +908,31 @@ move_speed = 56.0
 position = Vector2(1050, -180)
 patrol_width = 150.0
 move_speed = 48.0
+
+
+[node name="Carrion10" parent="." instance=ExtResource("18_carrion")]
+position = Vector2(2480, 110)
+patrol_width = 90.0
+move_speed = 52.0
+
+
+[node name="Carrion11" parent="." instance=ExtResource("18_carrion")]
+position = Vector2(4200, 55)
+patrol_width = 85.0
+move_speed = 54.0
+
+
+[node name="Carrion12" parent="." instance=ExtResource("18_carrion")]
+position = Vector2(5100, -40)
+patrol_width = 100.0
+move_speed = 50.0
+
+
+[node name="Carrion13" parent="." instance=ExtResource("18_carrion")]
+position = Vector2(3200, -195)
+patrol_width = 130.0
+move_speed = 46.0
+bob_height = 10.0
 
 
 [node name="Carrion20" parent="." instance=ExtResource("18_carrion")]

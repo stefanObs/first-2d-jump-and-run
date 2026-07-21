@@ -10,6 +10,7 @@ const TYPES := [
 	["pit", "Pit"],
 	["checkpoint", "Camp"],
 	["spring", "Spring"],
+	["bandit", "Bandit"],
 	["goal", "Saloon"],
 	["erase", "Erase"],
 ]
@@ -19,6 +20,7 @@ var _selected_type: String = "ground"
 var _cells: Array[Button] = []
 var _status: Label
 var _title_edit: LineEdit
+var _preview: LevelPreview
 
 
 func _ready() -> void:
@@ -40,7 +42,11 @@ func _build_ui() -> void:
 	var heading := HBoxContainer.new()
 	root.add_child(heading)
 	var title := Label.new()
-	title.text = "Family Trail Builder"
+	title.text = (
+		"Edit Campaign Level"
+		if str(_data.get("kind", "")) == "override"
+		else "Add Campaign Level"
+	)
 	title.add_theme_font_size_override(&"font_size", 30)
 	title.add_theme_color_override(&"font_color", Color(0.35, 0.16, 0.05))
 	title.custom_minimum_size.x = 350
@@ -76,7 +82,7 @@ func _build_ui() -> void:
 		palette.add_child(button)
 
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(0, 390)
+	scroll.custom_minimum_size = Vector2(0, 235)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	root.add_child(scroll)
 	var grid := GridContainer.new()
@@ -89,13 +95,17 @@ func _build_ui() -> void:
 	for y in range(height):
 		for x in range(width):
 			var cell := Button.new()
-			cell.custom_minimum_size = Vector2(46, 34)
-			cell.add_theme_font_size_override(&"font_size", 11)
+			cell.custom_minimum_size = Vector2(38, 28)
+			cell.add_theme_font_size_override(&"font_size", 9)
 			var cell_x := x
 			var cell_y := y
 			cell.pressed.connect(func() -> void: _place(cell_x, cell_y))
 			grid.add_child(cell)
 			_cells.append(cell)
+
+	_preview = LevelPreview.new()
+	_preview.name = "LevelPreview"
+	root.add_child(_preview)
 
 	_status = Label.new()
 	_status.text = "Stamp: Dirt — keep a dirt path under the cowboy and saloon."
@@ -109,7 +119,7 @@ func _build_ui() -> void:
 	root.add_child(actions)
 	_add_action(actions, "Save Trail", _save)
 	_add_action(actions, "Play Test", _play_test)
-	_add_action(actions, "Back to Trail Slots", GameManager.open_custom_level_hub)
+	_add_action(actions, "Back to Campaign Workshop", GameManager.open_custom_level_hub)
 
 
 func _add_action(parent: Control, text: String, action: Callable) -> void:
@@ -199,6 +209,8 @@ func _refresh_grid() -> void:
 			var type_name := _display_type_at(x, y)
 			cell.text = _short_label(type_name)
 			cell.modulate = _type_color(type_name)
+	if _preview != null:
+		_preview.show_level(_data)
 
 
 func _display_type_at(x: int, y: int) -> String:
@@ -218,7 +230,7 @@ func _short_label(type_name: String) -> String:
 	var labels := {
 		"ground": "DIRT", "platform": "WOOD", "star": "STAR",
 		"cactus": "OUCH", "pit": "PIT", "checkpoint": "CAMP",
-		"spring": "BOING", "goal": "END",
+		"spring": "BOING", "bandit": "BANDIT", "goal": "END",
 	}
 	return str(labels.get(type_name, ""))
 
@@ -229,7 +241,7 @@ func _type_color(type_name: String) -> Color:
 		"platform": Color(0.62, 0.4, 0.22), "star": Color(1, 0.85, 0.2),
 		"cactus": Color(0.35, 0.75, 0.3), "pit": Color(0.35, 0.18, 0.1),
 		"checkpoint": Color(0.95, 0.45, 0.2), "spring": Color(0.3, 0.9, 0.45),
-		"goal": Color(0.85, 0.3, 0.2),
+		"bandit": Color(0.32, 0.18, 0.08), "goal": Color(0.85, 0.3, 0.2),
 	}
 	return colors.get(type_name, Color.WHITE)
 

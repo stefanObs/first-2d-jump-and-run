@@ -483,7 +483,34 @@ shape = SubResource("GroundSeg")
 
 [node name="Pit6" parent="." instance=ExtResource("5_hazard")]
 position = Vector2(2800, 400)
-scale = Vector2(4.8, 1.8)
+scale = Vector2(2.4, 1.6)
+
+
+[node name="FerryStep6A" type="StaticBody2D" parent="."]
+position = Vector2(2700, 280)
+[node name="Visual" type="ColorRect" parent="FerryStep6A"]
+offset_left = -70.0
+offset_top = -12.0
+offset_right = 70.0
+offset_bottom = 12.0
+color = Color(0.62, 0.4, 0.22, 1)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="FerryStep6A"]
+shape = SubResource("Block")
+
+[node name="FerryStep6B" type="StaticBody2D" parent="."]
+position = Vector2(2900, 230)
+[node name="Visual" type="ColorRect" parent="FerryStep6B"]
+offset_left = -70.0
+offset_top = -12.0
+offset_right = 70.0
+offset_bottom = 12.0
+color = Color(0.62, 0.4, 0.22, 1)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="FerryStep6B"]
+shape = SubResource("Block")
+
+[node name="FerrySpring6" parent="." instance=ExtResource("11_spring")]
+position = Vector2(2480, 320)
+bounce_velocity = -720.0
 
 
 [node name="Ground7" type="StaticBody2D" parent="."]
@@ -563,9 +590,39 @@ color = Color(0.45, 0.72, 0.28, 1)
 shape = SubResource("GroundSeg")
 
 
-[node name="Pit12" parent="." instance=ExtResource("5_hazard")]
-position = Vector2(5680, 400)
-scale = Vector2(4.8, 1.8)
+[node name="Pit12A" parent="." instance=ExtResource("5_hazard")]
+position = Vector2(5560, 400)
+scale = Vector2(1.8, 1.5)
+
+
+[node name="FerryIsle12" type="StaticBody2D" parent="."]
+position = Vector2(5720, 300)
+[node name="Visual" type="ColorRect" parent="FerryIsle12"]
+offset_left = -90.0
+offset_top = -14.0
+offset_right = 90.0
+offset_bottom = 14.0
+color = Color(0.62, 0.4, 0.22, 1)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="FerryIsle12"]
+shape = SubResource("BlockWide")
+
+[node name="Pit12B" parent="." instance=ExtResource("5_hazard")]
+position = Vector2(5880, 400)
+scale = Vector2(1.8, 1.5)
+
+
+[node name="FerryCloud12A" parent="." instance=ExtResource("15_cloud")]
+position = Vector2(5620, 250)
+always_solid = true
+platform_width_scale = 0.9
+purpose_label = "HOP"
+
+
+[node name="FerryCloud12B" parent="." instance=ExtResource("15_cloud")]
+position = Vector2(5820, 235)
+always_solid = true
+platform_width_scale = 0.9
+purpose_label = "HOP"
 
 
 [node name="Ground13" type="StaticBody2D" parent="."]
@@ -639,7 +696,7 @@ position = Vector2(5000, 330)
 
 
 [node name="Cactus34" parent="." instance=ExtResource("5_hazard")]
-position = Vector2(6710, 330)
+position = Vector2(6880, 330)
 
 
 [node name="Checkpoint" parent="." instance=ExtResource("3_checkpoint")]
@@ -665,15 +722,8 @@ move_speed = 82.0
 position = Vector2(1130, 200)
 
 
-[node name="Moving1" parent="." instance=ExtResource("12_move")]
-position = Vector2(2800, 250)
-point_a = Vector2(-220, 70)
-point_b = Vector2(220, -238)
-move_speed = 82.0
-
-
 [node name="MoveStar1" parent="." instance=ExtResource("9_star")]
-position = Vector2(2530, 200)
+position = Vector2(2900, 175)
 
 
 [node name="Moving2" parent="." instance=ExtResource("12_move")]
@@ -687,22 +737,15 @@ move_speed = 82.0
 position = Vector2(3930, 200)
 
 
-[node name="Moving3" parent="." instance=ExtResource("12_move")]
-position = Vector2(5680, 250)
-point_a = Vector2(-220, 70)
-point_b = Vector2(220, -238)
-move_speed = 82.0
-
-
 [node name="MoveStar3" parent="." instance=ExtResource("9_star")]
-position = Vector2(5600, 200)
+position = Vector2(5720, 230)
 
 
 [node name="Moving4" parent="." instance=ExtResource("12_move")]
-position = Vector2(6400, 250)
-point_a = Vector2(-220, 70)
-point_b = Vector2(220, -238)
-move_speed = 82.0
+position = Vector2(6550, 280)
+point_a = Vector2(-90, 40)
+point_b = Vector2(90, -120)
+move_speed = 70.0
 
 
 [node name="MoveStar4" parent="." instance=ExtResource("9_star")]

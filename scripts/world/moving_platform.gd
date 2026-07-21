@@ -13,6 +13,8 @@ var _label: Label
 func _ready() -> void:
 	_origin = global_position
 	_label = get_node_or_null("Label") as Label
+	if _label != null:
+		_label.visible = false
 	_update_label()
 
 

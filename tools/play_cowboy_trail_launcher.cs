@@ -1,7 +1,10 @@
 using System;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.IO.Compression;
+using System.Media;
+using System.Threading;
 using System.Windows.Forms;
 
 /// <summary>
@@ -14,6 +17,8 @@ internal static class Program
 	[STAThread]
 	private static void Main()
 	{
+		LoadingForm loading = null;
+		SoundPlayer loadingMusic = null;
 		try
 		{
 			string root = AppDomain.CurrentDomain.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
@@ -29,6 +34,20 @@ internal static class Program
 					+ "To play from anywhere, build the portable game with create_exe.bat and copy CowboyTrail.exe instead.");
 				return;
 			}
+			Application.EnableVisualStyles();
+			loading = new LoadingForm(root);
+			loading.Show();
+			Application.DoEvents();
+			string musicPath = Path.Combine(root, "assets", "audio", "cheerful_cowboy_trail.wav");
+			if (File.Exists(musicPath))
+			{
+				try
+				{
+					loadingMusic = new SoundPlayer(musicPath);
+					loadingMusic.PlayLooping();
+				}
+				catch { }
+			}
 
 			string engine = Path.Combine(root, "godot", "Godot_v4.4.1-stable_win64.exe");
 			string engineZip = Path.Combine(root, "godot", "Godot_v4.4.1-stable_win64.exe.zip");
@@ -37,6 +56,7 @@ internal static class Program
 
 			if (!File.Exists(engine))
 			{
+				loading.SetStatus("Unpacking the saddle bags...");
 				if (!File.Exists(engineZip))
 				{
 					Fail("Could not find the bundled Godot engine zip in the godot folder.");
@@ -64,6 +84,7 @@ internal static class Program
 
 			if (needImport)
 			{
+				loading.SetStatus("Painting the Wild West...");
 				string godotDir = Path.Combine(root, ".godot");
 				if (Directory.Exists(godotDir))
 				{
@@ -82,6 +103,8 @@ internal static class Program
 				}
 			}
 
+			loading.SetStatus("Starting the trail...");
+			Application.DoEvents();
 			Process.Start(new ProcessStartInfo
 			{
 				FileName = engine,
@@ -89,10 +112,24 @@ internal static class Program
 				WorkingDirectory = root,
 				UseShellExecute = true
 			});
+			Thread.Sleep(250);
 		}
 		catch (Exception ex)
 		{
 			Fail(ex.Message);
+		}
+		finally
+		{
+			if (loadingMusic != null)
+			{
+				try { loadingMusic.Stop(); } catch { }
+				loadingMusic.Dispose();
+			}
+			if (loading != null)
+			{
+				loading.Close();
+				loading.Dispose();
+			}
 		}
 	}
 
@@ -108,7 +145,11 @@ internal static class Program
 		};
 		Process p = Process.Start(info);
 		if (p == null) return -1;
-		p.WaitForExit();
+		while (!p.HasExited)
+		{
+			Application.DoEvents();
+			Thread.Sleep(40);
+		}
 		return p.ExitCode;
 	}
 
@@ -127,5 +168,61 @@ internal static class Program
 	private static void Fail(string message)
 	{
 		MessageBox.Show(message, "Cowboy Trail", MessageBoxButtons.OK, MessageBoxIcon.Error);
+	}
+}
+
+internal sealed class LoadingForm : Form
+{
+	private readonly Label status;
+
+	internal LoadingForm(string root)
+	{
+		Text = "Cowboy Trail";
+		FormBorderStyle = FormBorderStyle.FixedDialog;
+		StartPosition = FormStartPosition.CenterScreen;
+		ClientSize = new Size(620, 300);
+		BackColor = Color.FromArgb(237, 151, 67);
+		ControlBox = false;
+		ShowInTaskbar = true;
+		var title = new Label
+		{
+			Text = "COWBOY TRAIL",
+			Font = new Font(FontFamily.GenericSerif, 30, FontStyle.Bold),
+			ForeColor = Color.FromArgb(85, 35, 12),
+			TextAlign = ContentAlignment.MiddleCenter,
+			Bounds = new Rectangle(20, 38, 580, 70)
+		};
+		Controls.Add(title);
+		status = new Label
+		{
+			Text = "Saddling up...",
+			Font = new Font(FontFamily.GenericSansSerif, 17, FontStyle.Bold),
+			ForeColor = Color.FromArgb(105, 48, 18),
+			TextAlign = ContentAlignment.MiddleCenter,
+			Bounds = new Rectangle(20, 185, 580, 55)
+		};
+		Controls.Add(status);
+		string iconPath = Path.Combine(root, "icon.png");
+		if (File.Exists(iconPath))
+		{
+			try
+			{
+				var picture = new PictureBox
+				{
+					Image = Image.FromFile(iconPath),
+					SizeMode = PictureBoxSizeMode.Zoom,
+					Bounds = new Rectangle(270, 105, 80, 80)
+				};
+				Controls.Add(picture);
+				picture.BringToFront();
+			}
+			catch { }
+		}
+	}
+
+	internal void SetStatus(string text)
+	{
+		status.Text = text;
+		Application.DoEvents();
 	}
 }

@@ -14,6 +14,7 @@ signal player_respawned(position: Vector2)
 @export var is_final_level: bool = false
 @export var fall_recovery_y: float = 540.0
 @export var is_custom_level: bool = false
+var campaign_source_level: int = 0
 
 var spawn_point: Marker2D
 var player: Player
@@ -85,6 +86,11 @@ func setup_level() -> void:
 	if _is_set_up:
 		return
 	_is_set_up = true
+	var campaign_context := GameManager.consume_campaign_context()
+	if not campaign_context.is_empty():
+		level_number = int(campaign_context.get("position", level_number))
+		campaign_source_level = int(campaign_context.get("source_level", level_number))
+		is_final_level = level_number >= int(campaign_context.get("count", 10))
 
 	spawn_point = get_node_or_null("SpawnPoint") as Marker2D
 	var player_node := get_node_or_null("Player")
@@ -116,7 +122,7 @@ func setup_level() -> void:
 			"Loaded! Back at your saved camp."
 			if _loaded_run_state
 			else hint.text if hint != null and not String(hint.text).is_empty()
-			else "Let's go: %s!" % display_title
+			else tr("Let's go: %s!") % display_title
 		)
 		hud.show_toast(tip, 4.5)
 		if hint != null:
@@ -170,12 +176,24 @@ func begin_completion() -> void:
 		player.visible = false
 	if transition != null:
 		var stars := player.stars_collected if player != null else 0
-		var message := "Trail complete!" if is_final_level else "Yeehaw!"
+		var message := tr("Trail complete!") if is_final_level else tr("Yeehaw!")
 		if stars > 0:
-			message = "%s  %d badges!" % [message, stars]
-		transition.play_celebration(message, stars)
+			message = tr("%s  %d badges!") % [message, stars]
+		transition.play_celebration(message, stars, _goal_saloon_screen_position())
 	_completion.start()
 	level_completed.emit()
+
+
+func _goal_saloon_screen_position() -> Vector2:
+	## Map the in-level saloon sprite center into CanvasLayer/screen space so the
+	## celebration keeps the saloon where it already sits on screen.
+	var goal := find_child("Goal", true, false) as Node2D
+	if goal == null:
+		return Vector2.INF
+	var sprite := goal.get_node_or_null("Sprite2D") as Node2D
+	var world_center: Vector2 = sprite.global_position if sprite != null else goal.global_position
+	var canvas := get_viewport().get_canvas_transform()
+	return canvas * world_center
 
 
 func _handle_next_level_tap() -> void:
@@ -203,7 +221,9 @@ func _handle_next_boss_tap() -> void:
 			player.set_input_enabled(false)
 		# From a trail: jump into the next boss after this level's slot
 		# (or cycle starting from the first boss).
-		GameManager.load_next_boss_from_level(level_number)
+		GameManager.load_next_boss_from_level(
+			campaign_source_level if campaign_source_level > 0 else level_number
+		)
 		return
 	_next_boss_tap_time_msec = now
 	if hud != null:
@@ -213,6 +233,7 @@ func _handle_next_boss_tap() -> void:
 func respawn_player() -> void:
 	if player == null or _is_completing:
 		return
+	AudioManager.play_sfx(&"hurt")
 	_clear_hostile_projectiles()
 	var destination := get_active_respawn_position()
 	player.respawn_at(destination)
@@ -413,7 +434,7 @@ func _on_star_collected(total: int) -> void:
 	if hud != null:
 		hud.set_stars(total)
 		if total > 0 and total % 5 == 0:
-			hud.show_toast("Nice! %d badges!" % total, 1.8)
+			hud.show_toast(tr("Nice! %d badges!") % total, 1.8)
 
 
 func _on_badge_taken(badge_name: String) -> void:
@@ -499,6 +520,7 @@ func _restore_run_state() -> void:
 
 
 func _on_goal_reached(_goal: Goal) -> void:
+	AudioManager.play_sfx(&"goal")
 	begin_completion()
 
 
@@ -552,7 +574,7 @@ func _on_bounty_caught(opponent: Opponent, amount: int) -> void:
 	add_child(reward_effect)
 	reward_effect.play(opponent.global_position, player.global_position, new_badges)
 	if hud != null:
-		hud.show_toast("Bounty caught! +%d badges!" % new_badges, 2.2)
+		hud.show_toast(tr("Bounty caught! +%d badges!") % new_badges, 2.2)
 
 
 func _on_celebration_finished() -> void:
@@ -565,7 +587,7 @@ func _on_celebration_finished() -> void:
 	if GameManager.try_load_boss_after(level_number):
 		return
 	if is_final_level:
-		GameManager.return_to_save_select()
+		GameManager.finish_campaign()
 	else:
 		GameManager.request_horse_arrival()
 		GameManager.load_level(level_number + 1)
@@ -626,7 +648,7 @@ func _on_device_changed(_device: Variant) -> void:
 
 
 func _gameplay_prompt() -> String:
-	return "Move: %s   Jump: %s   Lasso: %s   Pause: %s" % [
+	return tr("Move: %s   Jump: %s   Lasso: %s   Pause: %s") % [
 		InputManager.prompt_for(&"move_left"),
 		InputManager.prompt_for(&"jump"),
 		InputManager.prompt_for(&"lasso"),

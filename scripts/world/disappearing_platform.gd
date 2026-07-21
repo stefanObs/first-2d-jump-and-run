@@ -8,6 +8,11 @@ extends StaticBody2D
 @export var always_solid: bool = false
 @export var purpose_label: String = "CLOUD"
 @export var platform_width_scale: float = 1.0
+## Trail floor top Y in level space — clouds stay above this with clearance.
+@export var trail_floor_top: float = 320.0
+@export var floor_clearance: float = 36.0
+
+const CLOUD_COLLISION_HEIGHT := 14.0
 
 var _timer: float = 0.0
 var _solid: bool = true
@@ -23,7 +28,11 @@ func _ready() -> void:
 	_shape = get_node_or_null("CollisionShape2D") as CollisionShape2D
 	_visual = get_node_or_null("Visual") as CanvasItem
 	_label = get_node_or_null("Label") as Label
+	if _label != null:
+		_label.visible = false
 	_apply_width_scale()
+	_configure_one_way()
+	_clamp_above_floor()
 	for child in get_children():
 		if child is CanvasItem and (String(child.name).begins_with("Fluff") or child == _visual):
 			_extras.append(child as CanvasItem)
@@ -34,6 +43,23 @@ func _ready() -> void:
 	_apply_state()
 
 
+func _configure_one_way() -> void:
+	# True one-way: jump up through, land on top. Never crush from below when
+	# a blinking cloud reappears around the cowboy.
+	if _shape == null:
+		return
+	_shape.one_way_collision = true
+	_shape.one_way_collision_margin = 4.0
+
+
+func _clamp_above_floor() -> void:
+	# Keep cloud collision from sinking into / intersecting the trail floor.
+	var half_h := CLOUD_COLLISION_HEIGHT * 0.5
+	var max_center_y := trail_floor_top - floor_clearance - half_h
+	if global_position.y > max_center_y:
+		global_position.y = max_center_y
+
+
 func _apply_width_scale() -> void:
 	var w := maxf(platform_width_scale, 0.5)
 	if _visual is Sprite2D:
@@ -41,8 +67,10 @@ func _apply_width_scale() -> void:
 		spr.scale = Vector2(0.95 * w, 0.9)
 	if _shape != null and _shape.shape is RectangleShape2D:
 		var rect := (_shape.shape as RectangleShape2D).duplicate() as RectangleShape2D
-		rect.size = Vector2(130.0 * w, 30.0)
+		# Thin top slab reads as a cloud deck and works cleanly with one-way.
+		rect.size = Vector2(130.0 * w, CLOUD_COLLISION_HEIGHT)
 		_shape.shape = rect
+		_shape.position = Vector2(0.0, -6.0)
 	if _label != null:
 		_label.offset_left = -40.0 * w
 		_label.offset_right = 40.0 * w
@@ -77,7 +105,10 @@ func _process(delta: float) -> void:
 
 func _apply_state() -> void:
 	if _shape != null:
+		# Disable completely when hidden so disappearance never carries/crushes.
 		_shape.disabled = not _solid
+		if _solid:
+			_configure_one_way()
 	var alpha := 1.0 if _solid else 0.25
 	for item in _extras:
 		item.modulate = Color(1, 1, 1, alpha)
@@ -106,3 +137,7 @@ func _update_warning_blink() -> void:
 		_label.modulate = Color(0.85, 0.35, 0.1, 1.0)
 		_label.add_theme_font_size_override(&"font_size", 18)
 		_label.scale = Vector2(1.0 + absf(sin(_blink_phase)) * 0.15, 1.0)
+
+
+func is_one_way_cloud() -> bool:
+	return _shape != null and _shape.one_way_collision and not _shape.disabled

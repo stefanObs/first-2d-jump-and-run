@@ -6,45 +6,61 @@ extends Node
 
 func _ready() -> void:
 	var failures := 0
-	failures += _run("JumpAssist coyote allows brief airborne jump", _test_coyote_jump)
-	failures += _run("JumpAssist buffer remembers early jump press", _test_jump_buffer)
-	failures += _run("JumpAssist consume clears coyote and buffer", _test_consume_clears_state)
-	failures += _run("InputBindings registers required actions", _test_input_bindings_actions)
-	failures += _run("ModeController durations and shield", _test_mode_controller)
-	failures += _run("GameManager save slots persist", _test_save_slots)
-	failures += _run("Portable saves fall back when exe folder is read-only", _test_save_paths_writable_fallback)
-	failures += _run("Save select scene loads", _test_save_select_scene)
-	failures += _run("Level 01 contains core objects", _test_level_01_world_objects)
-	failures += _run("Level catalog has ten scenes", _test_ten_levels_exist)
-	failures += _run("LevelController respawns at checkpoint", _test_respawn_uses_checkpoint)
-	failures += _run("Camp restores tied bandits and active bonuses", _test_camp_restores_state)
-	failures += _run("Goal completion disables player input", _test_goal_disables_input)
-	failures += _run("Flying over the saloon still finishes the trail", _test_goal_triggers_when_flying_over)
-	failures += _run("Bubble shield blocks opponent damage flag", _test_shield_blocks_damage_flag)
-	failures += _run("Bubble shield does not block canyon falls", _test_canyon_ignores_bubble_shield)
-	failures += _run("InputManager device prompts", _test_input_manager_prompts)
-	failures += _run("Star reachability heuristics", _test_star_reachability)
-	failures += _run(
+	failures += await _run("JumpAssist coyote allows brief airborne jump", _test_coyote_jump)
+	failures += await _run("JumpAssist buffer remembers early jump press", _test_jump_buffer)
+	failures += await _run("JumpAssist consume clears coyote and buffer", _test_consume_clears_state)
+	failures += await _run("InputBindings registers required actions", _test_input_bindings_actions)
+	failures += await _run("Debug name overlay toggles cleanly with F1 action", _test_debug_name_overlay)
+	failures += await _run("ModeController durations and shield", _test_mode_controller)
+	failures += await _run("GameManager save slots persist", _test_save_slots)
+	failures += await _run("Portable saves fall back when exe folder is read-only", _test_save_paths_writable_fallback)
+	failures += await _run("Save select scene loads", _test_save_select_scene)
+	failures += await _run("German text and spoken-instruction settings work", _test_localization_settings)
+	failures += await _run("Settings language dropdown persists and supports controller use", _test_settings_language_dropdown)
+	failures += await _run("Translation CSV parses and round-trips safely", _test_translation_csv_round_trip)
+	failures += await _run("Translation placeholders render and validate", _test_translation_placeholders)
+	failures += await _run("Translation editor loads and exports portably", _test_translation_editor)
+	failures += await _run("Handmade trail progress and effect sounds work", _test_handmade_progress_and_sfx)
+	failures += await _run("Level 01 contains core objects", _test_level_01_world_objects)
+	failures += await _run("Level catalog has ten scenes", _test_ten_levels_exist)
+	failures += await _run("LevelController respawns at checkpoint", _test_respawn_uses_checkpoint)
+	failures += await _run("Camp restores tied bandits and active bonuses", _test_camp_restores_state)
+	failures += await _run("Goal completion disables player input", _test_goal_disables_input)
+	failures += await _run("Flying over the saloon still finishes the trail", _test_goal_triggers_when_flying_over)
+	failures += await _run("Bubble shield blocks opponent damage flag", _test_shield_blocks_damage_flag)
+	failures += await _run("Bubble shield does not block canyon falls", _test_canyon_ignores_bubble_shield)
+	failures += await _run("InputManager device prompts", _test_input_manager_prompts)
+	failures += await _run("Star reachability heuristics", _test_star_reachability)
+	failures += await _run(
 		"Levels complete; platforms reachable; effects and environments styled",
 		_test_level_layout_rules
 	)
-	failures += _run("Cowboy player has movement animations", _test_cowboy_animations)
-	failures += _run("Lasso ties bandits and makes them pass-through", _test_lasso_ties_bandit)
-	failures += _run("Lasso cast ties bandits via HurtArea", _test_lasso_cast_hits_hurt_area)
-	failures += _run("Jumping on a bandit head ties him", _test_stomp_ties_bandit)
-	failures += _run("Side contact with a bandit sends the cowboy to camp", _test_side_contact_hurts)
-	failures += _run("Controller bindings match every gamepad device", _test_controller_all_devices)
-	failures += _run("Flying levels guard the very top of the screen", _test_flying_levels_top_guarded)
-	failures += _run("Timed door shows a clear open/closed barrier", _test_timed_door_states)
-	failures += _run("Untied bandits restore normal standing size", _test_untie_restores_stand_scale)
-	failures += _run("Campaign hazards are no longer blocked by plank highways", _test_no_plank_highways)
-	failures += _run("Canyon rafts travel on steep required routes", _test_steep_canyon_rafts)
-	failures += _run("Custom level store and builder work", _test_custom_level_builder)
-	failures += _run("Hand-drawn celebration art and cheerful music load", _test_art_and_music)
-	failures += _run("Mid-trail save data persists and loads", _test_mid_trail_save)
-	failures += _run("Saved camp and badges restore inside a level", _test_level_run_restore)
-	failures += _run("Pause menu exposes save, load, and restart from start", _test_pause_save_controls)
-	failures += _run("Boss arenas expose lasso targets and solvable kingpin layout", _test_boss_arenas)
+	failures += await _run("Cowboy player has movement animations", _test_cowboy_animations)
+	failures += await _run("Lasso ties bandits and makes them pass-through", _test_lasso_ties_bandit)
+	failures += await _run("Lasso cast ties bandits via HurtArea", _test_lasso_cast_hits_hurt_area)
+	failures += await _run("Jumping on a bandit head ties him", _test_stomp_ties_bandit)
+	failures += await _run("Side contact with a bandit sends the cowboy to camp", _test_side_contact_hurts)
+	failures += await _run("Bandits turn around at plank edges", _test_bandit_respects_plank_edges)
+	failures += await _run("Controller bindings match every gamepad device", _test_controller_all_devices)
+	failures += await _run("Flying levels guard the very top of the screen", _test_flying_levels_top_guarded)
+	failures += await _run("Timed door shows a clear open/closed barrier", _test_timed_door_states)
+	failures += await _run("Gameplay obstacles do not display floating text", _test_obstacle_labels_hidden)
+	failures += await _run("Untied bandits restore normal standing size", _test_untie_restores_stand_scale)
+	failures += await _run("Campaign hazards are no longer blocked by plank highways", _test_no_plank_highways)
+	failures += await _run("Canyon rafts travel on steep required routes", _test_steep_canyon_rafts)
+	failures += await _run("Custom level store and builder work", _test_custom_level_builder)
+	failures += await _run("Campaign workshop edits and inserts levels", _test_campaign_workshop)
+	failures += await _run("Hand-drawn celebration art and cheerful music load", _test_art_and_music)
+	failures += await _run("Mid-trail save data persists and loads", _test_mid_trail_save)
+	failures += await _run("Saved camp and badges restore inside a level", _test_level_run_restore)
+	failures += await _run("Pause menu exposes save, load, and restart from start", _test_pause_save_controls)
+	failures += await _run("Boss arenas expose lasso targets and solvable kingpin layout", _test_boss_arenas)
+	failures += await _run("Clouds are one-way platforms that stay above the floor", _test_one_way_cloud_platforms)
+	failures += await _run("Wind zones push while overlapping gusts", _test_wind_zone_force_overlap)
+	failures += await _run("HUD uses handmade western sign boards", _test_handmade_hud_signs)
+	failures += await _run("Celebration saloon keeps the goal screen position", _test_saloon_transition_anchor)
+	failures += await _run("Canyon clouds include two-cloud hop chains", _test_two_cloud_canyon_chains)
+	failures += await _run("Wings levels place varied aerial carrions", _test_wings_carrion_variety)
 
 	if failures == 0:
 		print("All tests passed.")
@@ -55,7 +71,7 @@ func _ready() -> void:
 
 
 func _run(name: String, callable: Callable) -> int:
-	var error: Variant = callable.call()
+	var error: Variant = await callable.call()
 	if error == null:
 		print("PASS: %s" % name)
 		return 0
@@ -100,7 +116,8 @@ func _test_consume_clears_state() -> Variant:
 func _test_input_bindings_actions() -> Variant:
 	var required: Array[StringName] = [
 		&"move_left", &"move_right", &"jump", &"lasso", &"next_level", &"next_boss",
-		&"pause", &"confirm", &"back",
+		&"toggle_debug_names",
+		&"pause", &"confirm", &"back", &"delete_save",
 		&"ui_up", &"ui_down", &"ui_left", &"ui_right",
 	]
 	for action in required:
@@ -115,7 +132,89 @@ func _test_input_bindings_actions() -> Variant:
 				break
 	if not has_boss_minus:
 		return "next_boss should include numpad minus (KEY_KP_SUBTRACT)."
+	var has_f1 := false
+	for event in InputMap.action_get_events(&"toggle_debug_names"):
+		if event is InputEventKey:
+			var key := event as InputEventKey
+			if key.physical_keycode == KEY_F1 or key.keycode == KEY_F1:
+				has_f1 = true
+				break
+	if not has_f1:
+		return "toggle_debug_names should include keyboard F1."
 	return null
+
+
+func _test_debug_name_overlay() -> Variant:
+	DebugLabels.set_enabled(false)
+	if DebugLabels.is_enabled():
+		return "Debug names should start disabled."
+	var packed: PackedScene = load("res://scenes/levels/level_01.tscn")
+	if packed == null:
+		return "Missing level_01 scene."
+	var level := packed.instantiate()
+	add_child(level)
+	var error: Variant = null
+	var stray := level.find_children("DebugNameLabel", "Label", true, false)
+	if not stray.is_empty():
+		error = "Debug name labels must stay hidden during normal play."
+	else:
+		DebugLabels.set_enabled(true)
+		DebugLabels.refresh_now()
+		if not DebugLabels.is_enabled():
+			error = "Debug names should stay enabled after toggle."
+		else:
+			var player := level.get_node_or_null("Player") as Node2D
+			var player_label := (
+				player.get_node_or_null("DebugNameLabel") as Label if player != null else null
+			)
+			if player_label == null or not player_label.visible or player_label.text != "Player":
+				error = "Enabled debug mode should label the Player."
+			else:
+				var labeled := 0
+				for node_name in ["Pit3", "Ground", "SpawnPoint"]:
+					var target := level.get_node_or_null(node_name) as Node2D
+					if target != null and target.get_node_or_null("DebugNameLabel") is Label:
+						labeled += 1
+				if labeled < 2:
+					error = "Enabled debug mode should label hazards/platforms/spawn."
+				else:
+					DebugLabels.set_enabled(false)
+					if DebugLabels.is_enabled():
+						error = "Debug names should turn off on second toggle."
+					else:
+						var remaining := level.find_children("DebugNameLabel", "Label", true, false)
+						# queue_free may defer; force a flush-friendly check via freed-or-queued.
+						var still_visible := 0
+						for label_node in remaining:
+							if is_instance_valid(label_node) and not (label_node as Node).is_queued_for_deletion():
+								still_visible += 1
+						if still_visible > 0:
+							error = "Disabling debug mode should remove all debug name labels."
+						elif not DebugLabels.is_enabled():
+							# Toggle state must survive scene swaps during the run.
+							DebugLabels.set_enabled(true)
+							level.queue_free()
+							level = null
+							var level2 := packed.instantiate()
+							add_child(level2)
+							DebugLabels.refresh_now()
+							var player2 := level2.get_node_or_null("Player") as Node2D
+							var label2 := (
+								player2.get_node_or_null("DebugNameLabel") as Label
+								if player2 != null
+								else null
+							)
+							if not DebugLabels.is_enabled():
+								error = "Debug name toggle should persist across scene changes."
+							elif label2 == null or not label2.visible:
+								error = "Persisted debug mode should relabel the next scene."
+							DebugLabels.set_enabled(false)
+							level2.queue_free()
+							level = null
+	DebugLabels.set_enabled(false)
+	if level != null:
+		level.queue_free()
+	return error
 
 
 func _test_boss_arenas() -> Variant:
@@ -165,6 +264,35 @@ func _test_boss_arenas() -> Variant:
 
 	var coach := coach_packed.instantiate()
 	add_child(coach)
+	var chase_player := coach.get_node_or_null("Player") as Player
+	var horse_near := coach.get_node_or_null("Coach/HorseNear") as Sprite2D
+	var horse_far := coach.get_node_or_null("Coach/HorseFar") as Sprite2D
+	var rein_near := coach.get_node_or_null("Coach/Harness") as Line2D
+	var rein_far := coach.get_node_or_null("Coach/HarnessFar") as Line2D
+	if chase_player == null or not chase_player.is_mounted():
+		coach.queue_free()
+		return "The cowboy should chase the coach while mounted."
+	if (
+		horse_near == null
+		or horse_far == null
+		or horse_near.position.x > 205.0
+		or horse_far.position.x - horse_near.position.x > 60.0
+	):
+		coach.queue_free()
+		return "Coach horses should form a close, compact team."
+	if rein_near == null or rein_far == null:
+		coach.queue_free()
+		return "Each coach horse needs a connected rein."
+	var near_bit := horse_near.position + Vector2(48.0, -12.0)
+	var far_bit := horse_far.position + Vector2(48.0, -10.0)
+	if (
+		rein_near.points.is_empty()
+		or rein_far.points.is_empty()
+		or rein_near.points[rein_near.points.size() - 1].distance_to(near_bit) > 1.0
+		or rein_far.points[rein_far.points.size() - 1].distance_to(far_bit) > 1.0
+	):
+		coach.queue_free()
+		return "Coach reins should end at the moving horse bridles."
 	for i in range(3):
 		var door := coach.get_node_or_null("Coach/Door%d" % i)
 		if door == null or not door.has_method("lasso_hit") or not (door is Area2D):
@@ -196,9 +324,28 @@ func _test_boss_arenas() -> Variant:
 		return "Kingpin must be solid so the cowboy cannot jump through him."
 	var king_shape := king.get_node_or_null("Kingpin/CollisionShape2D") as CollisionShape2D
 	var king_spring := king.get_node_or_null("KingpinJumpSpring") as SpringPad
+	var king_spring2 := king.get_node_or_null("KingpinJumpSpring2") as SpringPad
+	var king_spring3 := king.get_node_or_null("KingpinJumpSpring3") as SpringPad
+	var king_hurt := king.get_node_or_null("Kingpin/HurtArea") as Area2D
 	if king_shape == null or king_shape.disabled or king_spring == null:
 		king.queue_free()
 		return "The solid kingpin needs a nearby spring so the cowboy can jump over him."
+	if king_spring2 == null or king_spring3 == null:
+		king.queue_free()
+		return "Kingpin arena needs three nearby springs for fair vaulting."
+	if king_hurt == null:
+		king.queue_free()
+		return "Kingpin needs a HurtArea so side contact hurts like bandits."
+	if not king.has_method("_is_head_stomp") or not king.has_method("_handle_kingpin_contact"):
+		king.queue_free()
+		return "Kingpin must distinguish head stomps from harmful side contact."
+	var patrol_span: float = absf(float(king.get("_right_x")) - float(king.get("_left_x")))
+	if patrol_span < 400.0:
+		king.queue_free()
+		return "Kingpin should patrol a wider bounded arena path."
+	if float(king.get("_walk_speed")) < 90.0:
+		king.queue_free()
+		return "Kingpin should move more during the fight."
 	if target == null or not target.has_method("lasso_hit") or not (target is Area2D):
 		king.queue_free()
 		return "Kingpin needs an Area2D lasso target."
@@ -349,27 +496,205 @@ func _test_save_select_scene() -> Variant:
 	var error: Variant = null
 	if scene.get_node_or_null("Slots/Slot1") == null:
 		error = "Save select missing slots."
-	var delete_button := scene.get_node_or_null("DeleteSaveButton") as Button
-	if error == null and delete_button == null:
-		error = "Save select needs a visible Delete Save button."
-	elif error == null and delete_button.disabled:
-		error = "Delete Save should be enabled for a non-empty highlighted slot."
+	if error == null and scene.get_node_or_null("DeleteSaveButton") != null:
+		error = "Save select should not show a permanent Delete Save button."
+	if error == null and scene.get_node_or_null("LanguageButton") != null:
+		error = "Save select should not show a top-level language button."
+	var delete_dialog := scene.get_node_or_null("DeleteConfirmation") as ConfirmationDialog
+	if error == null and delete_dialog == null:
+		error = "Save deletion needs a confirmation dialog."
 	var first_card := scene.get_node_or_null("Slots/Slot1") as Button
-	if error == null and first_card != null and not first_card.text.contains("4: Canyon Ferry"):
+	if error == null and first_card != null and not first_card.text.contains("4: "):
 		error = "Save cards should show level names as '<number>: <name>'."
 	if error == null:
 		scene._request_delete()
 		if GameManager.is_slot_empty(0):
 			error = "Delete Save must ask for confirmation before erasing."
-		elif not delete_button.text.contains("CONFIRM"):
-			error = "Delete Save confirmation should be explicit."
+		elif not delete_dialog.visible:
+			error = "Right-click, Space, or Y should open an explicit confirmation."
 	if error == null:
-		scene._request_delete()
+		scene._confirm_delete()
 		if not GameManager.is_slot_empty(0):
 			error = "Confirming Delete Save should erase the highlighted slot."
 	scene.queue_free()
 	GameManager.erase_slot(0)
 	return error
+
+
+func _test_localization_settings() -> Variant:
+	var previous_language := String(GameManager.get_settings().get("language", "en"))
+	var previous_narration := bool(GameManager.get_settings().get("narration", true))
+	GameManager.set_setting("language", "de")
+	if not TranslationServer.get_locale().begins_with("de"):
+		return "German language setting should update TranslationServer."
+	if tr("Settings") != "Einstellungen":
+		GameManager.set_setting("language", previous_language)
+		return "German translation catalog is not loaded."
+	GameManager.set_setting("narration", false)
+	if bool(GameManager.get_settings().get("narration", true)):
+		GameManager.set_setting("language", previous_language)
+		return "Spoken instructions setting should be saved."
+	GameManager.set_setting("narration", previous_narration)
+	GameManager.set_setting("language", previous_language)
+	return null
+
+
+func _test_settings_language_dropdown() -> Variant:
+	var previous_language := String(GameManager.get_settings().get("language", "en"))
+	GameManager.set_setting("language", "de")
+	var packed := load("res://scenes/ui/pause_menu.tscn") as PackedScene
+	if packed == null:
+		GameManager.set_setting("language", previous_language)
+		return "Missing pause menu scene."
+	var menu := packed.instantiate() as PauseMenu
+	add_child(menu)
+	var panel := menu.get_node_or_null("SettingsPanel") as SettingsPanel
+	var dropdown := menu.get_node_or_null("SettingsPanel/Margin/VBox/LanguageDropdown") as OptionButton
+	var error: Variant = null
+	if menu.get_node_or_null("SettingsPanel/Margin/VBox/LanguageButton") != null:
+		error = "Settings should replace its language toggle button with a dropdown."
+	elif panel == null or dropdown == null or dropdown.item_count < 2:
+		error = "Settings needs a language dropdown with English and German choices."
+	elif dropdown.get_item_text(0) not in ["English", "Englisch"]:
+		error = "The first language choice should be English."
+	elif dropdown.get_item_text(1) not in ["Deutsch", "German"]:
+		error = "The second language choice should be Deutsch/German."
+	elif dropdown.selected != 1 or dropdown.text not in ["Deutsch", "German"]:
+		error = "The closed dropdown should visibly restore the current German selection."
+	if error == null:
+		panel._select_language(0)
+		if not TranslationServer.get_locale().begins_with("en"):
+			error = "Selecting English should update TranslationServer immediately."
+		elif String(GameManager.get_settings().get("language", "")) != "en":
+			error = "Selecting English should update GameManager immediately."
+	if error == null:
+		panel._select_language(1)
+		var save_json: Variant = JSON.parse_string(FileAccess.get_file_as_string(GameManager.save_path()))
+		if not TranslationServer.get_locale().begins_with("de"):
+			error = "Selecting Deutsch should update TranslationServer immediately."
+		elif typeof(save_json) != TYPE_DICTIONARY:
+			error = "Language selection should persist through the settings save file."
+		elif String((save_json as Dictionary).get("settings", {}).get("language", "")) != "de":
+			error = "The persisted settings should contain the selected locale."
+	if error == null:
+		GameManager.load_from_disk()
+		panel._load_values()
+		if dropdown.selected != 1 or dropdown.text not in ["Deutsch", "German"]:
+			error = "Reloading settings should restore the visible current language."
+	if error == null:
+		panel.visible = true
+		panel.focus_first()
+		var previous := InputEventAction.new()
+		previous.action = &"move_left"
+		previous.pressed = true
+		panel._unhandled_input(previous)
+		panel._unhandled_input(previous)
+		if panel._controls[panel._index] != dropdown:
+			error = "Controller navigation should reach the language dropdown."
+		else:
+			var activate := InputEventAction.new()
+			activate.action = &"jump"
+			activate.pressed = true
+			panel._unhandled_input(activate)
+			if not dropdown.get_popup().visible:
+				error = "Xbox A / keyboard activation should open the language dropdown."
+			dropdown.get_popup().hide()
+	menu.queue_free()
+	GameManager.set_setting("language", previous_language)
+	return error
+
+
+func _test_translation_csv_round_trip() -> Variant:
+	var fixture := (
+		"keys,en,de\r\n"
+		+ "\"Greeting, key\",\"Hello, cowboy — 100%%!\",\"Hallo, Cowboy — 100%%!\"\r\n"
+		+ "Multiline,\"First line\nSecond line\",\"Erste Zeile\nZweite Zeile\"\r\n"
+		+ "Quote,\"He said \"\"Yeehaw!\"\"\",\"Er sagte \"\"Jippie!\"\"\"\r\n"
+	)
+	var parsed := TranslationCsv.parse(fixture)
+	if not String(parsed.get("error", "")).is_empty():
+		return "Quoted CSV fixture did not parse: %s" % parsed["error"]
+	var rows: Array = parsed.get("rows", [])
+	if rows.size() != 3:
+		return "Expected three parsed translation rows, got %d." % rows.size()
+	if String(rows[0]["en"]) != "Hello, cowboy — 100%%!":
+		return "Quoted commas, Unicode, or percent signs changed while parsing."
+	if not String(rows[1]["de"]).contains("\n"):
+		return "A newline inside a quoted translation was not preserved."
+	var reparsed := TranslationCsv.parse(TranslationCsv.serialize(rows))
+	if not String(reparsed.get("error", "")).is_empty() or reparsed.get("rows", []) != rows:
+		return "Translation CSV did not survive a parse/serialize round trip."
+	return null
+
+
+func _test_translation_placeholders() -> Variant:
+	if TranslationCsv.example("TRAIL %d%%") != "TRAIL 7%":
+		return "Integer and escaped-percent example was not rendered safely."
+	if not TranslationCsv.has_placeholders("Ready: 100%%"):
+		return "An escaped percent should be recognized as a formatting placeholder."
+	var mixed := TranslationCsv.example("%s / %d / %.0f / %%")
+	if mixed.contains("%s") or mixed.contains("%d") or mixed.contains("%.0f") or not mixed.ends_with("%"):
+		return "Mixed placeholder example was not fully rendered: %s" % mixed
+	if not TranslationCsv.placeholders_match("Badges: %d / %s", "Abzeichen: %d / %s"):
+		return "Matching English/German placeholders were rejected."
+	if TranslationCsv.placeholders_match("Badges: %d / %s", "Abzeichen: %s / %d"):
+		return "Placeholder order mismatch was not detected."
+	if TranslationCsv.placeholders_match("Time: %.0f", "Zeit: %d"):
+		return "Placeholder type mismatch was not detected."
+	return null
+
+
+func _test_translation_editor() -> Variant:
+	var packed: PackedScene = load("res://scenes/ui/translation_editor.tscn")
+	if packed == null:
+		return "Translation editor scene did not load."
+	var editor := packed.instantiate() as TranslationEditor
+	add_child(editor)
+	var error: Variant = null
+	if editor.rows.is_empty():
+		error = "Translation editor did not load the real CSV."
+	elif editor.get_node_or_null("Page/RowsScroll/Rows/Entry0") == null:
+		error = "Translation editor did not create scrollable entry controls."
+	var save_paths := preload("res://scripts/autoload/save_paths.gd")
+	var export_path: String = save_paths.translation_export_path()
+	if error == null and (
+		not export_path.contains(save_paths.FOLDER_NAME)
+		or export_path.get_file() != save_paths.TRANSLATION_EXPORT_FILE
+	):
+		error = "Translation export is not in the portable savegames folder: %s" % export_path
+	var existed := FileAccess.file_exists(export_path)
+	var backup := FileAccess.get_file_as_bytes(export_path) if existed else PackedByteArray()
+	if error == null:
+		editor._save_export()
+		if not FileAccess.file_exists(export_path):
+			error = "Translation editor did not write its CSV export."
+		else:
+			var exported := TranslationCsv.parse(FileAccess.get_file_as_string(export_path))
+			if not String(exported.get("error", "")).is_empty():
+				error = "Exported translation CSV could not be parsed again."
+	if FileAccess.file_exists(export_path):
+		DirAccess.remove_absolute(export_path)
+	if existed:
+		var restore := FileAccess.open(export_path, FileAccess.WRITE)
+		if restore != null:
+			restore.store_buffer(backup)
+	editor.queue_free()
+	return error
+
+
+func _test_handmade_progress_and_sfx() -> Variant:
+	var progress := HandmadeProgress.new()
+	add_child(progress)
+	progress.set_progress(0.6)
+	progress.set_camps([0.25, 0.75])
+	if not is_equal_approx(progress.ratio, 0.6) or progress.camp_ratios.size() != 2:
+		progress.queue_free()
+		return "Handmade progress sign should retain trail and camp progress."
+	progress.queue_free()
+	var effect := AudioManager._make_effect(&"collect")
+	if effect == null or effect.data.is_empty():
+		return "Collect effect should produce playable sound data."
+	return null
 
 
 func _test_level_01_world_objects() -> Variant:
@@ -386,6 +711,10 @@ func _test_level_01_world_objects() -> Variant:
 		error = "Missing PauseMenu."
 	elif node.find_child("Hud", true, false) == null:
 		error = "Missing Hud."
+	elif node.player == null or not node.player.is_mounted():
+		error = "Level 1 should introduce the cowboy riding his horse."
+	elif not is_equal_approx(node.player.get_jump_distance_multiplier(), 1.2):
+		error = "The horse should jump 20 percent farther than the normal cowboy."
 	_free_level(node)
 	return error
 
@@ -594,6 +923,23 @@ func _test_cowboy_animations() -> Variant:
 	if wings == null or wings.scale.x < 0.9:
 		node.queue_free()
 		return "Fly power should display large, clearly visible wings."
+	cowboy.mount_horse()
+	var mounted := cowboy.get_node_or_null("MountedHorse") as Sprite2D
+	cowboy._update_animation(false)
+	var jump_texture: Texture2D = load("res://assets/world/cowboy_horse_jump.png")
+	if mounted == null or not mounted.visible or mounted.texture != jump_texture:
+		node.queue_free()
+		return "Mounted cowboy needs a dedicated handmade horse-jump pose."
+	if not is_equal_approx(cowboy.get_run_speed(), cowboy.move_speed * 1.45):
+		node.queue_free()
+		return "Mounted horse should match the boosted Midnight Coach chase speed."
+	cowboy.velocity.x = cowboy.get_run_speed()
+	cowboy.get_jump_assist().notify_grounded(true)
+	cowboy.get_jump_assist().notify_jump_pressed()
+	cowboy._try_jump(true)
+	if not is_equal_approx(cowboy.velocity.x, cowboy.move_speed * 1.2):
+		node.queue_free()
+		return "Mounted jump speed should be exactly 20 percent above a normal jump."
 	node.queue_free()
 	return null
 
@@ -707,6 +1053,32 @@ func _test_side_contact_hurts() -> Variant:
 	return error
 
 
+func _test_bandit_respects_plank_edges() -> Variant:
+	var plank := StaticBody2D.new()
+	plank.position = Vector2(200, 410)
+	plank.collision_layer = 1
+	var collision := CollisionShape2D.new()
+	var shape := RectangleShape2D.new()
+	shape.size = Vector2(120, 20)
+	collision.shape = shape
+	plank.add_child(collision)
+	add_child(plank)
+	var packed: PackedScene = load("res://scenes/world/opponent.tscn")
+	var bandit := packed.instantiate() as Opponent
+	bandit.position = Vector2(238, 400)
+	add_child(bandit)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	var error: Variant = null
+	if bandit._has_floor_ahead(1.0):
+		error = "Bandit should detect the right plank edge and turn around."
+	elif not bandit._has_floor_ahead(-1.0):
+		error = "Bandit should keep walking where the plank continues."
+	bandit.queue_free()
+	plank.queue_free()
+	return error
+
+
 func _test_controller_all_devices() -> Variant:
 	for action in [&"jump", &"move_left", &"move_right", &"lasso", &"pause"]:
 		var found := false
@@ -728,12 +1100,17 @@ func _test_flying_levels_top_guarded() -> Variant:
 		var level := packed.instantiate()
 		add_child(level)
 		var top_guards := 0
+		var top_xs: Array[float] = []
 		for node in level.find_children("*", "Area2D", true, false):
 			if node is Carrion and (node as Node2D).global_position.y <= -150.0:
 				top_guards += 1
+				top_xs.append((node as Node2D).global_position.x)
 		level.queue_free()
-		if top_guards < 1 or top_guards > 2:
-			return "Level %s should use only 1-2 top carrions (found %d)." % [lv, top_guards]
+		if top_guards < 2 or top_guards > 3:
+			return "Level %s should use 2-3 top-route carrions (found %d)." % [lv, top_guards]
+		top_xs.sort()
+		if top_xs.size() >= 2 and top_xs[top_xs.size() - 1] - top_xs[0] < 1200.0:
+			return "Level %s top carrions should be spread across the trail, not one cluster." % lv
 	for lv in ["02", "06"]:
 		var no_bird_packed: PackedScene = load("res://scenes/levels/level_%s.tscn" % lv)
 		var no_bird_level: Node = no_bird_packed.instantiate()
@@ -752,26 +1129,53 @@ func _test_timed_door_states() -> Variant:
 		return "Missing timed door scene."
 	var door := packed.instantiate() as TimedDoor
 	add_child(door)
-	var barrier := door.get_node_or_null("Barrier") as ColorRect
 	var handmade_gate := door.get_node_or_null("HandmadeGate") as Sprite2D
+	var lantern := door.get_node_or_null("StatusLantern") as Polygon2D
 	var error: Variant = null
-	if barrier == null:
-		error = "Timed door needs a visible barrier fill so its state is clear."
-	elif handmade_gate == null or handmade_gate.texture == null:
+	if handmade_gate == null or handmade_gate.texture == null:
 		error = "Timed door should use the hand-painted fence gate artwork."
+	elif door.get_node_or_null("StatusPlate") != null or door.get_node_or_null("Barrier") != null:
+		error = "Timed doors should not use generic status plates or barrier rectangles."
+	elif lantern == null:
+		error = "Timed door needs a status lantern so open and closed states are clear."
 	else:
 		door._open = false
 		door._apply_state(false)
-		var closed_color := barrier.color
+		var closed_scale := handmade_gate.scale
+		var closed_color := lantern.color
 		door._open = true
 		door._apply_state(false)
-		var open_color := barrier.color
+		var open_scale := handmade_gate.scale
+		var open_color := lantern.color
 		if closed_color.is_equal_approx(open_color):
 			error = "Open and closed gates must look clearly different."
-		elif closed_color.a <= open_color.a:
-			error = "A closed gate should read as a solid, blocking barrier."
+		elif closed_scale.x <= open_scale.x:
+			error = "A closed gate should look wider and solid while the open gate turns edge-on."
 	door.queue_free()
 	return error
+
+
+func _test_obstacle_labels_hidden() -> Variant:
+	for path in [
+		"res://scenes/world/opponent.tscn",
+		"res://scenes/world/rattlesnake.tscn",
+		"res://scenes/world/spring_pad.tscn",
+		"res://scenes/world/moving_platform.tscn",
+		"res://scenes/world/disappearing_platform.tscn",
+		"res://scenes/world/wind_zone.tscn",
+		"res://scenes/world/timed_door.tscn",
+	]:
+		var packed := load(path) as PackedScene
+		if packed == null:
+			return "Missing obstacle scene: %s" % path
+		var obstacle := packed.instantiate()
+		add_child(obstacle)
+		for label_node in obstacle.find_children("*", "Label", true, false):
+			if (label_node as Label).visible:
+				obstacle.queue_free()
+				return "Obstacle still shows floating text: %s" % path
+		obstacle.queue_free()
+	return null
 
 
 func _test_untie_restores_stand_scale() -> Variant:
@@ -815,15 +1219,33 @@ func _test_steep_canyon_rafts() -> Variant:
 	for node in level.find_children("*", "AnimatableBody2D", true, false):
 		if node is MovingPlatform:
 			rafts.append(node as MovingPlatform)
-	if rafts.size() < 4:
+	if rafts.size() < 2:
 		level.free()
-		return "Level 4 needs rafts for its ultra-wide canyon crossings."
+		return "Level 4 should keep at least two steep canyon rafts."
+	var steep_rafts := 0
 	for raft in rafts:
 		var route := raft.point_b - raft.point_a
 		var angle := rad_to_deg(atan2(absf(route.y), absf(route.x)))
-		if angle < 34.0 or angle > 36.0:
-			level.free()
-			return "Raft %s should travel at about 35 degrees (got %.1f)." % [raft.name, angle]
+		if angle >= 34.0 and angle <= 36.0:
+			steep_rafts += 1
+	if steep_rafts < 2:
+		level.free()
+		return "Level 4 needs at least two ~35-degree raft crossings (found %d)." % steep_rafts
+	# Varied platforming identity: not every canyon is an ultra-wide raft-only gap.
+	var hop_clouds := 0
+	var hop_steps := 0
+	for node in level.get_children():
+		var node_name := String(node.name)
+		if node_name.begins_with("FerryCloud"):
+			hop_clouds += 1
+		elif node_name.begins_with("FerryStep") or node_name.begins_with("FerryIsle"):
+			hop_steps += 1
+	if hop_clouds < 2 or hop_steps < 2:
+		level.free()
+		return "Level 4 should mix cloud/plank hops with raft canyons."
+	if level.get_node_or_null("FerrySpring6") == null:
+		level.free()
+		return "Level 4 needs a spring-assisted ferry gap for variety."
 	for removed_ground in ["Ground3", "Ground6", "Ground9", "Ground12"]:
 		if level.get_node_or_null(removed_ground) != null:
 			level.free()
@@ -858,6 +1280,71 @@ func _test_custom_level_builder() -> Variant:
 	return error
 
 
+func _test_campaign_workshop() -> Variant:
+	var override_slot := CustomLevelStore.override_slot_for(1)
+	var extra_slot := CustomLevelStore.SLOT_COUNT - 1
+	var paths := [
+		CustomLevelStore.SavePaths.custom_level_path(override_slot),
+		CustomLevelStore.SavePaths.custom_level_path(extra_slot),
+	]
+	var backups: Array[PackedByteArray] = []
+	var existed: Array[bool] = []
+	for path in paths:
+		existed.append(FileAccess.file_exists(path))
+		backups.append(FileAccess.get_file_as_bytes(path) if FileAccess.file_exists(path) else PackedByteArray())
+		if FileAccess.file_exists(path):
+			DirAccess.remove_absolute(path)
+	var imported := CustomLevelStore.import_builtin(1)
+	var error: Variant = null
+	if str(imported.get("kind", "")) != "override" or (imported.get("objects", []) as Array).size() < 10:
+		error = "Editing a built-in level should begin with an imported copy of its layout."
+	elif not CustomLevelStore.save(override_slot, imported):
+		error = "Could not save a built-in campaign override."
+	else:
+		var extra := CustomLevelStore.default_level(extra_slot)
+		extra["kind"] = "extra"
+		extra["insert_position"] = 5
+		extra["title"] = "Inserted Test Trail"
+		if not CustomLevelStore.save(extra_slot, extra):
+			error = "Could not save an inserted campaign level."
+		else:
+			var entries := CustomLevelStore.campaign_entries()
+			var saw_override := false
+			var saw_extra_before_five := false
+			for i in range(entries.size()):
+				var entry := entries[i]
+				saw_override = saw_override or int(entry.get("custom_slot", -1)) == override_slot
+				if int(entry.get("custom_slot", -1)) == extra_slot:
+					saw_extra_before_five = (
+						i + 1 < entries.size()
+						and int(entries[i + 1].get("source_level", 0)) == 5
+					)
+			if not saw_override or not saw_extra_before_five:
+				error = "Campaign order should replace built-ins and insert extras at the chosen position."
+	var preview := LevelPreview.new()
+	add_child(preview)
+	preview.show_level(imported)
+	if error == null and preview._data.is_empty():
+		error = "The editor should keep a live preview document below its grid."
+	preview.queue_free()
+	var editor_packed: PackedScene = load("res://scenes/ui/level_editor.tscn")
+	GameManager.active_custom_slot = 2
+	var editor := editor_packed.instantiate()
+	add_child(editor)
+	var embedded_preview := editor.find_child("LevelPreview", true, false) as LevelPreview
+	if error == null and (embedded_preview == null or embedded_preview.custom_minimum_size.y < 140.0):
+		error = "The editor needs an always-visible preview below the editing area."
+	editor.queue_free()
+	for i in range(paths.size()):
+		if FileAccess.file_exists(paths[i]):
+			DirAccess.remove_absolute(paths[i])
+		if existed[i]:
+			var restore := FileAccess.open(paths[i], FileAccess.WRITE)
+			if restore != null:
+				restore.store_buffer(backups[i])
+	return error
+
+
 func _test_art_and_music() -> Variant:
 	var texture: Texture2D = load("res://assets/player/celebrate.png")
 	if texture == null:
@@ -867,10 +1354,13 @@ func _test_art_and_music() -> Variant:
 		"res://assets/world/trail_desert_tile.png",
 		"res://assets/world/trail_dirt_tile.png",
 		"res://assets/world/horizon_hills_strip.png",
+		"res://assets/world/transition_desert_skyline.png",
 		"res://assets/world/canyon_gap.png",
+		"res://assets/world/canyon_rim_left.png",
 		"res://assets/world/trail_horse.png",
 		"res://assets/world/cowboy_horse_ride_0.png",
 		"res://assets/world/cowboy_horse_ride_1.png",
+		"res://assets/world/cowboy_horse_jump.png",
 		"res://assets/world/lantern_fly_0.png",
 		"res://assets/world/lantern_fly_1.png",
 		"res://assets/world/lantern_ground.png",
@@ -886,6 +1376,14 @@ func _test_art_and_music() -> Variant:
 	var country: AudioStream = load("res://assets/audio/country_version.mp3")
 	if country == null:
 		return "Country start/finale theme did not load."
+	if load("res://scenes/ui/startup_loading.tscn") == null:
+		return "Game needs a visible startup loading scene."
+	var project_text := FileAccess.get_file_as_string("res://project.godot")
+	if (
+		not project_text.contains("startup_loading.tscn")
+		or not project_text.contains("boot_splash/image")
+	):
+		return "Startup should show the handmade loading art before the menu appears."
 	var wind_packed: PackedScene = load("res://scenes/world/wind_zone.tscn")
 	var wind: Node = wind_packed.instantiate()
 	var wind_background := wind.get_node_or_null("Visual") as ColorRect
@@ -897,6 +1395,10 @@ func _test_art_and_music() -> Variant:
 	var transition := transition_packed.instantiate() as LevelTransition
 	add_child(transition)
 	transition.play_celebration()
+	var transition_skyline := transition.get_node_or_null("HandmadeSkyline") as TextureRect
+	if transition_skyline == null or transition_skyline.texture == null:
+		transition.queue_free()
+		return "Level transitions need their own handmade desert skyline."
 	var saloon := transition.get_node_or_null("CelebrationSaloon") as Sprite2D
 	var celebration_cowboy := transition.get_node_or_null("CelebrationCowboy") as Sprite2D
 	if (
@@ -929,35 +1431,35 @@ func _test_art_and_music() -> Variant:
 	if pit == null:
 		controller.queue_free()
 		return "Level fixture is missing Pit3."
-	var pit_mouth := pit.get_node_or_null("PitMouth") as Sprite2D
-	if pit_mouth == null or not pit_mouth.visible or pit_mouth.texture == null:
+	var pit_mouth := pit.get_node_or_null("PitMouth") as ScalableCanyonArt
+	if (
+		pit_mouth == null
+		or pit_mouth.get_node_or_null("LeftRim") == null
+		or pit_mouth.get_node_or_null("RightRim") == null
+	):
 		controller.queue_free()
-		return "Pit canyon mouth was not configured."
+		return "Pit needs separate handmade canyon rims."
 	var floor_top := 320.0
-	var tex_h := float(pit_mouth.texture.get_height())
-	var world_top := (
-		pit.global_position.y
-		+ (pit_mouth.position.y - tex_h * 0.5 * pit_mouth.scale.y) * pit.scale.y
-	)
-	if absf(world_top - floor_top) > 4.0:
+	if absf(pit_mouth.floor_top - floor_top) > 4.0:
 		controller.queue_free()
-		return "Canyon rim should meet the trail floor (top=%.1f, expected %.1f)." % [world_top, floor_top]
+		return "Canyon rim should meet the trail floor."
 	# Opening should cover the fall gap between Ground2 and Ground3.
 	var g2 := controller.get_node_or_null("Ground2/Visual") as ColorRect
 	var g3 := controller.get_node_or_null("Ground3/Visual") as ColorRect
 	if g2 != null and g3 != null:
 		var gap_left: float = controller.get_node("Ground2").position.x + maxf(g2.offset_left, g2.offset_right)
 		var gap_right: float = controller.get_node("Ground3").position.x + minf(g3.offset_left, g3.offset_right)
-		var tex_w := float(pit_mouth.texture.get_width())
-		var world_w := tex_w * pit_mouth.scale.x * pit.scale.x
-		var center_x := pit.global_position.x + pit_mouth.position.x * pit.scale.x
-		var open_left := center_x - world_w * 0.5 + world_w * Hazard.OPENING_LEFT
-		var open_right := center_x - world_w * 0.5 + world_w * Hazard.OPENING_RIGHT
-		if absf(open_left - gap_left) > 12.0 or absf(open_right - gap_right) > 12.0:
+		if absf(pit_mouth.gap_left - gap_left) > 12.0 or absf(pit_mouth.gap_right - gap_right) > 12.0:
 			controller.queue_free()
-			return "Canyon borders should match the fall gap (open=%.0f..%.0f gap=%.0f..%.0f)." % [
-				open_left, open_right, gap_left, gap_right
-			]
+			return "Canyon borders should match the fall gap."
+		var left_scale := (pit_mouth.get_node("LeftRim") as Sprite2D).scale
+		pit_mouth.configure(floor_top, gap_left, gap_right + 600.0)
+		if (
+			pit_mouth.opening_width() < gap_right - gap_left + 590.0
+			or (pit_mouth.get_node("LeftRim") as Sprite2D).scale != left_scale
+		):
+			controller.queue_free()
+			return "Canyon center should widen without stretching its handmade rims."
 	controller.queue_free()
 	return null
 
@@ -1068,6 +1570,124 @@ func _test_level_run_restore() -> Variant:
 	_free_level(controller)
 	GameManager.erase_slot(0)
 	return error
+
+
+func _test_one_way_cloud_platforms() -> Variant:
+	var packed: PackedScene = load("res://scenes/world/disappearing_platform.tscn")
+	if packed == null:
+		return "Missing cloud platform scene."
+	var cloud := packed.instantiate() as DisappearingPlatform
+	cloud.position = Vector2(200, 400)
+	cloud.trail_floor_top = 320.0
+	cloud.floor_clearance = 36.0
+	add_child(cloud)
+	await get_tree().process_frame
+	var shape := cloud.get_node_or_null("CollisionShape2D") as CollisionShape2D
+	var error: Variant = null
+	if shape == null or not shape.one_way_collision:
+		error = "Clouds must use Godot one-way collision."
+	elif cloud.global_position.y > 320.0 - 36.0 - 7.0:
+		error = "Clouds must stay clear of the trail floor."
+	elif not cloud.is_one_way_cloud():
+		error = "Solid clouds should report one-way configuration."
+	cloud.queue_free()
+	return error
+
+
+func _test_wind_zone_force_overlap() -> Variant:
+	var packed: PackedScene = load("res://scenes/world/wind_zone.tscn")
+	var wind := packed.instantiate() as WindZone
+	wind.wind_force = Vector2(180, -25)
+	add_child(wind)
+	var player_packed: PackedScene = load("res://scenes/player/player.tscn")
+	var player := player_packed.instantiate() as Player
+	add_child(player)
+	player.global_position = wind.global_position
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	player.external_velocity = Vector2.ZERO
+	wind._physics_process(0.016)
+	var after := player.external_velocity
+	var error: Variant = null
+	if after.x < 100.0:
+		error = "Wind should apply a strong push while the cowboy overlaps the gust zone."
+	elif not is_equal_approx(after.y, wind.wind_force.y):
+		error = "Wind should apply its full indicated direction (including upward lift)."
+	player.queue_free()
+	wind.queue_free()
+	return error
+
+
+func _test_handmade_hud_signs() -> Variant:
+	var packed: PackedScene = load("res://scenes/ui/hud.tscn")
+	var hud := packed.instantiate() as Hud
+	add_child(hud)
+	var banner := hud.get_node_or_null("Banner")
+	var prompt := hud.get_node_or_null("PromptBanner")
+	var error: Variant = null
+	if banner == null or prompt == null:
+		error = "HUD needs top and bottom sign boards."
+	elif banner is ColorRect or prompt is ColorRect:
+		error = "HUD banners should not be flat ColorRect plates."
+	elif not (banner is HandmadeSign) or not (prompt is HandmadeSign):
+		error = "HUD banners should use HandmadeSign western boards."
+	hud.queue_free()
+	return error
+
+
+func _test_saloon_transition_anchor() -> Variant:
+	var packed: PackedScene = load("res://scenes/ui/level_transition.tscn")
+	var transition := packed.instantiate() as LevelTransition
+	add_child(transition)
+	var anchor := Vector2(640, 220)
+	transition.play_celebration("Yeehaw!", 2, anchor)
+	var saloon := transition.get_node_or_null("CelebrationSaloon") as Sprite2D
+	var cowboy := transition.get_node_or_null("CelebrationCowboy") as Sprite2D
+	var error: Variant = null
+	if saloon == null or cowboy == null:
+		error = "Celebration needs saloon and cowboy sprites."
+	elif saloon.position.distance_to(anchor) > 1.0:
+		error = "Celebration saloon should stay at the passed goal screen position."
+	elif absf(cowboy.position.y - (saloon.position.y + 50.0)) > 1.0:
+		error = "Cowboy should keep the doorway stance relative to the saloon."
+	elif transition.get_saloon_screen_position().distance_to(anchor) > 1.0:
+		error = "Transition should expose the anchored saloon screen position."
+	transition.queue_free()
+	return error
+
+
+func _test_two_cloud_canyon_chains() -> Variant:
+	for lv in ["07", "10"]:
+		var packed: PackedScene = load("res://scenes/levels/level_%s.tscn" % lv)
+		var level := packed.instantiate()
+		add_child(level)
+		var chain_pairs := 0
+		if level.get_node_or_null("CloudCanyon0A") != null and level.get_node_or_null("CloudCanyon0B") != null:
+			chain_pairs += 1
+		if level.get_node_or_null("CloudCanyon2A") != null and level.get_node_or_null("CloudCanyon2B") != null:
+			chain_pairs += 1
+		level.queue_free()
+		if chain_pairs < 1:
+			return "Level %s should include at least one two-cloud canyon hop chain." % lv
+	return null
+
+
+func _test_wings_carrion_variety() -> Variant:
+	for lv in ["07", "10"]:
+		var packed: PackedScene = load("res://scenes/levels/level_%s.tscn" % lv)
+		var level := packed.instantiate()
+		add_child(level)
+		var heights: Array[float] = []
+		for node in level.find_children("*", "Area2D", true, false):
+			if node is Carrion:
+				heights.append((node as Node2D).global_position.y)
+		level.queue_free()
+		if heights.size() < 10:
+			return "Level %s should place more carrions for the Wings route (found %d)." % [lv, heights.size()]
+		heights.sort()
+		if heights[heights.size() - 1] - heights[0] < 200.0:
+			return "Level %s carrions should vary in height, not form one line." % lv
+	return null
 
 
 func _instantiate_level(path: String) -> Variant:

@@ -65,7 +65,7 @@ position = Vector2(800, 320)
 
 [node name="HorseFar" type="Sprite2D" parent="Coach"]
 z_index = -2
-position = Vector2(-300, -48)
+position = Vector2(-240, -48)
 scale = Vector2(0.36, 0.36)
 texture = ExtResource("8")
 flip_h = true
@@ -73,16 +73,22 @@ modulate = Color(0.82, 0.78, 0.72, 1)
 
 [node name="HorseNear" type="Sprite2D" parent="Coach"]
 z_index = -1
-position = Vector2(-230, -42)
+position = Vector2(-190, -42)
 scale = Vector2(0.4, 0.4)
 texture = ExtResource("8")
 flip_h = true
 
 [node name="Harness" type="Line2D" parent="Coach"]
 z_index = -1
-points = PackedVector2Array(-200, -55, -150, -62, -120, -70)
+points = PackedVector2Array(-110, -96, -150, -82, -238, -54)
 width = 3.0
 default_color = Color(0.35, 0.22, 0.12, 1)
+
+[node name="HarnessFar" type="Line2D" parent="Coach"]
+z_index = -3
+points = PackedVector2Array(-104, -92, -175, -82, -288, -58)
+width = 2.5
+default_color = Color(0.28, 0.18, 0.1, 0.85)
 
 [node name="Sprite2D" type="Sprite2D" parent="Coach"]
 position = Vector2(20, -78)
@@ -132,5 +138,6 @@ polygon = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
 
 [node name="Player" parent="." instance=ExtResource("2")]
 position = Vector2(220, 320)
+start_mounted = true
 
 [node name="Hud" parent="." instance=ExtResource("3")]

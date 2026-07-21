@@ -23,6 +23,14 @@ signal star_collected(total: int)
 @export var respawn_invulnerability_time: float = 0.85
 @export var fly_rise_speed: float = 240.0
 @export var fly_fall_speed: float = 150.0
+@export var start_mounted: bool = false
+
+const HORSE_SPEED_MULTIPLIER := 1.45
+const HORSE_JUMP_DISTANCE_MULTIPLIER := 1.2
+const HORSE_VISUAL_SCALE := 0.48
+const HORSE_RIDE_0 := preload("res://assets/world/cowboy_horse_ride_0.png")
+const HORSE_RIDE_1 := preload("res://assets/world/cowboy_horse_ride_1.png")
+const HORSE_JUMP := preload("res://assets/world/cowboy_horse_jump.png")
 
 var input_enabled: bool = true
 var stars_collected: int = 0
@@ -43,6 +51,11 @@ var _using_magic_boots_art: bool = false
 var _bounce_cooldown: float = 0.0
 var _lasso_cooldown: float = 0.0
 var _is_canyon_falling: bool = false
+var _mounted: bool = false
+var _mounted_sprite: Sprite2D
+var _body_shape: CollisionShape2D
+var _normal_shape: Shape2D
+var _normal_shape_position: Vector2
 
 
 func _ready() -> void:
@@ -50,7 +63,14 @@ func _ready() -> void:
 	_ensure_jump_assist()
 	_ensure_modes()
 	_sprite = get_node_or_null("AnimatedSprite2D") as AnimatedSprite2D
+	_body_shape = get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if _body_shape != null:
+		_normal_shape = _body_shape.shape
+		_normal_shape_position = _body_shape.position
 	_setup_sprite_frames(false)
+	_ensure_mounted_sprite()
+	if start_mounted:
+		mount_horse()
 	_ensure_shield_bubble()
 	_ensure_wings()
 	if _sprite != null:
@@ -114,6 +134,45 @@ func set_input_enabled(enabled: bool) -> void:
 		_jump_assist.reset()
 
 
+func mount_horse() -> void:
+	_mounted = true
+	_ensure_mounted_sprite()
+	if _sprite != null:
+		_sprite.visible = false
+	if _mounted_sprite != null:
+		_mounted_sprite.visible = true
+	if _body_shape != null:
+		var horse_shape := RectangleShape2D.new()
+		horse_shape.size = Vector2(94.0, 58.0)
+		_body_shape.shape = horse_shape
+		_body_shape.position = Vector2(8.0, -29.0)
+
+
+func dismount_horse() -> void:
+	_mounted = false
+	if _mounted_sprite != null:
+		_mounted_sprite.visible = false
+	if _sprite != null:
+		_sprite.visible = true
+	if _body_shape != null:
+		_body_shape.shape = _normal_shape
+		_body_shape.position = _normal_shape_position
+
+
+func is_mounted() -> bool:
+	return _mounted
+
+
+func get_run_speed() -> float:
+	_ensure_modes()
+	var mount_multiplier := HORSE_SPEED_MULTIPLIER if _mounted else 1.0
+	return move_speed * _modes.move_speed_multiplier() * mount_multiplier
+
+
+func get_jump_distance_multiplier() -> float:
+	return HORSE_JUMP_DISTANCE_MULTIPLIER if _mounted else 1.0
+
+
 func celebrate() -> void:
 	_celebrating = true
 	velocity = Vector2.ZERO
@@ -125,9 +184,14 @@ func throw_lasso() -> void:
 	if not input_enabled or _lasso_cooldown > 0.0 or _celebrating:
 		return
 	_lasso_cooldown = 0.55
+	AudioManager.play_sfx(&"lasso")
 	var lasso := LassoCast.new()
 	lasso.name = "LassoCast"
-	lasso.position = Vector2(10.0 * _facing, -38.0)
+	lasso.position = (
+		Vector2(52.0 * _facing, -76.0)
+		if _mounted
+		else Vector2(10.0 * _facing, -38.0)
+	)
 	lasso.z_index = 4
 	lasso.setup(_facing)
 	add_child(lasso)
@@ -164,6 +228,10 @@ func respawn_at(world_position: Vector2) -> void:
 		_sprite.rotation = 0.0
 		_sprite.scale = Vector2(1.5, 1.5)
 		_sprite.modulate = Color.WHITE
+	if _mounted_sprite != null:
+		_mounted_sprite.rotation = 0.0
+		_mounted_sprite.scale = Vector2.ONE * HORSE_VISUAL_SCALE
+		_mounted_sprite.modulate = Color.WHITE
 	_jump_assist.reset()
 	_jump_cut_applied = false
 	_invulnerable_remaining = respawn_invulnerability_time
@@ -186,21 +254,28 @@ func play_boss_heart_recovery(world_position: Vector2, duration: float = 1.15) -
 		_sprite.rotation = 0.0
 		_sprite.scale = Vector2(1.5, 1.5)
 		_sprite.modulate = Color(1, 1, 1, 0.35)
+	if _mounted_sprite != null and _mounted:
+		_mounted_sprite.rotation = 0.0
+		_mounted_sprite.scale = Vector2.ONE * HORSE_VISUAL_SCALE
+		_mounted_sprite.modulate = Color(1, 1, 1, 0.35)
 	var tween := create_tween()
 	tween.tween_property(self, "global_position", world_position, duration).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 	var blink: Tween = null
-	if _sprite != null:
+	var recovery_visual := _active_visual()
+	if recovery_visual != null:
 		# Slower blink than normal respawn.
 		blink = create_tween()
 		blink.set_loops(maxi(int(duration / 0.2), 5))
-		blink.tween_property(_sprite, "modulate:a", 0.18, 0.1)
-		blink.tween_property(_sprite, "modulate:a", 0.9, 0.1)
+		blink.tween_property(recovery_visual, "modulate:a", 0.18, 0.1)
+		blink.tween_property(recovery_visual, "modulate:a", 0.9, 0.1)
 	await tween.finished
 	if blink != null and blink.is_valid():
 		blink.kill()
 	collision_layer = 2
 	if _sprite != null:
 		_sprite.modulate = Color.WHITE
+	if _mounted_sprite != null:
+		_mounted_sprite.modulate = Color.WHITE
 	_invulnerable_remaining = maxf(respawn_invulnerability_time, 1.15)
 	input_enabled = true
 	respawned.emit(world_position)
@@ -216,10 +291,11 @@ func play_canyon_fall() -> void:
 	var tween := create_tween()
 	tween.set_parallel(true)
 	tween.tween_property(self, "position:y", position.y + 135.0, 0.55).set_trans(Tween.TRANS_QUAD)
-	if _sprite != null:
-		tween.tween_property(_sprite, "rotation", _sprite.rotation + TAU * 1.5, 0.55)
-		tween.tween_property(_sprite, "scale", Vector2(0.22, 0.22), 0.55)
-		tween.tween_property(_sprite, "modulate:a", 0.25, 0.55)
+	var visual := _active_visual()
+	if visual != null:
+		tween.tween_property(visual, "rotation", visual.rotation + TAU * 1.5, 0.55)
+		tween.tween_property(visual, "scale", visual.scale * 0.15, 0.55)
+		tween.tween_property(visual, "modulate:a", 0.25, 0.55)
 	await tween.finished
 
 
@@ -348,12 +424,46 @@ func _add_anim(
 			frames.add_frame(anim_name, texture)
 
 
+func _ensure_mounted_sprite() -> void:
+	_mounted_sprite = get_node_or_null("MountedHorse") as Sprite2D
+	if _mounted_sprite != null:
+		return
+	_mounted_sprite = Sprite2D.new()
+	_mounted_sprite.name = "MountedHorse"
+	_mounted_sprite.texture = HORSE_RIDE_0
+	_mounted_sprite.position = Vector2(0.0, -64.0)
+	_mounted_sprite.scale = Vector2.ONE * HORSE_VISUAL_SCALE
+	_mounted_sprite.z_index = 1
+	_mounted_sprite.visible = false
+	add_child(_mounted_sprite)
+
+
+func _active_visual() -> Node2D:
+	if _mounted and _mounted_sprite != null:
+		return _mounted_sprite
+	return _sprite
+
+
 func _update_animation(on_floor: bool) -> void:
 	if _sprite == null or _sprite.sprite_frames == null:
 		return
 	if absf(velocity.x) > 12.0:
 		_facing = signf(velocity.x)
 	_sprite.flip_h = _facing < 0.0
+	if _mounted:
+		_ensure_mounted_sprite()
+		_sprite.visible = false
+		_mounted_sprite.visible = true
+		_mounted_sprite.flip_h = _facing < 0.0
+		if not on_floor:
+			_mounted_sprite.texture = HORSE_JUMP
+		elif absf(velocity.x) > 20.0:
+			var gallop_frame := int(Time.get_ticks_msec() / 140) % 2
+			_mounted_sprite.texture = HORSE_RIDE_0 if gallop_frame == 0 else HORSE_RIDE_1
+		else:
+			_mounted_sprite.texture = HORSE_RIDE_0
+		return
+	_sprite.visible = true
 
 	var next := &"idle"
 	if _celebrating:
@@ -383,6 +493,8 @@ func _update_mode_visual() -> void:
 		var blink := 0.35 + absf(sin(Time.get_ticks_msec() * 0.025)) * 0.65
 		color.a = blink
 	_sprite.modulate = color
+	if _mounted_sprite != null:
+		_mounted_sprite.modulate = color
 	_update_shield_bubble()
 	_update_wings()
 	_update_boot_sparks()
@@ -395,6 +507,19 @@ func _on_landed() -> void:
 
 func _update_land_squash(delta: float) -> void:
 	if _sprite == null:
+		return
+	if _mounted and _mounted_sprite != null:
+		if _land_squash > 0.0:
+			_land_squash = maxf(_land_squash - delta, 0.0)
+			var horse_t := 1.0 - (_land_squash / 0.18)
+			var horse_y := lerpf(0.88, 1.0, horse_t)
+			var horse_x := lerpf(1.10, 1.0, horse_t)
+			_mounted_sprite.scale = Vector2(
+				HORSE_VISUAL_SCALE * horse_x,
+				HORSE_VISUAL_SCALE * horse_y
+			)
+		else:
+			_mounted_sprite.scale = Vector2.ONE * HORSE_VISUAL_SCALE
 		return
 	if _land_squash > 0.0:
 		_land_squash = maxf(_land_squash - delta, 0.0)
@@ -429,7 +554,7 @@ func _update_wings() -> void:
 	_ensure_wings()
 	if _wing_sprite == null:
 		return
-	var flying := _modes.is_flying()
+	var flying := _modes.is_flying() and not _mounted
 	_wing_sprite.visible = flying
 	if flying:
 		var flap := 1.0 + sin(Time.get_ticks_msec() * 0.02) * 0.08
@@ -440,7 +565,7 @@ func _update_wings() -> void:
 
 func _update_boot_sparks() -> void:
 	var spark := get_node_or_null("BootSpark") as ColorRect
-	if _modes.active_mode != ModeController.Mode.MAGIC_BOOTS:
+	if _mounted or _modes.active_mode != ModeController.Mode.MAGIC_BOOTS:
 		if spark != null:
 			spark.visible = false
 		return
@@ -536,7 +661,11 @@ func _apply_gravity(delta: float, on_floor: bool) -> void:
 
 func _apply_horizontal_movement(delta: float, on_floor: bool) -> void:
 	var input_axis := Input.get_axis(&"move_left", &"move_right")
-	var target_speed := input_axis * move_speed * _modes.move_speed_multiplier()
+	var target_speed := input_axis * (
+		move_speed * HORSE_JUMP_DISTANCE_MULTIPLIER
+		if _mounted and not on_floor
+		else get_run_speed()
+	)
 
 	if absf(input_axis) > 0.01:
 		var accel := acceleration if on_floor else air_acceleration
@@ -552,7 +681,11 @@ func _apply_horizontal_movement(delta: float, on_floor: bool) -> void:
 func _try_jump(on_floor: bool) -> void:
 	if not _jump_assist.should_consume_buffered_jump(on_floor):
 		return
+	if _mounted:
+		var jump_speed := move_speed * HORSE_JUMP_DISTANCE_MULTIPLIER
+		velocity.x = clampf(velocity.x, -jump_speed, jump_speed)
 	velocity.y = jump_velocity * _modes.jump_multiplier()
+	AudioManager.play_sfx(&"jump")
 	_jump_cut_applied = false
 	_jump_assist.consume_jump()
 

@@ -40,6 +40,10 @@ signal active_slot_changed(slot_index: int)
 var active_slot_index: int = -1
 var active_custom_slot: int = 0
 var custom_return_to_editor: bool = true
+var active_campaign_position: int = 1
+var active_campaign_source_level: int = 1
+var campaign_custom_active: bool = false
+var _campaign_load_pending: bool = false
 var _horse_arrival_pending: bool = false
 var _data: Dictionary = {}
 
@@ -126,8 +130,9 @@ func complete_level(level_number: int, stars_found: int) -> void:
 		return
 	var slot: Dictionary = get_slot(active_slot_index)
 	slot["stars"] = int(slot.get("stars", 0)) + max(stars_found, 0)
-	if level_number >= LEVEL_SCENES.size():
-		slot["current_level"] = LEVEL_SCENES.size()
+	var count := campaign_level_count()
+	if level_number >= count:
+		slot["current_level"] = count
 		slot["completed"] = true
 	else:
 		slot["current_level"] = max(level_number + 1, int(slot.get("current_level", 1)))
@@ -138,8 +143,32 @@ func complete_level(level_number: int, stars_found: int) -> void:
 
 
 func load_level(level_number: int) -> void:
-	var index := clampi(level_number, 1, LEVEL_SCENES.size()) - 1
-	get_tree().change_scene_to_file(LEVEL_SCENES[index])
+	var entries := campaign_entries()
+	var index := clampi(level_number, 1, entries.size()) - 1
+	var entry := entries[index]
+	active_campaign_position = index + 1
+	active_campaign_source_level = int(entry.get("source_level", 0))
+	_campaign_load_pending = true
+	if str(entry.get("kind", "builtin")) == "custom":
+		active_custom_slot = int(entry.get("custom_slot", 0))
+		custom_return_to_editor = false
+		campaign_custom_active = true
+		get_tree().change_scene_to_file("res://scenes/levels/custom_level_runtime.tscn")
+		return
+	campaign_custom_active = false
+	get_tree().change_scene_to_file(str(entry.get("scene", LEVEL_SCENES[0])))
+
+
+func consume_campaign_context() -> Dictionary:
+	if not _campaign_load_pending:
+		return {}
+	_campaign_load_pending = false
+	return {
+		"position": active_campaign_position,
+		"source_level": active_campaign_source_level,
+		"count": campaign_level_count(),
+		"custom": campaign_custom_active,
+	}
 
 
 func return_to_save_select() -> void:
@@ -171,9 +200,10 @@ const BOSS_ORDER: Array[int] = [3, 7, 10]
 
 
 func try_load_boss_after(level_number: int) -> bool:
-	if not BOSS_SCENES.has(level_number):
+	var source_level := active_campaign_source_level
+	if source_level <= 0 or not BOSS_SCENES.has(source_level):
 		return false
-	get_tree().change_scene_to_file(str(BOSS_SCENES[level_number]))
+	get_tree().change_scene_to_file(str(BOSS_SCENES[source_level]))
 	return true
 
 
@@ -210,11 +240,11 @@ func load_next_boss_from_level(level_number: int) -> void:
 
 
 func finish_boss(source_level: int) -> void:
-	if source_level >= LEVEL_SCENES.size():
+	if active_campaign_position >= campaign_level_count():
 		get_tree().change_scene_to_file("res://scenes/ui/victory_horizon.tscn")
 		return
 	request_horse_arrival()
-	load_level(source_level + 1)
+	load_level(active_campaign_position + 1)
 
 
 func save_run_state(
@@ -232,7 +262,7 @@ func save_run_state(
 	var slot := get_slot(active_slot_index)
 	slot["empty"] = false
 	slot["resume"] = {
-		"level_number": clampi(level_number, 1, LEVEL_SCENES.size()),
+		"level_number": clampi(level_number, 1, campaign_level_count()),
 		"checkpoint_name": checkpoint_name,
 		"collected_badges": collected_badges.duplicate(),
 		"stars_found": maxi(stars_found, 0),
@@ -307,6 +337,8 @@ func edit_custom_level(slot_index: int) -> void:
 func play_custom_level(slot_index: int, return_to_editor: bool = true) -> void:
 	active_custom_slot = clampi(slot_index, 0, CUSTOM_LEVEL_STORE.SLOT_COUNT - 1)
 	custom_return_to_editor = return_to_editor
+	_campaign_load_pending = false
+	campaign_custom_active = false
 	get_tree().change_scene_to_file("res://scenes/levels/custom_level_runtime.tscn")
 
 
@@ -377,13 +409,31 @@ func load_from_disk() -> void:
 
 
 func level_scene_for(level_number: int) -> String:
-	var index := clampi(level_number, 1, LEVEL_SCENES.size()) - 1
-	return LEVEL_SCENES[index]
+	var entries := campaign_entries()
+	var entry := entries[clampi(level_number, 1, entries.size()) - 1]
+	return (
+		"res://scenes/levels/custom_level_runtime.tscn"
+		if str(entry.get("kind", "builtin")) == "custom"
+		else str(entry.get("scene", LEVEL_SCENES[0]))
+	)
 
 
 func level_name_for(level_number: int) -> String:
-	var number := clampi(level_number, 1, LEVEL_NAMES.size())
-	return "%d: %s" % [number, LEVEL_NAMES[number - 1]]
+	var entries := campaign_entries()
+	var number := clampi(level_number, 1, entries.size())
+	return "%d: %s" % [number, tr(str(entries[number - 1].get("title", "Trail")))]
+
+
+func campaign_entries() -> Array[Dictionary]:
+	return CUSTOM_LEVEL_STORE.campaign_entries()
+
+
+func campaign_level_count() -> int:
+	return campaign_entries().size()
+
+
+func finish_campaign() -> void:
+	get_tree().change_scene_to_file("res://scenes/ui/victory_horizon.tscn")
 
 
 func _ensure_data() -> void:
@@ -394,6 +444,7 @@ func _ensure_data() -> void:
 func _apply_settings() -> void:
 	_ensure_data()
 	var settings: Dictionary = _data["settings"]
+	TranslationServer.set_locale(String(settings.get("language", "en")))
 	if bool(settings.get("fullscreen", false)):
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 	else:
@@ -409,6 +460,8 @@ func _default_data() -> Dictionary:
 			"sfx_volume": 0.8,
 			"vibration": true,
 			"fullscreen": false,
+			"language": "en",
+			"narration": true,
 		},
 	}
 

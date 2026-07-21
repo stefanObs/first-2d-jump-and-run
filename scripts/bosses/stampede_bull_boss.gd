@@ -231,7 +231,7 @@ func _on_ring_lasso() -> void:
 		return
 	_hits += 1
 	_stun_token += 1  # Cancel the stun timer — lasso unstuns immediately.
-	report_progress("Ring caught! %d / %d" % [_hits, hits_needed])
+	report_progress(tr("Ring caught! %d / %d") % [_hits, hits_needed])
 	if _hits >= hits_needed:
 		_state = State.HIT
 		if _ring != null:

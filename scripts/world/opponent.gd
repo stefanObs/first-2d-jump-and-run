@@ -37,6 +37,8 @@ func _ready() -> void:
 	_origin = global_position
 	_area = get_node_or_null("HurtArea") as Area2D
 	_label = get_node_or_null("Label") as Label
+	if _label != null:
+		_label.visible = false
 	_setup_sprite()
 	_shot_timer = randf_range(1.8, 3.0) if bounty_bandit else randf_range(3.0, 5.0)
 	_revolver = RevolverOverlay.new()
@@ -110,6 +112,15 @@ func _physics_process(delta: float) -> void:
 			return
 		_shot_timer = 1.0
 	var target := _origin + (point_b if _going_to_b else point_a)
+	var travel_x := target.x - global_position.x
+	if (
+		not vertical_patrol
+		and absf(travel_x) > 0.5
+		and not _has_floor_ahead(signf(travel_x))
+	):
+		_going_to_b = not _going_to_b
+		_apply_facing(1.0 if _going_to_b else -1.0)
+		return
 	var previous := global_position
 	global_position = global_position.move_toward(target, move_speed * delta)
 	var dx := global_position.x - previous.x
@@ -124,6 +135,20 @@ func _physics_process(delta: float) -> void:
 	if global_position.distance_to(target) < 2.0:
 		_going_to_b = not _going_to_b
 		_apply_facing(1.0 if _going_to_b else -1.0)
+
+
+func _has_floor_ahead(direction: float) -> bool:
+	var world := get_world_2d()
+	if world == null:
+		return true
+	var ahead := global_position + Vector2(direction * 24.0, -4.0)
+	var query := PhysicsRayQueryParameters2D.create(
+		ahead,
+		ahead + Vector2(0.0, 72.0),
+		1
+	)
+	query.exclude = [get_rid()]
+	return not world.direct_space_state.intersect_ray(query).is_empty()
 
 
 func _apply_facing(direction: float) -> void:

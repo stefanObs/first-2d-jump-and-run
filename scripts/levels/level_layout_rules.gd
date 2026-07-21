@@ -512,6 +512,7 @@ static func _is_platform(node: Node) -> bool:
 		or name_text.contains("Platform")
 		or name_text.begins_with("Moving")
 		or name_text.begins_with("Cloud")
+		or name_text.begins_with("Ferry")
 		or name_text.begins_with("Conveyor")
 		or name_text.contains("Ledge")
 	)

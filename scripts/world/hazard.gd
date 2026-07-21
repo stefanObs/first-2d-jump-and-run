@@ -6,6 +6,8 @@ extends Area2D
 
 signal hurt(player: Player)
 
+const CANYON_ART := preload("res://scripts/world/scalable_canyon_art.gd")
+
 
 func is_canyon() -> bool:
 	return maxf(absf(scale.x), absf(scale.y)) > 1.35
@@ -13,10 +15,6 @@ func is_canyon() -> bool:
 
 func is_cactus() -> bool:
 	return not is_canyon()
-
-## Fraction of canyon_gap.png that is the open fall space (left..right).
-const OPENING_LEFT := 0.0875
-const OPENING_RIGHT := 0.9125
 
 
 func _ready() -> void:
@@ -37,8 +35,7 @@ func _configure_visual() -> void:
 	if rim != null:
 		rim.visible = false
 	if label != null:
-		# Canyons stay unlabeled; cactus keeps a tiny hint.
-		label.visible = not wide
+		label.visible = false
 		if not wide:
 			label.text = "OUCH!"
 			label.add_theme_font_size_override(&"font_size", 15)
@@ -64,38 +61,14 @@ func align_canyon_to_gap(floor_top_y: float, gap_left: float, gap_right: float) 
 	if old_pit != null:
 		old_pit.visible = false
 
-	var mouth := get_node_or_null("PitMouth") as Sprite2D
-	if mouth == null:
-		mouth = Sprite2D.new()
-		mouth.name = "PitMouth"
-		mouth.z_index = -1
-		add_child(mouth)
-	mouth.texture = load("res://assets/world/canyon_gap.png")
-	if mouth.texture == null:
-		mouth.texture = load("res://assets/world/pit_mouth.png")
-	if mouth.texture == null:
-		return
-
-	var tex_w := float(mouth.texture.get_width())
-	var tex_h := float(mouth.texture.get_height())
 	var gap_w := maxf(gap_right - gap_left, 40.0)
-	var opening_frac := OPENING_RIGHT - OPENING_LEFT
-	# Scale so the textured opening matches the real fall gap width.
-	var world_w := gap_w / opening_frac
-	var world_h := maxf(world_w * (tex_h / tex_w), 150.0)
-	mouth.centered = true
-	mouth.scale = Vector2(world_w / (tex_w * parent_sx), world_h / (tex_h * parent_sy))
-
-	# Place so opening left edge sits on gap_left and rim top on floor_top.
 	var opening_center_x := (gap_left + gap_right) * 0.5
-	var tex_center_from_opening := ((OPENING_LEFT + OPENING_RIGHT) * 0.5 - 0.5) * world_w
-	var world_center_x := opening_center_x - tex_center_from_opening
-	var half_local_h := (tex_h * 0.5) * mouth.scale.y
-	mouth.position = Vector2(
-		(world_center_x - global_position.x) / parent_sx,
-		(floor_top_y - global_position.y) / parent_sy + half_local_h
-	)
-	mouth.visible = true
+	var canyon_art := get_node_or_null("PitMouth") as ScalableCanyonArt
+	if canyon_art == null:
+		canyon_art = CANYON_ART.new() as ScalableCanyonArt
+		canyon_art.name = "PitMouth"
+		add_child(canyon_art)
+	canyon_art.configure(floor_top_y, gap_left, gap_right)
 
 	# Widen the hurt box to cover the fall gap.
 	var shape := get_node_or_null("CollisionShape2D") as CollisionShape2D

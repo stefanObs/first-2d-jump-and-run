@@ -25,6 +25,8 @@ const RAISED_OFFSET := Vector2(0, -34)
 func _ready() -> void:
 	_sprite = get_node_or_null("Sprite2D") as Sprite2D
 	_label = get_node_or_null("Label") as Label
+	if _label != null:
+		_label.visible = false
 	_ensure_shadow()
 	_ensure_collision()
 	if _sprite != null:

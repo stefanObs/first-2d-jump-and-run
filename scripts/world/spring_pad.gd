@@ -18,6 +18,7 @@ func _ready() -> void:
 	if _visual != null:
 		_base_scale = _visual.scale
 	if _label != null:
+		_label.visible = false
 		_label.text = "BOING!"
 	body_entered.connect(_on_body_entered)
 

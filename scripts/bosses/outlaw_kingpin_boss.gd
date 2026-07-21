@@ -4,22 +4,25 @@ extends BossArena
 
 const KING_TEX := preload("res://assets/world/boss_outlaw_kingpin.png")
 const TIED_TEX := preload("res://assets/world/bandit_tied_red.png")
+const STOMP_BOUNCE := -420.0
 
 var _king: Node2D
 var _king_sprite: Sprite2D
 var _king_target: BossLassoTarget
+var _hurt_area: Area2D
 var _label: Label
 var _revolver: RevolverOverlay
 var _guards_left: int = 2
 var _vulnerable: bool = false
 var _walk_dir: float = -1.0
-var _walk_speed: float = 70.0
-var _left_x: float = 780.0
-var _right_x: float = 1180.0
+var _walk_speed: float = 105.0
+var _left_x: float = 720.0
+var _right_x: float = 1280.0
 var _shot_timer: float = 1.2
 var _shooting: bool = false
 var _shot_generation: int = 0
 var _capturing: bool = false
+var _stomp_cooldown: float = 0.0
 
 
 func _ready() -> void:
@@ -30,10 +33,12 @@ func _ready() -> void:
 	_label = $Kingpin/Label as Label
 	_king_target = $Kingpin/LassoTarget as BossLassoTarget
 	_king_sprite = $Kingpin/Sprite2D as Sprite2D
+	_hurt_area = $Kingpin/HurtArea as Area2D
 	if _king_sprite != null:
 		_king_sprite.texture = KING_TEX
 	if _king_target != null:
 		_king_target.set_lasso_active(false)
+	_ensure_hurt_area()
 	_revolver = RevolverOverlay.new()
 	_revolver.name = "Revolver"
 	_revolver.z_index = 4
@@ -46,13 +51,38 @@ func _ready() -> void:
 		var guard := get_node_or_null(name) as Opponent
 		if guard != null:
 			guard.captured.connect(_on_guard_captured)
+			if not guard.hurt_player.is_connected(_on_guard_hurt):
+				guard.hurt_player.connect(_on_guard_hurt)
 	_apply_facing()
 	_start_telegraph_loop()
+
+
+func _ensure_hurt_area() -> void:
+	if _hurt_area != null:
+		_hurt_area.collision_layer = 0
+		_hurt_area.collision_mask = 2
+		_hurt_area.monitoring = true
+		return
+	_hurt_area = Area2D.new()
+	_hurt_area.name = "HurtArea"
+	_hurt_area.collision_layer = 0
+	_hurt_area.collision_mask = 2
+	_hurt_area.monitoring = true
+	_hurt_area.monitorable = false
+	var shape := CollisionShape2D.new()
+	var rect := RectangleShape2D.new()
+	rect.size = Vector2(78, 140)
+	shape.shape = rect
+	shape.position = Vector2(0, -70)
+	_hurt_area.add_child(shape)
+	_king.add_child(_hurt_area)
 
 
 func _physics_process(delta: float) -> void:
 	if _won or _king == null or _capturing or not combat_ready:
 		return
+	_stomp_cooldown = maxf(_stomp_cooldown - delta, 0.0)
+	_resolve_kingpin_contact()
 	if not _shooting:
 		_king.position.x += _walk_dir * _walk_speed * delta
 		if _king.position.x <= _left_x:
@@ -70,6 +100,38 @@ func _physics_process(delta: float) -> void:
 		_shoot_at_player()
 
 
+func _resolve_kingpin_contact() -> void:
+	if _hurt_area == null or player == null or _capturing:
+		return
+	for body in _hurt_area.get_overlapping_bodies():
+		if body is Player:
+			_handle_kingpin_contact(body as Player)
+			return
+
+
+func _handle_kingpin_contact(hit_player: Player) -> void:
+	# Same rules as bandits: head stomp is safe/useful; side/body contact hurts.
+	if _is_head_stomp(hit_player):
+		if _stomp_cooldown <= 0.0:
+			hit_player.velocity.y = STOMP_BOUNCE
+			if absf(hit_player.velocity.x) < 40.0:
+				hit_player.velocity.x = 0.0
+			_stomp_cooldown = 0.35
+		return
+	if hit_player.is_invulnerable():
+		return
+	fail_soft()
+
+
+func _is_head_stomp(hit_player: Player) -> bool:
+	var chest_y := _king.global_position.y - 28.0
+	return hit_player.global_position.y <= chest_y
+
+
+func _on_guard_hurt(_hit_player: Player) -> void:
+	fail_soft()
+
+
 func _apply_facing() -> void:
 	if _king_sprite != null:
 		_king_sprite.flip_h = _walk_dir < 0.0
@@ -77,7 +139,7 @@ func _apply_facing() -> void:
 
 func _on_guard_captured(_opp: Opponent) -> void:
 	_guards_left = maxi(_guards_left - 1, 0)
-	report_progress("Guard tied! %d left" % _guards_left)
+	report_progress(tr("Guard tied! %d left") % _guards_left)
 	if _guards_left <= 0:
 		report_progress("Now lasso the Kingpin!")
 		_vulnerable = true

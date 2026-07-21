@@ -90,6 +90,7 @@ func activate() -> void:
 		return
 	is_active = true
 	_pop_time = 0.35
+	AudioManager.play_sfx(&"checkpoint")
 	_update_visual()
 	activated.emit(self)
 

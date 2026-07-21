@@ -56,6 +56,7 @@ func _on_body_entered(body: Node2D) -> void:
 	_collected = true
 	visible = false
 	monitoring = false
+	AudioManager.play_sfx(&"powerup")
 	(body as Player).activate_mode(mode, duration_override)
 	collected.emit(mode)
 

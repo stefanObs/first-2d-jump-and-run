@@ -9,6 +9,7 @@ const GOAL := preload("res://scenes/world/goal.tscn")
 const HAZARD := preload("res://scenes/world/hazard.tscn")
 const STAR := preload("res://scenes/world/star.tscn")
 const SPRING := preload("res://scenes/world/spring_pad.tscn")
+const BANDIT := preload("res://scenes/world/opponent.tscn")
 const HUD := preload("res://scenes/ui/hud.tscn")
 const PAUSE := preload("res://scenes/ui/pause_menu.tscn")
 const TRANSITION := preload("res://scenes/ui/level_transition.tscn")
@@ -61,6 +62,8 @@ static func build(level: LevelController, data: Dictionary) -> void:
 				_add_scene(level, CHECKPOINT, "Checkpoint" if index == 0 else "Checkpoint%d" % index, position)
 			"spring":
 				_add_scene(level, SPRING, "Spring%d" % index, position)
+			"bandit":
+				_add_scene(level, BANDIT, "Opponent%d" % index, position)
 			"goal":
 				if not has_goal:
 					_add_scene(level, GOAL, "Goal", position)

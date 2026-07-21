@@ -18,6 +18,8 @@ var _coach: Node2D
 var _coach_sprite: Sprite2D
 var _horse_near: Sprite2D
 var _horse_far: Sprite2D
+var _harness_near: Line2D
+var _harness_far: Line2D
 var _driver_gun: RevolverOverlay
 var _ground: StaticBody2D
 var _ground_visual: ColorRect
@@ -51,6 +53,8 @@ func _ready() -> void:
 	_coach_sprite = $Coach/Sprite2D as Sprite2D
 	_horse_near = $Coach/HorseNear as Sprite2D
 	_horse_far = $Coach/HorseFar as Sprite2D
+	_harness_near = $Coach/Harness as Line2D
+	_harness_far = $Coach/HarnessFar as Line2D
 	_ground = $Ground as StaticBody2D
 	_ground_visual = $Ground/Visual as ColorRect
 	_ground_shape = $Ground/CollisionShape2D as CollisionShape2D
@@ -73,9 +77,11 @@ func _ready() -> void:
 			_doors.append(door)
 	_refresh_door_hints()
 	_setup_desert_floor()
-	# Infinite Speed Star for the race.
+	# The coach chase is ridden on horseback at the former Speed Star pace.
+	# Mounted air speed is capped separately so jumps reach exactly 20% farther.
 	if player != null:
-		player.activate_mode(ModeController.Mode.SPEED_STAR, 0.0, true)
+		player.clear_modes()
+		player.mount_horse()
 		var cam := player.get_node_or_null("Camera2D") as Camera2D
 		if cam != null:
 			cam.limit_right = 100000
@@ -90,7 +96,8 @@ func _ready() -> void:
 
 func _on_combat_started() -> void:
 	if player != null:
-		player.activate_mode(ModeController.Mode.SPEED_STAR, 0.0, true)
+		player.clear_modes()
+		player.mount_horse()
 	_speed = _player_run_speed() * COACH_SPEED_RATIO * 0.55
 	_waiting = false
 
@@ -101,14 +108,12 @@ func _face_coach_forward() -> void:
 		_coach_sprite.flip_h = true
 		_coach_sprite.position = Vector2(-20, -78)
 	if _horse_near != null:
-		_horse_near.position = Vector2(230, -42)
+		_horse_near.position = Vector2(190, -42)
 		_horse_near.flip_h = false
 	if _horse_far != null:
-		_horse_far.position = Vector2(300, -48)
+		_horse_far.position = Vector2(240, -48)
 		_horse_far.flip_h = false
-	var harness := _coach.get_node_or_null("Harness") as Line2D
-	if harness != null:
-		harness.points = PackedVector2Array([Vector2(120, -70), Vector2(160, -62), Vector2(210, -55)])
+	_update_reins()
 	# Rear door closest to the chasing player (left), then mid, then front.
 	var door_xs := [-90.0, -25.0, 45.0]
 	for i in range(3):
@@ -180,8 +185,13 @@ func _extend_desert_to(right_x: float) -> void:
 
 func _player_run_speed() -> float:
 	if player == null:
-		return 270.0 * 1.45
-	return player.move_speed * 1.45
+		return 270.0 * Player.HORSE_SPEED_MULTIPLIER
+	return player.get_run_speed()
+
+
+func _process(_delta: float) -> void:
+	if _coach != null:
+		_update_reins()
 
 
 func _physics_process(delta: float) -> void:
@@ -255,6 +265,24 @@ func _bob_horses() -> void:
 		_horse_near.position.y = -42.0 + sin(_gallop_t) * amp
 	if _horse_far != null:
 		_horse_far.position.y = -48.0 + sin(_gallop_t + 0.7) * amp
+	_update_reins()
+
+
+func _update_reins() -> void:
+	# Each rein ends at a horse's moving bridle, so the lines never float in
+	# the gap when the team bobs through its gallop cycle.
+	if _harness_near != null and _horse_near != null:
+		_harness_near.points = PackedVector2Array([
+			Vector2(110.0, -96.0),
+			Vector2(150.0, -82.0),
+			_horse_near.position + Vector2(48.0, -12.0),
+		])
+	if _harness_far != null and _horse_far != null:
+		_harness_far.points = PackedVector2Array([
+			Vector2(104.0, -92.0),
+			Vector2(168.0, -80.0),
+			_horse_far.position + Vector2(48.0, -10.0),
+		])
 
 
 func _apply_coach_frame(open_count: int) -> void:
@@ -378,7 +406,8 @@ func get_heart_drop_position() -> Vector2:
 
 func _on_heart_recovered() -> void:
 	if player != null:
-		player.activate_mode(ModeController.Mode.SPEED_STAR, 0.0, true)
+		player.clear_modes()
+		player.mount_horse()
 	report_progress("Catch up!")
 
 
@@ -386,11 +415,11 @@ func on_door_lassoed(index: int) -> void:
 	if _won or not combat_ready:
 		return
 	if index != _next_door:
-		report_progress("Wrong door — start with door %d!" % (_next_door + 1))
+		report_progress(tr("Wrong door — start with door %d!") % (_next_door + 1))
 		return
 	_doors_done += 1
 	_next_door += 1
-	report_progress("Door %d open! (%d/3)" % [index + 1, _doors_done])
+	report_progress(tr("Door %d open! (%d/3)") % [index + 1, _doors_done])
 	if index < _doors.size() and _doors[index] != null:
 		var door := _doors[index]
 		if door.has_method("play_open"):

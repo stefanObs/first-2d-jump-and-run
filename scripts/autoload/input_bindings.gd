@@ -57,6 +57,12 @@ func _ready() -> void:
 		]
 	)
 	_ensure_action(
+		&"toggle_debug_names",
+		[
+			_key(KEY_F1),
+		]
+	)
+	_ensure_action(
 		&"pause",
 		[
 			_key(KEY_ESCAPE),
@@ -75,6 +81,13 @@ func _ready() -> void:
 		[
 			_key(KEY_ESCAPE),
 			_joy_button(JOY_BUTTON_B),
+		]
+	)
+	_ensure_action(
+		&"delete_save",
+		[
+			_key(KEY_SPACE),
+			_joy_button(JOY_BUTTON_Y),
 		]
 	)
 	_ensure_action(

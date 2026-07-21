@@ -1094,10 +1094,17 @@ position = Vector2(1800, 275)
 mode = 1
 
 
-[node name="CloudCanyon0" parent="." instance=ExtResource("15_cloud")]
-position = Vector2(1360, 240)
+[node name="CloudCanyon0A" parent="." instance=ExtResource("15_cloud")]
+position = Vector2(1280, 235)
 always_solid = true
-platform_width_scale = 1.6
+platform_width_scale = 0.95
+purpose_label = "BRIDGE"
+
+
+[node name="CloudCanyon0B" parent="." instance=ExtResource("15_cloud")]
+position = Vector2(1480, 250)
+always_solid = true
+platform_width_scale = 0.95
 purpose_label = "BRIDGE"
 
 
@@ -1130,10 +1137,17 @@ always_solid = true
 purpose_label = "OVER"
 
 
-[node name="CloudCanyon2" parent="." instance=ExtResource("15_cloud")]
-position = Vector2(4160, 240)
+[node name="CloudCanyon2A" parent="." instance=ExtResource("15_cloud")]
+position = Vector2(4080, 235)
 always_solid = true
-platform_width_scale = 1.5
+platform_width_scale = 0.95
+purpose_label = "BRIDGE"
+
+
+[node name="CloudCanyon2B" parent="." instance=ExtResource("15_cloud")]
+position = Vector2(4280, 250)
+always_solid = true
+platform_width_scale = 0.95
 purpose_label = "BRIDGE"
 
 
@@ -1175,6 +1189,37 @@ move_speed = 62.0
 position = Vector2(3000, 95)
 patrol_width = 40.0
 move_speed = 50.0
+
+
+[node name="Carrion5" parent="." instance=ExtResource("18_carrion")]
+position = Vector2(2400, 40)
+patrol_width = 80.0
+move_speed = 55.0
+
+
+[node name="Carrion6" parent="." instance=ExtResource("18_carrion")]
+position = Vector2(3600, -50)
+patrol_width = 75.0
+move_speed = 58.0
+
+
+[node name="Carrion7" parent="." instance=ExtResource("18_carrion")]
+position = Vector2(4500, 100)
+patrol_width = 70.0
+move_speed = 52.0
+
+
+[node name="Carrion8" parent="." instance=ExtResource("18_carrion")]
+position = Vector2(6100, -20)
+patrol_width = 90.0
+move_speed = 56.0
+
+
+[node name="Carrion9" parent="." instance=ExtResource("18_carrion")]
+position = Vector2(1500, -120)
+patrol_width = 100.0
+move_speed = 50.0
+bob_height = 9.0
 
 
 [node name="FlightCeiling0" type="StaticBody2D" parent="."]
@@ -1303,6 +1348,12 @@ position = Vector2(700, -225)
 patrol_width = 118.0
 move_speed = 62.0
 bob_height = 8.0
+
+[node name="SkyGuardTop8" parent="." instance=ExtResource("18_carrion")]
+position = Vector2(2800, -210)
+patrol_width = 110.0
+move_speed = 54.0
+bob_height = 10.0
 
 [node name="SkyGuardTop19" parent="." instance=ExtResource("18_carrion")]
 position = Vector2(5070, -235)

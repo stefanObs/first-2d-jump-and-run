@@ -12,6 +12,7 @@ A small, friendly 2D platform game for children around six years old.
 - Reward exploration and progress; do not punish failure.
 - Use cheerful visuals, clear sounds, large buttons, and no advertisements or online features.
 - Theme the adventure as a friendly wild-west cowboy journey with readable, colorful graphics suited to a six-year-old.
+- Keep every new or replaced visual in the same warm, handmade, hand-painted style as the rest of the game; generic flat UI and mismatched stock art are not acceptable.
 
 ## Chapter 2: Feature list
 
@@ -28,11 +29,16 @@ A small, friendly 2D platform game for children around six years old.
 - A dedicated flying level
 - Simple opponents and obstacles that can hurt the player
 - A comic horse mount, ride-out, and next-level dismount transition after every level
+- A playable horse introduced in level 1 and used for the Midnight Coach chase; it matches the former boosted chase speed while mounted jumps are tuned to travel exactly 20% farther than the normal cowboy
+- A dedicated hand-painted desert skyline behind every between-level horse transition
 - A longer final celebration after level 10
 - Large, child-friendly menus with minimal reading
 - Pause, restart, settings, and save-selection screens
-- Three local custom-trail slots with a grid-based family level editor and play-test flow
+- Campaign Workshop: edit a copy of any of the 10 built-in levels, or insert an extra trail before any campaign position, with a live preview below the grid
 - Original hand-drawn cowboy animation and looping cheerful trail music
+- English and German text selectable from the start screen or settings
+- In-game English/German translation editor with search, placeholder examples, validation, and portable CSV export
+- Gameplay effect sounds and optional spoken instructions using a locally installed, preferably male system voice
 - Local offline play with no advertisements, purchases, or online account
 
 ### Gameplay features
@@ -59,6 +65,7 @@ The player can run left and right, jump, collect stars and mode items, activate 
 - `Alt`, `F`, or `L`: throw the lasso toward the cowboy's facing direction
 - Numpad `+` twice: move to the next campaign level
 - Numpad `-` (or `-`) twice: jump to the boss for this trail stretch; in a boss arena, cycle to the next boss
+- `F1`: toggle debug object names (play-test aid; off by default)
 - `Escape`: pause
 
 ### Xbox controller support
@@ -70,6 +77,7 @@ The game must be fully playable with an Xbox One or Xbox Series controller conne
 - `X`: throw the lasso
 - `B`: go back
 - Menu button: pause
+- On the save screen, `Y` opens the delete confirmation for the selected save
 - Controller vibration: optional feedback for checkpoints and level completion
 
 All menus must show the correct Xbox button prompts when a controller is active. The game should switch automatically between keyboard and controller prompts based on the last input used. Connecting or disconnecting a controller while playing must not interrupt the game.
@@ -85,7 +93,7 @@ Special items found in the levels temporarily change how the player moves or int
 - **Speed Star:** makes the player run faster while keeping acceleration controllable.
 - **Bubble Shield:** makes the player immune to bandits and bounces them safely off cacti for a limited time. Canyons still return the player to the latest checkpoint.
 
-Wings, Magic Boots, and Speed Star start with 30 seconds. Bubble Shield starts with 15 seconds and appears multiple times through Rail Yard. Catching a badge adds five seconds to the active mode.
+Wings, Magic Boots, and Speed Star start with 30 seconds. Bubble Shield starts with 7.5 seconds and appears multiple times through Rail Yard. Catching a badge adds five seconds to the active mode.
 
 An item plays a short transformation animation when collected. A large icon and a simple visual timer show which mode is active and when it will end. Mode items are separated so they never overlap or immediately replace one another.
 
@@ -95,14 +103,14 @@ Only one special mode is active at a time. Collecting another mode item replaces
 
 Opponents use simple, repeating movement patterns, such as walking between two points or slowly flying up and down. Bandits occasionally raise a revolver with a clear warning animation and fire a slow, bright projectile that can be avoided. The cowboy has no weapon: the nonviolent lasso catches bandits instead, and jumping onto a bandit's head ties him the same way. A capture seats the bandit on the floor in a comic bound pose with thick rope coils around the torso; it stops moving and shooting and no longer blocks or hurts the player. Red-scarf bounty bandits shoot a little more often and award two badges when caught.
 
-Carrion birds challenge Wings routes at varied heights. Some cacti are replaced by lower, wider rattlesnakes with a visible bite animation. Harmful obstacles must remain readable and predictable. Falling into a canyon now plays a spinning fall animation before returning to camp; there is no health counter, life limit, or game-over screen.
+Carrion birds challenge Wings routes at varied heights, including 2–3 spread guards on the very top flight path. Some cacti are replaced by lower, wider rattlesnakes with a visible bite animation. Harmful obstacles must remain readable and predictable. Clouds are one-way platforms. Canyons use handmade left/right cliff rims around an abyss that can widen to any gap the level needs. Falling into a canyon plays a spinning fall animation before returning to camp; there is no health counter, life limit, or game-over screen. Bandits on planks turn around at the edge instead of walking off. Wind zones push while the cowboy stands inside the visible gust animation.
 
 ## Chapter 6: Level progression
 
-1. **Dusty Trail** – walking, jumping, and the saloon goal
+1. **Dusty Trail** – learn mounted riding and jumping on the way to the saloon
 2. **Badge Meadow** – collecting sheriff badges across a long meadow
 3. **Bronco Springs** – spring pads and higher ledges
-4. **Canyon Ferry** – moving rafts across canyon gaps
+4. **Canyon Ferry** – raft canyons mixed with spring hops, planks, and cloud-to-cloud gaps
 5. **Outlaw Cave** – camps, simple outlaws, and careful jumps
 6. **Windy Mesa** – Magic Boots, gentle wind, and longer jumps
 7. **Sky Ranch** – Wings for a flying trail between cloud barns
@@ -121,8 +129,8 @@ Boss arenas use the same jump, lasso, mode, and platform tools as the trail. Def
 | After clearing | Boss | How to win |
 |----------------|------|------------|
 | Level 3 | **1. Stampede Bull** | Bounce on springs past the horns, then lasso the glowing rope ring on its back three times while it is stunned on wall bales. On the last catch, its legs are tied and it tips onto its side. |
-| Level 7 | **3. Midnight Coach** | Grab a Speed Star (or stay quick on foot), race alongside, and lasso each door handle in order until all three doors are tied shut. |
-| Level 10 | **6. Outlaw Kingpin** | Lasso the two bodyguards first, then lasso the kingpin once to tie him. |
+| Level 7 | **3. Midnight Coach** | Chase on horseback, race alongside, and lasso each door handle in order until all three doors are tied shut. |
+| Level 10 | **6. Outlaw Kingpin** | Lasso the two bodyguards first, then lasso the kingpin once to tie him. Side/body contact hurts like bandits; a head stomp bounces safely. |
 
 After the Kingpin falls, play a **horizon victory ride**: the cowboy mounts and rides into the sunset before returning to save select. After the fade to black, the dedication **VOM PAPI FÜR FINN** appears.
 
@@ -130,8 +138,8 @@ After the Kingpin falls, play a **horizon victory ride**: the cowboy mounts and 
 
 Status: **implemented** on `main` (see Chapter 13).
 
-1. **Saloon doorway:** Celebration cowboy stands **in front of the saloon door**.
-2. **Clouds:** Steeper steps; only canyon bridges (wider), multi-hazard approaches, or plank climbs.
+1. **Saloon doorway:** Celebration keeps the saloon at its on-screen goal position; the cowboy stands in front of that doorway.
+2. **Clouds:** True one-way platforms (jump up through, land on top); canyon bridges sometimes use two-cloud hop chains.
 3. **Rattlesnake:** Floor-bound; **head-raise only** (no size growth).
 4. **Flight ceiling:** Soft clamp + non-blocking ceilings so the cowboy can always descend.
 5. **Fence doors:** Visible posts + swinging open/close animation.
@@ -141,13 +149,13 @@ Status: **implemented** on `main` (see Chapter 13).
 
 ## Chapter 7: Level completion and progression
 
-Reaching the goal disables player input and starts a 3–5 second transition: the cowboy stands at the saloon door, a horse rides in from the left, the cowboy mounts, and they ride toward the next trail while the collected badge total remains displayed above them. Flying over the saloon counts the same as walking into the doorway. The next level starts automatically with the cowboy riding in and dismounting before control returns. After level 10 and the Outlaw Kingpin boss, the cowboy rides into the horizon; the screen fades to black with **VOM PAPI FÜR FINN**, then returns to the save selection screen.
+Reaching the goal disables player input and starts a 3–5 second transition: the saloon stays where it already appears on screen, the cowboy stands at that doorway, a horse rides in from the left, the cowboy mounts, and they ride toward the next trail while the collected badge total remains displayed above them. Flying over the saloon counts the same as walking into the doorway. The next level starts automatically with the cowboy riding in and dismounting before control returns. After level 10 and the Outlaw Kingpin boss, the cowboy rides into the horizon; the screen fades to black with **VOM PAPI FÜR FINN**, then returns to the save selection screen.
 
 ## Chapter 8: Save system
 
-The start screen displays three large save cards numbered **1**, **2**, and **3**. Each card shows the current level, collected stars, and total play time. Selecting an empty card starts level 1; selecting an existing card continues immediately.
+The start screen displays three large save cards numbered **1**, **2**, and **3**. Each card shows the current level, collected stars, and total play time. Selecting an empty card starts level 1; selecting an existing card continues immediately. Delete controls stay out of the main button row: right-click a card, press `Space`, or press Xbox `Y` to open a confirmation for the selected save.
 
-Progress is saved automatically after every level. A parent-accessible hold-to-confirm action can erase a save, preventing accidental deletion. Saves are stored locally in a **`savegames/`** folder and the game works fully offline.
+Progress is saved automatically after every level. A confirmation prevents accidental deletion. Saves are stored locally in a **`savegames/`** folder and the game works fully offline.
 
 - **While developing / using Play Cowboy Trail:** `savegames/` sits next to the project files.
 - **Portable Windows exe:** `savegames/` is created next to `CowboyTrail.exe`, so the exe stays fully self-contained (the game data is embedded) and works when copied anywhere writable. If the exe is run from a read-only or protected location (e.g. `Program Files`), progress automatically falls back to the per-user data folder instead of silently failing.
@@ -156,12 +164,20 @@ Progress is saved automatically after every level. A parent-accessible hold-to-c
 
 Older Godot `user://` files are only copied into `savegames/` if no local save exists yet; if that copy is an outdated format, it is still discarded.
 
+### Translation editor
+
+Choose **Translation Editor** on the start screen to edit the English and German values loaded from `assets/i18n/game_text.csv`. Search filters keys and both languages. Rows containing formatting parameters such as `%d`, `%s`, `%.0f`, or `%%` show a filled-in gameplay example directly below the text; incompatible English/German placeholder order or types are highlighted and block export.
+
+**Save / Export CSV** writes `game_text_edited.csv` into the same writable `savegames/` location used by progress. The screen always displays the exact absolute output path. In a source checkout this is `<project>/savegames/game_text_edited.csv`; a portable build writes beside the executable when possible and otherwise uses its per-user fallback. Export never overwrites the packaged/source CSV automatically, so a maintainer can review the corrected file before replacing `assets/i18n/game_text.csv`.
+
 ## Chapter 9: Child-friendly design and accessibility
 
 - No lives, game-over screen, player weapons, timers, or permanent failure; the cowboy uses a nonviolent lasso, while bandits only fire slow, avoidable warning shots
 - Frequent checkpoints and instant retries
 - Predictable opponents and clearly marked harmful obstacles
 - Optional spoken or animated hints instead of text-heavy instructions
+- English/German language selection; all gameplay instructions and main menus must be translated together
+- Spoken instructions can be disabled independently and gracefully stay silent if the operating system has no matching text-to-speech voice
 - Adjustable music and sound volume
 - Fullscreen/windowed mode and remappable controls
 - High-contrast goal markers and mechanics that do not rely on color alone
@@ -175,7 +191,7 @@ Older Godot `user://` files are only copied into `savegames/` if no local save e
 - **Input:** Godot InputMap actions for keyboard and joypad controls
 - **Controller support:** Godot joypad API and built-in controller mappings, tested with Xbox One and Xbox Series controllers over USB and Bluetooth
 - **Data:** Godot resources for level metadata; versioned JSON files in a local `savegames/` folder
-- **Audio:** OGG music and WAV/OGG sound effects
+- **Audio:** OGG/WAV music, lightweight effect sounds, and Godot `DisplayServer` text-to-speech for local narration
 - **Targets:** Windows PC first, followed by Linux and optional web export
 - **Testing:** Scene-based headless suite plus manual keyboard, Xbox controller, and child play-testing
 
@@ -185,8 +201,9 @@ Godot is well suited to a small 2D game, has a compact scene system, exports to 
 
 The launch scripts locate Godot 4, set the project directory correctly, and forward any additional command-line arguments to Godot.
 
-- **Windows PC (no install needed):** double-click **`Play Cowboy Trail.exe`** (cowboy-head icon). The first run of `Play Cowboy Trail.bat` builds that exe if needed, unpacks the engine, and refreshes assets after a git pull. (`.bat` files cannot show a custom icon in Explorer.)
+- **Windows PC (no install needed):** double-click **`Play Cowboy Trail.exe`** (cowboy-head icon). The first run of `Play Cowboy Trail.bat` builds that exe if needed, unpacks the engine, and refreshes assets after a git pull. While that happens, a loading window with trail music appears so the long quiet wait is gone. (`.bat` files cannot show a custom icon in Explorer.)
 - **macOS (no install needed):** double-click **`Play Cowboy Trail.command`**. On its first run it downloads the official universal Godot 4.4.1 engine (about 127 MB), imports the game, and starts it. No Godot installation is required; later starts use the cached engine. If macOS blocks the first launch, Control-click the file and choose **Open**.
+- Inside the game, a handmade desert boot splash and short **Saddling up…** screen play music before the save menu appears.
 - **Linux:** run `./run_linux.sh` (also refreshes assets when `content_version.txt` changes)
 - **Windows (with your own Godot):** double-click `run_windows.bat` or run it from Command Prompt
 - **Portable Windows exe:** run `./create_exe.sh` (Linux/macOS) or `create_exe.bat` (Windows). The build lands in `dist/windows/CowboyTrail.exe`. If `create_exe.bat` fails, open `dist\create_exe_log.txt`. Share that folder; progress appears in `savegames/` beside the exe.
@@ -201,6 +218,7 @@ Use reusable Godot scenes rather than building each level independently:
 - `Main` manages menus, save selection, and scene transitions.
 - `GameManager` tracks the active save, level progress, stars, and settings.
 - `InputManager` maps keyboard and controller actions, detects the active device, changes button prompts, and handles controller connection changes.
+- `DebugLabels` (F1 / `toggle_debug_names`) overlays temporary object names for play-test feedback; off by default and never shown during normal play.
 - `Player` contains movement, animation, checkpoints, damage handling, and input handling.
 - `ModeController` activates timed player modes and updates their visual indicator.
 - `LevelBase` defines spawn points, checkpoints, collectibles, and the goal.
@@ -276,19 +294,37 @@ Each cycle must maintain the following status block:
 
 ### Current development status
 
-- **Current iteration:** `v1.3.3` hazard variety, bounty bandits, and trail readability
-- **Last completed step:** Rebalanced bosses, powers, rafts, canyon/cloud routes, carrion density, saloon transitions, wind visuals, and the handmade timed gate from the latest play-test feedback
-- **Currently in progress:** In-game visual play-test of bosses and polish
-- **Next step:** Play-test bosses, fences, clouds, and flight; then tag `v1.3.3`
-- **Completed features:** Long 10-level cowboy trail; animated nonviolent bandit lasso; seated tied bandits; warning-shot and bounty bandits; carrions and rattlesnakes; animated canyon recovery; reachable hazards; hand-drawn cowboy + world props; looping music; three custom editor slots; mid-trail saves; modes; Xbox-ready input; Stampede Bull / Midnight Coach / Outlaw Kingpin bosses; horizon victory scene
-- **Remaining work:** In-game visual/gameplay play-test; Xbox controller physical verification; supervised child play-tests; additional SFX
-- **Tests last run:** all automated tests passed (incl. 35-degree required canyon rafts, sparse/no-carrion level rules, solid Kingpin spring route, Bull sizing, large Wings, transparent wind, handmade gate, and saloon-plank transition placement)
+- **Current iteration:** `v1.3.24` Gameplay polish (one-way clouds, handmade HUD/doors, wind, Kingpin, Wings carrions)
+- **Last completed step:** One-way clouds, handmade HUD/door signs, Level 4 variety, saloon transition anchoring, wind force, Wings carrions, Kingpin contact/springs/patrol
+- **Currently in progress:** Ready for in-game visual play-test of the polish pass
+- **Next step:** Play-test cloud hops, Canyon Ferry variety, Kingpin arena, and Wings routes; rebuild Windows launcher exe if needed
+- **Completed features:** Long 10-level cowboy trail; Campaign Workshop (edit built-ins / insert extras + live preview); animated nonviolent bandit lasso; seated tied bandits; plank-edge bandit turnarounds; warning-shot and bounty bandits; carrions and rattlesnakes; handmade scalable canyon rims; animated canyon recovery; reachable hazards; hand-drawn cowboy + world props; looping music; startup loading scene; mid-trail saves; modes; Xbox-ready input; Stampede Bull / Midnight Coach / Outlaw Kingpin bosses; horizon victory scene; F1 debug object-name overlay; one-way cloud platforms; handmade HUD/door styling
+- **Remaining work:** In-game visual/gameplay play-test; rebuild `Play Cowboy Trail.exe` after launcher C# change; Xbox controller physical verification; supervised child play-tests; additional SFX
+- **Tests last run:** all automated tests passed (one-way clouds, wind overlap, handmade HUD/doors, saloon anchor, two-cloud chains, Wings carrions, Level 4 variety, Kingpin contact/springs/patrol)
 - **Known issues or blockers:**
-  - Boss arenas and new fence/cloud art still need an in-game visual play-test
+  - Built-in workshop imports are grid approximations (complex scene detail may be simplified)
+  - Windows launcher loading window ships only after rebuilding the exe via `Play Cowboy Trail.bat`
   - Xbox controller not physically verified on this machine
-- **Latest iteration tag:** `v1.3.2`
-- **Relevant commit:** `a31fd4c`
+- **Latest iteration tag:** `v1.3.3`
+- **Relevant commit:** uncommitted local work on `v1.3.24`
 
+
+### Cycle notes — 2026-07-21 (v1.3.24)
+
+- Clouds use Godot one-way collision: jump upward through them, land/stand on top; disappearance cannot crush downward; clouds stay clear of the trail floor.
+- Occasional two-cloud canyon hop chains on Sky Ranch / Rainbow Saloon; Level 4 Canyon Ferry mixes steep rafts with spring/plank/cloud variety.
+- HUD top-left and bottom prompt use handmade irregular western sign boards; timed doors drop generic plates for gate + lantern state cues.
+- Wind zones apply full directional force while the cowboy overlaps the visible gust area.
+- End-of-level celebration anchors the saloon to the goal’s actual screen position across CanvasLayer/viewport sizes.
+- Sky Ranch and Rainbow Saloon add more varied carrions, with 2–3 spread top-route guards; Kingpin side contact hurts like bandits, head stomps bounce safely, three springs, wider bounded patrol.
+
+### Cycle notes — 2026-07-21 (v1.3.22)
+
+- Replaced the three-slot family editor with a **Campaign Workshop**: edit imported copies of any built-in level, insert extra trails at any campaign position, restore originals, and keep a live miniature preview under the stamp grid.
+- Bandits on planks turn around at the edge instead of walking off.
+- Canyons use handmade left/right cliff rims around an abyss that widens to any gap without stretching the rim art.
+- Added a handmade boot splash and in-game loading scene so desert art and music appear while the engine starts, plus an early loading window in the Windows `Play Cowboy Trail.exe` launcher source.
+- Press `F1` (`toggle_debug_names`) to show temporary yellow names above meaningful gameplay objects (player, hazards, platforms, camps, badges, bosses, etc.). Press `F1` again to remove them. The toggle persists across scene changes for the current run and stays off during normal play.
 
 ### Cycle notes — 2026-07-19 (v1.3.3)
 
@@ -342,7 +378,7 @@ Each cycle must maintain the following status block:
 - Audit follow-up: moved leftover rattlesnakes out from under cloud boards on levels 9–10, clear bandit projectiles on camp respawn, and align accessibility wording with warning shots.
 - Tied bandits now sit with rope around their body; both bandit and rope render behind the cowboy.
 - Added `Alt` lasso input (Xbox remains `X`) and double-tap numpad `+` campaign level advance.
-- Set Wings, Boots, and Speed to 30 seconds; Bubble Shield to 15 seconds, with extra shields through Rail Yard.
+- Set Wings, Boots, and Speed to 30 seconds; Bubble Shield to 7.5 seconds, with extra shields through Rail Yard.
 - Removed the carrion background, enlarged birds to roughly 2.5 cowboy widths, and added more at varied heights.
 - Added a canyon fall animation, animated wide rattlesnakes, and automated checks preventing ground hazards beneath raised boards.
 - Bandits now telegraph and fire slow bright shots. Red-scarf bounty bandits shoot more often and award two stored badges when lassoed.
@@ -386,7 +422,6 @@ Each cycle must maintain the following status block:
 - Strengthened automated QA for reachable stars, supported checkpoints, and accidental plank highways.
 - Replaced the cowboy frames with original hand-drawn idle/run/jump/celebration art.
 - Added original looping cheerful cowboy music with a persistent Music bus controlled by the existing volume setting.
-- Added **Build Your Own Trail** from the save screen: three local slots, stamp/grid editing, automatic saves, and isolated play-testing.
 
 ### Cycle notes — 2026-07-19 (v1.2.10)
 
