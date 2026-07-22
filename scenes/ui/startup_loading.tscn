@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/startup_loading.gd" id="1"]
 [ext_resource type="Texture2D" path="res://assets/world/transition_desert_skyline.png" id="2"]
+[ext_resource type="Script" path="res://scripts/ui/handmade_sign.gd" id="3"]
 
 [node name="StartupLoading" type="Control"]
 layout_mode = 3
@@ -32,7 +33,21 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-color = Color(0.2, 0.06, 0.02, 0.2)
+color = Color(0.95, 0.45, 0.12, 0.14)
+
+[node name="TitleBoard" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -340.0
+offset_top = -110.0
+offset_right = 340.0
+offset_bottom = -20.0
+mouse_filter = 2
+script = ExtResource("3")
 
 [node name="Title" type="Label" parent="."]
 layout_mode = 1
@@ -41,14 +56,31 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -420.0
-offset_top = -90.0
-offset_right = 420.0
-offset_bottom = -15.0
-theme_override_colors/font_color = Color(1, 0.91, 0.62, 1)
-theme_override_font_sizes/font_size = 54
+offset_left = -300.0
+offset_top = -95.0
+offset_right = 300.0
+offset_bottom = -30.0
+theme_override_colors/font_color = Color(0.28, 0.12, 0.04, 1)
+theme_override_colors/font_outline_color = Color(0.98, 0.88, 0.62, 0.8)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 48
 text = "Cowboy Trail"
 horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LoadingBoard" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -260.0
+offset_top = -8.0
+offset_right = 260.0
+offset_bottom = 62.0
+mouse_filter = 2
+script = ExtResource("3")
 
 [node name="LoadingLabel" type="Label" parent="."]
 layout_mode = 1
@@ -57,11 +89,14 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -300.0
-offset_top = 0.0
-offset_right = 300.0
-offset_bottom = 55.0
-theme_override_colors/font_color = Color(1, 0.84, 0.46, 1)
+offset_left = -230.0
+offset_top = 2.0
+offset_right = 230.0
+offset_bottom = 52.0
+theme_override_colors/font_color = Color(0.32, 0.14, 0.05, 1)
+theme_override_colors/font_outline_color = Color(0.98, 0.9, 0.7, 0.65)
+theme_override_constants/outline_size = 2
 theme_override_font_sizes/font_size = 28
 text = "Saddling up..."
 horizontal_alignment = 1
+vertical_alignment = 1

@@ -6,6 +6,9 @@ var _label: Label
 
 func _ready() -> void:
 	_label = get_node_or_null("LoadingLabel") as Label
+	var title := get_node_or_null("Title") as Label
+	if title != null:
+		title.text = tr("Cowboy Trail")
 	AudioManager.play_boot_intro()
 
 
