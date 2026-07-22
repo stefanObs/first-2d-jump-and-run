@@ -1,0 +1,25 @@
+---
+description: Treat README.md as binding project rules for gameplay, design, art, i18n, and audio
+alwaysApply: true
+---
+
+# Honor README.md
+
+`README.md` at the repository root is the **binding source of truth** for this Godot cowboy platformer: gameplay rules, campaign/level design, canyon and mover conventions, UI/art style, i18n (German default), and audio/TTS.
+
+## Before changing those areas
+
+1. **Read or consult `README.md`** (especially Core gameplay, World / level design rules, UI / art style, Audio, and Agent / contributor rules).
+2. **Do not violate** documented rules. Examples of forbidden regressions:
+   - Calling canyons “pits” in user-facing text
+   - English as the default language
+   - Featureless black canyon interiors, or canyon rims covering desert floor banks
+   - Impossible canyon gaps (no hop/mover chain within normal jump reach)
+   - Ferry-raft / ferry-step look on Level 4 movers (use clouds + planks)
+   - Uncapped runaway wind
+   - Generic flat UI that breaks the handmade western style
+3. Prefer the README checklist over older chat memory or outdated cycle notes.
+
+## When a documented rule must change
+
+If implementing something that **requires** changing a rule already written in `README.md`, **update `README.md` in the same change** so docs and code stay aligned. Do not silently diverge.
