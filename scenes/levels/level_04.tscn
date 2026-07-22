@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=3 uid="uid://clevel04"]
+[gd_scene load_steps=21 format=3 uid="uid://clevel04"]
 
 [ext_resource type="Script" path="res://scripts/levels/level_04.gd" id="1_level"]
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2_player"]
@@ -23,6 +23,12 @@ size = Vector2(420, 64)
 
 [sub_resource type="RectangleShape2D" id="Block"]
 size = Vector2(160, 32)
+
+[sub_resource type="RectangleShape2D" id="BlockHop"]
+size = Vector2(80, 32)
+
+[sub_resource type="RectangleShape2D" id="BlockIsle"]
+size = Vector2(120, 32)
 
 [sub_resource type="RectangleShape2D" id="BlockWide"]
 size = Vector2(220, 32)
@@ -73,7 +79,7 @@ offset_right = 1100.0
 offset_bottom = 130.0
 theme_override_colors/font_color = Color(0.35, 0.16, 0.05, 1)
 theme_override_font_sizes/font_size = 22
-text = "Use the wooden planks to cross the first canyon. Wait for paired clouds only where there are no planks."
+text = "Jump the wooden planks across the first canyon — miss a jump and you fall. Wait for paired clouds only where there are no planks."
 
 
 [node name="Mesa0" type="ColorRect" parent="."]
@@ -446,48 +452,48 @@ scale = Vector2(4.8, 1.8)
 
 
 [node name="FerryStep3A" type="StaticBody2D" parent="."]
-position = Vector2(1340, 300)
+position = Vector2(1290, 300)
 [node name="Visual" type="ColorRect" parent="FerryStep3A"]
-offset_left = -70.0
+offset_left = -40
 offset_top = -12.0
-offset_right = 70.0
+offset_right = 40
 offset_bottom = 12.0
 color = Color(0.62, 0.4, 0.22, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="FerryStep3A"]
-shape = SubResource("Block")
+shape = SubResource("BlockHop")
 
 [node name="FerryStep3B" type="StaticBody2D" parent="."]
-position = Vector2(1500, 300)
+position = Vector2(1470, 300)
 [node name="Visual" type="ColorRect" parent="FerryStep3B"]
-offset_left = -70.0
+offset_left = -40
 offset_top = -12.0
-offset_right = 70.0
+offset_right = 40
 offset_bottom = 12.0
 color = Color(0.62, 0.4, 0.22, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="FerryStep3B"]
-shape = SubResource("Block")
+shape = SubResource("BlockHop")
 
 [node name="FerryStep3C" type="StaticBody2D" parent="."]
-position = Vector2(1660, 300)
+position = Vector2(1650, 300)
 [node name="Visual" type="ColorRect" parent="FerryStep3C"]
-offset_left = -70.0
+offset_left = -40
 offset_top = -12.0
-offset_right = 70.0
+offset_right = 40
 offset_bottom = 12.0
 color = Color(0.62, 0.4, 0.22, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="FerryStep3C"]
-shape = SubResource("Block")
+shape = SubResource("BlockHop")
 
 [node name="FerryStep3D" type="StaticBody2D" parent="."]
-position = Vector2(1820, 300)
+position = Vector2(1830, 300)
 [node name="Visual" type="ColorRect" parent="FerryStep3D"]
-offset_left = -70.0
+offset_left = -40
 offset_top = -12.0
-offset_right = 70.0
+offset_right = 40
 offset_bottom = 12.0
 color = Color(0.62, 0.4, 0.22, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="FerryStep3D"]
-shape = SubResource("Block")
+shape = SubResource("BlockHop")
 
 
 [node name="Ground4" type="StaticBody2D" parent="."]
@@ -600,48 +606,48 @@ scale = Vector2(4.8, 1.8)
 
 
 [node name="FerryStep9A" type="StaticBody2D" parent="."]
-position = Vector2(4220, 300)
+position = Vector2(4170, 300)
 [node name="Visual" type="ColorRect" parent="FerryStep9A"]
-offset_left = -70.0
+offset_left = -40
 offset_top = -12.0
-offset_right = 70.0
+offset_right = 40
 offset_bottom = 12.0
 color = Color(0.62, 0.4, 0.22, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="FerryStep9A"]
-shape = SubResource("Block")
+shape = SubResource("BlockHop")
 
 [node name="FerryStep9B" type="StaticBody2D" parent="."]
-position = Vector2(4380, 300)
+position = Vector2(4350, 300)
 [node name="Visual" type="ColorRect" parent="FerryStep9B"]
-offset_left = -70.0
+offset_left = -40
 offset_top = -12.0
-offset_right = 70.0
+offset_right = 40
 offset_bottom = 12.0
 color = Color(0.62, 0.4, 0.22, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="FerryStep9B"]
-shape = SubResource("Block")
+shape = SubResource("BlockHop")
 
 [node name="FerryStep9C" type="StaticBody2D" parent="."]
-position = Vector2(4540, 300)
+position = Vector2(4530, 300)
 [node name="Visual" type="ColorRect" parent="FerryStep9C"]
-offset_left = -70.0
+offset_left = -40
 offset_top = -12.0
-offset_right = 70.0
+offset_right = 40
 offset_bottom = 12.0
 color = Color(0.62, 0.4, 0.22, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="FerryStep9C"]
-shape = SubResource("Block")
+shape = SubResource("BlockHop")
 
 [node name="FerryStep9D" type="StaticBody2D" parent="."]
-position = Vector2(4700, 300)
+position = Vector2(4710, 300)
 [node name="Visual" type="ColorRect" parent="FerryStep9D"]
-offset_left = -70.0
+offset_left = -40
 offset_top = -12.0
-offset_right = 70.0
+offset_right = 40
 offset_bottom = 12.0
 color = Color(0.62, 0.4, 0.22, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="FerryStep9D"]
-shape = SubResource("Block")
+shape = SubResource("BlockHop")
 
 
 [node name="Ground10" type="StaticBody2D" parent="."]
@@ -686,15 +692,15 @@ scale = Vector2(1.8, 1.5)
 
 
 [node name="FerryIsle12" type="StaticBody2D" parent="."]
-position = Vector2(5720, 300)
+position = Vector2(5780, 300)
 [node name="Visual" type="ColorRect" parent="FerryIsle12"]
-offset_left = -90.0
-offset_top = -14.0
-offset_right = 90.0
-offset_bottom = 14.0
+offset_left = -60
+offset_top = -14
+offset_right = 60
+offset_bottom = 14
 color = Color(0.62, 0.4, 0.22, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="FerryIsle12"]
-shape = SubResource("BlockWide")
+shape = SubResource("BlockIsle")
 
 [node name="Pit12B" parent="." instance=ExtResource("5_hazard")]
 position = Vector2(5880, 400)
@@ -702,40 +708,40 @@ scale = Vector2(1.8, 1.5)
 
 
 [node name="FerryCloud12A" parent="." instance=ExtResource("15_cloud")]
-position = Vector2(5620, 250)
+position = Vector2(5760, 250)
 always_solid = true
 platform_width_scale = 0.9
 purpose_label = "HOP"
 
 
 [node name="FerryCloud12B" parent="." instance=ExtResource("15_cloud")]
-position = Vector2(5820, 235)
+position = Vector2(5975, 235)
 always_solid = true
 platform_width_scale = 0.9
 purpose_label = "HOP"
 
 
 [node name="FerryStep12A" type="StaticBody2D" parent="."]
-position = Vector2(5960, 300)
+position = Vector2(5975, 300)
 [node name="Visual" type="ColorRect" parent="FerryStep12A"]
-offset_left = -70.0
+offset_left = -40
 offset_top = -12.0
-offset_right = 70.0
+offset_right = 40
 offset_bottom = 12.0
 color = Color(0.62, 0.4, 0.22, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="FerryStep12A"]
-shape = SubResource("Block")
+shape = SubResource("BlockHop")
 
 [node name="FerryStep12B" type="StaticBody2D" parent="."]
-position = Vector2(6120, 300)
+position = Vector2(6150, 300)
 [node name="Visual" type="ColorRect" parent="FerryStep12B"]
-offset_left = -70.0
+offset_left = -40
 offset_top = -12.0
-offset_right = 70.0
+offset_right = 40
 offset_bottom = 12.0
 color = Color(0.62, 0.4, 0.22, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="FerryStep12B"]
-shape = SubResource("Block")
+shape = SubResource("BlockHop")
 
 
 [node name="Ground13" type="StaticBody2D" parent="."]
@@ -825,7 +831,7 @@ position = Vector2(5490, 320)
 
 
 [node name="MoveStar0" parent="." instance=ExtResource("9_star")]
-position = Vector2(1500, 240)
+position = Vector2(1470, 240)
 
 
 [node name="MoveStar1" parent="." instance=ExtResource("9_star")]
@@ -852,11 +858,11 @@ obstruction_include_movers = false
 
 
 [node name="MoveStar2" parent="." instance=ExtResource("9_star")]
-position = Vector2(4380, 240)
+position = Vector2(4350, 240)
 
 
 [node name="MoveStar3" parent="." instance=ExtResource("9_star")]
-position = Vector2(5720, 230)
+position = Vector2(5780, 230)
 
 
 [node name="Moving4" parent="." instance=ExtResource("12_move")]
