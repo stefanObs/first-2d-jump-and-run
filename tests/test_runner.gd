@@ -2166,18 +2166,30 @@ func _test_canyon_center_illustrated() -> Variant:
 	if not canyon_art.top_level or canyon_art.z_index <= -2:
 		controller.queue_free()
 		return "CanyonMouth must be top_level above FloorAbyss (z > -2)."
-	var back := canyon_art.get_node_or_null("BackFill") as Polygon2D
-	var bands := canyon_art.get_node_or_null("StrataBands") as Node2D
-	var river := canyon_art.get_node_or_null("DryRiver") as Polygon2D
+	var sky := canyon_art.get_node_or_null("SkyWash") as Sprite2D
+	var depth := canyon_art.get_node_or_null("DepthTiles") as Node2D
+	var floor_wash := canyon_art.get_node_or_null("FloorWash") as Sprite2D
 	var walls := canyon_art.get_node_or_null("LeftInnerWalls") as Node2D
-	if back == null or bands == null or bands.get_child_count() < 2 or river == null or walls == null or walls.get_child_count() < 3:
+	if (
+		sky == null
+		or sky.texture == null
+		or depth == null
+		or depth.get_child_count() < 1
+		or floor_wash == null
+		or floor_wash.texture == null
+		or walls == null
+		or walls.get_child_count() < 1
+	):
 		controller.queue_free()
-		return "Canyon center is missing illustrated strata / river layers."
+		return "Canyon center is missing handpainted sky / depth / floor layers."
 	# Interior must look like open sky, not the same warm orange as the rims.
-	if back.color.b <= back.color.r or back.color.b < 0.55:
-		controller.queue_free()
-		return "Canyon interior should show sky blue so it stays distinct from the rims."
-	if back.z_index < 0:
+	var sky_img := sky.texture.get_image()
+	if sky_img != null:
+		var sample := sky_img.get_pixel(sky_img.get_width() / 2, maxi(1, sky_img.get_height() / 5))
+		if sample.b <= sample.r or sample.b < 0.45:
+			controller.queue_free()
+			return "Canyon interior should show painted sky blue so it stays distinct from the rims."
+	if sky.z_index < 0:
 		controller.queue_free()
 		return "Canyon fill layers must stay at non-negative relative z above FloorAbyss."
 	var left_rim := canyon_art.get_node("LeftRim") as Sprite2D
@@ -2375,6 +2387,9 @@ func _test_art_and_music() -> Variant:
 		"res://assets/world/canyon_gap.png",
 		"res://assets/world/canyon_rim_left.png",
 		"res://assets/world/canyon_depth_tile.png",
+		"res://assets/world/canyon_sky_wash.png",
+		"res://assets/world/canyon_inner_wall.png",
+		"res://assets/world/canyon_floor_wash.png",
 		"res://assets/world/trail_horse.png",
 		"res://assets/world/cowboy_horse_ride_0.png",
 		"res://assets/world/cowboy_horse_ride_1.png",

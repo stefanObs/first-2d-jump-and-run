@@ -2,35 +2,26 @@ class_name ScalableCanyonArt
 extends Node2D
 
 ## Hand-painted cliff rims outside the desert floor, framing an open canyon
-## interior with sky showing through. Rims stay warm and trail-matched; the
-## interior uses cooler depth + sky so it never blends into the rim walls.
+## interior. Sky wash + tiled depth art fill the gap; rims stay warm and
+## trail-matched so the opening never blends into the bank walls.
 
-const RIM_TEXTURE := preload("res://assets/world/canyon_rim_left.png")
+const RIM_TEXTURE: Texture2D = preload("res://assets/world/canyon_rim_left.png")
+const SKY_TEXTURE: Texture2D = preload("res://assets/world/canyon_sky_wash.png")
+const DEPTH_TEXTURE: Texture2D = preload("res://assets/world/canyon_depth_tile.png")
+const INNER_WALL_TEXTURE: Texture2D = preload("res://assets/world/canyon_inner_wall.png")
+const FLOOR_TEXTURE: Texture2D = preload("res://assets/world/canyon_floor_wash.png")
+
 const RIM_SIZE := Vector2(220.0, 260.0)
 const DEPTH := 320.0
 
-## Interior is cool/open so it stays distinct from warm hand-painted rims.
-const SKY := Color(0.55, 0.78, 0.95, 1.0)
-const SKY_DEEP := Color(0.38, 0.58, 0.82, 1.0)
-const DEPTH_PURPLE := Color(0.42, 0.28, 0.48, 1.0)
-const DEPTH_SHADOW := Color(0.28, 0.16, 0.32, 1.0)
-const FAR_FLOOR := Color(0.62, 0.42, 0.36, 1.0)
-const RIVER := Color(0.72, 0.78, 0.55, 1.0)
-const INNER_LIT := Color(0.72, 0.40, 0.34, 1.0)
-const INNER_MID := Color(0.52, 0.28, 0.34, 1.0)
-const INNER_DEEP := Color(0.34, 0.18, 0.30, 1.0)
-const OUTLINE := Color(0.18, 0.08, 0.10, 1.0)
-const SCRUB := Color(0.30, 0.55, 0.26, 1.0)
 
 var gap_left: float
 var gap_right: float
 var floor_top: float
 
-var _sky_fill: Polygon2D
-var _sky_deep: Polygon2D
-var _band_root: Node2D
-var _floor_band: Polygon2D
-var _river: Polygon2D
+var _sky: Sprite2D
+var _depth_root: Node2D
+var _floor: Sprite2D
 var _detail_root: Node2D
 var _left_walls: Node2D
 var _right_walls: Node2D
@@ -66,17 +57,16 @@ func opening_width() -> float:
 
 
 func center_is_illustrated() -> bool:
-	if _sky_fill == null or _band_root == null:
+	if _sky == null or _depth_root == null or _floor == null:
 		return false
-	# Interior must read as sky/open air, not the same warm orange as the rims.
-	var sky := _sky_fill.color
-	var is_skyish := sky.b > sky.r and sky.b > 0.55 and sky.g > 0.45
+	# Interior must read as painted sky/open air, not warm rim rock.
 	return (
-		is_skyish
-		and _band_root.get_child_count() >= 2
+		_sky.texture == SKY_TEXTURE
+		and _sky_reads_blue()
+		and _depth_root.get_child_count() >= 1
 		and _left_walls != null
 		and _left_walls.get_child_count() > 0
-		and _river != null
+		and _floor.texture == FLOOR_TEXTURE
 		and _detail_root != null
 		and _detail_root.get_child_count() > 0
 	)
@@ -93,19 +83,27 @@ func rims_outside_floor() -> bool:
 
 
 func _ensure_parts() -> void:
-	if _sky_fill != null:
+	if _sky != null:
 		return
 
-	_sky_fill = _make_poly("BackFill", SKY, 0)
-	_sky_deep = _make_poly("SkyDeep", SKY_DEEP, 0)
+	_sky = Sprite2D.new()
+	_sky.name = "SkyWash"
+	_sky.texture = SKY_TEXTURE
+	_sky.centered = false
+	_sky.z_index = 0
+	add_child(_sky)
 
-	_band_root = Node2D.new()
-	_band_root.name = "StrataBands"
-	_band_root.z_index = 1
-	add_child(_band_root)
+	_depth_root = Node2D.new()
+	_depth_root.name = "DepthTiles"
+	_depth_root.z_index = 1
+	add_child(_depth_root)
 
-	_floor_band = _make_poly("CanyonFloor", FAR_FLOOR, 2)
-	_river = _make_poly("DryRiver", RIVER, 3)
+	_floor = Sprite2D.new()
+	_floor.name = "FloorWash"
+	_floor.texture = FLOOR_TEXTURE
+	_floor.centered = false
+	_floor.z_index = 2
+	add_child(_floor)
 
 	_detail_root = Node2D.new()
 	_detail_root.name = "CanyonDetails"
@@ -140,13 +138,12 @@ func _ensure_parts() -> void:
 	add_child(_right_rim)
 
 
-func _make_poly(poly_name: String, color: Color, z: int) -> Polygon2D:
-	var poly := Polygon2D.new()
-	poly.name = poly_name
-	poly.color = color
-	poly.z_index = z
-	add_child(poly)
-	return poly
+func _sky_reads_blue() -> bool:
+	var img: Image = SKY_TEXTURE.get_image()
+	if img == null:
+		return true
+	var sample: Color = img.get_pixel(img.get_width() / 2, maxi(1, img.get_height() / 5))
+	return sample.b > sample.r and sample.b > 0.45 and sample.g > 0.40
 
 
 func _layout_center() -> void:
@@ -156,68 +153,49 @@ func _layout_center() -> void:
 	var right := gap_right
 	var width := right - left
 
-	# Open sky through the canyon mouth — clearly different from warm rim rock.
-	_sky_fill.polygon = PackedVector2Array([
-		Vector2(left, top),
-		Vector2(right, top),
-		Vector2(right, bottom),
-		Vector2(left, bottom),
-	])
-	_sky_fill.color = SKY
+	# Painted sky wash stretched across the open mouth.
+	var sky_size: Vector2 = SKY_TEXTURE.get_size()
+	_sky.position = Vector2(left, top)
+	_sky.scale = Vector2(width / sky_size.x, DEPTH / sky_size.y)
+	_sky.modulate = Color(1, 1, 1, 1)
 
-	# Soft deeper sky toward the bottom so the gorge reads as open air, not rock fill.
-	var sky_mid := top + DEPTH * 0.42
-	_sky_deep.polygon = PackedVector2Array([
-		Vector2(left, sky_mid),
-		Vector2(right, sky_mid),
-		Vector2(right, bottom),
-		Vector2(left, bottom),
-	])
-	_sky_deep.color = SKY_DEEP
+	# Distant handpainted depth tiles (soft shelves / haze), repeated for width.
+	_clear_children(_depth_root)
+	var depth_size: Vector2 = DEPTH_TEXTURE.get_size()
+	var tile_h := DEPTH * 0.92
+	var tile_scale_y := tile_h / depth_size.y
+	var tile_w := depth_size.x * tile_scale_y
+	var tile_y := top + DEPTH * 0.06
+	var x := left - tile_w * 0.08
+	var tile_i := 0
+	while x < right - tile_w * 0.15:
+		var tile := Sprite2D.new()
+		tile.name = "Depth%d" % tile_i
+		tile.texture = DEPTH_TEXTURE
+		tile.centered = false
+		tile.position = Vector2(x, tile_y)
+		tile.scale = Vector2(tile_scale_y, tile_scale_y)
+		# Soften so sky wash still reads through the open air.
+		tile.modulate = Color(1, 1, 1, 0.88)
+		_depth_root.add_child(tile)
+		x += tile_w * 0.72
+		tile_i += 1
+	if tile_i == 0:
+		var fallback := Sprite2D.new()
+		fallback.name = "Depth0"
+		fallback.texture = DEPTH_TEXTURE
+		fallback.centered = false
+		fallback.position = Vector2(left, tile_y)
+		fallback.scale = Vector2(width / depth_size.x, tile_scale_y)
+		fallback.modulate = Color(1, 1, 1, 0.88)
+		_depth_root.add_child(fallback)
 
-	_clear_children(_band_root)
-	# Only a couple of cool distant haze shelves — not full-width orange strata
-	# that would look like more rim rock.
-	var bands := [
-		{"y": 150.0, "h": 28.0, "inset": 0.28, "color": Color(DEPTH_PURPLE, 0.55)},
-		{"y": 210.0, "h": 34.0, "inset": 0.36, "color": Color(DEPTH_SHADOW, 0.70)},
-	]
-	for i in range(bands.size()):
-		var band: Dictionary = bands[i]
-		var inset: float = width * float(band["inset"])
-		var y0: float = top + float(band["y"])
-		var y1: float = y0 + float(band["h"])
-		var fill := Polygon2D.new()
-		fill.name = "Band%d" % i
-		fill.color = band["color"]
-		fill.polygon = PackedVector2Array([
-			Vector2(left + inset, y0),
-			Vector2(right - inset, y0),
-			Vector2(right - inset - 10.0, y1),
-			Vector2(left + inset + 10.0, y1),
-		])
-		_band_root.add_child(fill)
-
-	var inset := minf(width * 0.22, 100.0)
-	_floor_band.polygon = PackedVector2Array([
-		Vector2(left + inset * 0.35, bottom - 78.0),
-		Vector2(right - inset * 0.35, bottom - 78.0),
-		Vector2(right - inset, bottom - 6.0),
-		Vector2(left + inset, bottom - 6.0),
-	])
-	_floor_band.color = FAR_FLOOR
-
-	var mid := (left + right) * 0.5
-	var river_w := clampf(width * 0.10, 14.0, 40.0)
-	_river.polygon = PackedVector2Array([
-		Vector2(mid - river_w * 0.2, bottom - 74.0),
-		Vector2(mid + river_w * 0.5, bottom - 74.0),
-		Vector2(mid + river_w * 0.2, bottom - 42.0),
-		Vector2(mid + river_w * 0.85, bottom - 10.0),
-		Vector2(mid - river_w * 0.35, bottom - 10.0),
-		Vector2(mid - river_w * 0.65, bottom - 42.0),
-	])
-	_river.color = RIVER
+	# Soft painted gorge floor wash near the bottom.
+	var floor_size: Vector2 = FLOOR_TEXTURE.get_size()
+	var floor_h := 72.0
+	var floor_y := bottom - floor_h - 4.0
+	_floor.position = Vector2(left + width * 0.08, floor_y)
+	_floor.scale = Vector2((width * 0.84) / floor_size.x, floor_h / floor_size.y)
 
 
 func _layout_inner_walls() -> void:
@@ -225,102 +203,70 @@ func _layout_inner_walls() -> void:
 	_clear_children(_right_walls)
 	var top := floor_top + 1.0
 	var width := gap_right - gap_left
-	# Cooler, narrower cliff shelves INSIDE the gap — distinct from warm outer rims.
-	var ledge_w := clampf(width * 0.14, 14.0, 52.0)
+	var wall_size: Vector2 = INNER_WALL_TEXTURE.get_size()
+	var ledge_w := clampf(width * 0.16, 28.0, 70.0)
 	if width < 200.0:
-		ledge_w = minf(ledge_w, width * 0.20)
-	var bands := [
-		{"y": 6.0, "h": 40.0, "inset": 0.0, "color": INNER_LIT},
-		{"y": 44.0, "h": 44.0, "inset": 8.0, "color": INNER_MID},
-		{"y": 86.0, "h": 48.0, "inset": 16.0, "color": INNER_DEEP},
-		{"y": 132.0, "h": 52.0, "inset": 26.0, "color": DEPTH_PURPLE},
-		{"y": 182.0, "h": 58.0, "inset": 36.0, "color": DEPTH_SHADOW},
-	]
-	for i in range(bands.size()):
-		var band: Dictionary = bands[i]
-		var y0: float = top + float(band["y"])
-		var y1: float = y0 + float(band["h"])
-		var inset: float = float(band["inset"])
-		var color: Color = band["color"]
-		var jag := 3.5 + float(i % 3) * 1.8
+		ledge_w = minf(ledge_w, width * 0.22)
+	var wall_h := DEPTH * 0.95
+	var sx: float = ledge_w / wall_size.x
+	var sy: float = wall_h / wall_size.y
 
-		var left_poly := Polygon2D.new()
-		left_poly.name = "LeftStrata%d" % i
-		left_poly.color = color
-		left_poly.polygon = PackedVector2Array([
-			Vector2(gap_left, y0),
-			Vector2(gap_left + ledge_w - inset + jag, y0 + 2.0),
-			Vector2(gap_left + ledge_w - inset - jag * 0.3, y1),
-			Vector2(gap_left, y1),
-		])
-		_left_walls.add_child(left_poly)
+	var left_wall := Sprite2D.new()
+	left_wall.name = "LeftInnerPaint"
+	left_wall.texture = INNER_WALL_TEXTURE
+	left_wall.centered = false
+	left_wall.position = Vector2(gap_left, top + 4.0)
+	left_wall.scale = Vector2(sx, sy)
+	left_wall.modulate = Color(0.92, 0.88, 0.95, 0.92)
+	_left_walls.add_child(left_wall)
 
-		var right_poly := Polygon2D.new()
-		right_poly.name = "RightStrata%d" % i
-		right_poly.color = color.darkened(0.06)
-		right_poly.polygon = PackedVector2Array([
-			Vector2(gap_right, y0),
-			Vector2(gap_right - (ledge_w - inset + jag), y0 + 2.0),
-			Vector2(gap_right - (ledge_w - inset - jag * 0.3), y1),
-			Vector2(gap_right, y1),
-		])
-		_right_walls.add_child(right_poly)
+	var right_wall := Sprite2D.new()
+	right_wall.name = "RightInnerPaint"
+	right_wall.texture = INNER_WALL_TEXTURE
+	right_wall.centered = false
+	right_wall.flip_h = true
+	right_wall.position = Vector2(gap_right - ledge_w, top + 4.0)
+	right_wall.scale = Vector2(sx, sy)
+	right_wall.modulate = Color(0.86, 0.82, 0.90, 0.92)
+	_right_walls.add_child(right_wall)
 
 
 func _layout_details() -> void:
 	_clear_children(_detail_root)
 	var top := floor_top + 1.0
-	var bottom := top + DEPTH
 	var width := gap_right - gap_left
 	var mid := (gap_left + gap_right) * 0.5
 
-	# Soft sky cloud wisps in the open center (helps sell "air", not rock).
-	if width >= 120.0:
-		for i in range(2):
-			var wisp := Polygon2D.new()
-			wisp.name = "SkyWisp%d" % i
-			wisp.color = Color(0.92, 0.96, 1.0, 0.35)
-			var wy := top + 36.0 + float(i) * 48.0
-			var wx := mid + float(i * 2 - 1) * width * 0.12
-			var ww := clampf(width * 0.10, 18.0, 42.0)
-			wisp.polygon = PackedVector2Array([
-				Vector2(wx - ww, wy),
-				Vector2(wx - ww * 0.3, wy - 8.0),
-				Vector2(wx + ww * 0.6, wy - 5.0),
-				Vector2(wx + ww, wy + 2.0),
-				Vector2(wx + ww * 0.2, wy + 7.0),
-				Vector2(wx - ww * 0.5, wy + 5.0),
-			])
-			_detail_root.add_child(wisp)
-
+	# Soft painted scrub accents near the bank lips (tiny polygon dabs only).
 	if width >= 90.0:
 		for side_i in [-1, 1]:
 			var side := float(side_i)
 			var scrub := Polygon2D.new()
 			scrub.name = "Scrub%s" % ("L" if side < 0.0 else "R")
-			scrub.color = SCRUB
-			var edge_x: float = mid + side * width * 0.18
+			scrub.color = Color(0.32, 0.50, 0.28, 0.85)
+			var edge_x: float = mid + side * width * 0.22
 			scrub.polygon = PackedVector2Array([
-				Vector2(edge_x - 4.0, top + 14.0),
-				Vector2(edge_x, top + 3.0),
-				Vector2(edge_x + 4.0, top + 14.0),
-				Vector2(edge_x + 1.0, top + 14.0),
-				Vector2(edge_x, top + 9.0),
-				Vector2(edge_x - 1.0, top + 14.0),
+				Vector2(edge_x - 3.5, top + 12.0),
+				Vector2(edge_x, top + 2.0),
+				Vector2(edge_x + 3.5, top + 12.0),
+				Vector2(edge_x + 1.0, top + 12.0),
+				Vector2(edge_x, top + 7.5),
+				Vector2(edge_x - 1.0, top + 12.0),
 			])
 			_detail_root.add_child(scrub)
 
-	for i in range(3):
-		var tick := Line2D.new()
-		tick.name = "FloorTick%d" % i
-		tick.width = 2.0
-		tick.default_color = Color(0.40, 0.22, 0.28, 1.0)
-		var tx := mid + float(i - 1) * clampf(width * 0.10, 16.0, 42.0)
-		tick.points = PackedVector2Array([
-			Vector2(tx, bottom - 62.0),
-			Vector2(tx + 7.0, bottom - 14.0),
-		])
-		_detail_root.add_child(tick)
+	# Extra soft wisp marks so detail root stays populated on narrow gaps.
+	if width >= 70.0:
+		var wisp := Sprite2D.new()
+		wisp.name = "SkyGrainHint"
+		wisp.texture = SKY_TEXTURE
+		wisp.centered = true
+		wisp.modulate = Color(1, 1, 1, 0.18)
+		wisp.position = Vector2(mid, top + 48.0)
+		var hint_w := clampf(width * 0.28, 40.0, 120.0)
+		var tex_size: Vector2 = SKY_TEXTURE.get_size()
+		wisp.scale = Vector2(hint_w / tex_size.x, 36.0 / tex_size.y)
+		_detail_root.add_child(wisp)
 
 
 func _layout_rims() -> void:
