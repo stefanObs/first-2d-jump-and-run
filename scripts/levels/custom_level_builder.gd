@@ -68,8 +68,12 @@ static func build(level: LevelController, data: Dictionary) -> void:
 
 	if not has_goal:
 		_add_scene(level, GOAL, "Goal", Vector2((width - 2) * grid, float(trail) * grid))
-	var player := PLAYER.instantiate()
+	var player := PLAYER.instantiate() as Player
 	player.name = "Player"
+	# Dusty Trail (campaign source 1) teaches mounted riding — keep that when
+	# workshop overrides rebuild the trail from stamp data.
+	if bool(data.get("start_mounted", false)) or int(data.get("source_level", 0)) == 1:
+		player.start_mounted = true
 	level.add_child(player)
 	player.position = spawn.position
 	level.add_child(TRANSITION.instantiate())

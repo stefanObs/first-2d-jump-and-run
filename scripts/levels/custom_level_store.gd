@@ -281,7 +281,19 @@ static func import_builtin(level_number: int) -> Dictionary:
 			object["y"] = clampi(int(object.get("y", 0)) + shift, 0, trail)
 	result["height"] = height
 	result["width"] = clampi(max_x, 24, 180)
-	result["objects"] = objects if not objects.is_empty() else result["objects"]
+	# Walk-surface props often sit a few pixels above ground center; snap them to
+	# the trail row so workshop rebuilds do not float cacti above the dirt.
+	if not objects.is_empty():
+		for object in objects:
+			var type_name := str(object.get("type", ""))
+			if type_name not in ["cactus", "checkpoint", "spring", "bandit", "goal"]:
+				continue
+			var prop_y := int(object.get("y", 0))
+			if prop_y >= trail - 1:
+				object["y"] = trail
+		result["objects"] = objects
+	if number == 1:
+		result["start_mounted"] = true
 	var spawn_marker := level.get_node_or_null("SpawnPoint") as Node2D
 	var player := level.get_node_or_null("Player") as Node2D
 	var spawn_node: Node2D = spawn_marker if spawn_marker != null else player
@@ -328,6 +340,7 @@ static func sanitize(source: Dictionary, slot_index: int) -> Dictionary:
 	result["width"] = clampi(int(source.get("width", result["width"])), 12, 180)
 	result["height"] = clampi(int(source.get("height", result["height"])), 6, 14)
 	result["version"] = VERSION
+	result["start_mounted"] = bool(source.get("start_mounted", false)) or int(result["source_level"]) == 1
 	var trail := trail_row(int(result["height"]))
 	var objects: Array[Dictionary] = []
 	var source_objects: Variant = source.get("objects", [])

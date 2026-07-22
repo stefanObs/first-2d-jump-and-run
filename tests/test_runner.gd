@@ -865,6 +865,20 @@ func _test_level_01_world_objects() -> Variant:
 		error = "Level 1 should introduce the cowboy riding his horse."
 	elif not is_equal_approx(node.player.get_jump_distance_multiplier(), 1.2):
 		error = "The horse should jump 20 percent farther than the normal cowboy."
+	else:
+		# First cactus must sit past the hand-painted rim body (~220px outside the gap).
+		var cactus := node.find_child("Cactus4", true, false) as Node2D
+		var gaps := LevelLayoutRules._ground_canyon_gaps(node)
+		if cactus == null or gaps.is_empty():
+			error = "Level 1 should keep a first-canyon cactus for trail teaching."
+		else:
+			var gap_left := float(gaps[0]["left"])
+			var rim_clear := ScalableCanyonArt.RIM_SIZE.x + 40.0
+			if gap_left - cactus.global_position.x < rim_clear:
+				error = (
+					"Level 1 first cactus overlaps the canyon rim art (need %.0fpx clear, got %.0f)."
+					% [rim_clear, gap_left - cactus.global_position.x]
+				)
 	_free_level(node)
 	return error
 
@@ -2178,6 +2192,9 @@ func _test_canyon_center_illustrated() -> Variant:
 	if not canyon_art.rims_match_desert_height():
 		controller.queue_free()
 		return "Canyon rim desert top must align with the trail floor height."
+	if not canyon_art.interior_stays_inside_gap():
+		controller.queue_free()
+		return "Canyon sky/depth must stay inside the mouth; do not paint over desert banks."
 	var trail := controller.get_node_or_null("TrailFloor") as Node2D
 	var abyss := trail.get_node_or_null("FloorAbyss") as ColorRect if trail != null else null
 	if abyss == null:
@@ -2238,6 +2255,9 @@ func _test_canyon_center_illustrated() -> Variant:
 	if not canyon_art.rims_outside_floor():
 		controller.queue_free()
 		return "Wide canyon rims drifted over the desert floor."
+	if not canyon_art.interior_stays_inside_gap():
+		controller.queue_free()
+		return "Wide canyon sky/depth spilled onto desert banks."
 	controller.queue_free()
 	return null
 
@@ -2267,7 +2287,38 @@ func _test_custom_level_builder() -> Variant:
 		error = "Custom builder missing ground."
 	level.free()
 	CustomLevelStore.erase(slot)
-	return error
+
+	if error != null:
+		return error
+	# Dusty Trail workshop overrides must keep the cowboy mounted.
+	var dusty := CustomLevelStore.import_builtin(1)
+	if not bool(dusty.get("start_mounted", false)):
+		return "Importing Dusty Trail should mark the trail as start_mounted."
+	var dusty_level := LevelController.new()
+	dusty_level.is_custom_level = true
+	CustomLevelBuilder.build(dusty_level, dusty)
+	var dusty_player := dusty_level.find_child("Player", true, false) as Player
+	if dusty_player == null or not dusty_player.start_mounted:
+		dusty_level.free()
+		return "Dusty Trail rebuilds should spawn the cowboy on his horse."
+	# First cactus must sit on the trail row, clear of the canyon rim.
+	var first_cactus: Node2D = null
+	var first_cactus_x := INF
+	for node in dusty_level.find_children("*", "Area2D", true, false):
+		if node is Hazard and (node as Hazard).is_cactus():
+			var cactus := node as Node2D
+			if cactus.global_position.x < first_cactus_x:
+				first_cactus_x = cactus.global_position.x
+				first_cactus = cactus
+	var layout_errors := LevelLayoutRules._validate_cactus_clear_of_canyons(dusty_level)
+	if first_cactus == null:
+		dusty_level.free()
+		return "Imported Dusty Trail should keep at least one cactus."
+	elif not layout_errors.is_empty():
+		dusty_level.free()
+		return "Imported Dusty Trail cactus placement: %s" % layout_errors[0]
+	dusty_level.free()
+	return null
 
 
 func _test_trail_row_model() -> Variant:
