@@ -57,6 +57,10 @@ func _ready() -> void:
 		_test_level_04_cloud_phase_runtime
 	)
 	failures += await _run(
+		"Level 4 second canyon has a fair opposite-phase cloud handoff",
+		_test_level_04_second_canyon_paired_handoff
+	)
+	failures += await _run(
 		"Canyon center art is illustrated with outside rims",
 		_test_canyon_center_illustrated
 	)
@@ -1457,7 +1461,7 @@ func _test_level_09_raft_hop_boots() -> Variant:
 func _test_level_04_paired_moving_clouds() -> Variant:
 	var packed: PackedScene = load("res://scenes/levels/level_04.tscn")
 	var level: Node = packed.instantiate()
-	var cloud_names := ["Moving0", "Moving1", "Moving2", "Moving3", "Moving4"]
+	var cloud_names := ["Moving0", "Moving1", "Moving2", "Moving3", "Moving4", "Moving5", "Moving6"]
 	for cloud_name in cloud_names:
 		var cloud := level.get_node_or_null(cloud_name) as MovingPlatform
 		if cloud == null:
@@ -1489,7 +1493,7 @@ func _test_level_04_paired_moving_clouds() -> Variant:
 			level.free()
 			return "%s sinks too close to the trail floor." % cloud_name
 
-	for pair_names in [["Moving0", "Moving1"], ["Moving2", "Moving3"]]:
+	for pair_names in [["Moving0", "Moving1"], ["Moving5", "Moving6"], ["Moving2", "Moving3"]]:
 		var part_1 := level.get_node(pair_names[0]) as MovingPlatform
 		var part_2 := level.get_node(pair_names[1]) as MovingPlatform
 		if part_1.start_at_point_b or not part_2.start_at_point_b:
@@ -1708,7 +1712,7 @@ func _test_level_04_cloud_phase_runtime() -> Variant:
 	add_child(level)
 	# Snapshot far-side starts immediately after _ready, before any motion.
 
-	var pairs: Array = [["Moving0", "Moving1"], ["Moving2", "Moving3"]]
+	var pairs: Array = [["Moving0", "Moving1"], ["Moving5", "Moving6"], ["Moving2", "Moving3"]]
 	var start_gaps: Dictionary = {}
 	for pair_names in pairs:
 		var left := level.get_node(pair_names[0]) as MovingPlatform
@@ -1730,7 +1734,7 @@ func _test_level_04_cloud_phase_runtime() -> Variant:
 			return "%s and %s must begin moving in opposite directions." % pair_names
 		start_gaps[pair_names[0]] = absf(right.global_position.x - left.global_position.x)
 
-	# Both pairs share the same period; simulate once and sample both.
+	# All three pairs share the same period; simulate once and sample each.
 	var sample := level.get_node("Moving0") as MovingPlatform
 	var half_period := sample.point_a.distance_to(sample.point_b) / sample.move_speed
 	var frames := int(ceil(half_period / get_physics_process_delta_time())) + 4
@@ -1779,6 +1783,101 @@ func _test_level_04_cloud_phase_runtime() -> Variant:
 			return "%s/%s did not reverse apart after the handoff." % pair_names
 
 	level.queue_free()
+	return null
+
+
+func _test_level_04_second_canyon_paired_handoff() -> Variant:
+	# Second ground canyon (Ground5 -> Ground7 / Pit6) used to end with a ~330px
+	# dead jump after FerryStep6B. It must use an opposite-phase cloud pair whose
+	# closest edge-to-edge handoff stays inside a normal standing jump.
+	var packed: PackedScene = load("res://scenes/levels/level_04.tscn")
+	var level: Node = packed.instantiate()
+	var left := level.get_node_or_null("Moving5") as MovingPlatform
+	var right := level.get_node_or_null("Moving6") as MovingPlatform
+	if left == null or right == null:
+		level.free()
+		return "Level 4 second canyon needs Moving5/Moving6 opposite-phase clouds."
+
+	var merged := WildWestTheme._merge_segments(WildWestTheme._collect_ground_segments(level))
+	var second_gap: Dictionary = {}
+	var wide_gaps := 0
+	for i in range(merged.size() - 1):
+		var gap_left := float(merged[i]["right"])
+		var gap_right := float(merged[i + 1]["left"])
+		var gap := gap_right - gap_left
+		if gap <= 200.0:
+			continue
+		wide_gaps += 1
+		if wide_gaps == 2:
+			second_gap = {
+				"left": gap_left,
+				"right": gap_right,
+				"gap": gap,
+				"floor_y": minf(float(merged[i]["top"]), float(merged[i + 1]["top"])),
+			}
+			break
+	if second_gap.is_empty():
+		level.free()
+		return "Level 4 is missing its second wide ground canyon."
+
+	var clearable := _max_same_height_jump_distance() * 0.92
+	if float(second_gap["gap"]) <= clearable:
+		level.free()
+		return "Level 4 second canyon should stay wider than a raw normal jump."
+
+	var left_route_min := minf(left.position.x + left.point_a.x, left.position.x + left.point_b.x)
+	var left_route_max := maxf(left.position.x + left.point_a.x, left.position.x + left.point_b.x)
+	var right_route_min := minf(right.position.x + right.point_a.x, right.position.x + right.point_b.x)
+	var right_route_max := maxf(right.position.x + right.point_a.x, right.position.x + right.point_b.x)
+	var pair_left := minf(left_route_min, right_route_min) - 70.0
+	var pair_right := maxf(left_route_max, right_route_max) + 70.0
+	if pair_right < float(second_gap["left"]) - 40.0 or pair_left > float(second_gap["right"]) + 40.0:
+		level.free()
+		return "Moving5/Moving6 do not cover the second canyon gap."
+
+	if left.start_at_point_b or not right.start_at_point_b:
+		level.free()
+		return "Moving5/Moving6 must start on opposite sides and travel toward each other."
+	if left.obstruction_include_movers or right.obstruction_include_movers:
+		level.free()
+		return "Moving5/Moving6 must ignore each other so the handoff stays in sync."
+	if not is_equal_approx(left.move_speed, right.move_speed):
+		level.free()
+		return "Moving5/Moving6 must share the same ferry speed."
+
+	var left_shape := left.get_node("CollisionShape2D").shape as RectangleShape2D
+	var right_shape := right.get_node("CollisionShape2D").shape as RectangleShape2D
+	var handoff_left := left.position + left.point_b
+	var handoff_right := right.position + right.point_a
+	var edge_gap := (
+		absf(handoff_right.x - handoff_left.x)
+		- (left_shape.size.x + right_shape.size.x) * 0.5
+	)
+	var height_difference := absf(handoff_right.y - handoff_left.y)
+	# Prefer a short child-friendly hop; keep well under standing jump reach.
+	if edge_gap < 8.0 or edge_gap > 80.0 or height_difference > 40.0:
+		level.free()
+		return (
+			"Second canyon handoff is not a fair normal jump (edge gap %.0f, height %.0f, clearable %.0f)."
+			% [edge_gap, height_difference, clearable]
+		)
+	if edge_gap > clearable:
+		level.free()
+		return "Second canyon handoff edge gap %.0f exceeds normal jump %.0f." % [edge_gap, clearable]
+
+	# Rim boarding: outer endpoints must meet the canyon lips so the cowboy can mount.
+	var left_board := left.position + left.point_a
+	var right_board := right.position + right.point_b
+	var left_board_edge := left_board.x - left_shape.size.x * 0.5
+	var right_board_edge := right_board.x + right_shape.size.x * 0.5
+	if absf(left_board_edge - float(second_gap["left"])) > 24.0:
+		level.free()
+		return "Moving5 far-left board edge should meet the second canyon left rim."
+	if absf(right_board_edge - float(second_gap["right"])) > 40.0:
+		level.free()
+		return "Moving6 far-right board edge should meet the second canyon right rim."
+
+	level.free()
 	return null
 
 

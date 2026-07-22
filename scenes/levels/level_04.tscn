@@ -73,7 +73,7 @@ offset_right = 1100.0
 offset_bottom = 130.0
 theme_override_colors/font_color = Color(0.35, 0.16, 0.05, 1)
 theme_override_font_sizes/font_size = 22
-text = "Wait for paired clouds to meet, then hop the wooden planks across the canyon."
+text = "Wait for paired clouds to meet in the middle, then hop across each canyon."
 
 
 [node name="Mesa0" type="ColorRect" parent="."]
@@ -487,7 +487,7 @@ scale = Vector2(2.4, 1.6)
 
 
 [node name="FerryStep6A" type="StaticBody2D" parent="."]
-position = Vector2(2700, 280)
+position = Vector2(2660, 285)
 [node name="Visual" type="ColorRect" parent="FerryStep6A"]
 offset_left = -70.0
 offset_top = -12.0
@@ -498,7 +498,7 @@ color = Color(0.62, 0.4, 0.22, 1)
 shape = SubResource("Block")
 
 [node name="FerryStep6B" type="StaticBody2D" parent="."]
-position = Vector2(2900, 230)
+position = Vector2(3370, 285)
 [node name="Visual" type="ColorRect" parent="FerryStep6B"]
 offset_left = -70.0
 offset_top = -12.0
@@ -735,7 +735,26 @@ position = Vector2(1130, 200)
 
 
 [node name="MoveStar1" parent="." instance=ExtResource("9_star")]
-position = Vector2(2900, 175)
+position = Vector2(3030, 175)
+
+
+[node name="Moving5" parent="." instance=ExtResource("12_move")]
+position = Vector2(2790, 240)
+point_a = Vector2(0, 0)
+point_b = Vector2(160, 0)
+move_speed = 80.0
+visual_style = 1
+obstruction_include_movers = false
+
+
+[node name="Moving6" parent="." instance=ExtResource("12_move")]
+position = Vector2(3110, 240)
+point_a = Vector2(0, 0)
+point_b = Vector2(160, 0)
+move_speed = 80.0
+visual_style = 1
+start_at_point_b = true
+obstruction_include_movers = false
 
 
 [node name="Moving2" parent="." instance=ExtResource("12_move")]

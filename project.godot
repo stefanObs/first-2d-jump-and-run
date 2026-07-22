@@ -7,7 +7,7 @@ config_version=5
 
 config/name="First 2D Jump-and-Run"
 config/description="A child-friendly 2D jump-and-run game."
-config/version="1.3.25"
+config/version="1.3.26"
 run/main_scene="res://scenes/ui/startup_loading.tscn"
 config/features=PackedStringArray("4.4", "Forward Plus")
 config/icon="res://icon.png"
