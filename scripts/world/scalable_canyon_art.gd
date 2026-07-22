@@ -13,8 +13,13 @@ const FLOOR_TEXTURE: Texture2D = preload("res://assets/world/canyon_floor_wash.p
 
 const RIM_SIZE := Vector2(220.0, 260.0)
 const DEPTH := 320.0
-## Pixel row of the painted desert top in canyon_rim_left.png (below the scrub tuft).
-const RIM_SURFACE_TEX_Y := 14.0
+## Pixel row of the painted desert top in canyon_rim_left.png (sand crust under scrub).
+## Cliff-lip columns first go opaque around y=16; keep this matched to that lip.
+const RIM_SURFACE_TEX_Y := 16.0
+## Keep fill layers inset under the rim lips so blue never paints desert banks.
+const INTERIOR_INSET := 3.0
+## Drop the sky wash just under the desert crust / rim lip.
+const INTERIOR_TOP_PAD := 3.0
 
 
 var gap_left: float
@@ -112,6 +117,38 @@ func rims_match_desert_height(tolerance: float = 3.0) -> bool:
 	)
 
 
+func interior_stays_inside_gap(tolerance: float = 0.5) -> bool:
+	## Sky / depth / floor wash must not paint over desert banks beside the mouth.
+	if _sky == null or _depth_root == null or _floor == null:
+		return false
+	var left := gap_left - tolerance
+	var right := gap_right + tolerance
+	if not _sprite_inside_x(_sky, left, right):
+		return false
+	if not _sprite_inside_x(_floor, left, right):
+		return false
+	for child in _depth_root.get_children():
+		if child is Sprite2D and not _sprite_inside_x(child as Sprite2D, left, right):
+			return false
+	return true
+
+
+func _sprite_inside_x(sprite: Sprite2D, left: float, right: float) -> bool:
+	if sprite == null or sprite.texture == null:
+		return false
+	var tex_w := float(sprite.texture.get_size().x)
+	var x0: float
+	var x1: float
+	if sprite.centered:
+		var half := tex_w * absf(sprite.scale.x) * 0.5
+		x0 = sprite.position.x - half
+		x1 = sprite.position.x + half
+	else:
+		x0 = sprite.position.x
+		x1 = sprite.position.x + tex_w * absf(sprite.scale.x)
+	return x0 >= left and x1 <= right
+
+
 func _ensure_parts() -> void:
 	if _sky != null:
 		return
@@ -125,37 +162,38 @@ func _ensure_parts() -> void:
 
 	_depth_root = Node2D.new()
 	_depth_root.name = "DepthTiles"
-	_depth_root.z_index = 1
+	_depth_root.z_index = 0
 	add_child(_depth_root)
 
 	_floor = Sprite2D.new()
 	_floor.name = "FloorWash"
 	_floor.texture = FLOOR_TEXTURE
 	_floor.centered = false
-	_floor.z_index = 2
+	_floor.z_index = 0
 	add_child(_floor)
 
 	_detail_root = Node2D.new()
 	_detail_root.name = "CanyonDetails"
-	_detail_root.z_index = 3
+	_detail_root.z_index = 0
 	add_child(_detail_root)
 
 	_left_walls = Node2D.new()
 	_left_walls.name = "LeftInnerWalls"
-	_left_walls.z_index = 4
+	_left_walls.z_index = 0
 	add_child(_left_walls)
 
 	_right_walls = Node2D.new()
 	_right_walls.name = "RightInnerWalls"
-	_right_walls.z_index = 4
+	_right_walls.z_index = 0
 	add_child(_right_walls)
 
+	# Rims last at the same relative z so tree order covers any seam, still under desert (z 1).
 	_left_rim = Sprite2D.new()
 	_left_rim.name = "LeftRim"
 	_left_rim.texture = RIM_TEXTURE
 	_left_rim.centered = true
-	_left_rim.z_as_relative = false
-	_left_rim.z_index = -1
+	_left_rim.z_as_relative = true
+	_left_rim.z_index = 0
 	add_child(_left_rim)
 
 	_right_rim = Sprite2D.new()
@@ -163,8 +201,8 @@ func _ensure_parts() -> void:
 	_right_rim.texture = RIM_TEXTURE
 	_right_rim.centered = true
 	_right_rim.flip_h = true
-	_right_rim.z_as_relative = false
-	_right_rim.z_index = -1
+	_right_rim.z_as_relative = true
+	_right_rim.z_index = 0
 	add_child(_right_rim)
 
 
@@ -176,41 +214,59 @@ func _sky_reads_blue() -> bool:
 	return sample.b > sample.r and sample.b > 0.45 and sample.g > 0.40
 
 
+func _interior_bounds() -> Dictionary:
+	var inset := minf(INTERIOR_INSET, opening_width() * 0.08)
+	var left := gap_left + inset
+	var right := gap_right - inset
+	if right - left < 8.0:
+		left = gap_left
+		right = gap_right
+	var top := floor_top + INTERIOR_TOP_PAD
+	return {"left": left, "right": right, "top": top, "bottom": top + DEPTH}
+
+
 func _layout_center() -> void:
-	var top := floor_top + 1.0
-	var bottom := top + DEPTH
-	var left := gap_left
-	var right := gap_right
+	var bounds := _interior_bounds()
+	var top: float = bounds["top"]
+	var bottom: float = bounds["bottom"]
+	var left: float = bounds["left"]
+	var right: float = bounds["right"]
 	var width := right - left
 
-	# Painted sky wash stretched across the open mouth.
+	# Painted sky wash — strictly inside the mouth, under the rim lips.
 	var sky_size: Vector2 = SKY_TEXTURE.get_size()
 	_sky.position = Vector2(left, top)
 	_sky.scale = Vector2(width / sky_size.x, DEPTH / sky_size.y)
 	_sky.modulate = Color(1, 1, 1, 1)
 
-	# Distant handpainted depth tiles (soft shelves / haze), repeated for width.
+	# Distant handpainted depth tiles (soft shelves / haze), clipped to the mouth.
 	_clear_children(_depth_root)
 	var depth_size: Vector2 = DEPTH_TEXTURE.get_size()
 	var tile_h := DEPTH * 0.92
 	var tile_scale_y := tile_h / depth_size.y
 	var tile_w := depth_size.x * tile_scale_y
 	var tile_y := top + DEPTH * 0.06
-	var x := left - tile_w * 0.08
+	var x := left
 	var tile_i := 0
-	while x < right - tile_w * 0.15:
+	while x < right - 0.5:
+		var remaining := right - x
+		var use_w := minf(tile_w, remaining)
 		var tile := Sprite2D.new()
 		tile.name = "Depth%d" % tile_i
 		tile.texture = DEPTH_TEXTURE
 		tile.centered = false
 		tile.position = Vector2(x, tile_y)
-		tile.scale = Vector2(tile_scale_y, tile_scale_y)
+		tile.scale = Vector2(use_w / depth_size.x, tile_scale_y)
 		# Soften so sky wash still reads through the open air.
 		tile.modulate = Color(1, 1, 1, 0.88)
 		_depth_root.add_child(tile)
-		x += tile_w * 0.72
 		tile_i += 1
-	if tile_i == 0:
+		if remaining <= tile_w:
+			break
+		x += tile_w * 0.72
+		if tile_i > 80:
+			break
+	if tile_i == 0 and width > 1.0:
 		var fallback := Sprite2D.new()
 		fallback.name = "Depth0"
 		fallback.texture = DEPTH_TEXTURE
@@ -220,23 +276,28 @@ func _layout_center() -> void:
 		fallback.modulate = Color(1, 1, 1, 0.88)
 		_depth_root.add_child(fallback)
 
-	# Soft painted gorge floor wash near the bottom.
+	# Soft painted gorge floor wash near the bottom (also inset).
 	var floor_size: Vector2 = FLOOR_TEXTURE.get_size()
 	var floor_h := 72.0
 	var floor_y := bottom - floor_h - 4.0
-	_floor.position = Vector2(left + width * 0.08, floor_y)
+	var floor_inset := width * 0.08
+	_floor.position = Vector2(left + floor_inset, floor_y)
 	_floor.scale = Vector2((width * 0.84) / floor_size.x, floor_h / floor_size.y)
 
 
 func _layout_inner_walls() -> void:
 	_clear_children(_left_walls)
 	_clear_children(_right_walls)
-	var top := floor_top + 1.0
-	var width := gap_right - gap_left
+	var bounds := _interior_bounds()
+	var top: float = bounds["top"]
+	var left: float = bounds["left"]
+	var right: float = bounds["right"]
+	var width := right - left
 	var wall_size: Vector2 = INNER_WALL_TEXTURE.get_size()
 	var ledge_w := clampf(width * 0.16, 28.0, 70.0)
 	if width < 200.0:
 		ledge_w = minf(ledge_w, width * 0.22)
+	ledge_w = minf(ledge_w, width * 0.45)
 	var wall_h := DEPTH * 0.95
 	var sx: float = ledge_w / wall_size.x
 	var sy: float = wall_h / wall_size.y
@@ -245,7 +306,7 @@ func _layout_inner_walls() -> void:
 	left_wall.name = "LeftInnerPaint"
 	left_wall.texture = INNER_WALL_TEXTURE
 	left_wall.centered = false
-	left_wall.position = Vector2(gap_left, top + 4.0)
+	left_wall.position = Vector2(left, top + 4.0)
 	left_wall.scale = Vector2(sx, sy)
 	left_wall.modulate = Color(0.92, 0.88, 0.95, 0.92)
 	_left_walls.add_child(left_wall)
@@ -255,7 +316,7 @@ func _layout_inner_walls() -> void:
 	right_wall.texture = INNER_WALL_TEXTURE
 	right_wall.centered = false
 	right_wall.flip_h = true
-	right_wall.position = Vector2(gap_right - ledge_w, top + 4.0)
+	right_wall.position = Vector2(right - ledge_w, top + 4.0)
 	right_wall.scale = Vector2(sx, sy)
 	right_wall.modulate = Color(0.86, 0.82, 0.90, 0.92)
 	_right_walls.add_child(right_wall)
@@ -263,9 +324,12 @@ func _layout_inner_walls() -> void:
 
 func _layout_details() -> void:
 	_clear_children(_detail_root)
-	var top := floor_top + 1.0
-	var width := gap_right - gap_left
-	var mid := (gap_left + gap_right) * 0.5
+	var bounds := _interior_bounds()
+	var top: float = bounds["top"]
+	var left: float = bounds["left"]
+	var right: float = bounds["right"]
+	var width := right - left
+	var mid := (left + right) * 0.5
 
 	# Soft painted scrub accents near the bank lips (tiny polygon dabs only).
 	if width >= 90.0:
@@ -294,6 +358,7 @@ func _layout_details() -> void:
 		wisp.modulate = Color(1, 1, 1, 0.18)
 		wisp.position = Vector2(mid, top + 48.0)
 		var hint_w := clampf(width * 0.28, 40.0, 120.0)
+		hint_w = minf(hint_w, width - 2.0)
 		var tex_size: Vector2 = SKY_TEXTURE.get_size()
 		wisp.scale = Vector2(hint_w / tex_size.x, 36.0 / tex_size.y)
 		_detail_root.add_child(wisp)
@@ -310,21 +375,18 @@ func _layout_rims() -> void:
 	_left_rim.scale = rim_scale
 	_right_rim.scale = rim_scale
 	_right_rim.flip_h = true
-	_left_rim.z_as_relative = false
-	_right_rim.z_as_relative = false
-	_left_rim.z_index = -1
-	_right_rim.z_index = -1
+	_left_rim.z_as_relative = true
+	_right_rim.z_as_relative = true
+	_left_rim.z_index = 0
+	_right_rim.z_index = 0
 
 	# Place rims OUTSIDE the desert floor gap: cliff lip at the bank edge,
 	# rock body under the trail bank (covered by floor tiles), never over sand.
 	# Align the painted desert top in the rim texture to each adjacent bank.
 	var half_w := RIM_SIZE.x * 0.5 * fit
 	var surface_from_center := (RIM_SURFACE_TEX_Y - tex_size.y * 0.5) * rim_scale.y
-	# +1 keeps the painted lip just under the desert surface tiles.
-	var left_rim_y := left_floor_top + 1.0 - surface_from_center
-	var right_rim_y := right_floor_top + 1.0 - surface_from_center
-	_left_rim.position = Vector2(gap_left - half_w - 2.0 * fit, left_rim_y)
-	_right_rim.position = Vector2(gap_right + half_w + 2.0 * fit, right_rim_y)
+	_left_rim.position = Vector2(gap_left - half_w - 2.0 * fit, left_floor_top - surface_from_center)
+	_right_rim.position = Vector2(gap_right + half_w + 2.0 * fit, right_floor_top - surface_from_center)
 
 
 func _clear_children(node: Node) -> void:
