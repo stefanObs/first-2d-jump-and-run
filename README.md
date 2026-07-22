@@ -2,7 +2,7 @@
 
 Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, no lives/game-over, nonviolent lasso. **German is the default language**; English is fully supported. Optional spoken instructions use local OS TTS (Narrator).
 
-**Content version:** `1.3.31` (see `content_version.txt`). Launchers reimport when this stamp changes.
+**Content version:** `1.3.32` (see `content_version.txt`). Launchers reimport when this stamp changes.
 
 This README is the **binding source of truth** for gameplay, level design, art, i18n, and audio. Agents and contributors must follow it (see [Agent / contributor rules](#agent--contributor-rules)).
 
@@ -112,7 +112,7 @@ Safe stars, forward-only solvability, reachable platforms/stars, visible themed 
 
 - Warm **handmade / hand-painted** western look matching trail tiles (sky, ground, props, cowboy frames).
 - HUD / doors / prompts: irregular **western wood signs** (`HandmadeSign`), not generic flat UI cards.
-- Start screen, settings, pause, save select: stay **handcrafted** and trail-themed (polish may continue; do not regress to stock Godot chrome or mismatched stock art).
+- Start screen, settings, pause, save select: stay **handcrafted** and trail-themed (polish may continue; do not regress to stock Godot chrome or mismatched stock art). Save select / boot title use a painted weathered **saloon wood sign** (peeling red rim, cream lettering, optional pointing-hand motif) in the same soft handmade style as trail tiles — not photoreal stock art.
 - Between-level horse transitions use a dedicated hand-painted desert skyline.
 
 ---
