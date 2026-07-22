@@ -13,11 +13,15 @@ const FLOOR_TEXTURE: Texture2D = preload("res://assets/world/canyon_floor_wash.p
 
 const RIM_SIZE := Vector2(220.0, 260.0)
 const DEPTH := 320.0
+## Pixel row of the painted desert top in canyon_rim_left.png (below the scrub tuft).
+const RIM_SURFACE_TEX_Y := 14.0
 
 
 var gap_left: float
 var gap_right: float
 var floor_top: float
+var left_floor_top: float
+var right_floor_top: float
 
 var _sky: Sprite2D
 var _depth_root: Node2D
@@ -37,11 +41,20 @@ func _ready() -> void:
 	_ensure_parts()
 
 
-func configure(new_floor_top: float, new_gap_left: float, new_gap_right: float) -> void:
+func configure(
+	new_floor_top: float,
+	new_gap_left: float,
+	new_gap_right: float,
+	new_left_floor_top: float = NAN,
+	new_right_floor_top: float = NAN
+) -> void:
 	top_level = true
 	z_index = -1
 	z_as_relative = false
-	floor_top = new_floor_top
+	left_floor_top = new_floor_top if is_nan(new_left_floor_top) else new_left_floor_top
+	right_floor_top = new_floor_top if is_nan(new_right_floor_top) else new_right_floor_top
+	# Interior starts at the higher bank lip so raised sides stay covered.
+	floor_top = minf(left_floor_top, right_floor_top)
 	gap_left = minf(new_gap_left, new_gap_right)
 	gap_right = maxf(new_gap_left, new_gap_right)
 	_ensure_parts()
@@ -80,6 +93,23 @@ func rims_outside_floor() -> bool:
 	var left_right_edge := _left_rim.position.x + half_w
 	var right_left_edge := _right_rim.position.x - half_w
 	return left_right_edge <= gap_left + 14.0 and right_left_edge >= gap_right - 14.0
+
+
+func rim_surface_world_y(rim: Sprite2D) -> float:
+	## World Y of the painted desert top on a rim sprite.
+	if rim == null or rim.texture == null:
+		return floor_top
+	var tex_h := float(rim.texture.get_size().y)
+	return rim.position.y + (RIM_SURFACE_TEX_Y - tex_h * 0.5) * rim.scale.y
+
+
+func rims_match_desert_height(tolerance: float = 3.0) -> bool:
+	if _left_rim == null or _right_rim == null:
+		return false
+	return (
+		absf(rim_surface_world_y(_left_rim) - left_floor_top) <= tolerance
+		and absf(rim_surface_world_y(_right_rim) - right_floor_top) <= tolerance
+	)
 
 
 func _ensure_parts() -> void:
@@ -287,10 +317,14 @@ func _layout_rims() -> void:
 
 	# Place rims OUTSIDE the desert floor gap: cliff lip at the bank edge,
 	# rock body under the trail bank (covered by floor tiles), never over sand.
+	# Align the painted desert top in the rim texture to each adjacent bank.
 	var half_w := RIM_SIZE.x * 0.5 * fit
-	var rim_y := floor_top + 6.0 + RIM_SIZE.y * 0.45 * fit
-	_left_rim.position = Vector2(gap_left - half_w - 2.0 * fit, rim_y)
-	_right_rim.position = Vector2(gap_right + half_w + 2.0 * fit, rim_y)
+	var surface_from_center := (RIM_SURFACE_TEX_Y - tex_size.y * 0.5) * rim_scale.y
+	# +1 keeps the painted lip just under the desert surface tiles.
+	var left_rim_y := left_floor_top + 1.0 - surface_from_center
+	var right_rim_y := right_floor_top + 1.0 - surface_from_center
+	_left_rim.position = Vector2(gap_left - half_w - 2.0 * fit, left_rim_y)
+	_right_rim.position = Vector2(gap_right + half_w + 2.0 * fit, right_rim_y)
 
 
 func _clear_children(node: Node) -> void:

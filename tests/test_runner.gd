@@ -580,10 +580,29 @@ func _test_save_select_scene() -> Variant:
 		error = "Save cards should show level names as '<number>: <name>'."
 	if error == null and first_card != null:
 		var normal := first_card.get_theme_stylebox("normal")
-		if normal == null or not (normal is StyleBoxFlat):
-			error = "Save slot buttons should use handmade wood StyleBoxFlat styling."
-		elif (normal as StyleBoxFlat).bg_color.b > 0.55:
-			error = "Save slot buttons should look wooden, not default gray/blue."
+		if normal is StyleBoxTexture:
+			var tex_style := normal as StyleBoxTexture
+			if tex_style.texture == null:
+				error = "Save slot StyleBoxTexture needs a weathered saloon wood texture."
+		elif normal is StyleBoxFlat:
+			if (normal as StyleBoxFlat).bg_color.b > 0.55:
+				error = "Save slot buttons should look wooden, not default gray/blue."
+		else:
+			error = "Save slot buttons should use handmade wood StyleBox styling."
+	var title_label := scene.get_node_or_null("Title") as Label
+	if error == null and title_label != null:
+		var cream := title_label.get_theme_color("font_color")
+		if cream.r < 0.85 or cream.g < 0.7 or cream.b > 0.65:
+			error = "Save select title should use faded cream/yellow saloon lettering."
+	var hand := scene.get_node_or_null("PointingHandRight") as TextureRect
+	if error == null and (hand == null or hand.texture == null):
+		error = "Save select should show a handpainted pointing-hand motif by the title."
+	if error == null and title_board is HandmadeSign:
+		var board := title_board as HandmadeSign
+		if board.board_style != HandmadeSign.BoardStyle.SALOON:
+			error = "Save select title board should use HandmadeSign SALOON weathering."
+		elif board.board_texture == null:
+			error = "Save select title board should use the painted saloon title texture."
 	if error == null:
 		scene._request_delete()
 		if GameManager.is_slot_empty(0):
@@ -2156,8 +2175,11 @@ func _test_canyon_center_illustrated() -> Variant:
 	if not canyon_art.rims_outside_floor():
 		controller.queue_free()
 		return "Canyon side walls overlap the desert floor; rims must sit outside the gap."
+	if not canyon_art.rims_match_desert_height():
+		controller.queue_free()
+		return "Canyon rim desert top must align with the trail floor height."
 	var trail := controller.get_node_or_null("TrailFloor") as Node2D
-	var abyss := trail.get_node_or_null("FloorAbyss") as CanvasItem if trail != null else null
+	var abyss := trail.get_node_or_null("FloorAbyss") as ColorRect if trail != null else null
 	if abyss == null:
 		controller.queue_free()
 		return "TrailFloor/FloorAbyss missing; canyon cover order cannot be verified."
@@ -2167,6 +2189,12 @@ func _test_canyon_center_illustrated() -> Variant:
 	if not canyon_art.top_level or canyon_art.z_index <= -2:
 		controller.queue_free()
 		return "CanyonMouth must be top_level above FloorAbyss (z > -2)."
+	# Abyss must never start above a walk surface (dark band over desert).
+	var merged := WildWestTheme._merge_segments(WildWestTheme._collect_ground_segments(controller))
+	for strip in merged:
+		if abyss.position.y + 0.5 < float(strip["top"]):
+			controller.queue_free()
+			return "FloorAbyss starts above desert top %.0f (abyss y=%.0f)." % [float(strip["top"]), abyss.position.y]
 	var sky := canyon_art.get_node_or_null("SkyWash") as Sprite2D
 	var depth := canyon_art.get_node_or_null("DepthTiles") as Node2D
 	var floor_wash := canyon_art.get_node_or_null("FloorWash") as Sprite2D
@@ -2330,6 +2358,36 @@ func _test_trail_row_model() -> Variant:
 			return "%s should include stacked dirt fill banks for height steps." % path.get_file()
 		if tops.size() < 2:
 			return "%s should keep distinct walk heights after theme merge." % path.get_file()
+	# Level 2 raised banks must not leave FloorAbyss painting a dark band over lower desert.
+	var level2: Variant = _instantiate_level("res://scenes/levels/level_02.tscn")
+	if level2 is String:
+		return level2
+	var level2_controller := level2 as LevelController
+	var level2_trail := level2_controller.get_node_or_null("TrailFloor") as Node2D
+	var level2_abyss := level2_trail.get_node_or_null("FloorAbyss") as ColorRect if level2_trail != null else null
+	if level2_abyss == null:
+		level2_controller.queue_free()
+		return "Level 2 is missing FloorAbyss."
+	var level2_merged := WildWestTheme._merge_segments(
+		WildWestTheme._collect_ground_segments(level2_controller)
+	)
+	for strip in level2_merged:
+		if level2_abyss.position.y + 0.5 < float(strip["top"]):
+			level2_controller.queue_free()
+			return (
+				"Level 2 FloorAbyss paints above desert top %.0f (dark line over sand)."
+				% float(strip["top"])
+			)
+	# Canyon beside the raised plateau should match each bank lip height.
+	var pit6 := level2_controller.find_child("Pit6", true, false) as Hazard
+	if pit6 != null:
+		var pit6_art := pit6.get_node_or_null("CanyonMouth") as ScalableCanyonArt
+		if pit6_art == null:
+			pit6_art = pit6.get_node_or_null("PitMouth") as ScalableCanyonArt
+		if pit6_art != null and not pit6_art.rims_match_desert_height():
+			level2_controller.queue_free()
+			return "Level 2 Pit6 canyon rims must match adjacent desert bank heights."
+	level2_controller.queue_free()
 	return null
 
 

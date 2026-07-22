@@ -49,7 +49,13 @@ func align_pit_to_floor(floor_top_y: float) -> void:
 	align_canyon_to_gap(floor_top_y, global_position.x - 80.0, global_position.x + 80.0)
 
 
-func align_canyon_to_gap(floor_top_y: float, gap_left: float, gap_right: float) -> void:
+func align_canyon_to_gap(
+	floor_top_y: float,
+	gap_left: float,
+	gap_right: float,
+	left_floor_top_y: float = NAN,
+	right_floor_top_y: float = NAN
+) -> void:
 	var parent_sy := absf(scale.y)
 	if parent_sy <= 0.001:
 		parent_sy = 1.0
@@ -72,7 +78,7 @@ func align_canyon_to_gap(floor_top_y: float, gap_left: float, gap_right: float) 
 		add_child(canyon_art)
 	else:
 		canyon_art.name = "CanyonMouth"
-	canyon_art.configure(floor_top_y, gap_left, gap_right)
+	canyon_art.configure(floor_top_y, gap_left, gap_right, left_floor_top_y, right_floor_top_y)
 
 	# Widen the hurt box to cover the fall gap.
 	var shape := get_node_or_null("CollisionShape2D") as CollisionShape2D

@@ -340,10 +340,10 @@ static func _align_pits(level: Node) -> void:
 
 
 static func _gap_edge_tops(gap: Dictionary, merged: Array[Dictionary]) -> Dictionary:
-	var left_top := float(gap.get("left_top", 320.0))
-	var right_top := float(gap.get("right_top", left_top))
 	var gap_left := float(gap["left"])
 	var gap_right := float(gap["right"])
+	var left_top := 320.0
+	var right_top := 320.0
 	var found_left := false
 	var found_right := false
 	for strip in merged:
@@ -353,21 +353,21 @@ static func _gap_edge_tops(gap: Dictionary, merged: Array[Dictionary]) -> Dictio
 		if absf(float(strip["left"]) - gap_right) <= 2.0:
 			right_top = float(strip["top"])
 			found_right = true
-	if not found_left or not found_right:
-		# Fallback: nearest strip on each side of the gap.
+	if not found_left:
 		for strip in merged:
-			var mid := (float(strip["left"]) + float(strip["right"])) * 0.5
-			if not found_left and mid < gap_left:
+			if float(strip["right"]) <= gap_left + 2.0:
 				left_top = float(strip["top"])
-			if not found_right and mid > gap_right and not found_right:
+				found_left = true
+	if not found_right:
+		for strip in merged:
+			if float(strip["left"]) >= gap_right - 2.0:
 				right_top = float(strip["top"])
 				found_right = true
-		# Re-scan left as the rightmost strip still left of the gap.
-		if not found_left:
-			for strip in merged:
-				if float(strip["right"]) <= gap_left + 2.0:
-					left_top = float(strip["top"])
-					found_left = true
+				break
+	if not found_left and not merged.is_empty():
+		left_top = float(merged[0]["top"])
+	if not found_right and not merged.is_empty():
+		right_top = float(merged[merged.size() - 1]["top"])
 	return {"left": left_top, "right": right_top}
 
 
