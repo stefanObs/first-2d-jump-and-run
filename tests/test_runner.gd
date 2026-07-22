@@ -592,28 +592,36 @@ func _test_localization_settings() -> Variant:
 func _test_narrator_voice_fallback() -> Variant:
 	# Windows ships English SAPI voices but usually no German one. A German trail
 	# must still speak by falling back English -> any voice, never returning "".
+	# The cowboy narrator must prefer a male voice whenever one is available.
 	var narrator := preload("res://scripts/autoload/narrator.gd")
 	var windows_default := [
-		{"id": "sapi_david", "name": "Microsoft David Desktop", "language": "en-US"},
 		{"id": "sapi_zira", "name": "Microsoft Zira Desktop", "language": "en-US"},
+		{"id": "sapi_david", "name": "Microsoft David Desktop", "language": "en-US"},
 	]
-	# German requested, only English installed -> should pick an English voice.
+	# German requested, only English installed -> male English (David), not Zira.
 	if narrator.select_voice(windows_default, "de") != "sapi_david":
-		return "German narration should fall back to an installed English voice, not go silent."
-	# German requested and installed -> should prefer the German (male) voice.
+		return "German narration should fall back to a male English voice, not a female one."
+	# German requested and installed -> prefer the German male voice over Hedda.
 	var with_german := windows_default + [
 		{"id": "sapi_hedda", "name": "Microsoft Hedda Desktop", "language": "de-DE"},
 		{"id": "sapi_stefan", "name": "Microsoft Stefan Desktop", "language": "de-DE"},
 	]
 	if narrator.select_voice(with_german, "de") != "sapi_stefan":
 		return "A male German voice should be preferred when German is installed."
-	# English requested with English installed -> pick English (David via male hint).
+	# English requested -> David even when Zira is listed first.
 	if narrator.select_voice(windows_default, "en") != "sapi_david":
-		return "English narration should pick an English voice."
-	# Only non-matching languages installed -> still speak with the first voice.
+		return "English narration should pick the male David voice."
+	# Only female voices installed -> still speak (better audible than silent).
 	var only_french := [{"id": "sapi_hortense", "name": "Hortense", "language": "fr-FR"}]
 	if narrator.select_voice(only_french, "de") != "sapi_hortense":
 		return "With no language match, narration should still use any installed voice."
+	# Mixed non-matching languages -> prefer the male one.
+	var mixed := [
+		{"id": "sapi_hortense", "name": "Hortense", "language": "fr-FR"},
+		{"id": "sapi_paul", "name": "Paul", "language": "fr-FR"},
+	]
+	if narrator.select_voice(mixed, "de") != "sapi_paul":
+		return "When falling back across languages, narration should still prefer a male voice."
 	# No voices installed at all -> the one legitimate silent case.
 	if narrator.select_voice([], "en") != "":
 		return "With zero installed voices, voice selection must report none available."
@@ -1917,13 +1925,13 @@ func _test_canyon_center_illustrated() -> Variant:
 	var bands := canyon_art.get_node_or_null("StrataBands") as Node2D
 	var river := canyon_art.get_node_or_null("DryRiver") as Polygon2D
 	var walls := canyon_art.get_node_or_null("LeftInnerWalls") as Node2D
-	if back == null or bands == null or bands.get_child_count() < 4 or river == null or walls == null or walls.get_child_count() < 3:
+	if back == null or bands == null or bands.get_child_count() < 2 or river == null or walls == null or walls.get_child_count() < 3:
 		controller.queue_free()
 		return "Canyon center is missing illustrated strata / river layers."
-	var back_luma := back.color.r * 0.3 + back.color.g * 0.59 + back.color.b * 0.11
-	if back_luma < 0.40:
+	# Interior must look like open sky, not the same warm orange as the rims.
+	if back.color.b <= back.color.r or back.color.b < 0.55:
 		controller.queue_free()
-		return "Canyon BackFill is still too dark (luma %.3f)." % back_luma
+		return "Canyon interior should show sky blue so it stays distinct from the rims."
 	if back.z_index < 0:
 		controller.queue_free()
 		return "Canyon fill layers must stay at non-negative relative z above FloorAbyss."
