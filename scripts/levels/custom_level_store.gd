@@ -188,7 +188,7 @@ static func import_builtin(level_number: int) -> Dictionary:
 		elif node is Opponent:
 			type_name = "bandit"
 		elif node is Hazard:
-			type_name = "pit" if maxf(absf((node as Node2D).scale.x), absf((node as Node2D).scale.y)) > 1.35 else "cactus"
+			type_name = "canyon" if maxf(absf((node as Node2D).scale.x), absf((node as Node2D).scale.y)) > 1.35 else "cactus"
 		if not type_name.is_empty():
 			_append_unique(objects, {"type": type_name, "x": cell_x, "y": cell_y})
 	for child in level.get_children():
@@ -267,7 +267,7 @@ static func sanitize(source: Dictionary, slot_index: int) -> Dictionary:
 
 static func _valid_object(object: Dictionary) -> bool:
 	var valid_types := [
-		"ground", "platform", "star", "cactus", "pit",
+		"ground", "platform", "star", "cactus", "canyon", "pit",
 		"checkpoint", "spring", "goal", "bandit",
 	]
 	var type_name := str(object.get("type", ""))

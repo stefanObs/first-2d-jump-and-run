@@ -40,8 +40,9 @@ func _draw() -> void:
 				draw_line(rect.position, rect.position + Vector2(rect.size.x, 0), Color(0.25, 0.62, 0.22), maxf(1.0, cell * 0.18))
 			"platform":
 				draw_rect(Rect2(rect.position, Vector2(cell * 2.0, maxf(2.0, cell * 0.3))), Color(0.38, 0.20, 0.08), true)
-			"pit":
-				draw_rect(Rect2(rect.position, Vector2(cell, cell * 2.0)), Color(0.08, 0.02, 0.04), true)
+			"pit", "canyon":
+				draw_rect(Rect2(rect.position, Vector2(cell, cell * 2.0)), Color(0.72, 0.38, 0.18), true)
+				draw_rect(Rect2(rect.position + Vector2(cell * 0.15, cell * 0.35), Vector2(cell * 0.7, cell * 1.4)), Color(0.42, 0.18, 0.24), true)
 			"star":
 				draw_circle(rect.get_center(), maxf(2.0, cell * 0.32), Color(1.0, 0.82, 0.12))
 			"cactus":

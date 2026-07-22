@@ -55,9 +55,9 @@ static func build(level: LevelController, data: Dictionary) -> void:
 				_add_scene(level, STAR, "CustomStar%d" % index, position)
 			"cactus":
 				_add_scene(level, HAZARD, "Cactus%d" % index, position)
-			"pit":
-				var pit := _add_scene(level, HAZARD, "Pit%d" % index, position + Vector2(0, 40))
-				pit.scale = Vector2(1.8, 1.8)
+			"canyon", "pit":
+				var canyon := _add_scene(level, HAZARD, "Canyon%d" % index, position + Vector2(0, 40))
+				canyon.scale = Vector2(1.8, 1.8)
 			"checkpoint":
 				_add_scene(level, CHECKPOINT, "Checkpoint" if index == 0 else "Checkpoint%d" % index, position)
 			"spring":

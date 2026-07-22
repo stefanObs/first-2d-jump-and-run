@@ -7,7 +7,7 @@ const TYPES := [
 	["platform", "Plank"],
 	["star", "Badge"],
 	["cactus", "Cactus"],
-	["pit", "Pit"],
+	["canyon", "Canyon"],
 	["checkpoint", "Camp"],
 	["spring", "Spring"],
 	["bandit", "Bandit"],
@@ -179,9 +179,9 @@ func _place(x: int, y: int) -> void:
 	var before := objects.duplicate(true)
 	if _selected_type == "erase":
 		_erase_at(objects, x, y)
-	elif _selected_type == "pit":
+	elif _selected_type == "canyon" or _selected_type == "pit":
 		_erase_at(objects, x, y, true)
-		objects.append({"type": "pit", "x": x, "y": y})
+		objects.append({"type": "canyon", "x": x, "y": y})
 	elif _selected_type == "ground":
 		if not _has_type_at(objects, x, y, "ground"):
 			objects.append({"type": "ground", "x": x, "y": y})
@@ -275,7 +275,7 @@ func _display_type_at(x: int, y: int) -> String:
 func _short_label(type_name: String) -> String:
 	var labels := {
 		"ground": "DIRT", "platform": "WOOD", "star": "STAR",
-		"cactus": "OUCH", "pit": "PIT", "checkpoint": "CAMP",
+		"cactus": "OUCH", "canyon": "CANYON", "pit": "CANYON", "checkpoint": "CAMP",
 		"spring": "BOING", "bandit": "BANDIT", "goal": "END",
 	}
 	return str(labels.get(type_name, ""))
@@ -285,7 +285,7 @@ func _type_color(type_name: String) -> Color:
 	var colors := {
 		"": Color(1, 1, 1), "ground": Color(0.86, 0.68, 0.38),
 		"platform": Color(0.62, 0.4, 0.22), "star": Color(1, 0.85, 0.2),
-		"cactus": Color(0.35, 0.75, 0.3), "pit": Color(0.35, 0.18, 0.1),
+		"cactus": Color(0.35, 0.75, 0.3), "canyon": Color(0.55, 0.28, 0.14), "pit": Color(0.55, 0.28, 0.14),
 		"checkpoint": Color(0.95, 0.45, 0.2), "spring": Color(0.3, 0.9, 0.45),
 		"bandit": Color(0.32, 0.18, 0.08), "goal": Color(0.85, 0.3, 0.2),
 	}

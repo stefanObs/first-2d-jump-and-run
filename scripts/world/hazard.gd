@@ -63,11 +63,15 @@ func align_canyon_to_gap(floor_top_y: float, gap_left: float, gap_right: float) 
 
 	var gap_w := maxf(gap_right - gap_left, 40.0)
 	var opening_center_x := (gap_left + gap_right) * 0.5
-	var canyon_art := get_node_or_null("PitMouth") as ScalableCanyonArt
+	var canyon_art := get_node_or_null("CanyonMouth") as ScalableCanyonArt
+	if canyon_art == null:
+		canyon_art = get_node_or_null("PitMouth") as ScalableCanyonArt
 	if canyon_art == null:
 		canyon_art = CANYON_ART.new() as ScalableCanyonArt
-		canyon_art.name = "PitMouth"
+		canyon_art.name = "CanyonMouth"
 		add_child(canyon_art)
+	else:
+		canyon_art.name = "CanyonMouth"
 	canyon_art.configure(floor_top_y, gap_left, gap_right)
 
 	# Widen the hurt box to cover the fall gap.

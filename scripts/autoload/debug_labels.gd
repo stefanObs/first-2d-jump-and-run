@@ -109,17 +109,29 @@ func _discover(node: Node) -> void:
 		_discover(child)
 
 
+func _display_name_for(target: Node2D) -> String:
+	if target is Hazard and (target as Hazard).is_canyon():
+		return "Canyon"
+	if target is ScalableCanyonArt:
+		return "Canyon"
+	var node_name := String(target.name)
+	if node_name.begins_with("Pit") or node_name.begins_with("SkyPit"):
+		return node_name.replace("Pit", "Canyon").replace("SkyCanyon", "SkyCanyon")
+	return node_name
+
+
 func _ensure_label_for(target: Node2D) -> void:
 	if target == null or not is_instance_valid(target):
 		return
+	var display_name := _display_name_for(target)
 	var existing := target.get_node_or_null(NodePath(String(LABEL_NODE_NAME))) as Label
 	if existing != null:
-		existing.text = String(target.name)
+		existing.text = display_name
 		existing.visible = true
 		return
 	var label := Label.new()
 	label.name = String(LABEL_NODE_NAME)
-	label.text = String(target.name)
+	label.text = display_name
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE

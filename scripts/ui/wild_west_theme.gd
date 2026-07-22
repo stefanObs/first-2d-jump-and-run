@@ -197,7 +197,7 @@ static func _make_contiguous_floors(level: Node) -> void:
 		floor_top = minf(floor_top, float(strip["top"]))
 		floor_height = maxf(floor_height, float(strip["bottom"]) - float(strip["top"]))
 
-	# Deep underworld safety fill only — canyon art must paint over pit openings.
+	# Deep underworld safety fill only — canyon art must paint over canyon openings.
 	var abyss := ColorRect.new()
 	abyss.name = "FloorAbyss"
 	abyss.position = Vector2(level_left, floor_top)
@@ -228,15 +228,22 @@ static func _make_contiguous_floors(level: Node) -> void:
 		if surface != null:
 			_tile_strip_row(floor_root, surface, left, right, top, height, 1, "FloorSurface%d" % i)
 
-		# Below: continue brown dirt where the surface tile ends, down toward the abyss.
+		# Below: continue brown dirt under the bank, stopping a few pixels before the
+		# canyon lip so cliff walls sit outside the desert brown face.
 		if dirt != null:
 			var surface_h := surface.get_size().y if surface != null else dirt.get_size().y
 			var scale_y := height / surface_h
 			var dirt_h := dirt.get_size().y * scale_y
 			var y := top + height - 2.0
+			var dirt_left := left
+			var dirt_right := right
+			if i + 1 < merged.size():
+				dirt_right = minf(dirt_right, right - 10.0)
+			if i > 0:
+				dirt_left = maxf(dirt_left, left + 10.0)
 			var row := 0
 			while y < deep_bottom - 1.0:
-				_tile_strip_row(floor_root, dirt, left, right, y, dirt_h, 0, "FloorDirt%d_%d" % [i, row])
+				_tile_strip_row(floor_root, dirt, dirt_left, dirt_right, y, dirt_h, 0, "FloorDirt%d_%d" % [i, row])
 				y += dirt_h - 2.0
 				row += 1
 				if row > 40:

@@ -57,11 +57,11 @@ func _ready() -> void:
 		_test_level_04_cloud_phase_runtime
 	)
 	failures += await _run(
-		"Canyon center art is illustrated and covers FloorAbyss",
+		"Canyon center art is illustrated with outside rims",
 		_test_canyon_center_illustrated
 	)
 	failures += await _run(
-		"Campaign pits are crossable by normal jump or movers",
+		"Campaign canyons are crossable by normal jump or movers",
 		_test_campaign_pits_crossable
 	)
 	failures += await _run(
@@ -1787,61 +1787,64 @@ func _test_canyon_center_illustrated() -> Variant:
 	if level is String:
 		return level
 	var controller := level as LevelController
-	var pit := controller.find_child("Pit3", true, false) as Hazard
-	if pit == null:
+	var canyon := controller.find_child("Pit3", true, false) as Hazard
+	if canyon == null:
 		controller.queue_free()
-		return "Level 01 is missing Pit3."
-	var pit_mouth := pit.get_node_or_null("PitMouth") as ScalableCanyonArt
-	if pit_mouth == null:
+		return "Level 01 is missing canyon Pit3."
+	var canyon_art := canyon.get_node_or_null("CanyonMouth") as ScalableCanyonArt
+	if canyon_art == null:
+		canyon_art = canyon.get_node_or_null("PitMouth") as ScalableCanyonArt
+	if canyon_art == null:
 		controller.queue_free()
-		return "Pit3 needs ScalableCanyonArt (PitMouth)."
-	if not pit_mouth.center_is_illustrated():
+		return "Canyon needs ScalableCanyonArt (CanyonMouth)."
+	if not canyon_art.center_is_illustrated():
 		controller.queue_free()
 		return "Canyon center is still flat/near-black instead of illustrated depth."
+	if not canyon_art.rims_outside_floor():
+		controller.queue_free()
+		return "Canyon side walls overlap the desert floor; rims must sit outside the gap."
 	var trail := controller.get_node_or_null("TrailFloor") as Node2D
 	var abyss := trail.get_node_or_null("FloorAbyss") as CanvasItem if trail != null else null
 	if abyss == null:
 		controller.queue_free()
 		return "TrailFloor/FloorAbyss missing; canyon cover order cannot be verified."
-	# PitMouth must sit above the global FloorAbyss fill inside the gap.
-	if pit_mouth.z_index <= abyss.z_index and not pit_mouth.top_level:
+	if canyon_art.z_index <= abyss.z_index and not canyon_art.top_level:
 		controller.queue_free()
 		return "Canyon art must draw above FloorAbyss."
-	if pit_mouth.z_index < 0 and abyss.z_index >= pit_mouth.z_index and not pit_mouth.top_level:
+	if not canyon_art.top_level or canyon_art.z_index <= -2:
 		controller.queue_free()
-		return "Canyon art z-order does not cover FloorAbyss."
-	# With top_level canyon at -1 and FloorAbyss at -2 (relative to TrailFloor 0),
-	# the illustrated pit must win inside the gap.
-	if not pit_mouth.top_level or pit_mouth.z_index <= -2:
-		controller.queue_free()
-		return "PitMouth must be top_level above FloorAbyss (z > -2)."
-	var back := pit_mouth.get_node_or_null("BackFill") as Polygon2D
-	var deep := pit_mouth.get_node_or_null("GradientDeep") as Polygon2D
-	var river := pit_mouth.get_node_or_null("DryRiver") as Polygon2D
-	var walls := pit_mouth.get_node_or_null("LeftInnerWalls") as Node2D
-	if back == null or deep == null or river == null or walls == null or walls.get_child_count() < 3:
+		return "CanyonMouth must be top_level above FloorAbyss (z > -2)."
+	var back := canyon_art.get_node_or_null("BackFill") as Polygon2D
+	var bands := canyon_art.get_node_or_null("StrataBands") as Node2D
+	var river := canyon_art.get_node_or_null("DryRiver") as Polygon2D
+	var walls := canyon_art.get_node_or_null("LeftInnerWalls") as Node2D
+	if back == null or bands == null or bands.get_child_count() < 4 or river == null or walls == null or walls.get_child_count() < 3:
 		controller.queue_free()
 		return "Canyon center is missing illustrated strata / river layers."
 	var back_luma := back.color.r * 0.3 + back.color.g * 0.59 + back.color.b * 0.11
 	if back_luma < 0.40:
 		controller.queue_free()
 		return "Canyon BackFill is still too dark (luma %.3f)." % back_luma
-	# Fill layers must not use negative relative z (that buried them under FloorAbyss).
-	if back.z_index < 0 or deep.z_index < 0:
+	if back.z_index < 0:
 		controller.queue_free()
 		return "Canyon fill layers must stay at non-negative relative z above FloorAbyss."
-	# Widening must never stretch rims past the handmade base size.
-	var left_rim := pit_mouth.get_node("LeftRim") as Sprite2D
+	var left_rim := canyon_art.get_node("LeftRim") as Sprite2D
+	if left_rim.z_index > 0:
+		controller.queue_free()
+		return "Canyon rims must stay under the desert surface tiles."
 	var max_rim_scale := ScalableCanyonArt.RIM_SIZE / left_rim.texture.get_size()
-	var wide_right := pit_mouth.gap_right + 700.0
-	pit_mouth.configure(pit_mouth.floor_top, pit_mouth.gap_left, wide_right)
-	var wide_scale := (pit_mouth.get_node("LeftRim") as Sprite2D).scale
+	var wide_right := canyon_art.gap_right + 700.0
+	canyon_art.configure(canyon_art.floor_top, canyon_art.gap_left, wide_right)
+	var wide_scale := (canyon_art.get_node("LeftRim") as Sprite2D).scale
 	if wide_scale.x > max_rim_scale.x + 0.01 or wide_scale.y > max_rim_scale.y + 0.01:
 		controller.queue_free()
 		return "Widening the canyon stretched the handmade rim."
-	if not pit_mouth.center_is_illustrated():
+	if not canyon_art.center_is_illustrated():
 		controller.queue_free()
 		return "Wide canyon lost illustrated center treatment."
+	if not canyon_art.rims_outside_floor():
+		controller.queue_free()
+		return "Wide canyon rims drifted over the desert floor."
 	controller.queue_free()
 	return null
 
@@ -2090,36 +2093,41 @@ func _test_art_and_music() -> Variant:
 	if controller.get_node_or_null("HorizonHills") == null:
 		controller.queue_free()
 		return "Level is missing endless horizon hills."
-	var pit := controller.find_child("Pit3", true, false) as Hazard
-	if pit == null:
+	var canyon := controller.find_child("Pit3", true, false) as Hazard
+	if canyon == null:
 		controller.queue_free()
-		return "Level fixture is missing Pit3."
-	var pit_mouth := pit.get_node_or_null("PitMouth") as ScalableCanyonArt
+		return "Level fixture is missing canyon Pit3."
+	var canyon_art := canyon.get_node_or_null("CanyonMouth") as ScalableCanyonArt
+	if canyon_art == null:
+		canyon_art = canyon.get_node_or_null("PitMouth") as ScalableCanyonArt
 	if (
-		pit_mouth == null
-		or pit_mouth.get_node_or_null("LeftRim") == null
-		or pit_mouth.get_node_or_null("RightRim") == null
+		canyon_art == null
+		or canyon_art.get_node_or_null("LeftRim") == null
+		or canyon_art.get_node_or_null("RightRim") == null
 	):
 		controller.queue_free()
-		return "Pit needs separate handmade canyon rims."
+		return "Canyon needs separate handmade canyon rims."
 	var floor_top := 320.0
-	if absf(pit_mouth.floor_top - floor_top) > 4.0:
+	if absf(canyon_art.floor_top - floor_top) > 4.0:
 		controller.queue_free()
 		return "Canyon rim should meet the trail floor."
+	if not canyon_art.rims_outside_floor():
+		controller.queue_free()
+		return "Canyon rims must sit outside the desert floor banks."
 	# Opening should cover the fall gap between Ground2 and Ground3.
 	var g2 := controller.get_node_or_null("Ground2/Visual") as ColorRect
 	var g3 := controller.get_node_or_null("Ground3/Visual") as ColorRect
 	if g2 != null and g3 != null:
 		var gap_left: float = controller.get_node("Ground2").position.x + maxf(g2.offset_left, g2.offset_right)
 		var gap_right: float = controller.get_node("Ground3").position.x + minf(g3.offset_left, g3.offset_right)
-		if absf(pit_mouth.gap_left - gap_left) > 12.0 or absf(pit_mouth.gap_right - gap_right) > 12.0:
+		if absf(canyon_art.gap_left - gap_left) > 12.0 or absf(canyon_art.gap_right - gap_right) > 12.0:
 			controller.queue_free()
 			return "Canyon borders should match the fall gap."
-		var max_rim_scale := ScalableCanyonArt.RIM_SIZE / (pit_mouth.get_node("LeftRim") as Sprite2D).texture.get_size()
-		pit_mouth.configure(floor_top, gap_left, gap_right + 600.0)
-		var wide_scale := (pit_mouth.get_node("LeftRim") as Sprite2D).scale
+		var max_rim_scale := ScalableCanyonArt.RIM_SIZE / (canyon_art.get_node("LeftRim") as Sprite2D).texture.get_size()
+		canyon_art.configure(floor_top, gap_left, gap_right + 600.0)
+		var wide_scale := (canyon_art.get_node("LeftRim") as Sprite2D).scale
 		if (
-			pit_mouth.opening_width() < gap_right - gap_left + 590.0
+			canyon_art.opening_width() < gap_right - gap_left + 590.0
 			or wide_scale.x > max_rim_scale.x + 0.01
 			or wide_scale.y > max_rim_scale.y + 0.01
 		):
