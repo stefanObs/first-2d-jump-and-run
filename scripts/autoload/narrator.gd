@@ -87,12 +87,12 @@ func stop() -> void:
 
 
 func _pick_voice() -> String:
-	var locale := String(GameManager.get_settings().get("language", "en"))
+	var locale := String(GameManager.get_settings().get("language", "de"))
 	var chosen := select_voice(DisplayServer.tts_get_voices(), locale)
 	if not chosen.is_empty():
 		return chosen
 	# Last-resort platform lookup for systems that only report voices per language.
-	for fallback_locale in [locale, "en"]:
+	for fallback_locale in [locale, "de", "en"]:
 		var ids := DisplayServer.tts_get_voices_for_language(String(fallback_locale))
 		if not ids.is_empty():
 			return String(ids[0])
@@ -108,6 +108,14 @@ static func select_voice(voices: Array, locale: String) -> String:
 	by_locale = _match_locale(voices, locale, false)
 	if not by_locale.is_empty():
 		return by_locale
+	# Prefer German next (game default), then English, then any male / any voice.
+	if not locale.strip_edges().to_lower().begins_with("de"):
+		var german_male := _match_locale(voices, "de", true)
+		if not german_male.is_empty():
+			return german_male
+		var german := _match_locale(voices, "de", false)
+		if not german.is_empty():
+			return german
 	if not locale.strip_edges().to_lower().begins_with("en"):
 		var english_male := _match_locale(voices, "en", true)
 		if not english_male.is_empty():

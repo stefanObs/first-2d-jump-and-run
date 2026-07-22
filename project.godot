@@ -39,7 +39,7 @@ window/stretch/aspect="expand"
 
 [internationalization]
 
-locale/fallback="en"
+locale/fallback="de"
 locale/translations=PackedStringArray("res://assets/i18n/game_text.en.translation", "res://assets/i18n/game_text.de.translation")
 
 [layer_names]

@@ -453,7 +453,7 @@ func _ensure_data() -> void:
 func _apply_settings() -> void:
 	_ensure_data()
 	var settings: Dictionary = _data["settings"]
-	TranslationServer.set_locale(String(settings.get("language", "en")))
+	TranslationServer.set_locale(String(settings.get("language", "de")))
 	if bool(settings.get("fullscreen", false)):
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 	else:
@@ -469,7 +469,7 @@ func _default_data() -> Dictionary:
 			"sfx_volume": 0.8,
 			"vibration": true,
 			"fullscreen": false,
-			"language": "en",
+			"language": "de",
 			"narration": true,
 		},
 	}

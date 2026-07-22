@@ -221,7 +221,7 @@ func _load_values() -> void:
 	if _narration:
 		_narration.button_pressed = bool(settings.get("narration", true))
 	if _language:
-		var current := String(settings.get("language", "en"))
+		var current := String(settings.get("language", "de"))
 		_language.select(1 if current.begins_with("de") else 0)
 
 

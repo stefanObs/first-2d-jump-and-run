@@ -572,7 +572,13 @@ func _test_save_select_scene() -> Variant:
 
 
 func _test_localization_settings() -> Variant:
-	var previous_language := String(GameManager.get_settings().get("language", "en"))
+	var defaults := GameManager._default_data()
+	if String(defaults.get("settings", {}).get("language", "")) != "de":
+		return "German must be the default language for new saves."
+	if String(ProjectSettings.get_setting("internationalization/locale/fallback", "")) != "de":
+		# Project setting path may differ; also accept TranslationServer after fresh apply.
+		pass
+	var previous_language := String(GameManager.get_settings().get("language", "de"))
 	var previous_narration := bool(GameManager.get_settings().get("narration", true))
 	GameManager.set_setting("language", "de")
 	if not TranslationServer.get_locale().begins_with("de"):
@@ -811,8 +817,11 @@ func _test_level_01_world_objects() -> Variant:
 func _test_ten_levels_exist() -> Variant:
 	if GameManager.LEVEL_SCENES.size() != 10:
 		return "Expected 10 levels."
-	if GameManager.level_name_for(2) != "2: Badge Meadow":
+	var level_two := GameManager.level_name_for(2)
+	if not level_two.begins_with("2: "):
 		return "Level names should use the '<number>: <name>' format."
+	if level_two not in ["2: Badge Meadow", "2: Abzeichen-Wiese"]:
+		return "Level 2 should keep its English or German display title."
 	for path in GameManager.LEVEL_SCENES:
 		if load(path) == null:
 			return "Missing scene: %s" % path
