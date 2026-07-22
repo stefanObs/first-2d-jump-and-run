@@ -18,13 +18,17 @@ const TRANSITION := preload("res://scenes/ui/level_transition.tscn")
 static func build(level: LevelController, data: Dictionary) -> void:
 	var grid := float(data.get("grid", 40))
 	var width := int(data.get("width", 24))
+	var height := int(data.get("height", 8))
+	var trail := CustomLevelStore.trail_row(height)
 	_add_background(level, width * grid)
 
-	var spawn_data: Array = data.get("spawn", [2, 8])
+	var spawn_data: Array = data.get("spawn", [2, trail])
 	var spawn := Marker2D.new()
 	spawn.name = "SpawnPoint"
 	spawn.position = Vector2(float(spawn_data[0]) * grid, float(spawn_data[1]) * grid)
 	level.add_child(spawn)
+
+	_add_ground_columns(level, data, grid, trail)
 
 	var counters: Dictionary = {}
 	var has_goal := false
@@ -33,6 +37,8 @@ static func build(level: LevelController, data: Dictionary) -> void:
 			continue
 		var object := value as Dictionary
 		var type_name := str(object.get("type", ""))
+		if type_name == "ground":
+			continue
 		var index := int(counters.get(type_name, 0))
 		counters[type_name] = index + 1
 		var position := Vector2(
@@ -40,15 +46,6 @@ static func build(level: LevelController, data: Dictionary) -> void:
 			float(object.get("y", 0)) * grid
 		)
 		match type_name:
-			"ground":
-				_add_block(
-					level,
-					"Ground%d" % index,
-					position,
-					Vector2(grid, grid),
-					Color(0.72, 0.46, 0.22),
-					true
-				)
 			"platform":
 				_add_block(level, "Platform%d" % index, position, Vector2(grid * 2.0, 24), Color(0.55, 0.32, 0.14))
 			"star":
@@ -70,7 +67,7 @@ static func build(level: LevelController, data: Dictionary) -> void:
 					has_goal = true
 
 	if not has_goal:
-		_add_scene(level, GOAL, "Goal", Vector2((width - 2) * grid, 8 * grid))
+		_add_scene(level, GOAL, "Goal", Vector2((width - 2) * grid, float(trail) * grid))
 	var player := PLAYER.instantiate()
 	player.name = "Player"
 	level.add_child(player)
@@ -78,6 +75,47 @@ static func build(level: LevelController, data: Dictionary) -> void:
 	level.add_child(TRANSITION.instantiate())
 	level.add_child(HUD.instantiate())
 	level.add_child(PAUSE.instantiate())
+
+
+## Merge vertically stacked dirt cells into one tall bank so steps look handpainted.
+static func _add_ground_columns(level: Node, data: Dictionary, grid: float, trail: int) -> void:
+	var columns: Dictionary = {}
+	for value in data.get("objects", []):
+		if not (value is Dictionary):
+			continue
+		var object := value as Dictionary
+		if str(object.get("type", "")) != "ground":
+			continue
+		var x := int(object.get("x", 0))
+		var y := int(object.get("y", trail))
+		if not columns.has(x):
+			columns[x] = {"top": y, "bottom": y}
+		else:
+			var col: Dictionary = columns[x]
+			col["top"] = mini(int(col["top"]), y)
+			col["bottom"] = maxi(int(col["bottom"]), y)
+	var xs: Array = columns.keys()
+	xs.sort()
+	var index := 0
+	for x in xs:
+		var col: Dictionary = columns[x]
+		var top_y := int(col["top"])
+		var bottom_y := int(col["bottom"])
+		var cell_count := bottom_y - top_y + 1
+		var size := Vector2(grid, grid * float(cell_count))
+		var position := Vector2(
+			(float(x) + 0.5) * grid,
+			(float(top_y) + float(cell_count) * 0.5) * grid
+		)
+		_add_block(
+			level,
+			"Ground%d" % index,
+			position,
+			size,
+			Color(0.72, 0.46, 0.22),
+			true
+		)
+		index += 1
 
 
 static func _add_background(level: Node, width: float) -> void:
@@ -121,7 +159,7 @@ static func _add_block(
 		var stripe := ColorRect.new()
 		stripe.name = "TopStripe"
 		stripe.position = Vector2(-size.x * 0.5, -size.y * 0.5)
-		stripe.size = Vector2(size.x, 12.0)
+		stripe.size = Vector2(size.x, mini(14.0, size.y * 0.22))
 		stripe.color = Color(0.28, 0.72, 0.22)
 		stripe.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		body.add_child(stripe)

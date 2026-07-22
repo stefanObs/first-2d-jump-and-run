@@ -565,7 +565,7 @@ scale = Vector2(4.8, 1.8)
 
 
 [node name="Ground9" type="StaticBody2D" parent="."]
-position = Vector2(4530, 352)
+position = Vector2(4530, 312)
 [node name="Visual" type="ColorRect" parent="Ground9"]
 offset_left = -210.0
 offset_top = -32.0
@@ -581,9 +581,26 @@ color = Color(0.45, 0.72, 0.28, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground9"]
 shape = SubResource("GroundSeg")
 
+[node name="Ground9Fill" type="StaticBody2D" parent="."]
+position = Vector2(4530, 352)
+[node name="Visual" type="ColorRect" parent="Ground9Fill"]
+offset_left = -210.0
+offset_top = -32.0
+offset_right = 210.0
+offset_bottom = 32.0
+color = Color(0.72, 0.46, 0.22, 1)
+[node name="TopStripe" type="ColorRect" parent="Ground9Fill"]
+offset_left = -210.0
+offset_top = -32.0
+offset_right = 210.0
+offset_bottom = -18.0
+color = Color(0.45, 0.72, 0.28, 1)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Ground9Fill"]
+shape = SubResource("GroundSeg")
+
 
 [node name="Ground10" type="StaticBody2D" parent="."]
-position = Vector2(4960, 352)
+position = Vector2(4960, 312)
 [node name="Visual" type="ColorRect" parent="Ground10"]
 offset_left = -210.0
 offset_top = -32.0
@@ -597,6 +614,23 @@ offset_right = 210.0
 offset_bottom = -18.0
 color = Color(0.45, 0.72, 0.28, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground10"]
+shape = SubResource("GroundSeg")
+
+[node name="Ground10Fill" type="StaticBody2D" parent="."]
+position = Vector2(4960, 352)
+[node name="Visual" type="ColorRect" parent="Ground10Fill"]
+offset_left = -210.0
+offset_top = -32.0
+offset_right = 210.0
+offset_bottom = 32.0
+color = Color(0.72, 0.46, 0.22, 1)
+[node name="TopStripe" type="ColorRect" parent="Ground10Fill"]
+offset_left = -210.0
+offset_top = -32.0
+offset_right = 210.0
+offset_bottom = -18.0
+color = Color(0.45, 0.72, 0.28, 1)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Ground10Fill"]
 shape = SubResource("GroundSeg")
 
 
@@ -708,7 +742,7 @@ position = Vector2(3380, 330)
 
 
 [node name="Rattlesnake22" parent="." instance=ExtResource("18_snake")]
-position = Vector2(4490, 330)
+position = Vector2(4100, 330)
 
 
 [node name="Cactus34" parent="." instance=ExtResource("5_hazard")]
@@ -750,7 +784,7 @@ move_speed = 48.0
 
 
 [node name="Opponent3" parent="." instance=ExtResource("13_opp")]
-position = Vector2(4900, 320)
+position = Vector2(4900, 280)
 point_a = Vector2(-60, 0)
 point_b = Vector2(60, 0)
 move_speed = 48.0

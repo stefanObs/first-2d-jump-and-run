@@ -79,6 +79,7 @@ func _ready() -> void:
 	failures += await _run("Moonlight Gulch rafts require hop transfers for Magic Boots", _test_level_09_raft_hop_boots)
 	failures += await _run("Canyon rafts are one-way jump-through platforms", _test_one_way_moving_platforms)
 	failures += await _run("Custom level store and builder work", _test_custom_level_builder)
+	failures += await _run("Trail workshop uses one trail row and stacked dirt", _test_trail_row_model)
 	failures += await _run("Campaign workshop edits and inserts levels", _test_campaign_workshop)
 	failures += await _run("Trail editor saves and resets explicit snapshots", _test_trail_editor_save_reset)
 	failures += await _run("Hand-drawn celebration art and cheerful music load", _test_art_and_music)
@@ -2216,6 +2217,8 @@ func _test_canyon_center_illustrated() -> Variant:
 func _test_custom_level_builder() -> Variant:
 	var slot := 2
 	var data := CustomLevelStore.default_level(slot)
+	if int(data.get("height", 0)) != 8:
+		return "Default trails should use a single trail row (height 8)."
 	if not CustomLevelStore.save(slot, data):
 		return "Could not save custom trail."
 	var loaded := CustomLevelStore.load_level(slot)
@@ -2237,6 +2240,97 @@ func _test_custom_level_builder() -> Variant:
 	level.free()
 	CustomLevelStore.erase(slot)
 	return error
+
+
+func _test_trail_row_model() -> Variant:
+	var legacy := {
+		"version": 3,
+		"height": 10,
+		"width": 12,
+		"spawn": [2, 8],
+		"objects": [
+			{"type": "ground", "x": 0, "y": 9},
+			{"type": "ground", "x": 1, "y": 9},
+			{"type": "ground", "x": 1, "y": 7},
+			{"type": "canyon", "x": 2, "y": 9},
+			{"type": "cactus", "x": 0, "y": 8},
+			{"type": "star", "x": 3, "y": 7},
+			{"type": "goal", "x": 4, "y": 8},
+		],
+	}
+	var migrated := CustomLevelStore.migrate_v3_to_v4(legacy)
+	if int(migrated.get("height", 0)) != 8:
+		return "v3 trails should collapse the lower 3 rows into height 8."
+	var trail := CustomLevelStore.trail_row(8)
+	var types_at := func(x: int, y: int) -> PackedStringArray:
+		var found: PackedStringArray = []
+		for value in migrated.get("objects", []):
+			var object := value as Dictionary
+			if int(object.get("x", -1)) == x and int(object.get("y", -1)) == y:
+				found.append(str(object.get("type", "")))
+		return found
+	if "ground" not in types_at.call(0, trail) or "cactus" not in types_at.call(0, trail):
+		return "Surface props and dirt should share the single trail row after migration."
+	if "canyon" not in types_at.call(2, trail):
+		return "The old bottom row (3rd of the lower trio) should map canyon underside to the trail row."
+	if "ground" not in types_at.call(1, trail - 1):
+		return "Dirt stamped on the near-trail row should become a height step above the trail."
+	var slot := CustomLevelStore.SLOT_COUNT - 2
+	var data := CustomLevelStore.default_level(slot)
+	data["objects"] = [
+		{"type": "ground", "x": 3, "y": trail},
+		{"type": "ground", "x": 3, "y": trail - 1},
+		{"type": "ground", "x": 4, "y": trail},
+		{"type": "goal", "x": 5, "y": trail},
+	]
+	var level := LevelController.new()
+	CustomLevelBuilder.build(level, data)
+	var ground := level.find_child("Ground0", true, false) as StaticBody2D
+	if ground == null:
+		level.free()
+		return "Stacked dirt should build a ground body."
+	var shape := ground.get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if shape == null or not (shape.shape is RectangleShape2D):
+		level.free()
+		return "Stacked dirt needs a collision shape."
+	var size := (shape.shape as RectangleShape2D).size
+	if size.y < 70.0:
+		level.free()
+		return "Two stacked dirt cells should merge into one taller bank, not two short boxes."
+	WildWestTheme.apply_to_level(level)
+	var has_surface := false
+	var has_step_lip := false
+	for node in level.find_children("*", "Node", true, false):
+		var node_name := String(node.name)
+		has_surface = has_surface or node_name.begins_with("FloorSurface")
+		has_step_lip = has_step_lip or node_name.begins_with("FloorStepLip")
+	if not has_surface:
+		level.free()
+		return "Theme should paint desert surface over stacked dirt banks."
+	if not has_step_lip:
+		level.free()
+		return "Adjacent dirt height differences should paint a handpainted step face."
+	level.free()
+	# Campaign levels 2 and 5 should include stacked dirt height differences.
+	for path in ["res://scenes/levels/level_02.tscn", "res://scenes/levels/level_05.tscn"]:
+		var packed: PackedScene = load(path)
+		var campaign := packed.instantiate()
+		add_child(campaign)
+		await get_tree().process_frame
+		var fills := 0
+		for node in campaign.find_children("*", "StaticBody2D", true, false):
+			if String(node.name).ends_with("Fill"):
+				fills += 1
+		var merged := WildWestTheme._merge_segments(WildWestTheme._collect_ground_segments(campaign))
+		var tops: Dictionary = {}
+		for strip in merged:
+			tops[int(round(float(strip["top"])))] = true
+		campaign.queue_free()
+		if fills < 1:
+			return "%s should include stacked dirt fill banks for height steps." % path.get_file()
+		if tops.size() < 2:
+			return "%s should keep distinct walk heights after theme merge." % path.get_file()
+	return null
 
 
 func _test_campaign_workshop() -> Variant:
@@ -2284,15 +2378,23 @@ func _test_campaign_workshop() -> Variant:
 	add_child(preview)
 	preview.show_level(imported)
 	if error == null and preview._data.is_empty():
-		error = "The editor should keep a live preview document below its grid."
+		error = "The editor should keep a live preview document."
+	preview.set_hover_column(3)
+	if error == null and preview.get_hover_column() != 3:
+		error = "Hover preview should track the focused trail column."
 	preview.queue_free()
 	var editor_packed: PackedScene = load("res://scenes/ui/level_editor.tscn")
 	GameManager.active_custom_slot = 2
 	var editor := editor_packed.instantiate()
 	add_child(editor)
 	var embedded_preview := editor.find_child("LevelPreview", true, false) as LevelPreview
-	if error == null and (embedded_preview == null or embedded_preview.custom_minimum_size.y < 140.0):
-		error = "The editor needs an always-visible preview below the editing area."
+	if error == null and (embedded_preview == null or embedded_preview.custom_minimum_size.y < 200.0):
+		error = "The editor needs a large game-like hover preview at the top."
+	elif error == null:
+		var preview_index := embedded_preview.get_index()
+		var grid_scroll := editor.find_children("*", "ScrollContainer", true, false)
+		if grid_scroll.is_empty() or preview_index > grid_scroll[0].get_index():
+			error = "The magnified hover preview should sit above the stamp grid."
 	editor.queue_free()
 	for i in range(paths.size()):
 		if FileAccess.file_exists(paths[i]):

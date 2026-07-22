@@ -149,3 +149,20 @@ Could not save the trail.,Could not save the trail.,Der Pfad konnte nicht gespei
 No unsaved changes to reset.,No unsaved changes to reset.,Keine ungespeicherten Änderungen zum Zurücksetzen.
 Trail reset to the last saved version.,Trail reset to the last saved version.,Pfad auf die zuletzt gespeicherte Version zurückgesetzt.
 New trail reset to its starting layout.,New trail reset to its starting layout.,Neuer Pfad auf das Startlayout zurückgesetzt.
+Edit Campaign Level,Edit Campaign Level,Kampagnen-Level bearbeiten
+Add Campaign Level,Add Campaign Level,Kampagnen-Level hinzufügen
+"1. Pick a stamp   2. Pick a square   3. Save or Play Test","1. Pick a stamp   2. Pick a square   3. Save or Play Test","1. Stempel wählen   2. Feld wählen   3. Speichern oder Test spielen"
+Bottom row is the trail: Dirt or Canyon sets the ground and what sits below it.,Bottom row is the trail: Dirt or Canyon sets the ground and what sits below it.,Die unterste Zeile ist der Pfad: Erde oder Canyon legt den Boden und das darunter fest.
+Stamp,Stamp,Stempel
+Dirt,Dirt,Erde
+Plank,Plank,Brett
+Badge,Badge,Stern
+Cactus,Cactus,Kaktus
+Canyon,Canyon,Canyon
+Camp,Camp,Lager
+Spring,Spring,Feder
+Bandit,Bandit,Bandit
+Saloon,Saloon,Saloon
+Erase,Erase,Radierer
+Stamp: Dirt — keep a dirt path under the cowboy and saloon.,Stamp: Dirt — keep a dirt path under the cowboy and saloon.,Stempel: Erde — halte einen Erdpfad unter Cowboy und Saloon.
+"Add Dirt and a Saloon before play-testing.","Add Dirt and a Saloon before play-testing.","Füge Erde und einen Saloon hinzu, bevor du testest."

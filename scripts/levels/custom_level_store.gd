@@ -3,7 +3,7 @@ extends RefCounted
 
 ## Versioned local storage for campaign overrides and inserted family trails.
 
-const VERSION := 3
+const VERSION := 4
 const LEGACY_SLOT_COUNT := 3
 const BUILTIN_SLOT_START := 3
 const BUILTIN_COUNT := 10
@@ -23,14 +23,20 @@ const BUILTIN_NAMES: PackedStringArray = [
 ]
 
 
+static func trail_row(height: int) -> int:
+	return maxi(height - 1, 0)
+
+
 static func default_level(slot_index: int) -> Dictionary:
+	var height := 8
+	var trail := trail_row(height)
 	var objects: Array[Dictionary] = []
 	for x in range(24):
-		objects.append({"type": "ground", "x": x, "y": 9})
-	objects.append({"type": "star", "x": 7, "y": 7})
-	objects.append({"type": "cactus", "x": 11, "y": 8})
-	objects.append({"type": "checkpoint", "x": 15, "y": 8})
-	objects.append({"type": "goal", "x": 22, "y": 8})
+		objects.append({"type": "ground", "x": x, "y": trail})
+	objects.append({"type": "star", "x": 7, "y": trail - 2})
+	objects.append({"type": "cactus", "x": 11, "y": trail})
+	objects.append({"type": "checkpoint", "x": 15, "y": trail})
+	objects.append({"type": "goal", "x": 22, "y": trail})
 	return {
 		"version": VERSION,
 		"slot": clampi(slot_index, 0, SLOT_COUNT - 1),
@@ -40,8 +46,8 @@ static func default_level(slot_index: int) -> Dictionary:
 		"insert_position": 11,
 		"grid": 40,
 		"width": 24,
-		"height": 10,
-		"spawn": [2, 8],
+		"height": height,
+		"spawn": [2, trail],
 		"objects": objects,
 	}
 
@@ -69,10 +75,13 @@ static func load_level(slot_index: int) -> Dictionary:
 	if typeof(parsed) != TYPE_DICTIONARY:
 		return default_level(slot_index)
 	var raw := parsed as Dictionary
-	# Older custom-trail formats are discarded.
-	if int(raw.get("version", 0)) < VERSION:
+	var version := int(raw.get("version", 0))
+	# Formats older than the three-row trail grid are discarded.
+	if version < 3:
 		erase(slot_index)
 		return default_level(slot_index)
+	if version == 3:
+		raw = migrate_v3_to_v4(raw)
 	return sanitize(raw, slot_index)
 
 
@@ -154,6 +163,54 @@ static func campaign_entries() -> Array[Dictionary]:
 	return result
 
 
+## Collapse the old bottom three stamp rows into one trail row.
+## Old y=H-1 (bottom / 3rd of the lower trio) defined dirt vs canyon underside;
+## props on H-2 sat on that surface; H-3 held near-trail air / short steps.
+static func migrate_v3_to_v4(source: Dictionary) -> Dictionary:
+	var result := source.duplicate(true)
+	var old_height := clampi(int(source.get("height", 10)), 8, 16)
+	var new_height := clampi(old_height - 2, 6, 14)
+	var old_trail_bottom := old_height - 1
+	var old_surface := old_height - 2
+	var old_near := old_height - 3
+	var trail := trail_row(new_height)
+	var objects: Array[Dictionary] = []
+	var source_objects: Variant = source.get("objects", [])
+	if source_objects is Array:
+		for value in source_objects:
+			if not (value is Dictionary):
+				continue
+			var object := (value as Dictionary).duplicate(true)
+			var y := int(object.get("y", 0))
+			var type_name := str(object.get("type", ""))
+			if y >= old_near:
+				if type_name == "ground" or type_name == "canyon" or type_name == "pit":
+					# Keep a one-cell step when dirt was stamped on the near-trail row.
+					if y == old_near and type_name == "ground":
+						object["y"] = maxi(trail - 1, 0)
+					else:
+						object["y"] = trail
+				elif y == old_near:
+					object["y"] = maxi(trail - 1, 0)
+				else:
+					# Surface-row props share the trail cell with dirt/canyon.
+					object["y"] = trail
+			else:
+				# Shift sky/platform rows down by the two removed rows.
+				object["y"] = clampi(y, 0, trail)
+			objects.append(object)
+	var spawn: Array = source.get("spawn", [2, old_surface])
+	if spawn.size() >= 2:
+		var spawn_y := int(spawn[1])
+		if spawn_y >= old_near:
+			spawn_y = trail
+		result["spawn"] = [int(spawn[0]), spawn_y]
+	result["height"] = new_height
+	result["objects"] = objects
+	result["version"] = VERSION
+	return result
+
+
 static func import_builtin(level_number: int) -> Dictionary:
 	var number := clampi(level_number, 1, BUILTIN_COUNT)
 	var slot := override_slot_for(number)
@@ -161,7 +218,7 @@ static func import_builtin(level_number: int) -> Dictionary:
 	result["kind"] = "override"
 	result["source_level"] = number
 	result["title"] = BUILTIN_NAMES[number - 1]
-	result["height"] = 12
+	result["height"] = 10
 	var packed := load(BUILTIN_SCENES[number - 1]) as PackedScene
 	if packed == null:
 		return result
@@ -169,6 +226,7 @@ static func import_builtin(level_number: int) -> Dictionary:
 	var grid := float(result["grid"])
 	var objects: Array[Dictionary] = []
 	var max_x := 24
+	var max_ground_y := 0
 	for node in _all_descendants(level):
 		if not (node is Node2D):
 			continue
@@ -205,6 +263,7 @@ static func import_builtin(level_number: int) -> Dictionary:
 			var first_x := int(floor((center.x - rect.size.x * 0.5) / grid))
 			var last_x := int(ceil((center.x + rect.size.x * 0.5) / grid))
 			var y := clampi(int(round(center.y / grid)), 0, 15)
+			max_ground_y = maxi(max_ground_y, y)
 			for x in range(maxi(first_x, 0), mini(last_x + 1, 180)):
 				_append_unique(objects, {"type": "ground", "x": x, "y": y})
 		elif "plank" in body_name or "platform" in body_name:
@@ -213,8 +272,24 @@ static func import_builtin(level_number: int) -> Dictionary:
 				"x": maxi(0, int(round(center.x / grid))),
 				"y": clampi(int(round(center.y / grid)), 0, 15),
 			})
+	# Fit height so the deepest ground sits on the single trail row.
+	var height := clampi(maxi(max_ground_y + 1, 8), 8, 14)
+	var trail := trail_row(height)
+	var shift := trail - max_ground_y if max_ground_y > 0 else 0
+	if shift != 0:
+		for object in objects:
+			object["y"] = clampi(int(object.get("y", 0)) + shift, 0, trail)
+	result["height"] = height
 	result["width"] = clampi(max_x, 24, 180)
 	result["objects"] = objects if not objects.is_empty() else result["objects"]
+	var spawn_marker := level.get_node_or_null("SpawnPoint") as Node2D
+	var player := level.get_node_or_null("Player") as Node2D
+	var spawn_node: Node2D = spawn_marker if spawn_marker != null else player
+	if spawn_node != null:
+		result["spawn"] = [
+			maxi(0, int(round(spawn_node.global_position.x / grid))),
+			clampi(int(round(spawn_node.global_position.y / grid)) + shift, 0, trail),
+		]
 	level.free()
 	return result
 
@@ -251,21 +326,30 @@ static func sanitize(source: Dictionary, slot_index: int) -> Dictionary:
 	result["source_level"] = clampi(int(source.get("source_level", 0)), 0, BUILTIN_COUNT)
 	result["insert_position"] = clampi(int(source.get("insert_position", 11)), 1, BUILTIN_COUNT + 1)
 	result["width"] = clampi(int(source.get("width", result["width"])), 12, 180)
-	result["height"] = clampi(int(source.get("height", result["height"])), 8, 16)
+	result["height"] = clampi(int(source.get("height", result["height"])), 6, 14)
+	result["version"] = VERSION
+	var trail := trail_row(int(result["height"]))
 	var objects: Array[Dictionary] = []
 	var source_objects: Variant = source.get("objects", [])
 	if source_objects is Array:
 		for value in source_objects:
-			if value is Dictionary and _valid_object(value as Dictionary):
-				objects.append((value as Dictionary).duplicate(true))
+			if value is Dictionary and _valid_object(value as Dictionary, trail):
+				var object := (value as Dictionary).duplicate(true)
+				object["y"] = clampi(int(object.get("y", 0)), 0, trail)
+				if str(object.get("type", "")) == "pit":
+					object["type"] = "canyon"
+				objects.append(object)
 				if objects.size() >= 900:
 					break
 	if source_objects is Array:
 		result["objects"] = objects
+	var spawn: Array = result["spawn"]
+	if spawn is Array and spawn.size() >= 2:
+		result["spawn"] = [int(spawn[0]), clampi(int(spawn[1]), 0, trail)]
 	return result
 
 
-static func _valid_object(object: Dictionary) -> bool:
+static func _valid_object(object: Dictionary, trail: int) -> bool:
 	var valid_types := [
 		"ground", "platform", "star", "cactus", "canyon", "pit",
 		"checkpoint", "spring", "goal", "bandit",
@@ -275,4 +359,4 @@ static func _valid_object(object: Dictionary) -> bool:
 		return false
 	var x := int(object.get("x", -1))
 	var y := int(object.get("y", -1))
-	return x >= 0 and x < 180 and y >= 0 and y < 16
+	return x >= 0 and x < 180 and y >= 0 and y <= trail

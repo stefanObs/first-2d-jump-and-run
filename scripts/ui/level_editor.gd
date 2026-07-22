@@ -28,6 +28,8 @@ var _saved_data: Dictionary
 var _initial_data: Dictionary
 var _has_saved_state := false
 var _dirty := false
+var _grid: GridContainer
+var _hover_column: int = -1
 
 
 func _ready() -> void:
@@ -40,6 +42,7 @@ func _ready() -> void:
 		GameManager.custom_level_draft = {}
 	else:
 		_data = CustomLevelStore.load_level(GameManager.active_custom_slot)
+	_data = CustomLevelStore.sanitize(_data, GameManager.active_custom_slot)
 	_initial_data = _data.duplicate(true)
 	_has_saved_state = CustomLevelStore.exists(GameManager.active_custom_slot)
 	_saved_data = (
@@ -67,26 +70,39 @@ func _build_ui() -> void:
 	root.add_child(heading)
 	var title := Label.new()
 	title.text = (
-		"Edit Campaign Level"
+		tr("Edit Campaign Level")
 		if str(_data.get("kind", "")) == "override"
-		else "Add Campaign Level"
+		else tr("Add Campaign Level")
 	)
-	title.add_theme_font_size_override(&"font_size", 30)
+	title.add_theme_font_size_override(&"font_size", 28)
 	title.add_theme_color_override(&"font_color", Color(0.35, 0.16, 0.05))
-	title.custom_minimum_size.x = 350
+	title.custom_minimum_size.x = 320
 	heading.add_child(title)
 	_title_edit = LineEdit.new()
 	_title_edit.text = str(_data.get("title", "Family Trail"))
 	_title_edit.placeholder_text = tr("Trail name")
-	_title_edit.custom_minimum_size = Vector2(360, 44)
+	_title_edit.custom_minimum_size = Vector2(340, 42)
 	_title_edit.text_changed.connect(_on_title_changed)
 	heading.add_child(_title_edit)
 
+	_preview = LevelPreview.new()
+	_preview.name = "LevelPreview"
+	_preview.custom_minimum_size = Vector2(0, 210)
+	_preview.hover_column_changed.connect(_on_preview_hover_column)
+	root.add_child(_preview)
+
 	var instructions := Label.new()
-	instructions.text = "1. Pick a stamp   2. Pick a square   3. Save or Play Test"
+	instructions.text = tr("1. Pick a stamp   2. Pick a square   3. Save or Play Test")
 	instructions.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	instructions.add_theme_font_size_override(&"font_size", 18)
+	instructions.add_theme_font_size_override(&"font_size", 17)
 	root.add_child(instructions)
+
+	var trail_help := Label.new()
+	trail_help.text = tr("Bottom row is the trail: Dirt or Canyon sets the ground and what sits below it.")
+	trail_help.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	trail_help.add_theme_font_size_override(&"font_size", 15)
+	trail_help.add_theme_color_override(&"font_color", Color(0.4, 0.2, 0.08))
+	root.add_child(trail_help)
 
 	var palette := HBoxContainer.new()
 	palette.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -94,46 +110,44 @@ func _build_ui() -> void:
 	root.add_child(palette)
 	for item in TYPES:
 		var button := Button.new()
-		button.text = str(item[1])
-		button.custom_minimum_size = Vector2(112, 48)
-		button.add_theme_font_size_override(&"font_size", 17)
+		button.text = tr(str(item[1]))
+		button.custom_minimum_size = Vector2(108, 44)
+		button.add_theme_font_size_override(&"font_size", 16)
 		var captured := str(item[0])
 		button.pressed.connect(func() -> void:
 			_selected_type = captured
-			_status.text = "Stamp: %s" % str(item[1])
+			_status.text = "%s: %s" % [tr("Stamp"), tr(str(item[1]))]
 		)
 		palette.add_child(button)
 
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(0, 235)
+	scroll.custom_minimum_size = Vector2(0, 210)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root.add_child(scroll)
-	var grid := GridContainer.new()
-	grid.columns = int(_data.get("width", 24))
-	grid.add_theme_constant_override(&"h_separation", 2)
-	grid.add_theme_constant_override(&"v_separation", 2)
-	scroll.add_child(grid)
+	_grid = GridContainer.new()
+	_grid.columns = int(_data.get("width", 24))
+	_grid.add_theme_constant_override(&"h_separation", 2)
+	_grid.add_theme_constant_override(&"v_separation", 2)
+	scroll.add_child(_grid)
 	var width := int(_data.get("width", 24))
-	var height := int(_data.get("height", 10))
+	var height := int(_data.get("height", 8))
 	for y in range(height):
 		for x in range(width):
 			var cell := Button.new()
-			cell.custom_minimum_size = Vector2(38, 28)
+			cell.custom_minimum_size = Vector2(38, 30)
 			cell.add_theme_font_size_override(&"font_size", 9)
 			var cell_x := x
 			var cell_y := y
 			cell.pressed.connect(func() -> void: _place(cell_x, cell_y))
-			grid.add_child(cell)
+			cell.mouse_entered.connect(func() -> void: _set_hover_column(cell_x))
+			_grid.add_child(cell)
 			_cells.append(cell)
 
-	_preview = LevelPreview.new()
-	_preview.name = "LevelPreview"
-	root.add_child(_preview)
-
 	_status = Label.new()
-	_status.text = "Stamp: Dirt — keep a dirt path under the cowboy and saloon."
+	_status.text = tr("Stamp: Dirt — keep a dirt path under the cowboy and saloon.")
 	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_status.add_theme_font_size_override(&"font_size", 18)
+	_status.add_theme_font_size_override(&"font_size", 16)
 	root.add_child(_status)
 
 	var actions := HBoxContainer.new()
@@ -166,25 +180,58 @@ func _add_action(
 	var button := Button.new()
 	button.name = node_name
 	button.text = text
-	button.custom_minimum_size = Vector2(210, 56)
-	button.add_theme_font_size_override(&"font_size", 20)
+	button.custom_minimum_size = Vector2(200, 52)
+	button.add_theme_font_size_override(&"font_size", 18)
 	button.add_theme_color_override(&"font_color", Color(0.35, 0.16, 0.05))
 	button.pressed.connect(action)
 	parent.add_child(button)
 	return button
 
 
+func _trail_y() -> int:
+	return CustomLevelStore.trail_row(int(_data.get("height", 8)))
+
+
+func _set_hover_column(column: int) -> void:
+	_hover_column = column
+	if _preview != null:
+		_preview.set_hover_column(column)
+
+
+func _on_preview_hover_column(column: int) -> void:
+	_hover_column = column
+	_refresh_grid_highlights()
+
+
 func _place(x: int, y: int) -> void:
 	var objects := _objects()
 	var before := objects.duplicate(true)
+	var trail := _trail_y()
 	if _selected_type == "erase":
 		_erase_at(objects, x, y)
 	elif _selected_type == "canyon" or _selected_type == "pit":
-		_erase_at(objects, x, y, true)
-		objects.append({"type": "canyon", "x": x, "y": y})
+		# Canyon belongs on the trail row: it defines the opening below the surface.
+		_erase_at(objects, x, trail, true)
+		objects.append({"type": "canyon", "x": x, "y": trail})
 	elif _selected_type == "ground":
-		if not _has_type_at(objects, x, y, "ground"):
-			objects.append({"type": "ground", "x": x, "y": y})
+		# Dirt on the trail row sets the bank; dirt above it builds a step ledge.
+		var target_y := y if y <= trail else trail
+		if not _has_type_at(objects, x, target_y, "ground"):
+			objects.append({"type": "ground", "x": x, "y": target_y})
+		# Stamping dirt above the trail also keeps the trail bank underneath.
+		if target_y < trail and not _has_type_at(objects, x, trail, "ground"):
+			if not _has_type_at(objects, x, trail, "canyon"):
+				objects.append({"type": "ground", "x": x, "y": trail})
+		# Dirt replaces a canyon opening on the trail row.
+		if target_y == trail:
+			for i in range(objects.size() - 1, -1, -1):
+				var object := objects[i] as Dictionary
+				if (
+					int(object.get("x", -1)) == x
+					and int(object.get("y", -1)) == trail
+					and str(object.get("type", "")) in ["canyon", "pit"]
+				):
+					objects.remove_at(i)
 	else:
 		_remove_foreground_at(objects, x, y)
 		if _selected_type == "goal":
@@ -248,15 +295,37 @@ func _has_type_at(objects: Array, x: int, y: int, type_name: String) -> bool:
 
 func _refresh_grid() -> void:
 	var width := int(_data.get("width", 24))
-	var height := int(_data.get("height", 10))
+	var height := int(_data.get("height", 8))
+	var trail := _trail_y()
 	for y in range(height):
 		for x in range(width):
 			var cell := _cells[y * width + x]
 			var type_name := _display_type_at(x, y)
 			cell.text = _short_label(type_name)
+			if y == trail and type_name.is_empty():
+				cell.text = "···"
 			cell.modulate = _type_color(type_name)
+			if y == trail:
+				cell.modulate = cell.modulate.darkened(0.04)
+				if type_name.is_empty():
+					cell.modulate = Color(0.82, 0.7, 0.5)
+	_refresh_grid_highlights()
 	if _preview != null:
 		_preview.show_level(_data)
+		if _hover_column >= 0:
+			_preview.set_hover_column(_hover_column)
+
+
+func _refresh_grid_highlights() -> void:
+	var width := int(_data.get("width", 24))
+	var height := int(_data.get("height", 8))
+	for y in range(height):
+		for x in range(width):
+			var cell := _cells[y * width + x]
+			if x == _hover_column:
+				cell.self_modulate = Color(1.15, 1.1, 0.85)
+			else:
+				cell.self_modulate = Color.WHITE
 
 
 func _display_type_at(x: int, y: int) -> String:
@@ -361,6 +430,6 @@ func _play_test() -> void:
 		has_goal = has_goal or type_name == "goal"
 		has_ground = has_ground or type_name == "ground"
 	if not has_goal or not has_ground:
-		_status.text = "Add Dirt and a Saloon before play-testing."
+		_status.text = tr("Add Dirt and a Saloon before play-testing.")
 		return
 	GameManager.play_custom_level(GameManager.active_custom_slot, true)

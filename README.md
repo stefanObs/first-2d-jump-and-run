@@ -2,7 +2,7 @@
 
 Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, no lives/game-over, nonviolent lasso. **German is the default language**; English is fully supported. Optional spoken instructions use local OS TTS (Narrator).
 
-**Content version:** `1.3.28` (see `content_version.txt`). Launchers reimport when this stamp changes.
+**Content version:** `1.3.31` (see `content_version.txt`). Launchers reimport when this stamp changes.
 
 This README is the **binding source of truth** for gameplay, level design, art, i18n, and audio. Agents and contributors must follow it (see [Agent / contributor rules](#agent--contributor-rules)).
 
@@ -53,7 +53,7 @@ After Kingpin: horizon victory ride, fade, dedication **VOM PAPI FÜR FINN**, th
 
 **Saves:** three slots; auto-save; local `savegames/` (gitignored). `SAVE_VERSION` 4 — older formats discarded. Delete via card context / Space / Xbox Y + confirm.
 
-**Campaign Workshop / trail editor:** edit a copy of any built-in level or insert an extra trail before a campaign position; live preview under the stamp grid. Editor has explicit **Save Trail** and **Reset Changes** (snapshot restore). Translation editor edits DE/EN CSV export into `savegames/`.
+**Campaign Workshop / trail editor:** edit a copy of any built-in level or insert an extra trail before a campaign position. The bottom stamp row is the trail line (Dirt vs Canyon sets the surface and underside). A large hover magnifier at the top shows the hovered columns game-like; a thin overview strip remains under it. Editor has explicit **Save Trail** and **Reset Changes** (snapshot restore). Translation editor edits DE/EN CSV export into `savegames/`.
 
 ---
 

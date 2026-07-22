@@ -482,7 +482,7 @@ shape = SubResource("GroundSeg")
 
 
 [node name="Ground5" type="StaticBody2D" parent="."]
-position = Vector2(2510, 352)
+position = Vector2(2510, 312)
 [node name="Visual" type="ColorRect" parent="Ground5"]
 offset_left = -210.0
 offset_top = -32.0
@@ -496,6 +496,23 @@ offset_right = 210.0
 offset_bottom = -18.0
 color = Color(0.45, 0.72, 0.28, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground5"]
+shape = SubResource("GroundSeg")
+
+[node name="Ground5Fill" type="StaticBody2D" parent="."]
+position = Vector2(2510, 352)
+[node name="Visual" type="ColorRect" parent="Ground5Fill"]
+offset_left = -210.0
+offset_top = -32.0
+offset_right = 210.0
+offset_bottom = 32.0
+color = Color(0.72, 0.46, 0.22, 1)
+[node name="TopStripe" type="ColorRect" parent="Ground5Fill"]
+offset_left = -210.0
+offset_top = -32.0
+offset_right = 210.0
+offset_bottom = -18.0
+color = Color(0.45, 0.72, 0.28, 1)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Ground5Fill"]
 shape = SubResource("GroundSeg")
 
 
@@ -785,7 +802,7 @@ position = Vector2(1790, 270)
 
 
 [node name="TrailStar2" parent="." instance=ExtResource("9_star")]
-position = Vector2(2550, 270)
+position = Vector2(2550, 230)
 
 
 [node name="TrailStar3" parent="." instance=ExtResource("9_star")]

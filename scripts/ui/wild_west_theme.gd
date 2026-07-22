@@ -191,16 +191,16 @@ static func _make_contiguous_floors(level: Node) -> void:
 	if background != null:
 		level_left = minf(background.offset_left, background.offset_right)
 		level_right = maxf(background.offset_left, background.offset_right)
-	var floor_top := float(merged[0]["top"])
-	var floor_height := float(merged[0]["bottom"]) - floor_top
+	# FloorAbyss must start at or below every walk surface. Using the highest bank
+	# top (min y) paints a dark band over lower desert strips (Level 2 bug).
+	var abyss_top := float(merged[0]["top"])
 	for strip in merged:
-		floor_top = minf(floor_top, float(strip["top"]))
-		floor_height = maxf(floor_height, float(strip["bottom"]) - float(strip["top"]))
+		abyss_top = maxf(abyss_top, float(strip["top"]))
 
 	# Deep underworld safety fill only — canyon art must paint over canyon openings.
 	var abyss := ColorRect.new()
 	abyss.name = "FloorAbyss"
-	abyss.position = Vector2(level_left, floor_top)
+	abyss.position = Vector2(level_left, abyss_top)
 	abyss.size = Vector2(level_right - level_left, 900.0)
 	abyss.color = Color(0.22, 0.10, 0.12, 1.0)
 	abyss.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -223,18 +223,18 @@ static func _make_contiguous_floors(level: Node) -> void:
 		var bottom := float(strip["bottom"])
 		var height := bottom - top
 		var deep_bottom := top + 880.0
+		# Keep a thin desert crust on top; tall stacked banks stay dirt underneath.
+		var surface_thickness := minf(maxf(height, 36.0), 56.0)
 
 		# Surface row only — never overhang into canyon gaps.
 		if surface != null:
-			_tile_strip_row(floor_root, surface, left, right, top, height, 1, "FloorSurface%d" % i)
+			_tile_strip_row(floor_root, surface, left, right, top, surface_thickness, 1, "FloorSurface%d" % i)
 
 		# Below: continue brown dirt under the bank, stopping a few pixels before the
 		# canyon lip so cliff walls sit outside the desert brown face.
 		if dirt != null:
-			var surface_h := surface.get_size().y if surface != null else dirt.get_size().y
-			var scale_y := height / surface_h
-			var dirt_h := dirt.get_size().y * scale_y
-			var y := top + height - 2.0
+			var dirt_h := dirt.get_size().y * (surface_thickness / maxf(dirt.get_size().y, 1.0))
+			var y := top + surface_thickness - 2.0
 			var dirt_left := left
 			var dirt_right := right
 			if i + 1 < merged.size():
@@ -248,6 +248,39 @@ static func _make_contiguous_floors(level: Node) -> void:
 				row += 1
 				if row > 40:
 					break
+
+		# Handpainted step faces where neighboring banks sit at different heights.
+		if dirt != null and i + 1 < merged.size():
+			_draw_step_face(floor_root, dirt, merged[i], merged[i + 1], i)
+
+
+static func _draw_step_face(
+	parent: Node,
+	dirt: Texture2D,
+	left_strip: Dictionary,
+	right_strip: Dictionary,
+	index: int
+) -> void:
+	var left_top := float(left_strip["top"])
+	var right_top := float(right_strip["top"])
+	var step := absf(left_top - right_top)
+	if step < 10.0:
+		return
+	var seam_x := (float(left_strip["right"]) + float(right_strip["left"])) * 0.5
+	var high_top := minf(left_top, right_top)
+	var low_top := maxf(left_top, right_top)
+	var face_w := clampf(step * 0.55, 18.0, 36.0)
+	var face_left := seam_x - face_w * 0.5
+	# Shade the riser with dirt tiles so stacked banks read as one carved ledge.
+	_tile_strip_row(parent, dirt, face_left, face_left + face_w, high_top, low_top - high_top, 2, "FloorStep%d" % index)
+	var lip := ColorRect.new()
+	lip.name = "FloorStepLip%d" % index
+	lip.position = Vector2(face_left - 2.0, high_top)
+	lip.size = Vector2(face_w + 4.0, 5.0)
+	lip.color = Color(0.91, 0.68, 0.36, 0.95)
+	lip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lip.z_index = 3
+	parent.add_child(lip)
 
 
 static func _tile_strip_row(
@@ -288,7 +321,6 @@ static func _tile_strip_row(
 
 
 static func _align_pits(level: Node) -> void:
-	var floor_top := _typical_floor_top(level)
 	var merged := _merge_segments(_collect_ground_segments(level))
 	for node in level.find_children("*", "Area2D", true, false):
 		if not (node is Hazard):
@@ -297,7 +329,46 @@ static func _align_pits(level: Node) -> void:
 		if maxf(absf(hazard.scale.x), absf(hazard.scale.y)) <= 1.35:
 			continue
 		var gap := _gap_around(hazard.global_position.x, merged)
-		hazard.align_canyon_to_gap(floor_top, float(gap["left"]), float(gap["right"]))
+		var edge_tops := _gap_edge_tops(gap, merged)
+		hazard.align_canyon_to_gap(
+			minf(float(edge_tops["left"]), float(edge_tops["right"])),
+			float(gap["left"]),
+			float(gap["right"]),
+			float(edge_tops["left"]),
+			float(edge_tops["right"])
+		)
+
+
+static func _gap_edge_tops(gap: Dictionary, merged: Array[Dictionary]) -> Dictionary:
+	var left_top := float(gap.get("left_top", 320.0))
+	var right_top := float(gap.get("right_top", left_top))
+	var gap_left := float(gap["left"])
+	var gap_right := float(gap["right"])
+	var found_left := false
+	var found_right := false
+	for strip in merged:
+		if absf(float(strip["right"]) - gap_left) <= 2.0:
+			left_top = float(strip["top"])
+			found_left = true
+		if absf(float(strip["left"]) - gap_right) <= 2.0:
+			right_top = float(strip["top"])
+			found_right = true
+	if not found_left or not found_right:
+		# Fallback: nearest strip on each side of the gap.
+		for strip in merged:
+			var mid := (float(strip["left"]) + float(strip["right"])) * 0.5
+			if not found_left and mid < gap_left:
+				left_top = float(strip["top"])
+			if not found_right and mid > gap_right and not found_right:
+				right_top = float(strip["top"])
+				found_right = true
+		# Re-scan left as the rightmost strip still left of the gap.
+		if not found_left:
+			for strip in merged:
+				if float(strip["right"]) <= gap_left + 2.0:
+					left_top = float(strip["top"])
+					found_left = true
+	return {"left": left_top, "right": right_top}
 
 
 static func _gap_around(x: float, merged: Array[Dictionary]) -> Dictionary:
@@ -368,19 +439,58 @@ static func _collect_ground_segments(level: Node) -> Array[Dictionary]:
 
 
 static func _merge_segments(segments: Array[Dictionary]) -> Array[Dictionary]:
-	var merged: Array[Dictionary] = []
+	# First collapse vertically stacked dirt in the same column into one tall bank.
+	var columns: Array[Dictionary] = []
 	for segment in segments:
+		var placed := false
+		for column in columns:
+			var overlap := (
+				minf(float(column["right"]), float(segment["right"]))
+				- maxf(float(column["left"]), float(segment["left"]))
+			)
+			var span := minf(
+				float(column["right"]) - float(column["left"]),
+				float(segment["right"]) - float(segment["left"])
+			)
+			if overlap > span * 0.55:
+				column["left"] = minf(float(column["left"]), float(segment["left"]))
+				column["right"] = maxf(float(column["right"]), float(segment["right"]))
+				column["top"] = minf(float(column["top"]), float(segment["top"]))
+				column["bottom"] = maxf(float(column["bottom"]), float(segment["bottom"]))
+				placed = true
+				break
+		if not placed:
+			columns.append(segment.duplicate())
+	columns.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["left"]) < float(b["left"]))
+
+	# Then join neighbors only when their walk surfaces match — keep height steps.
+	var merged: Array[Dictionary] = []
+	for segment in columns:
 		if merged.is_empty():
 			merged.append(segment.duplicate())
 			continue
 		var last: Dictionary = merged[merged.size() - 1]
-		if float(segment["left"]) <= float(last["right"]) + 24.0:
+		var same_height := absf(float(segment["top"]) - float(last["top"])) <= 12.0
+		if same_height and float(segment["left"]) <= float(last["right"]) + 24.0:
 			last["right"] = maxf(float(last["right"]), float(segment["right"]))
 			last["top"] = minf(float(last["top"]), float(segment["top"]))
 			last["bottom"] = maxf(float(last["bottom"]), float(segment["bottom"]))
 		else:
 			merged.append(segment.duplicate())
+	_snap_adjacent_steps(merged)
 	return merged
+
+
+## Close tiny seams between height-stepped banks so they never read as canyon gaps.
+static func _snap_adjacent_steps(merged: Array[Dictionary]) -> void:
+	for i in range(merged.size() - 1):
+		var left: Dictionary = merged[i]
+		var right: Dictionary = merged[i + 1]
+		var seam := float(right["left"]) - float(left["right"])
+		if seam <= 24.0 and seam >= -4.0:
+			var mid := (float(left["right"]) + float(right["left"])) * 0.5
+			left["right"] = mid
+			right["left"] = mid
 
 
 static func _replace_block_art(body: Node, texture_path: String, is_ground: bool) -> void:
