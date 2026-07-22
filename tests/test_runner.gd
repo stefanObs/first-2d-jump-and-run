@@ -61,6 +61,10 @@ func _ready() -> void:
 		_test_level_04_second_canyon_paired_handoff
 	)
 	failures += await _run(
+		"Level 4 canyon assist chains stay inside jump reach",
+		_test_level_04_canyon_assist_chains
+	)
+	failures += await _run(
 		"Canyon center art is illustrated with outside rims",
 		_test_canyon_center_illustrated
 	)
@@ -550,12 +554,35 @@ func _test_save_select_scene() -> Variant:
 		error = "Save select should not show a permanent Delete Save button."
 	if error == null and scene.get_node_or_null("LanguageButton") != null:
 		error = "Save select should not show a top-level language button."
+	var skyline := scene.get_node_or_null("Skyline") as TextureRect
+	var title_board := scene.get_node_or_null("TitleBoard")
+	var prompt_board := scene.get_node_or_null("PromptBoard")
+	if error == null and (skyline == null or skyline.texture == null):
+		error = "Save select needs the desert skyline backdrop."
+	elif error == null and not (title_board is HandmadeSign):
+		error = "Save select title should use a HandmadeSign western board."
+	elif error == null and not (prompt_board is HandmadeSign):
+		error = "Save select prompts should use a HandmadeSign western board."
+	var settings_button := scene.get_node_or_null("SettingsButton") as Button
+	var settings_panel := scene.get_node_or_null("SettingsPanel") as SettingsPanel
+	if error == null and (settings_button == null or settings_panel == null):
+		error = "Save select needs Settings access via SettingsButton + SettingsPanel."
+	if error == null and scene.get_node_or_null("BuildTrailButton") == null:
+		error = "Save select needs Campaign Workshop access."
+	if error == null and scene.get_node_or_null("TranslationEditorButton") == null:
+		error = "Save select needs Translation Editor access."
 	var delete_dialog := scene.get_node_or_null("DeleteConfirmation") as ConfirmationDialog
 	if error == null and delete_dialog == null:
 		error = "Save deletion needs a confirmation dialog."
 	var first_card := scene.get_node_or_null("Slots/Slot1") as Button
 	if error == null and first_card != null and not first_card.text.contains("4: "):
 		error = "Save cards should show level names as '<number>: <name>'."
+	if error == null and first_card != null:
+		var normal := first_card.get_theme_stylebox("normal")
+		if normal == null or not (normal is StyleBoxFlat):
+			error = "Save slot buttons should use handmade wood StyleBoxFlat styling."
+		elif (normal as StyleBoxFlat).bg_color.b > 0.55:
+			error = "Save slot buttons should look wooden, not default gray/blue."
 	if error == null:
 		scene._request_delete()
 		if GameManager.is_slot_empty(0):
@@ -566,6 +593,14 @@ func _test_save_select_scene() -> Variant:
 		scene._confirm_delete()
 		if not GameManager.is_slot_empty(0):
 			error = "Confirming Delete Save should erase the highlighted slot."
+	if error == null and settings_button != null and settings_panel != null:
+		settings_button.pressed.emit()
+		if not settings_panel.visible:
+			error = "Settings button should open the settings panel on the start screen."
+		else:
+			settings_panel.closed.emit()
+			if settings_panel.visible:
+				error = "Closing settings should hide the settings panel again."
 	scene.queue_free()
 	GameManager.erase_slot(0)
 	return error
@@ -1344,8 +1379,7 @@ func _test_no_plank_highways() -> Variant:
 
 
 func _test_one_way_moving_platforms() -> Variant:
-	# Rafts/clouds like Moving0 in Canyon Ferry must let the cowboy jump up
-	# through them from below and land on top.
+	# Rafts/clouds must let the cowboy jump up through them from below and land on top.
 	var packed := load("res://scenes/world/moving_platform.tscn") as PackedScene
 	if packed == null:
 		return "Missing moving platform scene."
@@ -1360,12 +1394,12 @@ func _test_one_way_moving_platforms() -> Variant:
 	platform.queue_free()
 	if error == null:
 		var level := (load("res://scenes/levels/level_04.tscn") as PackedScene).instantiate()
-		var moving0 := level.get_node_or_null("Moving0") as MovingPlatform
-		if moving0 == null:
-			error = "Canyon Ferry should still contain Moving0."
+		# Plank canyons no longer use Moving0; keep a required mover for canyon 2.
+		var sample := level.get_node_or_null("Moving5") as MovingPlatform
+		if sample == null:
+			error = "Canyon Ferry should still contain Moving5 for the plank-free canyon."
 		level.free()
 	return error
-
 
 func _test_level_09_raft_hop_boots() -> Variant:
 	var packed: PackedScene = load("res://scenes/levels/level_09.tscn")
@@ -1478,7 +1512,14 @@ func _test_level_09_raft_hop_boots() -> Variant:
 func _test_level_04_paired_moving_clouds() -> Variant:
 	var packed: PackedScene = load("res://scenes/levels/level_04.tscn")
 	var level: Node = packed.instantiate()
-	var cloud_names := ["Moving0", "Moving1", "Moving2", "Moving3", "Moving4", "Moving5", "Moving6"]
+	# Plank-covered canyons must not keep redundant movers overhead.
+	for removed_name in ["Moving0", "Moving1", "Moving2", "Moving3"]:
+		if level.get_node_or_null(removed_name) != null:
+			level.free()
+			return "%s must be removed where wooden planks already cross the canyon." % removed_name
+
+	# Movers remain only where no solid plank path covers the gap.
+	var cloud_names := ["Moving5", "Moving6", "Moving4"]
 	for cloud_name in cloud_names:
 		var cloud := level.get_node_or_null(cloud_name) as MovingPlatform
 		if cloud == null:
@@ -1510,7 +1551,7 @@ func _test_level_04_paired_moving_clouds() -> Variant:
 			level.free()
 			return "%s sinks too close to the trail floor." % cloud_name
 
-	for pair_names in [["Moving0", "Moving1"], ["Moving5", "Moving6"], ["Moving2", "Moving3"]]:
+	for pair_names in [["Moving5", "Moving6"]]:
 		var part_1 := level.get_node(pair_names[0]) as MovingPlatform
 		var part_2 := level.get_node(pair_names[1]) as MovingPlatform
 		if part_1.start_at_point_b or not part_2.start_at_point_b:
@@ -1548,7 +1589,7 @@ func _test_level_04_paired_moving_clouds() -> Variant:
 				"%s/%s must ignore mover obstruction so the handoff stays in sync."
 				% [pair_names[0], pair_names[1]]
 			)
-	# Varied platforming identity: not every canyon is an ultra-wide raft-only gap.
+	# Varied platforming identity: plank chains + one mover canyon + end hop clouds.
 	var hop_clouds := 0
 	var hop_steps := 0
 	for node in level.get_children():
@@ -1557,21 +1598,35 @@ func _test_level_04_paired_moving_clouds() -> Variant:
 			hop_clouds += 1
 		elif node_name.begins_with("FerryStep") or node_name.begins_with("FerryIsle"):
 			hop_steps += 1
-	if hop_clouds < 2 or hop_steps < 2:
+	if hop_clouds < 2 or hop_steps < 6:
 		level.free()
-		return "Level 4 should mix cloud/plank hops with canyon gaps."
+		return "Level 4 should keep plank chains and end-hop clouds."
 	if level.get_node_or_null("FerrySpring6") == null:
 		level.free()
 		return "Level 4 needs a spring-assisted canyon gap for variety."
 	for removed_ground in ["Ground3", "Ground6", "Ground9", "Ground12"]:
 		if level.get_node_or_null(removed_ground) != null:
 			level.free()
-			return "Level 4 canyon at %s is still narrow enough to bypass its cloud route." % removed_ground
+			return "Level 4 canyon at %s is still narrow enough to bypass its assist route." % removed_ground
 	# FerryStep leftovers must be dressed as wooden planks, not brown ferry boxes.
 	add_child(level)
 	await get_tree().process_frame
 	WildWestTheme.apply_to_level(level)
-	for step_name in ["FerryStep6A", "FerryStep6B", "FerryIsle12"]:
+	for step_name in [
+		"FerryStep3A",
+		"FerryStep3B",
+		"FerryStep3C",
+		"FerryStep3D",
+		"FerryStep6A",
+		"FerryStep6B",
+		"FerryStep9A",
+		"FerryStep9B",
+		"FerryStep9C",
+		"FerryStep9D",
+		"FerryStep12A",
+		"FerryStep12B",
+		"FerryIsle12",
+	]:
 		var step := level.get_node_or_null(step_name) as Node
 		if step == null:
 			level.queue_free()
@@ -1606,6 +1661,188 @@ func _max_same_height_jump_distance(
 	var height := (jump_speed * jump_speed) / (2.0 * gravity)
 	var time_down := sqrt((2.0 * height) / (gravity * fall_gravity_multiplier))
 	return move_speed * (time_up + time_down)
+
+
+func _level_04_body_top_extent(body: Node2D) -> Dictionary:
+	var shape_node := body.get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if shape_node == null or not (shape_node.shape is RectangleShape2D):
+		return {}
+	var rect := shape_node.shape as RectangleShape2D
+	var half := rect.size * 0.5
+	var center := body.global_position + shape_node.position
+	# DisappearingPlatform may scale width in _ready; prefer live shape size.
+	return {
+		"left": center.x - half.x,
+		"right": center.x + half.x,
+		"top": center.y - half.y,
+	}
+
+
+func _level_04_static_pads_in_gap(level: Node, gap_left: float, gap_right: float) -> Array[Dictionary]:
+	var pads: Array[Dictionary] = []
+	for node in level.get_children():
+		var name_text := String(node.name)
+		if not (
+			name_text.begins_with("FerryStep")
+			or name_text.begins_with("FerryIsle")
+			or name_text.begins_with("FerryCloud")
+			or name_text.begins_with("JumpPlank")
+			or name_text.begins_with("Plank")
+		):
+			continue
+		if not (node is Node2D):
+			continue
+		var extent := _level_04_body_top_extent(node as Node2D)
+		if extent.is_empty():
+			continue
+		if float(extent["right"]) < gap_left - 40.0 or float(extent["left"]) > gap_right + 40.0:
+			continue
+		pads.append(extent)
+	return pads
+
+
+func _level_04_coverage_crosses(gap_left: float, gap_right: float, pads: Array[Dictionary], budget: float) -> bool:
+	var coverage := gap_left
+	var guard := 0
+	while coverage < gap_right - 0.5 and guard < 64:
+		guard += 1
+		var best := coverage
+		for pad in pads:
+			if float(pad["left"]) <= coverage + budget:
+				best = maxf(best, float(pad["right"]))
+		if best <= coverage + 0.01:
+			return false
+		coverage = best
+	return coverage >= gap_right - 0.5
+
+
+func _level_04_mover_route_pads(level: Node, gap_left: float, gap_right: float) -> Array[Dictionary]:
+	# Model each mover as a rideable span across its full route once boarded.
+	# Use travel_origin() — after _ready, position snaps to the start endpoint.
+	var pads: Array[Dictionary] = []
+	for node in level.get_children():
+		if not (node is MovingPlatform):
+			continue
+		var mover := node as MovingPlatform
+		var shape := mover.get_node_or_null("CollisionShape2D") as CollisionShape2D
+		if shape == null or not (shape.shape is RectangleShape2D):
+			continue
+		var half_w := (shape.shape as RectangleShape2D).size.x * 0.5
+		var origin := mover.travel_origin()
+		var xa := origin.x + mover.point_a.x
+		var xb := origin.x + mover.point_b.x
+		var ya := origin.y + mover.point_a.y
+		var yb := origin.y + mover.point_b.y
+		var route_left := minf(xa, xb) - half_w
+		var route_right := maxf(xa, xb) + half_w
+		if route_right < gap_left - 40.0 or route_left > gap_right + 40.0:
+			continue
+		pads.append({
+			"left": route_left,
+			"right": route_right,
+			"top": minf(ya, yb) - (shape.shape as RectangleShape2D).size.y * 0.5,
+		})
+	return pads
+
+
+func _test_level_04_canyon_assist_chains() -> Variant:
+	# Theoretical same-height reach is ~189px; keep a child-friendly budget.
+	var clearable := minf(_max_same_height_jump_distance() * 0.85, 165.0)
+	var packed: PackedScene = load("res://scenes/levels/level_04.tscn")
+	var level: Node = packed.instantiate()
+	add_child(level)
+	await get_tree().process_frame
+
+	var merged := WildWestTheme._merge_segments(WildWestTheme._collect_ground_segments(level))
+	var canyons: Array[Dictionary] = []
+	for i in range(merged.size() - 1):
+		var gap_left := float(merged[i]["right"])
+		var gap_right := float(merged[i + 1]["left"])
+		var gap := gap_right - gap_left
+		if gap <= 200.0:
+			continue
+		canyons.append({
+			"index": canyons.size() + 1,
+			"left": gap_left,
+			"right": gap_right,
+			"gap": gap,
+			"floor_y": minf(float(merged[i]["top"]), float(merged[i + 1]["top"])),
+		})
+	if canyons.size() < 4:
+		level.queue_free()
+		return "Level 4 should expose four wide canyon gaps (found %d)." % canyons.size()
+
+	# First canyon must be plank-led so it is solvable without cloud timing.
+	var first: Dictionary = canyons[0]
+	var first_planks := 0
+	for node in level.get_children():
+		var name_text := String(node.name)
+		if not name_text.begins_with("FerryStep3"):
+			continue
+		if not (node is Node2D):
+			continue
+		var px := (node as Node2D).position.x
+		if px >= float(first["left"]) - 40.0 and px <= float(first["right"]) + 40.0:
+			first_planks += 1
+	if first_planks < 4:
+		level.queue_free()
+		return "First Level 4 canyon needs a 4-plank FerryStep3* stepping chain (found %d)." % first_planks
+
+	# Plank canyons (1 and 3) must not keep movers overhead.
+	for canyon in canyons:
+		var gap_left := float(canyon["left"])
+		var gap_right := float(canyon["right"])
+		var static_pads := _level_04_static_pads_in_gap(level, gap_left, gap_right)
+		var static_ok := _level_04_coverage_crosses(gap_left, gap_right, static_pads, clearable)
+		if static_ok:
+			for node in level.get_children():
+				if not (node is MovingPlatform):
+					continue
+				var mover := node as MovingPlatform
+				var origin := mover.travel_origin()
+				var xa := origin.x + mover.point_a.x
+				var xb := origin.x + mover.point_b.x
+				var route_left := minf(xa, xb) - 70.0
+				var route_right := maxf(xa, xb) + 70.0
+				if route_right >= gap_left + 20.0 and route_left <= gap_right - 20.0:
+					level.queue_free()
+					return (
+						"Canyon %d already has a plank path — remove overlapping mover %s."
+						% [int(canyon["index"]), mover.name]
+					)
+			# Also flag any consecutive static hop that still exceeds budget.
+			var ordered := static_pads.duplicate()
+			ordered.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["left"]) < float(b["left"]))
+			var cursor := gap_left
+			for pad in ordered:
+				var edge_gap := float(pad["left"]) - cursor
+				if edge_gap > clearable:
+					level.queue_free()
+					return (
+						"Canyon %d static hop gap %.0fpx exceeds budget %.0f (at x≈%.0f)."
+						% [int(canyon["index"]), edge_gap, clearable, float(pad["left"])]
+					)
+				cursor = maxf(cursor, float(pad["right"]))
+			if gap_right - cursor > clearable:
+				level.queue_free()
+				return (
+					"Canyon %d exit hop gap %.0fpx exceeds budget %.0f."
+					% [int(canyon["index"]), gap_right - cursor, clearable]
+				)
+			continue
+
+		var mover_pads := _level_04_mover_route_pads(level, gap_left, gap_right)
+		var combined: Array[Dictionary] = []
+		combined.append_array(static_pads)
+		combined.append_array(mover_pads)
+		if not _level_04_coverage_crosses(gap_left, gap_right, combined, clearable):
+			level.queue_free()
+			return (
+				"Canyon %d (%.0f..%.0f) has no continuous assist chain within jump budget %.0f."
+				% [int(canyon["index"]), gap_left, gap_right, clearable]
+			)
+	level.queue_free()
+	return null
 
 
 func _test_campaign_pits_crossable() -> Variant:
@@ -1727,9 +1964,9 @@ func _test_level_04_cloud_phase_runtime() -> Variant:
 	var packed: PackedScene = load("res://scenes/levels/level_04.tscn")
 	var level: Node = packed.instantiate()
 	add_child(level)
-	# Snapshot far-side starts immediately after _ready, before any motion.
+	# Only the second canyon keeps a paired mover route (plank canyons have none).
 
-	var pairs: Array = [["Moving0", "Moving1"], ["Moving5", "Moving6"], ["Moving2", "Moving3"]]
+	var pairs: Array = [["Moving5", "Moving6"]]
 	var start_gaps: Dictionary = {}
 	for pair_names in pairs:
 		var left := level.get_node(pair_names[0]) as MovingPlatform
@@ -1751,8 +1988,7 @@ func _test_level_04_cloud_phase_runtime() -> Variant:
 			return "%s and %s must begin moving in opposite directions." % pair_names
 		start_gaps[pair_names[0]] = absf(right.global_position.x - left.global_position.x)
 
-	# All three pairs share the same period; simulate once and sample each.
-	var sample := level.get_node("Moving0") as MovingPlatform
+	var sample := level.get_node("Moving5") as MovingPlatform
 	var half_period := sample.point_a.distance_to(sample.point_b) / sample.move_speed
 	var frames := int(ceil(half_period / get_physics_process_delta_time())) + 4
 	var closest_gaps: Dictionary = {}
