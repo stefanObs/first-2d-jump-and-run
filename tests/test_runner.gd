@@ -99,6 +99,14 @@ func _ready() -> void:
 		"Empty transition horse gallops while riding in",
 		_test_empty_horse_gallop_animation
 	)
+	failures += await _run(
+		"Transition gallop frames match trail horse size",
+		_test_transition_gallop_frame_size
+	)
+	failures += await _run(
+		"Horse arrival rides on the ground under spawn",
+		_test_arrival_uses_ground_under_spawn
+	)
 	failures += await _run("Canyon clouds include two-cloud hop chains", _test_two_cloud_canyon_chains)
 	failures += await _run("Wings levels place varied aerial carrions", _test_wings_carrion_variety)
 
@@ -3043,6 +3051,7 @@ func _test_arrival_leaves_horse_at_spawn() -> Variant:
 	var spawn := Vector2(180.0, 360.0)
 	var floor_y := 360.0
 	var screen_scale := 1.0
+	var expected_ride_y := floor_y + LevelTransition.MOUNTED_SPRITE_OFFSET_Y * screen_scale
 	transition.play_arrival(spawn, floor_y, screen_scale)
 	# Wait until the cowboy has dismounted and the empty horse is left at spawn.
 	var horse := transition.get_node_or_null("TrailHorse") as Sprite2D
@@ -3066,6 +3075,11 @@ func _test_arrival_leaves_horse_at_spawn() -> Variant:
 		error = (
 			"Arrival should leave the horse at the level start (horse x=%.1f, spawn x=%.1f)."
 			% [horse.position.x, spawn.x]
+		)
+	elif absf(horse.position.y - expected_ride_y) > 3.0:
+		error = (
+			"Arrival horse should sit on the trail floor (horse y=%.1f, want %.1f)."
+			% [horse.position.y, expected_ride_y]
 		)
 	elif horse.position.x > get_viewport().get_visible_rect().size.x:
 		error = "Arrival must not send the horse off-screen after dismount."
@@ -3120,6 +3134,66 @@ func _test_empty_horse_gallop_animation() -> Variant:
 		error = "Mounting pause should use the standing trail horse, not gallop frames."
 	transition.queue_free()
 	return error
+
+
+func _test_transition_gallop_frame_size() -> Variant:
+	var standing: Texture2D = LevelTransition.HORSE_TEXTURE
+	var gallop0: Texture2D = LevelTransition.HORSE_GALLOP_0
+	var gallop1: Texture2D = LevelTransition.HORSE_GALLOP_1
+	if standing == null or gallop0 == null or gallop1 == null:
+		return "Transition horse textures failed to load."
+	if gallop0.get_width() != standing.get_width() or gallop0.get_height() != standing.get_height():
+		return (
+			"Gallop frame 0 must match trail_horse size (%dx%d), got %dx%d."
+			% [standing.get_width(), standing.get_height(), gallop0.get_width(), gallop0.get_height()]
+		)
+	if gallop1.get_width() != standing.get_width() or gallop1.get_height() != standing.get_height():
+		return (
+			"Gallop frame 1 must match trail_horse size (%dx%d), got %dx%d."
+			% [standing.get_width(), standing.get_height(), gallop1.get_width(), gallop1.get_height()]
+		)
+	return null
+
+
+func _test_arrival_uses_ground_under_spawn() -> Variant:
+	## Spawn markers sit above the plank; arrival floor must use the ground surface.
+	for path in ["res://scenes/levels/level_01.tscn", "res://scenes/levels/level_02.tscn"]:
+		var level: Variant = _instantiate_level(path)
+		if level is String:
+			return level
+		var controller := level as LevelController
+		await get_tree().physics_frame
+		await get_tree().physics_frame
+		if controller.spawn_point == null:
+			_free_level(controller)
+			return "Level is missing SpawnPoint."
+		var spawn := controller.spawn_point.global_position
+		var floor_y := controller._ground_surface_y_at(spawn)
+		if floor_y <= spawn.y + 8.0:
+			_free_level(controller)
+			return (
+				"%s ground under spawn should be below the marker (spawn=%.1f, floor=%.1f)."
+				% [path.get_file(), spawn.y, floor_y]
+			)
+		var canvas := controller.get_viewport().get_canvas_transform()
+		var floor_screen := canvas * Vector2(spawn.x, floor_y)
+		var scale := controller._world_to_screen_scale()
+		controller.transition.play_arrival(floor_screen, floor_screen.y, scale)
+		await get_tree().process_frame
+		var expected_ride_y := floor_screen.y + LevelTransition.MOUNTED_SPRITE_OFFSET_Y * scale
+		var rider := controller.transition.get_node_or_null("CowboyHorse") as Sprite2D
+		var error: Variant = null
+		if rider == null or not rider.visible:
+			error = "Arrival should show the mounted cowboy riding in."
+		elif absf(rider.position.y - expected_ride_y) > 3.0:
+			error = (
+				"Arrival ride-in must use ground Y, not the floating spawn marker (got %.1f, want %.1f)."
+				% [rider.position.y, expected_ride_y]
+			)
+		_free_level(controller)
+		if error != null:
+			return error
+	return null
 
 
 func _test_two_cloud_canyon_chains() -> Variant:

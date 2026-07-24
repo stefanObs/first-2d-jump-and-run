@@ -639,7 +639,9 @@ func _play_horse_arrival() -> void:
 	var spawn_world := (
 		spawn_point.global_position if spawn_point != null else player.global_position
 	)
-	var spawn_screen: Vector2 = canvas * spawn_world
+	# Spawn markers sit above the trail; ride on the ground surface, not in the air.
+	var floor_world := Vector2(spawn_world.x, _ground_surface_y_at(spawn_world))
+	var spawn_screen: Vector2 = canvas * floor_world
 	var floor_screen_y: float = spawn_screen.y
 	transition.play_arrival(spawn_screen, floor_screen_y, _world_to_screen_scale())
 	await transition.arrival_finished
@@ -647,6 +649,44 @@ func _play_horse_arrival() -> void:
 		return
 	player.visible = true
 	player.set_input_enabled(true)
+
+
+func _ground_surface_y_at(world_pos: Vector2) -> float:
+	## Trail floor under/near a point (spawn markers are often above the plank).
+	var world := get_world_2d()
+	if world != null:
+		var query := PhysicsRayQueryParameters2D.create(
+			Vector2(world_pos.x, world_pos.y - 80.0),
+			Vector2(world_pos.x, world_pos.y + 480.0),
+			1
+		)
+		if player != null:
+			query.exclude = [player.get_rid()]
+		var hit := world.direct_space_state.intersect_ray(query)
+		if not hit.is_empty():
+			return float(hit.position.y)
+	var best_y := world_pos.y
+	var best_dist := INF
+	for node in find_children("*", "StaticBody2D", true, false):
+		var shape_node := (node as Node).get_node_or_null("CollisionShape2D") as CollisionShape2D
+		if shape_node == null or shape_node.shape == null:
+			continue
+		var rect := shape_node.shape as RectangleShape2D
+		if rect == null:
+			continue
+		var top := (
+			shape_node.global_position.y
+			- rect.size.y * 0.5 * absf(shape_node.global_scale.y)
+		)
+		var half_w := rect.size.x * 0.5 * absf(shape_node.global_scale.x)
+		var cx := shape_node.global_position.x
+		if world_pos.x < cx - half_w - 8.0 or world_pos.x > cx + half_w + 8.0:
+			continue
+		var dist := absf(top - world_pos.y)
+		if dist < best_dist:
+			best_dist = dist
+			best_y = top
+	return best_y
 
 
 func _on_save_pressed() -> void:
