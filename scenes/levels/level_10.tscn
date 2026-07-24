@@ -704,7 +704,7 @@ shape = SubResource("GroundSeg")
 
 
 [node name="Cactus16" parent="." instance=ExtResource("5_hazard")]
-position = Vector2(3380, 330)
+position = Vector2(2300, 330)
 
 
 [node name="Rattlesnake22" parent="." instance=ExtResource("19_snake")]
@@ -1258,21 +1258,29 @@ position = Vector2(1650, 245)
 
 
 [node name="Conveyor1" parent="." instance=ExtResource("16_conv")]
-position = Vector2(3400, 320)
-push_right = false
-
-
-[node name="YardStar1" parent="." instance=ExtResource("9_star")]
-position = Vector2(2950, 245)
-
-
-[node name="Conveyor2" parent="." instance=ExtResource("16_conv")]
-position = Vector2(3920, 320)
+position = Vector2(3320, 320)
 push_right = true
 
 
+[node name="Door1" parent="." instance=ExtResource("17_door")]
+position = Vector2(3480, 320)
+
+
+[node name="YardStar1" parent="." instance=ExtResource("9_star")]
+position = Vector2(3380, 245)
+
+
+[node name="Conveyor2" parent="." instance=ExtResource("16_conv")]
+position = Vector2(4600, 320)
+push_right = true
+
+
+[node name="Door2" parent="." instance=ExtResource("17_door")]
+position = Vector2(4770, 320)
+
+
 [node name="YardStar2" parent="." instance=ExtResource("9_star")]
-position = Vector2(3980, 245)
+position = Vector2(4650, 245)
 
 
 [node name="Conveyor3" parent="." instance=ExtResource("16_conv")]
@@ -1280,8 +1288,12 @@ position = Vector2(5250, 320)
 push_right = false
 
 
+[node name="Door3" parent="." instance=ExtResource("17_door")]
+position = Vector2(5050, 320)
+
+
 [node name="YardStar3" parent="." instance=ExtResource("9_star")]
-position = Vector2(5550, 245)
+position = Vector2(5200, 245)
 
 
 [node name="Conveyor4" parent="." instance=ExtResource("16_conv")]

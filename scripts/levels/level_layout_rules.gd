@@ -12,6 +12,10 @@ const CACTUS_CANYON_CLEAR_PX := 260.0  ## Past hand-painted rim body (RIM_SIZE.x
 ## Timed doors stay clear of the gap and the rim band (tall gates must not sit above mouths).
 const TIMED_DOOR_CANYON_CLEAR_PX := 260.0
 const TIMED_DOOR_HALF_WIDTH := 45.0
+## Conveyor push path must hit a timed door (or clear solid ground) before a canyon.
+const CONVEYOR_HALF_WIDTH := 80.0
+const CONVEYOR_CANYON_PROBE_PX := 720.0
+const CONVEYOR_DOOR_CATCH_PX := 55.0
 const SPRING_APPROACH_PX := 350.0
 const CARRION_MAX_SCALE := 0.65
 const CARRION_VISUAL_HALF := Vector2(74.0, 46.0)
@@ -34,6 +38,7 @@ static func validate_level_node(level: Node) -> PackedStringArray:
 	errors.append_array(_validate_cactus_clear_of_springs(level))
 	errors.append_array(_validate_cactus_clear_of_canyons(level))
 	errors.append_array(_validate_timed_doors_clear_of_canyons(level))
+	errors.append_array(_validate_conveyors_not_pushing_into_canyons(level))
 	errors.append_array(_validate_no_slopes_across_canyons(level))
 	errors.append_array(_validate_carrion_flight_paths(level))
 	errors.append_array(_validate_mode_item_spacing(level))
@@ -326,30 +331,31 @@ static func _validate_cactus_clear_of_canyons(level: Node) -> PackedStringArray:
 		elif node is SpringPad:
 			springs.append(node as Node2D)
 	for cactus in cacti:
-		var cx := cactus.global_position.x
+		# Use the sprite body, not only the origin — a centered cactus can hang
+		# over the mouth while its position still sits on the bank.
+		var cactus_rect := _approx_rect(cactus, Vector2(40, 48))
+		var cactus_left := cactus_rect.position.x
+		var cactus_right := cactus_rect.end.x
 		for gap in gaps:
 			var gap_left := float(gap["left"])
 			var gap_right := float(gap["right"])
-			var side := ""
-			var edge_dist := INF
-			if cx < gap_left:
-				side = "before"
-				edge_dist = gap_left - cx
-			elif cx > gap_right:
-				side = "after"
-				edge_dist = cx - gap_right
-			else:
-				side = "inside"
-				edge_dist = 0.0
-			if edge_dist >= CACTUS_CANYON_CLEAR_PX:
-				continue
-			# Never keep a cactus inside the canyon mouth.
-			if side == "inside":
+			# Body overlapping the open mouth is always illegal.
+			if cactus_right > gap_left and cactus_left < gap_right:
 				errors.append(
 					"Cactus %s sits inside canyon gap %.0f..%.0f; remove it."
 					% [cactus.name, gap_left, gap_right]
 				)
 				break
+			var side := ""
+			var edge_dist := INF
+			if cactus_right <= gap_left:
+				side = "before"
+				edge_dist = gap_left - cactus_right
+			elif cactus_left >= gap_right:
+				side = "after"
+				edge_dist = cactus_left - gap_right
+			if edge_dist >= CACTUS_CANYON_CLEAR_PX:
+				continue
 			var spring_ok := false
 			for spring in springs:
 				var sx := spring.global_position.x
@@ -389,6 +395,55 @@ static func _validate_timed_doors_clear_of_canyons(level: Node) -> PackedStringA
 				% [door.name, float(gap["left"]), float(gap["right"])]
 			)
 			break
+	return errors
+
+
+static func _validate_conveyors_not_pushing_into_canyons(level: Node) -> PackedStringArray:
+	## Belts may push into a timed door on solid ground, never into an open canyon.
+	var errors: PackedStringArray = []
+	var gaps := _ground_canyon_gaps(level)
+	if gaps.is_empty():
+		return errors
+	var doors: Array[Node2D] = []
+	for node in level.find_children("*", "StaticBody2D", true, false):
+		if node is TimedDoor:
+			doors.append(node as Node2D)
+	for node in level.find_children("*", "StaticBody2D", true, false):
+		if not (node is ConveyorBelt):
+			continue
+		var belt := node as ConveyorBelt
+		var direction := 1.0 if belt.push_right else -1.0
+		# Prefer global X; fall back to local when transforms are not flushed yet.
+		var belt_x := belt.global_position.x
+		if is_zero_approx(belt_x) and not is_zero_approx(belt.position.x):
+			belt_x = belt.position.x
+		var cursor := belt_x + CONVEYOR_HALF_WIDTH * direction
+		var blocked_by_door := false
+		var step := 0.0
+		while step <= CONVEYOR_CANYON_PROBE_PX:
+			for door in doors:
+				var door_x := door.global_position.x
+				if is_zero_approx(door_x) and not is_zero_approx(door.position.x):
+					door_x = door.position.x
+				if absf(door_x - cursor) <= CONVEYOR_DOOR_CATCH_PX:
+					blocked_by_door = true
+					break
+			if blocked_by_door:
+				break
+			for gap in gaps:
+				var gap_left := float(gap["left"])
+				var gap_right := float(gap["right"])
+				if cursor >= gap_left and cursor <= gap_right:
+					errors.append(
+						"Conveyor %s pushes into canyon gap %.0f..%.0f; reposition belt/door onto solid ground."
+						% [belt.name, gap_left, gap_right]
+					)
+					blocked_by_door = true
+					break
+			if blocked_by_door:
+				break
+			cursor += direction * 10.0
+			step += 10.0
 	return errors
 
 

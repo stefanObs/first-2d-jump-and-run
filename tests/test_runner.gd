@@ -45,6 +45,10 @@ func _ready() -> void:
 	failures += await _run("Controller bindings match every gamepad device", _test_controller_all_devices)
 	failures += await _run("Flying levels guard the very top of the screen", _test_flying_levels_top_guarded)
 	failures += await _run("Timed door shows a clear open/closed barrier", _test_timed_door_states)
+	failures += await _run(
+		"Conveyors do not push into open canyons",
+		_test_conveyors_do_not_push_into_canyons
+	)
 	failures += await _run("Gameplay obstacles do not display floating text", _test_obstacle_labels_hidden)
 	failures += await _run("Untied bandits restore normal standing size", _test_untie_restores_stand_scale)
 	failures += await _run("Campaign hazards are no longer blocked by plank highways", _test_no_plank_highways)
@@ -690,6 +694,55 @@ func _test_save_select_scene() -> Variant:
 				error = "Closing settings should hide the settings panel again."
 	scene.queue_free()
 	GameManager.erase_slot(0)
+	return error
+
+
+func _test_element_reference_link() -> Variant:
+	DebugLabels.set_enabled(false)
+	if not ResourceLoader.exists("res://docs/element_name_reference.png"):
+		return "Missing docs/element_name_reference.png reference sheet."
+	var packed: PackedScene = load("res://scenes/ui/save_select.tscn")
+	if packed == null:
+		return "Missing save select scene."
+	var scene := packed.instantiate()
+	add_child(scene)
+	await get_tree().process_frame
+	var error: Variant = null
+	var button := scene.get_node_or_null("ElementReferenceButton") as Button
+	var overlay := scene.get_node_or_null("ElementReferenceOverlay") as Control
+	var sheet := scene.get_node_or_null("ElementReferenceOverlay/Panel/Margin/VBox/Sheet") as TextureRect
+	if button == null or overlay == null or sheet == null:
+		error = "Save select needs ElementReferenceButton + overlay with Sheet."
+	elif button.visible or scene.element_reference_unlocked():
+		error = "Element Names link must stay hidden until F1."
+	elif overlay.visible:
+		error = "Element reference overlay must start closed."
+	else:
+		# F1 maps to toggle_debug_names; DebugLabels unlocks the start-screen link.
+		DebugLabels.set_enabled(true)
+		await get_tree().process_frame
+		if not button.visible or not scene.element_reference_unlocked():
+			error = "Element Names link should appear after F1 / debug names enable."
+		elif scene.element_reference_path() != "res://docs/element_name_reference.png":
+			error = "Element reference path should point at docs/element_name_reference.png."
+		elif sheet.texture == null:
+			error = "Element reference overlay should load the labeled sheet texture."
+		else:
+			var tex_path := String(sheet.texture.resource_path)
+			if not tex_path.ends_with("element_name_reference.png"):
+				error = "Overlay sheet texture should be element_name_reference.png (got %s)." % tex_path
+			else:
+				button.pressed.emit()
+				if not overlay.visible:
+					error = "Element Names button should open the reference overlay."
+				else:
+					# Stays visible after F1 toggles debug names off again.
+					DebugLabels.set_enabled(false)
+					await get_tree().process_frame
+					if not button.visible:
+						error = "Element Names link should stay visible after the first F1 unlock."
+	DebugLabels.set_enabled(false)
+	scene.queue_free()
 	return error
 
 
@@ -1420,6 +1473,63 @@ func _test_timed_door_states() -> Variant:
 			error = "A closed gate should look wider and solid while the open gate turns edge-on."
 	door.queue_free()
 	return error
+
+
+func _test_conveyors_do_not_push_into_canyons() -> Variant:
+	# Rail Yard + finale share belt/door yards; belts must stop at a gate on solid ground.
+	for path in ["res://scenes/levels/level_08.tscn", "res://scenes/levels/level_10.tscn"]:
+		var packed: PackedScene = load(path)
+		if packed == null:
+			return "Missing level: %s" % path
+		var level: Node = packed.instantiate()
+		add_child(level)
+		if level is LevelController:
+			(level as LevelController).setup_level()
+		var errors := LevelLayoutRules._validate_conveyors_not_pushing_into_canyons(level)
+		var door_errors := LevelLayoutRules._validate_timed_doors_clear_of_canyons(level)
+		level.queue_free()
+		if not errors.is_empty():
+			return "%s -> %s" % [path, ", ".join(errors)]
+		if not door_errors.is_empty():
+			return "%s -> %s" % [path, ", ".join(door_errors)]
+	# Synthetic softlock: belt pushing into a ground canyon with no door must fail.
+	var probe := Node2D.new()
+	add_child(probe)
+	var ground_a := StaticBody2D.new()
+	ground_a.name = "GroundA"
+	ground_a.position = Vector2(200, 352)
+	var shape_a := CollisionShape2D.new()
+	shape_a.name = "CollisionShape2D"
+	var rect_a := RectangleShape2D.new()
+	rect_a.size = Vector2(400, 64)
+	shape_a.shape = rect_a
+	ground_a.add_child(shape_a)
+	probe.add_child(ground_a)
+	var ground_b := StaticBody2D.new()
+	ground_b.name = "GroundB"
+	ground_b.position = Vector2(800, 352)
+	var shape_b := CollisionShape2D.new()
+	shape_b.name = "CollisionShape2D"
+	var rect_b := RectangleShape2D.new()
+	rect_b.size = Vector2(400, 64)
+	shape_b.shape = rect_b
+	ground_b.add_child(shape_b)
+	probe.add_child(ground_b)
+	var belt_packed: PackedScene = load("res://scenes/world/conveyor_belt.tscn")
+	if belt_packed == null:
+		probe.queue_free()
+		return "Missing conveyor belt scene."
+	var belt := belt_packed.instantiate() as ConveyorBelt
+	belt.name = "SoftlockBelt"
+	belt.position = Vector2(350, 320)
+	belt.push_right = true
+	probe.add_child(belt)
+	await get_tree().process_frame
+	var bad := LevelLayoutRules._validate_conveyors_not_pushing_into_canyons(probe)
+	probe.queue_free()
+	if bad.is_empty():
+		return "Layout rules must reject a conveyor that pushes into an open canyon."
+	return null
 
 
 func _test_obstacle_labels_hidden() -> Variant:

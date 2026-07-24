@@ -2,7 +2,7 @@
 
 Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, no lives/game-over, nonviolent lasso. **German is the default language**; English is fully supported. Optional spoken instructions use local OS TTS (Narrator).
 
-**Content version:** `1.3.47` (see `content_version.txt`). Launchers reimport when this stamp changes.
+**Content version:** `1.3.49` (see `content_version.txt`). Launchers reimport when this stamp changes.
 
 This README is the **binding source of truth** for gameplay, level design, art, i18n, and audio. Agents and contributors must follow it (see [Agent / contributor rules](#agent--contributor-rules)).
 
@@ -81,12 +81,13 @@ Agents **must** honor these when editing levels or trail systems:
 - Bandits: head stomp / lasso tie; side contact hurts; **turn at plank edges** (do not walk off).
 - **No cactus inside canyon mouths** or on hand-painted rim bands (keep clear of the rim body past the gap).
 - **No timed doors** (`TimedDoor`) over ground canyon gaps or on rim bands (tall gates must not sit above canyon mouths).
+- **Conveyors** must not push the cowboy into a canyon. Pair each belt with a timed door on **solid ground** in the push direction (Door0/Door4 pattern), or keep clear solid runout — never a belt that dumps into an open gap after a rim door was removed.
 
 ### Canyon art
 
 - Hand-painted **rims sit outside** desert floor banks — never cover the brown desert surface span with rim sprites.
-- Ridge tops use the same warm sand crust as the trail and **align with the desert top** (slightly under the trail tiles in Y). Rims draw **in front of** desert floor tiles so lips sit on the canyon edge.
-- Between the ridges: **open sky only**, matching the trail **hand-drawn sky** (`sky_handdrawn.png` / SkyArt) — no depth shelves, floor wash, inner-wall fill, or mountain scenery inside the mouth; **never** a featureless black / flat near-black void or black outline framing the lips.
+- Ridge tops use the same warm sand crust as the trail and **align with the desert top** (slightly under the trail tiles in Y). Rims draw **in front of** desert floor tiles so lips sit on the canyon edge. Desert surface/dirt tiles **inset at canyon lips** so sand never overhangs past the ridge into the mouth.
+- Between the ridges: **open sky only** — punch horizon hills and FloorAbyss out of the gap so the real trail sky / Background shows through. Do **not** paint a stretched sky-fill column, depth shelves, floor wash, inner-wall fill, or mountain scenery inside the mouth; **never** a featureless black / flat near-black void or black outline framing the lips.
 - Horizon hills must **not** silhouette over canyon openings (sky continues through the gap).
 - Widening a gap must not stretch handmade rim textures.
 
@@ -143,7 +144,7 @@ Safe stars, forward-only solvability, reachable platforms/stars, visible themed 
 2. Call gaps **canyons** in player-facing strings.
 3. Canyon rims outside desert banks; illustrated interior with sky OK; never cover floor with rims; never featureless black.
 4. Every canyon crossable with normal (or L1 mounted) jump hops / movers; no impossible gaps.
-5. Movers: one-way; reverse before floor/obstructions; paired opposite-phase when handoffs are intended; L4 = clouds + planks, not ferry-step.
+5. Movers: one-way; reverse before floor/obstructions; paired opposite-phase when handoffs are intended; L4 = clouds + planks, not ferry-step. Conveyors must not push into open canyons (pair with a timed door on solid ground).
 6. Wind stays gentle and capped.
 7. Bandits: stomp/lasso tie; side hurt; turn at plank edges.
 8. Keep handmade western UI/art language; SFX via AudioManager; male-preferring Narrator TTS; German default.
