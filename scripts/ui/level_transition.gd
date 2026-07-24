@@ -6,6 +6,8 @@ extends CanvasLayer
 signal arrival_finished
 
 const HORSE_TEXTURE := preload("res://assets/world/trail_horse.png")
+const HORSE_GALLOP_0 := preload("res://assets/world/trail_horse_gallop_0.png")
+const HORSE_GALLOP_1 := preload("res://assets/world/trail_horse_gallop_1.png")
 const RIDE_TEXTURE_0 := preload("res://assets/world/cowboy_horse_ride_0.png")
 const RIDE_TEXTURE_1 := preload("res://assets/world/cowboy_horse_ride_1.png")
 const SALOON_TEXTURE := preload("res://assets/world/goal_saloon.png")
@@ -21,6 +23,7 @@ const HORSE_APPROACH_DISTANCE := 280.0
 const MOUNTED_SPRITE_OFFSET_Y := -64.0
 const PLAYER_IDLE_SCALE := 1.35
 const GOAL_SALOON_WORLD_SCALE := 1.85
+const GALLOP_FRAME_TIME := 0.14
 
 var _veil: ColorRect
 var _skyline: TextureRect
@@ -33,6 +36,7 @@ var _saloon: Sprite2D
 var _ride_phase: float = 0.0
 var _arrival_active: bool = false
 var _animating_rider: bool = false
+var _animating_empty_horse: bool = false
 var _saloon_screen_pos: Vector2 = Vector2.ZERO
 var _has_saloon_anchor: bool = false
 ## True when the finished level's Goal saloon is still visible behind us.
@@ -59,10 +63,18 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	if not visible or not _animating_rider or _rider == null or not _rider.visible:
+	if not visible:
 		return
-	_ride_phase += delta
-	_rider.texture = RIDE_TEXTURE_0 if int(_ride_phase / 0.14) % 2 == 0 else RIDE_TEXTURE_1
+	if _animating_rider and _rider != null and _rider.visible:
+		_ride_phase += delta
+		_rider.texture = RIDE_TEXTURE_0 if int(_ride_phase / GALLOP_FRAME_TIME) % 2 == 0 else RIDE_TEXTURE_1
+		return
+	if _animating_empty_horse and _horse != null and _horse.visible:
+		_ride_phase += delta
+		_horse.texture = HORSE_GALLOP_0 if int(_ride_phase / GALLOP_FRAME_TIME) % 2 == 0 else HORSE_GALLOP_1
+		# Soft hoof bob so the empty gallop reads as motion, not a slide.
+		var bob := sin(_ride_phase * TAU / (GALLOP_FRAME_TIME * 2.0)) * 3.0 * _world_to_screen_scale
+		_horse.position.y = _ride_center_y() + bob
 
 
 func play_celebration(
@@ -74,6 +86,8 @@ func play_celebration(
 ) -> void:
 	_arrival_active = false
 	_animating_rider = false
+	_animating_empty_horse = false
+	_ride_phase = 0.0
 	visible = true
 	_ensure_horse_art()
 	_apply_transparent_backdrop()
@@ -97,7 +111,9 @@ func play_celebration(
 	_horse.visible = true
 	_horse.modulate.a = 1.0
 	_horse.flip_h = false
+	_horse.texture = HORSE_GALLOP_0
 	_horse.position = Vector2(_horse_start_x(), ride_y)
+	_animating_empty_horse = true
 	_cowboy.visible = true
 	_cowboy.modulate.a = 1.0
 	_cowboy.position = door_pos
@@ -121,7 +137,11 @@ func set_progress(progress: float) -> void:
 		var arrival_ratio := progress / 0.28
 		_horse.visible = true
 		_horse.modulate.a = 1.0
-		_horse.position = Vector2(lerpf(_horse_start_x(), mount_x, arrival_ratio), ride_y)
+		_horse.position.x = lerpf(_horse_start_x(), mount_x, arrival_ratio)
+		# Y bob is applied in _process while the empty horse gallops.
+		if not _animating_empty_horse:
+			_horse.position.y = ride_y
+		_animating_empty_horse = true
 		_cowboy.visible = true
 		_cowboy.modulate.a = 1.0
 		_cowboy.position = door_pos
@@ -129,9 +149,7 @@ func set_progress(progress: float) -> void:
 		_animating_rider = false
 	elif progress < 0.48:
 		var mount_ratio := (progress - 0.28) / 0.20
-		_horse.visible = true
-		_horse.position = Vector2(mount_x, ride_y)
-		_horse.modulate.a = 1.0
+		_set_empty_horse_idle(Vector2(mount_x, ride_y))
 		var jump_y := door_pos.y - sin(mount_ratio * PI) * 78.0 * _world_to_screen_scale
 		_cowboy.visible = true
 		_cowboy.position = Vector2(lerpf(door_pos.x, mount_x + 6.0, mount_ratio), jump_y)
@@ -140,14 +158,27 @@ func set_progress(progress: float) -> void:
 		_rider.position = Vector2(mount_x, ride_y)
 		_rider.modulate.a = clampf((mount_ratio - 0.55) / 0.45, 0.0, 1.0)
 		_animating_rider = _rider.visible
+		if _rider.visible:
+			_horse.visible = false
 	else:
 		var ride_ratio := (progress - 0.48) / 0.52
 		_horse.visible = false
+		_animating_empty_horse = false
 		_cowboy.visible = false
 		_rider.visible = true
 		_rider.modulate.a = 1.0
 		_rider.position = Vector2(lerpf(mount_x, view_size.x + 240.0, ride_ratio), ride_y)
 		_animating_rider = true
+
+
+func _set_empty_horse_idle(pos: Vector2) -> void:
+	_animating_empty_horse = false
+	if _horse == null:
+		return
+	_horse.visible = true
+	_horse.texture = HORSE_TEXTURE
+	_horse.position = pos
+	_horse.modulate.a = 1.0
 
 
 func play_arrival(
@@ -159,6 +190,9 @@ func play_arrival(
 	visible = true
 	_ensure_horse_art()
 	_apply_transparent_backdrop()
+	_animating_empty_horse = false
+	_animating_rider = false
+	_ride_phase = 0.0
 	if is_finite(world_to_screen_scale) and world_to_screen_scale > 0.0:
 		_world_to_screen_scale = world_to_screen_scale
 	else:
@@ -188,6 +222,16 @@ func leaves_horse_at_spawn() -> bool:
 		and _horse.visible
 		and _has_spawn_anchor
 		and absf(_horse.position.x - _spawn_screen_pos.x) <= 2.0
+	)
+
+
+func is_empty_horse_galloping() -> bool:
+	## Riderless approach uses dedicated gallop frames (not the standing trail horse).
+	return (
+		_animating_empty_horse
+		and _horse != null
+		and _horse.visible
+		and (_horse.texture == HORSE_GALLOP_0 or _horse.texture == HORSE_GALLOP_1)
 	)
 
 func _resolve_presentation(
@@ -355,8 +399,8 @@ func _run_arrival() -> void:
 	await dismount.finished
 	_rider.visible = false
 	_animating_rider = false
-	# Horse stays at the level start; cowboy fades into the live player.
-	_horse.position = drop
+	# Horse stays idle at the level start; cowboy fades into the live player.
+	_set_empty_horse_idle(drop)
 	if _subtitle != null:
 		_subtitle.text = tr("Ready!")
 	var settle := create_tween()

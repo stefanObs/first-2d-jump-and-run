@@ -95,6 +95,10 @@ func _ready() -> void:
 		"Arrival leaves the horse at the level start",
 		_test_arrival_leaves_horse_at_spawn
 	)
+	failures += await _run(
+		"Empty transition horse gallops while riding in",
+		_test_empty_horse_gallop_animation
+	)
 	failures += await _run("Canyon clouds include two-cloud hop chains", _test_two_cloud_canyon_chains)
 	failures += await _run("Wings levels place varied aerial carrions", _test_wings_carrion_variety)
 
@@ -2613,6 +2617,8 @@ func _test_art_and_music() -> Variant:
 		"res://assets/world/canyon_inner_wall.png",
 		"res://assets/world/canyon_floor_wash.png",
 		"res://assets/world/trail_horse.png",
+		"res://assets/world/trail_horse_gallop_0.png",
+		"res://assets/world/trail_horse_gallop_1.png",
 		"res://assets/world/cowboy_horse_ride_0.png",
 		"res://assets/world/cowboy_horse_ride_1.png",
 		"res://assets/world/cowboy_horse_jump.png",
@@ -3035,6 +3041,42 @@ func _test_arrival_leaves_horse_at_spawn() -> Variant:
 	# Position must still be the spawn after the overlay closes (no ride-away).
 	if absf(horse.position.x - spawn.x) > 3.0:
 		error = "Horse must stay at the level start through the end of arrival."
+	transition.queue_free()
+	return error
+
+
+func _test_empty_horse_gallop_animation() -> Variant:
+	var packed: PackedScene = load("res://scenes/ui/level_transition.tscn")
+	var transition := packed.instantiate() as LevelTransition
+	add_child(transition)
+	transition.play_celebration("Yeehaw!", 0, Vector2(640, 220), 320.0, 1.0)
+	transition.set_progress(0.12)
+	var saw_gallop := false
+	var frame_ids: Dictionary = {}
+	for _i in range(36):
+		await get_tree().process_frame
+		if transition.is_empty_horse_galloping():
+			saw_gallop = true
+			var horse := transition.get_node_or_null("TrailHorse") as Sprite2D
+			if horse != null and horse.texture != null:
+				frame_ids[horse.texture.get_instance_id()] = true
+	var error: Variant = null
+	if not saw_gallop:
+		error = "Riderless horse should gallop while approaching the saloon."
+	elif frame_ids.size() < 2:
+		error = "Empty-horse approach needs at least two gallop frames."
+	transition.set_progress(0.35)
+	await get_tree().process_frame
+	var idle_horse := transition.get_node_or_null("TrailHorse") as Sprite2D
+	if error == null and transition.is_empty_horse_galloping():
+		error = "Empty horse should stop galloping while the cowboy mounts."
+	elif (
+		error == null
+		and idle_horse != null
+		and idle_horse.visible
+		and idle_horse.texture != LevelTransition.HORSE_TEXTURE
+	):
+		error = "Mounting pause should use the standing trail horse, not gallop frames."
 	transition.queue_free()
 	return error
 
