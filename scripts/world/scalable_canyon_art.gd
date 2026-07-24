@@ -10,13 +10,13 @@ const SKY_TEXTURE: Texture2D = preload("res://assets/world/canyon_sky_wash.png")
 
 const RIM_SIZE := Vector2(220.0, 260.0)
 const DEPTH := 320.0
-## Pixel row of the painted desert top in canyon_rim_left.png (sand crust under scrub).
-## Cliff-lip columns first go opaque around y=16; keep this matched to that lip.
-const RIM_SURFACE_TEX_Y := 16.0
+## Pixel row of the painted desert sand crust on canyon_rim_left.png.
+## Keep locked to the top plateau so ridge lips meet the trail surface.
+const RIM_SURFACE_TEX_Y := 3.0
 ## Keep sky inset under the rim lips so blue never paints desert banks.
 const INTERIOR_INSET := 3.0
 ## Drop the sky wash just under the desert crust / rim lip.
-const INTERIOR_TOP_PAD := 3.0
+const INTERIOR_TOP_PAD := 2.0
 
 
 var gap_left: float
@@ -89,12 +89,13 @@ func rim_surface_world_y(rim: Sprite2D) -> float:
 	return rim.position.y + (RIM_SURFACE_TEX_Y - tex_h * 0.5) * rim.scale.y
 
 
-func rims_match_desert_height(tolerance: float = 3.0) -> bool:
+func rims_match_desert_height(tolerance: float = 4.0) -> bool:
+	## Ridge tops sit 1px under the trail crust by design.
 	if _left_rim == null or _right_rim == null:
 		return false
 	return (
-		absf(rim_surface_world_y(_left_rim) - left_floor_top) <= tolerance
-		and absf(rim_surface_world_y(_right_rim) - right_floor_top) <= tolerance
+		absf(rim_surface_world_y(_left_rim) - (left_floor_top + 1.0)) <= tolerance
+		and absf(rim_surface_world_y(_right_rim) - (right_floor_top + 1.0)) <= tolerance
 	)
 
 
@@ -212,5 +213,8 @@ func _layout_rims() -> void:
 	# Align the painted desert top in the rim texture to each adjacent bank.
 	var half_w := RIM_SIZE.x * 0.5 * fit
 	var surface_from_center := (RIM_SURFACE_TEX_Y - tex_size.y * 0.5) * rim_scale.y
-	_left_rim.position = Vector2(gap_left - half_w - 2.0 * fit, left_floor_top - surface_from_center)
-	_right_rim.position = Vector2(gap_right + half_w + 2.0 * fit, right_floor_top - surface_from_center)
+	# +1px under the trail crust so the ridge top reads continuous with desert.
+	var surface_y := left_floor_top + 1.0
+	_left_rim.position = Vector2(gap_left - half_w - 2.0 * fit, surface_y - surface_from_center)
+	surface_y = right_floor_top + 1.0
+	_right_rim.position = Vector2(gap_right + half_w + 2.0 * fit, surface_y - surface_from_center)
