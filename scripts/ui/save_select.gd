@@ -142,48 +142,49 @@ func _style_screen() -> void:
 func _style_title_lettering() -> void:
 	var title := get_node_or_null("Title") as Label
 	if title != null:
-		title.add_theme_color_override(&"font_color", TITLE_CREAM)
-		title.add_theme_color_override(&"font_outline_color", Color(0.22, 0.08, 0.03, 0.92))
-		title.add_theme_constant_override(&"outline_size", 5)
+		_apply_cream_outline(title, TITLE_CREAM, Color(0.22, 0.08, 0.03, 0.92), 5)
 	var subtitle := get_node_or_null("Subtitle") as Label
 	if subtitle != null:
-		subtitle.add_theme_color_override(&"font_color", Color(0.94, 0.84, 0.52, 1.0))
-		subtitle.add_theme_color_override(&"font_outline_color", Color(0.24, 0.09, 0.04, 0.78))
-		subtitle.add_theme_constant_override(&"outline_size", 3)
+		_apply_cream_outline(subtitle, Color(0.94, 0.84, 0.52, 1.0), Color(0.24, 0.09, 0.04, 0.78), 3)
 	if _prompt != null:
-		_prompt.add_theme_color_override(&"font_color", Color(0.94, 0.84, 0.52, 1.0))
-		_prompt.add_theme_color_override(&"font_outline_color", Color(0.24, 0.09, 0.04, 0.72))
+		_apply_cream_outline(_prompt, Color(0.94, 0.84, 0.52, 1.0), Color(0.24, 0.09, 0.04, 0.72), 0)
 	if _hint != null:
-		_hint.add_theme_color_override(&"font_color", Color(0.90, 0.78, 0.48, 1.0))
-		_hint.add_theme_color_override(&"font_outline_color", Color(0.24, 0.09, 0.04, 0.65))
+		_apply_cream_outline(_hint, Color(0.90, 0.78, 0.48, 1.0), Color(0.24, 0.09, 0.04, 0.65), 0)
+
+
+func _apply_cream_outline(label: Label, fill: Color, outline: Color, outline_size: int) -> void:
+	label.add_theme_color_override(&"font_color", fill)
+	label.add_theme_color_override(&"font_outline_color", outline)
+	if outline_size > 0:
+		label.add_theme_constant_override(&"outline_size", outline_size)
 
 
 func _style_slot_button(button: Button) -> void:
-	button.add_theme_color_override(&"font_color", TITLE_CREAM)
-	button.add_theme_color_override(&"font_hover_color", TITLE_CREAM_HOVER)
-	button.add_theme_color_override(&"font_pressed_color", TITLE_CREAM)
-	button.add_theme_color_override(&"font_focus_color", TITLE_CREAM)
-	button.add_theme_color_override(&"font_outline_color", Color(0.22, 0.08, 0.03, 0.85))
-	button.add_theme_constant_override(&"outline_size", 3)
+	_apply_cream_button_fonts(button)
 	button.add_theme_font_size_override(&"font_size", 20)
 	button.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var normal := _saloon_slot_style(1.0)
 	var hover := _saloon_slot_style(1.08)
-	button.add_theme_stylebox_override(&"normal", normal)
-	button.add_theme_stylebox_override(&"hover", hover)
-	button.add_theme_stylebox_override(&"pressed", hover)
-	button.add_theme_stylebox_override(&"focus", hover)
+	_apply_button_styles(button, normal, hover)
 
 
 func _style_action_button(button: Button) -> void:
+	_apply_cream_button_fonts(button)
+	var normal := _wood_style(WOOD, 10, 10)
+	var hover := _wood_style(WOOD_HOVER, 10, 10)
+	_apply_button_styles(button, normal, hover)
+
+
+func _apply_cream_button_fonts(button: Button) -> void:
 	button.add_theme_color_override(&"font_color", TITLE_CREAM)
 	button.add_theme_color_override(&"font_hover_color", TITLE_CREAM_HOVER)
 	button.add_theme_color_override(&"font_pressed_color", TITLE_CREAM)
 	button.add_theme_color_override(&"font_focus_color", TITLE_CREAM)
 	button.add_theme_color_override(&"font_outline_color", Color(0.22, 0.08, 0.03, 0.85))
 	button.add_theme_constant_override(&"outline_size", 3)
-	var normal := _wood_style(WOOD, 10, 10)
-	var hover := _wood_style(WOOD_HOVER, 10, 10)
+
+
+func _apply_button_styles(button: Button, normal: StyleBox, hover: StyleBox) -> void:
 	button.add_theme_stylebox_override(&"normal", normal)
 	button.add_theme_stylebox_override(&"hover", hover)
 	button.add_theme_stylebox_override(&"pressed", hover)

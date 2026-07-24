@@ -45,10 +45,6 @@ func _configure_visual() -> void:
 		align_canyon_to_gap(global_position.y - 80.0, global_position.x - 80.0, global_position.x + 80.0)
 
 
-func align_pit_to_floor(floor_top_y: float) -> void:
-	align_canyon_to_gap(floor_top_y, global_position.x - 80.0, global_position.x + 80.0)
-
-
 func align_canyon_to_gap(
 	floor_top_y: float,
 	gap_left: float,

@@ -39,18 +39,18 @@ func _build_ui() -> void:
 	for entry in CustomLevelStore.campaign_entries():
 		if int(entry.get("source_level", 0)) == 0:
 			_add_extra_row(rows, entry)
-	var add_after := Button.new()
-	add_after.text = "+ Add a new level after Level 10"
-	add_after.custom_minimum_size.y = 48
-	add_after.add_theme_font_size_override(&"font_size", 19)
-	add_after.pressed.connect(func() -> void: _add_extra(CustomLevelStore.BUILTIN_COUNT + 1))
-	rows.add_child(add_after)
-	var back := Button.new()
-	back.custom_minimum_size = Vector2(0, 56)
-	back.text = "Back to Cowboy Trail"
-	back.add_theme_font_size_override(&"font_size", 20)
-	back.pressed.connect(GameManager.return_to_save_select)
-	box.add_child(back)
+	rows.add_child(_make_button(
+		"+ Add a new level after Level 10",
+		Vector2(0, 48),
+		19,
+		func() -> void: _add_extra(CustomLevelStore.BUILTIN_COUNT + 1)
+	))
+	box.add_child(_make_button(
+		"Back to Cowboy Trail",
+		Vector2(0, 56),
+		20,
+		GameManager.return_to_save_select
+	))
 	if rows.get_child_count() > 0:
 		(rows.get_child(0) as Control).grab_focus()
 
@@ -69,25 +69,27 @@ func _add_builtin_row(parent: VBoxContainer, level_number: int) -> void:
 		" (edited)" if CustomLevelStore.exists(slot) else "",
 	]
 	row.add_child(label)
-	var edit := Button.new()
-	edit.text = "Edit level"
-	edit.custom_minimum_size = Vector2(190, 48)
-	edit.pressed.connect(func() -> void: GameManager.edit_custom_level(slot))
-	row.add_child(edit)
-	var insert := Button.new()
-	insert.text = "Add before"
-	insert.custom_minimum_size = Vector2(190, 48)
-	insert.pressed.connect(func() -> void: _add_extra(level_number))
-	row.add_child(insert)
+	row.add_child(_make_button(
+		"Edit level",
+		Vector2(190, 48),
+		0,
+		func() -> void: GameManager.edit_custom_level(slot)
+	))
+	row.add_child(_make_button(
+		"Add before",
+		Vector2(190, 48),
+		0,
+		func() -> void: _add_extra(level_number)
+	))
 	if CustomLevelStore.exists(slot):
-		var reset := Button.new()
-		reset.text = "Restore original"
-		reset.custom_minimum_size = Vector2(190, 48)
-		reset.pressed.connect(func() -> void:
-			CustomLevelStore.erase(slot)
-			get_tree().reload_current_scene()
-		)
-		row.add_child(reset)
+		row.add_child(_make_button(
+			"Restore original",
+			Vector2(190, 48),
+			0,
+			func() -> void:
+				CustomLevelStore.erase(slot)
+				get_tree().reload_current_scene()
+		))
 
 
 func _add_extra_row(parent: VBoxContainer, entry: Dictionary) -> void:
@@ -105,19 +107,35 @@ func _add_extra_row(parent: VBoxContainer, entry: Dictionary) -> void:
 	]
 	label.add_theme_font_size_override(&"font_size", 18)
 	row.add_child(label)
-	var edit := Button.new()
-	edit.text = "Edit"
-	edit.custom_minimum_size = Vector2(190, 44)
-	edit.pressed.connect(func() -> void: GameManager.edit_custom_level(slot))
-	row.add_child(edit)
-	var remove := Button.new()
-	remove.text = "Remove"
-	remove.custom_minimum_size = Vector2(190, 44)
-	remove.pressed.connect(func() -> void:
-		CustomLevelStore.erase(slot)
-		get_tree().reload_current_scene()
-	)
-	row.add_child(remove)
+	row.add_child(_make_button(
+		"Edit",
+		Vector2(190, 44),
+		0,
+		func() -> void: GameManager.edit_custom_level(slot)
+	))
+	row.add_child(_make_button(
+		"Remove",
+		Vector2(190, 44),
+		0,
+		func() -> void:
+			CustomLevelStore.erase(slot)
+			get_tree().reload_current_scene()
+	))
+
+
+func _make_button(
+	text: String,
+	min_size: Vector2,
+	font_size: int,
+	action: Callable
+) -> Button:
+	var button := Button.new()
+	button.text = text
+	button.custom_minimum_size = min_size
+	if font_size > 0:
+		button.add_theme_font_size_override(&"font_size", font_size)
+	button.pressed.connect(action)
+	return button
 
 
 func _add_extra(insert_position: int) -> void:

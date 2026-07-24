@@ -12,23 +12,6 @@ static func sand_color() -> Color:
 	return Color(0.91, 0.67, 0.37, 1.0)
 
 
-static func dirt_edge_color() -> Color:
-	return Color(0.55, 0.28, 0.14, 1.0)
-
-
-static func grass_color() -> Color:
-	# Kept for older callers; trail top is desert sand now.
-	return Color(0.91, 0.67, 0.37, 1.0)
-
-
-static func rock_color() -> Color:
-	return Color(0.78, 0.41, 0.24, 1.0)
-
-
-static func wood_color() -> Color:
-	return Color(0.55, 0.32, 0.14, 1.0)
-
-
 static func apply_to_level(level: Node) -> void:
 	_dress_sky(level)
 	_dress_sun(level)
@@ -59,22 +42,8 @@ static func _dress_sky(level: Node) -> void:
 	var tex: Texture2D = load("res://assets/world/sky_handdrawn.png")
 	if tex == null:
 		return
-	var tex_size := tex.get_size()
-	var tile_w := tex_size.x * 1.35
-	var tile_h := 700.0
-	var x := -500.0
-	var index := 0
-	while x < width + 600.0:
-		var sprite := Sprite2D.new()
-		sprite.name = "SkyTile%d" % index
-		sprite.texture = tex
-		sprite.centered = false
-		# Lower the sky wash so more blue sits behind the trail.
-		sprite.position = Vector2(x, -520.0)
-		sprite.scale = Vector2(tile_w / tex_size.x, tile_h / tex_size.y)
-		root.add_child(sprite)
-		x += tile_w - 8.0
-		index += 1
+	# Lower the sky wash so more blue sits behind the trail.
+	_tile_backdrop(root, tex, "SkyTile", width, -520.0, 700.0, 8.0, Color.WHITE)
 
 
 static func _dress_sun(level: Node) -> void:
@@ -119,21 +88,42 @@ static func _make_endless_hills(level: Node) -> void:
 	var tex: Texture2D = load("res://assets/world/horizon_hills_strip.png")
 	if tex == null:
 		return
+	_tile_backdrop(
+		root,
+		tex,
+		"HillTile",
+		width,
+		floor_top - 520.0 + 10.0,
+		520.0,
+		220.0,
+		Color(1, 1, 1, 0.98)
+	)
+
+
+static func _tile_backdrop(
+	parent: Node,
+	tex: Texture2D,
+	name_prefix: String,
+	level_width: float,
+	y: float,
+	tile_h: float,
+	overlap: float,
+	modulate: Color
+) -> void:
 	var tex_size := tex.get_size()
 	var tile_w := tex_size.x * 1.35
-	var tile_h := 520.0
 	var x := -500.0
 	var index := 0
-	while x < width + 600.0:
+	while x < level_width + 600.0:
 		var sprite := Sprite2D.new()
-		sprite.name = "HillTile%d" % index
+		sprite.name = "%s%d" % [name_prefix, index]
 		sprite.texture = tex
 		sprite.centered = false
-		sprite.position = Vector2(x, floor_top - tile_h + 10.0)
+		sprite.position = Vector2(x, y)
 		sprite.scale = Vector2(tile_w / tex_size.x, tile_h / tex_size.y)
-		sprite.modulate = Color(1, 1, 1, 0.98)
-		root.add_child(sprite)
-		x += tile_w - 220.0
+		sprite.modulate = modulate
+		parent.add_child(sprite)
+		x += tile_w - overlap
 		index += 1
 
 
@@ -153,7 +143,7 @@ static func _dress_platforms(level: Node) -> void:
 			or parent_name.begins_with("PlankStep")
 			or parent_name.begins_with("PlankIsle")
 		):
-			_replace_block_art(node, "res://assets/world/wood_plank.png", false)
+			_replace_block_art(node, "res://assets/world/wood_plank.png")
 
 
 static func _make_contiguous_floors(level: Node) -> void:
@@ -493,7 +483,7 @@ static func _snap_adjacent_steps(merged: Array[Dictionary]) -> void:
 			right["left"] = mid
 
 
-static func _replace_block_art(body: Node, texture_path: String, is_ground: bool) -> void:
+static func _replace_block_art(body: Node, texture_path: String) -> void:
 	var visual := body.get_node_or_null("Visual") as ColorRect
 	if visual == null:
 		return
@@ -516,10 +506,10 @@ static func _replace_block_art(body: Node, texture_path: String, is_ground: bool
 	)
 	var tex_size := sprite.texture.get_size()
 	if tex_size.x > 0.0 and tex_size.y > 0.0:
-		var target_h := height if is_ground else maxf(height, 28.0)
+		var target_h := maxf(height, 28.0)
 		# Wood planks have transparent pad above the boards; crop so the walk
 		# surface matches the collision top (cowboy no longer floats).
-		if not is_ground and texture_path.ends_with("wood_plank.png") and tex_size.y > 16.0:
+		if texture_path.ends_with("wood_plank.png") and tex_size.y > 16.0:
 			var atlas := AtlasTexture.new()
 			atlas.atlas = sprite.texture
 			atlas.region = Rect2(0, 12, tex_size.x, tex_size.y - 12)

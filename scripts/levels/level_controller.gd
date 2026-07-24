@@ -445,23 +445,19 @@ func _on_mode_item_collected(mode: ModeController.Mode) -> void:
 
 
 func _on_wind_first_touch() -> void:
-	if hud != null:
-		hud.show_toast("Wind pushes you!", 2.0)
+	_show_toast("Wind pushes you!", 2.0)
 
 
 func _on_spring_bounced() -> void:
-	if hud != null:
-		hud.show_toast("Boing! Springs launch you up!", 2.4)
+	_show_toast("Boing! Springs launch you up!", 2.4)
 
 
 func _on_conveyor_first_ride() -> void:
-	if hud != null:
-		hud.show_toast("The belt pushes you along!", 2.4)
+	_show_toast("The belt pushes you along!", 2.4)
 
 
 func _on_door_first_warn() -> void:
-	if hud != null:
-		hud.show_toast("Watch the gate! Wait or hurry!", 2.6)
+	_show_toast("Watch the gate! Wait or hurry!", 2.6)
 
 
 func _on_player_mode_changed(mode_name: String, remaining: float) -> void:
@@ -720,8 +716,6 @@ func _animate_sun() -> void:
 
 
 func _maybe_progress_toast(ratio: float) -> void:
-	if hud == null:
-		return
 	var checks := [
 		[0.25, "Nice ride! Keep going!"],
 		[0.5, "Halfway to the saloon!"],
@@ -733,4 +727,9 @@ func _maybe_progress_toast(ratio: float) -> void:
 		var key := str(mark)
 		if ratio >= mark and not bool(_progress_milestones.get(key, false)):
 			_progress_milestones[key] = true
-			hud.show_toast(str(entry[1]), 2.4)
+			_show_toast(str(entry[1]), 2.4)
+
+
+func _show_toast(text: String, duration: float) -> void:
+	if hud != null:
+		hud.show_toast(text, duration)

@@ -7,31 +7,9 @@ const SLOT_COUNT := 3
 const CUSTOM_LEVEL_STORE := preload("res://scripts/levels/custom_level_store.gd")
 const SavePaths := preload("res://scripts/autoload/save_paths.gd")
 
-const LEVEL_SCENES: PackedStringArray = [
-	"res://scenes/levels/level_01.tscn",
-	"res://scenes/levels/level_02.tscn",
-	"res://scenes/levels/level_03.tscn",
-	"res://scenes/levels/level_04.tscn",
-	"res://scenes/levels/level_05.tscn",
-	"res://scenes/levels/level_06.tscn",
-	"res://scenes/levels/level_07.tscn",
-	"res://scenes/levels/level_08.tscn",
-	"res://scenes/levels/level_09.tscn",
-	"res://scenes/levels/level_10.tscn",
-]
-
-const LEVEL_NAMES: PackedStringArray = [
-	"Dusty Trail",
-	"Badge Meadow",
-	"Bronco Springs",
-	"Canyon Ferry",
-	"Outlaw Cave",
-	"Windy Mesa",
-	"Sky Ranch",
-	"Rail Yard",
-	"Moonlight Gulch",
-	"Rainbow Saloon",
-]
+## Single source of truth lives on CustomLevelStore; keep these aliases for callers/tests.
+const LEVEL_SCENES: PackedStringArray = CUSTOM_LEVEL_STORE.BUILTIN_SCENES
+const LEVEL_NAMES: PackedStringArray = CUSTOM_LEVEL_STORE.BUILTIN_NAMES
 
 signal saves_changed
 signal settings_changed
@@ -200,7 +178,7 @@ const BOSS_SCENES := {
 const BOSS_ORDER: Array[int] = [3, 7, 10]
 
 
-func try_load_boss_after(level_number: int) -> bool:
+func try_load_boss_after(_level_number: int) -> bool:
 	var source_level := active_campaign_source_level
 	if source_level <= 0 or not BOSS_SCENES.has(source_level):
 		return false
@@ -226,21 +204,15 @@ func load_next_boss(from_source_level: int) -> void:
 func load_next_boss_from_level(level_number: int) -> void:
 	## From a campaign trail: open the next boss at or after this level.
 	## Levels 1–3 → Bull, 4–7 → Coach, 8–10 → Kingpin; from a boss, use load_next_boss.
-	var target := BOSS_ORDER[0]
+	var target := BOSS_ORDER[BOSS_ORDER.size() - 1]
 	for boss_level in BOSS_ORDER:
 		if level_number <= boss_level:
 			target = boss_level
 			break
-		target = boss_level
-	# If already past the last boss level number while still on L10, still open Kingpin.
-	if level_number > BOSS_ORDER[BOSS_ORDER.size() - 1]:
-		target = BOSS_ORDER[BOSS_ORDER.size() - 1]
-	# Double-tap again from the matching boss level should advance to the next arena.
-	# First entry from trails always lands on the boss for that stretch.
 	load_boss_for_level(target)
 
 
-func finish_boss(source_level: int) -> void:
+func finish_boss(_source_level: int) -> void:
 	if active_campaign_position >= campaign_level_count():
 		get_tree().change_scene_to_file("res://scenes/ui/victory_horizon.tscn")
 		return

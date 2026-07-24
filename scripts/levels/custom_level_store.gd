@@ -4,7 +4,6 @@ extends RefCounted
 ## Versioned local storage for campaign overrides and inserted family trails.
 
 const VERSION := 4
-const LEGACY_SLOT_COUNT := 3
 const BUILTIN_SLOT_START := 3
 const BUILTIN_COUNT := 10
 const EXTRA_SLOT_START := 13
@@ -227,26 +226,12 @@ static func import_builtin(level_number: int) -> Dictionary:
 	var objects: Array[Dictionary] = []
 	var max_x := 24
 	var max_ground_y := 0
-	for node in _all_descendants(level):
-		if not (node is Node2D):
-			continue
+	for node in level.find_children("*", "Node2D", true, false):
 		var world_pos := (node as Node2D).global_position
 		var cell_x := maxi(0, int(round(world_pos.x / grid)))
 		var cell_y := clampi(int(round(world_pos.y / grid)), 0, 15)
 		max_x = maxi(max_x, cell_x + 3)
-		var type_name := ""
-		if node is Star:
-			type_name = "star"
-		elif node is Checkpoint:
-			type_name = "checkpoint"
-		elif node is SpringPad:
-			type_name = "spring"
-		elif node is Goal:
-			type_name = "goal"
-		elif node is Opponent:
-			type_name = "bandit"
-		elif node is Hazard:
-			type_name = "canyon" if maxf(absf((node as Node2D).scale.x), absf((node as Node2D).scale.y)) > 1.35 else "cactus"
+		var type_name := _import_type_for(node)
 		if not type_name.is_empty():
 			_append_unique(objects, {"type": type_name, "x": cell_x, "y": cell_y})
 	for child in level.get_children():
@@ -288,8 +273,7 @@ static func import_builtin(level_number: int) -> Dictionary:
 			var type_name := str(object.get("type", ""))
 			if type_name not in ["cactus", "checkpoint", "spring", "bandit", "goal"]:
 				continue
-			var prop_y := int(object.get("y", 0))
-			if prop_y >= trail - 1:
+			if int(object.get("y", 0)) >= trail - 1:
 				object["y"] = trail
 		result["objects"] = objects
 	if number == 1:
@@ -306,17 +290,21 @@ static func import_builtin(level_number: int) -> Dictionary:
 	return result
 
 
-static func _all_descendants(root: Node) -> Array[Node]:
-	var result: Array[Node] = []
-	var pending: Array[Node] = []
-	for child in root.get_children():
-		pending.append(child)
-	while not pending.is_empty():
-		var node: Node = pending.pop_back()
-		result.append(node)
-		for child in node.get_children():
-			pending.append(child)
-	return result
+static func _import_type_for(node: Node) -> String:
+	if node is Star:
+		return "star"
+	if node is Checkpoint:
+		return "checkpoint"
+	if node is SpringPad:
+		return "spring"
+	if node is Goal:
+		return "goal"
+	if node is Opponent:
+		return "bandit"
+	if node is Hazard:
+		var body := node as Node2D
+		return "canyon" if maxf(absf(body.scale.x), absf(body.scale.y)) > 1.35 else "cactus"
+	return ""
 
 
 static func _append_unique(objects: Array[Dictionary], object: Dictionary) -> void:
@@ -354,7 +342,6 @@ static func sanitize(source: Dictionary, slot_index: int) -> Dictionary:
 				objects.append(object)
 				if objects.size() >= 900:
 					break
-	if source_objects is Array:
 		result["objects"] = objects
 	var spawn: Array = result["spawn"]
 	if spawn is Array and spawn.size() >= 2:

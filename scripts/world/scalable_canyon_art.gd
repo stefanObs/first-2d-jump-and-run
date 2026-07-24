@@ -188,22 +188,21 @@ func _ensure_parts() -> void:
 	add_child(_right_walls)
 
 	# Rims last at the same relative z so tree order covers any seam, still under desert (z 1).
-	_left_rim = Sprite2D.new()
-	_left_rim.name = "LeftRim"
-	_left_rim.texture = RIM_TEXTURE
-	_left_rim.centered = true
-	_left_rim.z_as_relative = true
-	_left_rim.z_index = 0
+	_left_rim = _make_rim("LeftRim", false)
+	_right_rim = _make_rim("RightRim", true)
 	add_child(_left_rim)
-
-	_right_rim = Sprite2D.new()
-	_right_rim.name = "RightRim"
-	_right_rim.texture = RIM_TEXTURE
-	_right_rim.centered = true
-	_right_rim.flip_h = true
-	_right_rim.z_as_relative = true
-	_right_rim.z_index = 0
 	add_child(_right_rim)
+
+
+func _make_rim(rim_name: String, flip: bool) -> Sprite2D:
+	var rim := Sprite2D.new()
+	rim.name = rim_name
+	rim.texture = RIM_TEXTURE
+	rim.centered = true
+	rim.flip_h = flip
+	rim.z_as_relative = true
+	rim.z_index = 0
+	return rim
 
 
 func _sky_reads_blue() -> bool:
@@ -251,15 +250,7 @@ func _layout_center() -> void:
 	while x < right - 0.5:
 		var remaining := right - x
 		var use_w := minf(tile_w, remaining)
-		var tile := Sprite2D.new()
-		tile.name = "Depth%d" % tile_i
-		tile.texture = DEPTH_TEXTURE
-		tile.centered = false
-		tile.position = Vector2(x, tile_y)
-		tile.scale = Vector2(use_w / depth_size.x, tile_scale_y)
-		# Soften so sky wash still reads through the open air.
-		tile.modulate = Color(1, 1, 1, 0.88)
-		_depth_root.add_child(tile)
+		_depth_root.add_child(_make_depth_tile("Depth%d" % tile_i, x, tile_y, use_w / depth_size.x, tile_scale_y))
 		tile_i += 1
 		if remaining <= tile_w:
 			break
@@ -267,14 +258,9 @@ func _layout_center() -> void:
 		if tile_i > 80:
 			break
 	if tile_i == 0 and width > 1.0:
-		var fallback := Sprite2D.new()
-		fallback.name = "Depth0"
-		fallback.texture = DEPTH_TEXTURE
-		fallback.centered = false
-		fallback.position = Vector2(left, tile_y)
-		fallback.scale = Vector2(width / depth_size.x, tile_scale_y)
-		fallback.modulate = Color(1, 1, 1, 0.88)
-		_depth_root.add_child(fallback)
+		_depth_root.add_child(
+			_make_depth_tile("Depth0", left, tile_y, width / depth_size.x, tile_scale_y)
+		)
 
 	# Soft painted gorge floor wash near the bottom (also inset).
 	var floor_size: Vector2 = FLOOR_TEXTURE.get_size()
@@ -283,6 +269,17 @@ func _layout_center() -> void:
 	var floor_inset := width * 0.08
 	_floor.position = Vector2(left + floor_inset, floor_y)
 	_floor.scale = Vector2((width * 0.84) / floor_size.x, floor_h / floor_size.y)
+
+
+func _make_depth_tile(tile_name: String, x: float, y: float, sx: float, sy: float) -> Sprite2D:
+	var tile := Sprite2D.new()
+	tile.name = tile_name
+	tile.texture = DEPTH_TEXTURE
+	tile.centered = false
+	tile.position = Vector2(x, y)
+	tile.scale = Vector2(sx, sy)
+	tile.modulate = Color(1, 1, 1, 0.88)
+	return tile
 
 
 func _layout_inner_walls() -> void:
