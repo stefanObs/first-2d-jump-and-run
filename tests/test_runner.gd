@@ -360,18 +360,35 @@ func _test_boss_arenas() -> Variant:
 		coach.queue_free()
 		return "Midnight Coach ground needs deep, opaque earth below every camera view."
 	coach.call("_apply_coach_frame", 3)
-	coach.call("_show_surrender_flag")
+	var door_frame_sprite := coach.get_node_or_null("Coach/Sprite2D") as Sprite2D
+	var door_frame_pos := Vector2.ZERO
+	var door_frame_scale := Vector2.ONE
+	if door_frame_sprite != null:
+		door_frame_pos = door_frame_sprite.position
+		door_frame_scale = door_frame_sprite.scale
+	coach.call("_apply_surrender_pose")
 	var coach_sprite := coach.get_node_or_null("Coach/Sprite2D") as Sprite2D
 	var surrender_flag := coach.get_node_or_null("Coach/SurrenderFlag") as Node2D
 	if (
 		coach_sprite == null
 		or coach_sprite.texture == null
-		or not coach_sprite.texture.resource_path.ends_with("boss_midnight_coach_3.png")
-		or surrender_flag == null
-		or surrender_flag.get_node_or_null("Cloth") == null
+		or not coach_sprite.texture.resource_path.ends_with("boss_midnight_coach_surrender.png")
+		or surrender_flag != null
+		or coach_sprite.position != door_frame_pos
+		or coach_sprite.scale != door_frame_scale
 	):
 		coach.queue_free()
-		return "Coach victory art should keep the final handmade rig and add a clear surrender flag."
+		return "Coach victory art should use the hands-up surrender texture at the same scale and offset."
+	var surrender_tex: Texture2D = load("res://assets/world/boss_midnight_coach_surrender.png")
+	var door3_tex: Texture2D = load("res://assets/world/boss_midnight_coach_3.png")
+	if (
+		surrender_tex == null
+		or door3_tex == null
+		or surrender_tex.get_width() != door3_tex.get_width()
+		or surrender_tex.get_height() != door3_tex.get_height()
+	):
+		coach.queue_free()
+		return "Coach surrender texture must match the door-frame canvas size."
 	for frame_path in [
 		"res://assets/world/boss_midnight_coach_0.png",
 		"res://assets/world/boss_midnight_coach_1.png",

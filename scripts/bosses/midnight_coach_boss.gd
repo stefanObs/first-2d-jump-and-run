@@ -9,6 +9,8 @@ const COACH_FRAMES: Array[Texture2D] = [
 	preload("res://assets/world/boss_midnight_coach_3.png"),
 ]
 
+const COACH_SURRENDER: Texture2D = preload("res://assets/world/boss_midnight_coach_surrender.png")
+
 const SCREEN_LAG := 1280.0
 const COACH_SPEED_RATIO := 0.75
 const ACCEL := 160.0
@@ -454,7 +456,7 @@ func on_door_lassoed(index: int) -> void:
 
 func _play_win_animation() -> void:
 	## Keep the established coach, team, and harness together while the driver
-	## raises a bright surrender flag before the arena clears.
+	## puts both hands up in surrender before the arena clears.
 	combat_ready = false
 	_waiting = true
 	_speed = 0.0
@@ -467,11 +469,10 @@ func _play_win_animation() -> void:
 	for door in _doors:
 		if door != null:
 			door.set_lasso_active(false)
-			# The last handmade coach frame already shows all three open doors.
+			# Surrender art already shows all three open doors.
 			door.visible = false
 	report_progress("Driver gives up!")
-	_apply_coach_frame(COACH_FRAMES.size() - 1)
-	_show_surrender_flag()
+	_apply_surrender_pose()
 	if _coach != null:
 		# Settle the complete rig as one silhouette. Moving only the carriage
 		# made its wheels, horses, and reins look detached in the old finale.
@@ -483,44 +484,19 @@ func _play_win_animation() -> void:
 	await get_tree().create_timer(1.6).timeout
 
 
-func _show_surrender_flag() -> void:
-	if _coach == null or _coach.get_node_or_null("SurrenderFlag") != null:
+func _apply_surrender_pose() -> void:
+	## Same canvas size / scale / offset as the door frames so the rig does not
+	## jump; the handmade surrender texture shows hands-up instead of a flag.
+	if _coach_sprite == null:
 		return
-	var flag := Node2D.new()
-	flag.name = "SurrenderFlag"
-	flag.position = Vector2(82.0, -184.0)
-	flag.z_index = 6
-	_coach.add_child(flag)
-
-	var pole := Line2D.new()
-	pole.name = "Pole"
-	pole.points = PackedVector2Array([Vector2(0, 72), Vector2(0, 0)])
-	pole.width = 5.0
-	pole.default_color = Color(0.28, 0.12, 0.04, 1.0)
-	flag.add_child(pole)
-
-	var cloth := Polygon2D.new()
-	cloth.name = "Cloth"
-	cloth.polygon = PackedVector2Array([
-		Vector2(3, 3), Vector2(58, 10), Vector2(48, 27), Vector2(3, 31)
-	])
-	cloth.color = Color(1.0, 0.94, 0.72, 1.0)
-	flag.add_child(cloth)
-
-	var seam := Line2D.new()
-	seam.name = "Seam"
-	seam.points = PackedVector2Array([
-		Vector2(3, 3), Vector2(58, 10), Vector2(48, 27), Vector2(3, 31)
-	])
-	seam.closed = true
-	seam.width = 2.0
-	seam.default_color = Color(0.45, 0.22, 0.08, 1.0)
-	flag.add_child(seam)
-
-	flag.rotation = -0.10
-	var wave := create_tween().set_loops()
-	wave.tween_property(flag, "rotation", 0.08, 0.24).set_trans(Tween.TRANS_SINE)
-	wave.tween_property(flag, "rotation", -0.10, 0.24).set_trans(Tween.TRANS_SINE)
+	var flag := _coach.get_node_or_null("SurrenderFlag") if _coach != null else null
+	if flag != null:
+		flag.queue_free()
+	_coach_sprite.texture = COACH_SURRENDER
+	_coach_sprite.centered = true
+	_coach_sprite.flip_h = true
+	_coach_sprite.scale = Vector2(0.92, 0.92)
+	_coach_sprite.position = Vector2(-20, -78)
 
 
 func _refresh_door_hints() -> void:
