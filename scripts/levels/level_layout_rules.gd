@@ -30,6 +30,7 @@ static func validate_level_node(level: Node) -> PackedStringArray:
 	errors.append_array(_validate_ground_props_clear_of_raised_platforms(level))
 	errors.append_array(_validate_cactus_clear_of_springs(level))
 	errors.append_array(_validate_cactus_clear_of_canyons(level))
+	errors.append_array(_validate_timed_doors_clear_of_canyons(level))
 	errors.append_array(_validate_carrion_flight_paths(level))
 	errors.append_array(_validate_mode_item_spacing(level))
 	errors.append_array(_validate_visuals(level))
@@ -357,6 +358,29 @@ static func _validate_cactus_clear_of_canyons(level: Node) -> PackedStringArray:
 			errors.append(
 				"Cactus %s is directly %s canyon gap %.0f..%.0f without a launch spring."
 				% [cactus.name, side, gap_left, gap_right]
+			)
+			break
+	return errors
+
+
+static func _validate_timed_doors_clear_of_canyons(level: Node) -> PackedStringArray:
+	var errors: PackedStringArray = []
+	var gaps := _ground_canyon_gaps(level)
+	if gaps.is_empty():
+		return errors
+	for node in level.find_children("*", "StaticBody2D", true, false):
+		if not (node is TimedDoor):
+			continue
+		var door := node as Node2D
+		var dx := door.global_position.x
+		for gap in gaps:
+			var gap_left := float(gap["left"])
+			var gap_right := float(gap["right"])
+			if dx < gap_left or dx > gap_right:
+				continue
+			errors.append(
+				"TimedDoor %s sits inside canyon gap %.0f..%.0f; remove it."
+				% [door.name, gap_left, gap_right]
 			)
 			break
 	return errors

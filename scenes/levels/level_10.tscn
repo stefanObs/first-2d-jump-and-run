@@ -1288,10 +1288,6 @@ position = Vector2(5250, 320)
 push_right = false
 
 
-[node name="Door3" parent="." instance=ExtResource("17_door")]
-position = Vector2(5680, 320)
-
-
 [node name="YardStar3" parent="." instance=ExtResource("9_star")]
 position = Vector2(5550, 245)
 
