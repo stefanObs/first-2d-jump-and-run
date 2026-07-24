@@ -9,6 +9,9 @@ const SPRING_JUMP_HEIGHT := 250.0
 const BASE_HORIZONTAL_GAP := 230.0
 const ASSISTED_HORIZONTAL_GAP := 340.0
 const CACTUS_CANYON_CLEAR_PX := 260.0  ## Past hand-painted rim body (RIM_SIZE.x + margin).
+## Timed doors stay clear of the gap and the rim band (tall gates must not sit above mouths).
+const TIMED_DOOR_CANYON_CLEAR_PX := 260.0
+const TIMED_DOOR_HALF_WIDTH := 45.0
 const SPRING_APPROACH_PX := 350.0
 const CARRION_MAX_SCALE := 0.65
 const CARRION_VISUAL_HALF := Vector2(74.0, 46.0)
@@ -373,15 +376,17 @@ static func _validate_timed_doors_clear_of_canyons(level: Node) -> PackedStringA
 		if not (node is TimedDoor):
 			continue
 		var door := node as Node2D
-		var dx := door.global_position.x
+		var door_left := door.global_position.x - TIMED_DOOR_HALF_WIDTH
+		var door_right := door.global_position.x + TIMED_DOOR_HALF_WIDTH
 		for gap in gaps:
-			var gap_left := float(gap["left"])
-			var gap_right := float(gap["right"])
-			if dx < gap_left or dx > gap_right:
+			var gap_left := float(gap["left"]) - TIMED_DOOR_CANYON_CLEAR_PX
+			var gap_right := float(gap["right"]) + TIMED_DOOR_CANYON_CLEAR_PX
+			var overlap := minf(door_right, gap_right) - maxf(door_left, gap_left)
+			if overlap <= 0.0:
 				continue
 			errors.append(
-				"TimedDoor %s sits inside canyon gap %.0f..%.0f; remove it."
-				% [door.name, gap_left, gap_right]
+				"TimedDoor %s sits over/above canyon gap %.0f..%.0f; remove it."
+				% [door.name, float(gap["left"]), float(gap["right"])]
 			)
 			break
 	return errors

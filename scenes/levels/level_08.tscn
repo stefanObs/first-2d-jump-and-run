@@ -782,10 +782,6 @@ position = Vector2(3400, 320)
 push_right = false
 
 
-[node name="Door1" parent="." instance=ExtResource("17_door")]
-position = Vector2(3080, 320)
-
-
 [node name="YardStar1" parent="." instance=ExtResource("9_star")]
 position = Vector2(2950, 245)
 
@@ -793,10 +789,6 @@ position = Vector2(2950, 245)
 [node name="Conveyor2" parent="." instance=ExtResource("16_conv")]
 position = Vector2(3920, 320)
 push_right = true
-
-
-[node name="Door2" parent="." instance=ExtResource("17_door")]
-position = Vector2(4380, 320)
 
 
 [node name="YardStar2" parent="." instance=ExtResource("9_star")]

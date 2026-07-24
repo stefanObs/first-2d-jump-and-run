@@ -241,6 +241,7 @@ static func _make_contiguous_floors(level: Node) -> void:
 		abyss_top = maxf(abyss_top, float(strip["top"]))
 
 	# Deep underworld safety fill only — canyon art must paint over canyon openings.
+	# Keep abyss under dirt banks; never let it frame canyon mouths as a black border.
 	var abyss := ColorRect.new()
 	abyss.name = "FloorAbyss"
 	abyss.position = Vector2(level_left, abyss_top)
@@ -249,6 +250,7 @@ static func _make_contiguous_floors(level: Node) -> void:
 	abyss.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	abyss.z_index = -2
 	floor_root.add_child(abyss)
+	_cover_abyss_under_canyons(floor_root, merged, abyss_top)
 
 	# Stretch first/last walkable strips to the level edges.
 	if not merged.is_empty():
@@ -303,6 +305,42 @@ static func _is_canyon_between(left_strip: Dictionary, right_strip: Dictionary) 
 	return float(right_strip["left"]) - float(left_strip["right"]) > 8.0
 
 
+static func _cover_abyss_under_canyons(
+	floor_root: Node2D,
+	merged: Array,
+	abyss_top: float
+) -> void:
+	## Hide the dark FloorAbyss inside canyon mouths so lips have no black border.
+	var sky_tex: Texture2D = load("res://assets/world/sky_handdrawn.png")
+	for i in range(merged.size() - 1):
+		if not _is_canyon_between(merged[i], merged[i + 1]):
+			continue
+		var left := float(merged[i]["right"])
+		var right := float(merged[i + 1]["left"])
+		var width := right - left
+		if width <= 8.0:
+			continue
+		if sky_tex != null:
+			var sprite := Sprite2D.new()
+			sprite.name = "CanyonAbyssSky%d" % i
+			sprite.texture = sky_tex
+			sprite.centered = false
+			sprite.position = Vector2(left, abyss_top)
+			var tex_size := sky_tex.get_size()
+			sprite.scale = Vector2(width / tex_size.x, 900.0 / tex_size.y)
+			sprite.z_index = -1
+			floor_root.add_child(sprite)
+		else:
+			var cover := ColorRect.new()
+			cover.name = "CanyonAbyssSky%d" % i
+			cover.position = Vector2(left, abyss_top)
+			cover.size = Vector2(width, 900.0)
+			cover.color = desert_sky_color()
+			cover.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			cover.z_index = -1
+			floor_root.add_child(cover)
+
+
 static func _draw_bank_slope(
 	parent: Node,
 	surface: Texture2D,
@@ -318,23 +356,24 @@ static func _draw_bank_slope(
 		return
 	if _is_canyon_between(left_strip, right_strip):
 		return
-	var seam_x := (float(left_strip["right"]) + float(right_strip["left"])) * 0.5
 	# Gentle kid-friendly grade (~2.5–3:1 run:rise), capped so it stays local.
 	var run := clampf(step * 2.75, 56.0, 150.0)
 	var left_is_high := left_top < right_top
+	# Bite a little into each flat bank so slope crust meets desert top with no stepped lip.
+	const BANK_OVERLAP := 14.0
 	var x_high: float
 	var y_high: float
 	var x_low: float
 	var y_low: float
 	if left_is_high:
-		x_high = seam_x - 6.0
+		x_high = float(left_strip["right"]) - BANK_OVERLAP
 		y_high = left_top
-		x_low = seam_x + run
+		x_low = x_high + run
 		y_low = right_top
 	else:
-		x_high = seam_x + 6.0
+		x_high = float(right_strip["left"]) + BANK_OVERLAP
 		y_high = right_top
-		x_low = seam_x - run
+		x_low = x_high - run
 		y_low = left_top
 
 	_paint_slope_fill(parent, dirt, x_high, y_high, x_low, y_low, index)
@@ -358,9 +397,12 @@ static func _paint_slope_crust(
 	var length := maxf(sqrt(dx * dx + dy * dy), 1.0)
 	var angle := atan2(dy, dx)
 	var tex_size := surface.get_size()
-	var crust_h := 42.0
+	# Match flat FloorSurface thickness so ends seam with the desert crust.
+	var crust_h := 48.0
 	var scale_y := crust_h / tex_size.y
 	var tile_w := tex_size.x * scale_y * 0.92
+	# Perpendicular into the bank — half crust so the upper face sits on the desert top line.
+	var into_ground := Vector2(-sin(angle), cos(angle))
 	var along := 0.0
 	var tile_i := 0
 	while along < length - 1.0:
@@ -371,7 +413,7 @@ static func _paint_slope_crust(
 		sprite.name = "FloorSlope%d_%d" % [index, tile_i]
 		sprite.texture = surface
 		sprite.centered = true
-		sprite.position = mid + Vector2(0, crust_h * 0.28).rotated(angle)
+		sprite.position = mid + into_ground * (crust_h * 0.5)
 		sprite.rotation = angle
 		sprite.scale = Vector2(use / tex_size.x, scale_y)
 		sprite.z_index = 3

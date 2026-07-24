@@ -6,17 +6,20 @@ extends Node2D
 ## mountain scenery inside. Rims stay warm and trail-matched.
 
 const RIM_TEXTURE: Texture2D = preload("res://assets/world/canyon_rim_left.png")
-const SKY_TEXTURE: Texture2D = preload("res://assets/world/canyon_sky_wash.png")
+## Same hand-drawn sky as SkyArt / CanyonSkyGap so the mouth matches the trail sky.
+const SKY_TEXTURE: Texture2D = preload("res://assets/world/sky_handdrawn.png")
 
 const RIM_SIZE := Vector2(220.0, 260.0)
 const DEPTH := 320.0
 ## Pixel row of the painted desert sand crust on canyon_rim_left.png.
 ## Keep locked to the top plateau so ridge lips meet the trail surface.
 const RIM_SURFACE_TEX_Y := 3.0
-## Keep sky inset under the rim lips so blue never paints desert banks.
-const INTERIOR_INSET := 3.0
+## Sky flush to the bank lips — any inset lets FloorAbyss show as a black border.
+const INTERIOR_INSET := 0.0
 ## Drop the sky wash just under the desert crust / rim lip.
 const INTERIOR_TOP_PAD := 2.0
+## Draw above TrailFloor surface tiles (z 1) so ridge lips sit on the desert edge.
+const CANYON_DRAW_Z := 2
 
 
 var gap_left: float
@@ -32,8 +35,7 @@ var _right_rim: Sprite2D
 
 func _ready() -> void:
 	top_level = true
-	# Absolute draw order: above FloorAbyss (-2), below trail dirt/surface (0/1).
-	z_index = -1
+	z_index = CANYON_DRAW_Z
 	z_as_relative = false
 	_ensure_parts()
 
@@ -46,7 +48,7 @@ func configure(
 	new_right_floor_top: float = NAN
 ) -> void:
 	top_level = true
-	z_index = -1
+	z_index = CANYON_DRAW_Z
 	z_as_relative = false
 	left_floor_top = new_floor_top if is_nan(new_left_floor_top) else new_left_floor_top
 	right_floor_top = new_floor_top if is_nan(new_right_floor_top) else new_right_floor_top
@@ -130,10 +132,11 @@ func _ensure_parts() -> void:
 	_sky.name = "SkyWash"
 	_sky.texture = SKY_TEXTURE
 	_sky.centered = false
+	_sky.z_as_relative = true
 	_sky.z_index = 0
 	add_child(_sky)
 
-	# Rims last at the same relative z so tree order covers any seam, still under desert (z 1).
+	# Rims after sky so tree order covers the seam; relative z above sky wash.
 	_left_rim = _make_rim("LeftRim", false)
 	_right_rim = _make_rim("RightRim", true)
 	add_child(_left_rim)
@@ -147,25 +150,17 @@ func _make_rim(rim_name: String, flip: bool) -> Sprite2D:
 	rim.centered = true
 	rim.flip_h = flip
 	rim.z_as_relative = true
-	rim.z_index = 0
+	rim.z_index = 1
 	return rim
 
 
 func _sky_reads_blue() -> bool:
-	## Canyon fill must match the desert Background sky blue.
+	## Canyon fill must match the hand-drawn trail sky (not a mismatched flat blue).
 	var img: Image = SKY_TEXTURE.get_image()
 	if img == null:
 		return true
 	var sample: Color = img.get_pixel(img.get_width() / 2, maxi(1, img.get_height() / 5))
-	var sky := WildWestTheme.desert_sky_color()
-	return (
-		sample.b > sample.r
-		and sample.b > 0.45
-		and sample.g > 0.40
-		and absf(sample.r - sky.r) <= 0.12
-		and absf(sample.g - sky.g) <= 0.12
-		and absf(sample.b - sky.b) <= 0.12
-	)
+	return sample.b > sample.r and sample.b > 0.40 and sample.g > 0.35
 
 
 func _interior_bounds() -> Dictionary:
@@ -185,11 +180,12 @@ func _layout_sky() -> void:
 	var left: float = bounds["left"]
 	var right: float = bounds["right"]
 	var width := right - left
-	# Soft wash locked to desert Background sky blue (see canyon_sky_wash.png).
+	# Soft wash locked to the same hand-drawn sky as SkyArt / hill gap covers.
 	var sky_size: Vector2 = SKY_TEXTURE.get_size()
 	_sky.position = Vector2(left, top)
 	_sky.scale = Vector2(width / sky_size.x, DEPTH / sky_size.y)
 	_sky.modulate = Color.WHITE
+	_sky.z_index = 0
 
 
 func _layout_rims() -> void:
@@ -205,11 +201,12 @@ func _layout_rims() -> void:
 	_right_rim.flip_h = true
 	_left_rim.z_as_relative = true
 	_right_rim.z_as_relative = true
-	_left_rim.z_index = 0
-	_right_rim.z_index = 0
+	_left_rim.z_index = 1
+	_right_rim.z_index = 1
 
 	# Place rims OUTSIDE the desert floor gap: cliff lip at the bank edge,
-	# rock body under the trail bank (covered by floor tiles), never over sand.
+	# rock body under the trail bank (never over the sand span), drawn in front
+	# of desert tiles so the ridge lip reads on top of the canyon edge.
 	# Align the painted desert top in the rim texture to each adjacent bank.
 	var half_w := RIM_SIZE.x * 0.5 * fit
 	var surface_from_center := (RIM_SURFACE_TEX_Y - tex_size.y * 0.5) * rim_scale.y

@@ -2261,16 +2261,32 @@ func _test_canyon_center_illustrated() -> Variant:
 	var sky_img := sky.texture.get_image()
 	if sky_img != null:
 		var sample := sky_img.get_pixel(sky_img.get_width() / 2, maxi(1, sky_img.get_height() / 5))
-		if sample.b <= sample.r or sample.b < 0.45:
+		if sample.b <= sample.r or sample.b < 0.40:
 			controller.queue_free()
 			return "Canyon interior should show painted sky blue so it stays distinct from the rims."
+	# Mouth sky must use the same hand-drawn sky as SkyArt (not a mismatched flat wash).
+	var sky_art_tex: Texture2D = load("res://assets/world/sky_handdrawn.png")
+	if sky.texture != sky_art_tex:
+		controller.queue_free()
+		return "Canyon sky wash must match the trail sky_handdrawn texture."
 	if sky.z_index < 0:
 		controller.queue_free()
 		return "Canyon sky must stay at non-negative relative z above FloorAbyss."
-	var left_rim := canyon_art.get_node("LeftRim") as Sprite2D
-	if left_rim.z_index > 0:
+	# No black FloorAbyss border framing the mouth.
+	if trail.find_child("CanyonAbyssSky0", true, false) == null:
 		controller.queue_free()
-		return "Canyon rims must stay under the desert surface tiles."
+		return "Canyon mouths need sky cover over FloorAbyss so lips have no black border."
+	var left_rim := canyon_art.get_node("LeftRim") as Sprite2D
+	if canyon_art.z_index < 1:
+		controller.queue_free()
+		return "Canyon ridges must draw in front of the desert floor tiles."
+	if left_rim.z_index < 1:
+		controller.queue_free()
+		return "Canyon rim sprites must sit above the canyon sky wash."
+	var trail_surface_z := 1
+	if canyon_art.z_index <= trail_surface_z:
+		controller.queue_free()
+		return "CanyonMouth z_index must be above TrailFloor surface (z > %d)." % trail_surface_z
 	var max_rim_scale := ScalableCanyonArt.RIM_SIZE / left_rim.texture.get_size()
 	var wide_right := canyon_art.gap_right + 700.0
 	canyon_art.configure(canyon_art.floor_top, canyon_art.gap_left, wide_right)

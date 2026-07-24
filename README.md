@@ -2,7 +2,7 @@
 
 Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, no lives/game-over, nonviolent lasso. **German is the default language**; English is fully supported. Optional spoken instructions use local OS TTS (Narrator).
 
-**Content version:** `1.3.43` (see `content_version.txt`). Launchers reimport when this stamp changes.
+**Content version:** `1.3.44` (see `content_version.txt`). Launchers reimport when this stamp changes.
 
 This README is the **binding source of truth** for gameplay, level design, art, i18n, and audio. Agents and contributors must follow it (see [Agent / contributor rules](#agent--contributor-rules)).
 
@@ -80,19 +80,19 @@ Agents **must** honor these when editing levels or trail systems:
 - User-facing and UI copy: **canyon**, not pit (legacy node names like `PitMouth` may remain internally).
 - Bandits: head stomp / lasso tie; side contact hurts; **turn at plank edges** (do not walk off).
 - **No cactus inside canyon mouths** or on hand-painted rim bands (keep clear of the rim body past the gap).
-- **No timed doors** (`TimedDoor`) spanning ground canyon gaps.
+- **No timed doors** (`TimedDoor`) over ground canyon gaps or on rim bands (tall gates must not sit above canyon mouths).
 
 ### Canyon art
 
-- Hand-painted **rims sit outside** desert floor banks — never cover the brown desert surface with rim sprites.
-- Ridge tops use the same warm sand crust as the trail and **align with the desert top** (slightly under the trail tiles).
-- Between the ridges: **open sky blue only**, matching the desert **Background** sky (`WildWestTheme.desert_sky_color`) — no depth shelves, floor wash, inner-wall fill, or mountain scenery inside the mouth; **never** a featureless black / flat near-black void.
+- Hand-painted **rims sit outside** desert floor banks — never cover the brown desert surface span with rim sprites.
+- Ridge tops use the same warm sand crust as the trail and **align with the desert top** (slightly under the trail tiles in Y). Rims draw **in front of** desert floor tiles so lips sit on the canyon edge.
+- Between the ridges: **open sky only**, matching the trail **hand-drawn sky** (`sky_handdrawn.png` / SkyArt) — no depth shelves, floor wash, inner-wall fill, or mountain scenery inside the mouth; **never** a featureless black / flat near-black void or black outline framing the lips.
 - Horizon hills must **not** silhouette over canyon openings (sky continues through the gap).
 - Widening a gap must not stretch handmade rim textures.
 
 ### Floor height
 
-- Where desert banks sit at different heights **with continuous ground** (no canyon between), paint a **natural soft slope** with trail desert/dirt art (not a flat cliff face or ColorRect step). Slopes must be walkable.
+- Where desert banks sit at different heights **with continuous ground** (no canyon between), paint a **natural soft slope** with trail desert/dirt art (not a flat cliff face or ColorRect step). Slopes must be walkable; slope crust ends must **meet the flat desert top** (same height/seam, no stepped lip).
 - If a **canyon** separates banks at different heights, the canyon is the transition — do **not** paint a slope (or slope collision) across the gap.
 
 ### Canyon crossing
