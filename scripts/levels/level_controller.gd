@@ -633,7 +633,13 @@ func _play_horse_arrival() -> void:
 		return
 	player.visible = false
 	player.set_input_enabled(false)
-	transition.play_arrival()
+	var canvas := get_viewport().get_canvas_transform()
+	var spawn_world := (
+		spawn_point.global_position if spawn_point != null else player.global_position
+	)
+	var spawn_screen: Vector2 = canvas * spawn_world
+	var floor_screen_y: float = spawn_screen.y
+	transition.play_arrival(spawn_screen, floor_screen_y, _world_to_screen_scale())
 	await transition.arrival_finished
 	if not is_instance_valid(player):
 		return

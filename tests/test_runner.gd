@@ -91,6 +91,10 @@ func _ready() -> void:
 	failures += await _run("Wind zones give a gentle capped push you can walk against", _test_wind_zone_force_overlap)
 	failures += await _run("HUD uses handmade western sign boards", _test_handmade_hud_signs)
 	failures += await _run("Celebration saloon keeps the goal screen position", _test_saloon_transition_anchor)
+	failures += await _run(
+		"Arrival leaves the horse at the level start",
+		_test_arrival_leaves_horse_at_spawn
+	)
 	failures += await _run("Canyon clouds include two-cloud hop chains", _test_two_cloud_canyon_chains)
 	failures += await _run("Wings levels place varied aerial carrions", _test_wings_carrion_variety)
 
@@ -2985,6 +2989,52 @@ func _test_saloon_transition_anchor() -> Variant:
 		error = "Transition horse center should sit above the floor like MountedHorse."
 	elif absf(transition.get_ride_center_y() - expected_ride_y) > 1.0:
 		error = "Transition should expose the mounted ride baseline."
+	transition.queue_free()
+	return error
+
+
+func _test_arrival_leaves_horse_at_spawn() -> Variant:
+	var packed: PackedScene = load("res://scenes/ui/level_transition.tscn")
+	var transition := packed.instantiate() as LevelTransition
+	add_child(transition)
+	var spawn := Vector2(180.0, 360.0)
+	var floor_y := 360.0
+	var screen_scale := 1.0
+	transition.play_arrival(spawn, floor_y, screen_scale)
+	# Wait until the cowboy has dismounted and the empty horse is left at spawn.
+	var horse := transition.get_node_or_null("TrailHorse") as Sprite2D
+	var rider := transition.get_node_or_null("CowboyHorse") as Sprite2D
+	var frames := 0
+	while frames < 240:
+		await get_tree().process_frame
+		frames += 1
+		if (
+			horse != null
+			and horse.visible
+			and horse.modulate.a > 0.9
+			and rider != null
+			and not rider.visible
+		):
+			break
+	var error: Variant = null
+	if horse == null:
+		error = "Arrival needs the trail horse sprite."
+	elif absf(horse.position.x - spawn.x) > 3.0:
+		error = (
+			"Arrival should leave the horse at the level start (horse x=%.1f, spawn x=%.1f)."
+			% [horse.position.x, spawn.x]
+		)
+	elif horse.position.x > get_viewport().get_visible_rect().size.x:
+		error = "Arrival must not send the horse off-screen after dismount."
+	elif not transition.leaves_horse_at_spawn():
+		error = "Transition should report that the horse remains at the spawn anchor."
+	if error != null:
+		transition.queue_free()
+		return error
+	await transition.arrival_finished
+	# Position must still be the spawn after the overlay closes (no ride-away).
+	if absf(horse.position.x - spawn.x) > 3.0:
+		error = "Horse must stay at the level start through the end of arrival."
 	transition.queue_free()
 	return error
 

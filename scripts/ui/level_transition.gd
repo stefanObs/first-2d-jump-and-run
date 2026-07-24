@@ -39,6 +39,9 @@ var _has_saloon_anchor: bool = false
 var _uses_live_level_saloon: bool = false
 var _floor_screen_y: float = 0.0
 var _has_floor_baseline: bool = false
+## Next-trail spawn where the cowboy dismounts and leaves the horse.
+var _spawn_screen_pos: Vector2 = Vector2.ZERO
+var _has_spawn_anchor: bool = false
 ## Canvas/camera scale so overlay sprites match in-world gameplay size.
 var _world_to_screen_scale: float = 1.0
 
@@ -147,16 +150,45 @@ func set_progress(progress: float) -> void:
 		_animating_rider = true
 
 
-func play_arrival() -> void:
+func play_arrival(
+	spawn_screen_position: Vector2 = Vector2.INF,
+	floor_screen_y: float = INF,
+	world_to_screen_scale: float = INF
+) -> void:
 	_arrival_active = true
 	visible = true
 	_ensure_horse_art()
 	_apply_transparent_backdrop()
-	_world_to_screen_scale = _detect_world_to_screen_scale()
-	_has_floor_baseline = false
+	if is_finite(world_to_screen_scale) and world_to_screen_scale > 0.0:
+		_world_to_screen_scale = world_to_screen_scale
+	else:
+		_world_to_screen_scale = _detect_world_to_screen_scale()
+	if is_finite(floor_screen_y):
+		_floor_screen_y = floor_screen_y
+		_has_floor_baseline = true
+	else:
+		_has_floor_baseline = false
+	if spawn_screen_position != Vector2.INF and spawn_screen_position.is_finite():
+		_spawn_screen_pos = spawn_screen_position
+		_has_spawn_anchor = true
+	else:
+		_has_spawn_anchor = false
 	_apply_ride_scales()
 	_run_arrival()
 
+
+func get_spawn_screen_position() -> Vector2:
+	return _spawn_screen_pos
+
+
+func leaves_horse_at_spawn() -> bool:
+	## Arrival ends with the empty horse still at the level start, not ridden away.
+	return (
+		_horse != null
+		and _horse.visible
+		and _has_spawn_anchor
+		and absf(_horse.position.x - _spawn_screen_pos.x) <= 2.0
+	)
 
 func _resolve_presentation(
 	view_size: Vector2,
@@ -278,11 +310,18 @@ func _apply_transparent_backdrop() -> void:
 
 func _run_arrival() -> void:
 	var view_size := get_viewport().get_visible_rect().size
-	var ground_y := view_size.y * TRANSITION_GROUND_RATIO
-	_floor_screen_y = ground_y
-	_has_floor_baseline = true
+	if not _has_floor_baseline:
+		_floor_screen_y = view_size.y * TRANSITION_GROUND_RATIO
+		_has_floor_baseline = true
 	var ride_y := _ride_center_y()
-	var center := Vector2(view_size.x * 0.45, ride_y)
+	# Dismount at the next trail's start — leave the horse where the cowboy begins.
+	var drop_x := view_size.x * 0.22
+	if _has_spawn_anchor:
+		drop_x = _spawn_screen_pos.x
+	else:
+		_spawn_screen_pos = Vector2(drop_x, _floor_screen_y)
+		_has_spawn_anchor = true
+	var drop := Vector2(drop_x, ride_y)
 	_apply_transparent_backdrop()
 	if _banner != null:
 		_banner.text = tr("Next trail!")
@@ -300,13 +339,13 @@ func _run_arrival() -> void:
 	_rider.position = Vector2(-240.0, ride_y)
 	_animating_rider = true
 	var ride_in := create_tween()
-	ride_in.tween_property(_rider, "position", center, 0.85).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	ride_in.tween_property(_rider, "position", drop, 0.85).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	await ride_in.finished
 	_horse.visible = true
-	_horse.position = center
+	_horse.position = drop
 	_horse.modulate.a = 0.0
 	_cowboy.visible = true
-	_cowboy.position = center + Vector2(8.0, -36.0 * _world_to_screen_scale)
+	_cowboy.position = Vector2(drop.x + 8.0, _floor_screen_y - 18.0 * _world_to_screen_scale)
 	_cowboy.modulate.a = 0.0
 	var dismount := create_tween()
 	dismount.set_parallel(true)
@@ -316,14 +355,14 @@ func _run_arrival() -> void:
 	await dismount.finished
 	_rider.visible = false
 	_animating_rider = false
+	# Horse stays at the level start; cowboy fades into the live player.
+	_horse.position = drop
 	if _subtitle != null:
 		_subtitle.text = tr("Ready!")
-	var horse_exit := create_tween()
-	horse_exit.tween_interval(0.18)
-	horse_exit.set_parallel(true)
-	horse_exit.tween_property(_horse, "position:x", view_size.x + 240.0, 0.55).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	horse_exit.tween_property(_cowboy, "modulate:a", 0.0, 0.35)
-	await horse_exit.finished
+	var settle := create_tween()
+	settle.tween_interval(0.28)
+	settle.tween_property(_cowboy, "modulate:a", 0.0, 0.35)
+	await settle.finished
 	visible = false
 	_arrival_active = false
 	arrival_finished.emit()
