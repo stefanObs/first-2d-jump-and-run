@@ -16,6 +16,16 @@ const COACH_SPEED_RATIO := 0.75
 const ACCEL := 160.0
 const EARTH_TOP := 312.0
 const EARTH_DEPTH := 1200.0
+## Match WildWestTheme TrailFloor / backdrop tiling so the chase never drifts style.
+const FLOOR_TOP := 320.0
+const SURFACE_THICKNESS := 56.0
+const DESERT_LOOP_PAD := 1800.0
+const BACKDROP_SCALE := 1.35
+const HILL_OVERLAP := 220.0
+const SKY_OVERLAP := 8.0
+const SKY_Y := -520.0
+const SKY_H := 700.0
+const HILL_H := 520.0
 
 var _coach: Node2D
 var _coach_sprite: Sprite2D
@@ -44,9 +54,16 @@ var _shooting: bool = false
 var _shot_generation: int = 0
 var _ground_half_w: float = 800.0
 var _desert_root: Node2D
-var _desert_built_to: float = 0.0
+var _sky_root: Node2D
 var _hills_root: Node2D
-var _hills_built_to: float = 0.0
+var _sand_sprites: Array[Sprite2D] = []
+var _dirt_sprites: Array[Sprite2D] = []
+var _hill_sprites: Array[Sprite2D] = []
+var _sky_sprites: Array[Sprite2D] = []
+var _sand_step: float = 0.0
+var _dirt_step: float = 0.0
+var _hill_step: float = 0.0
+var _sky_step: float = 0.0
 
 
 func _ready() -> void:
@@ -127,75 +144,206 @@ func _face_coach_forward() -> void:
 
 
 func _setup_desert_floor() -> void:
-	# The textured trail strips are deliberately shallow.  Keep a deep,
-	# opaque earth layer behind them so the camera can never reveal the blue
-	# clear colour below the race course, even at wide aspect ratios.
+	# BossArena applies WildWestTheme first, which paints a *finite* TrailFloor /
+	# SkyArt / HorizonHills from the starting Background width.  Past that strip
+	# the old chase spawned a differently scaled DesertFloor — style drift mid-race.
+	# Tear those finite layers down and keep one looping set of trail-matched tiles.
+	for node_name in ["TrailFloor", "SkyArt", "HorizonHills", "RaceHills", "DesertFloor", "EarthUnderfill"]:
+		var stale := get_node_or_null(node_name)
+		if stale != null:
+			stale.free()
+
+	# Deep opaque earth behind the shallow trail crust so wide cameras never show
+	# the clear-colour void under the race course.
 	_earth_underfill = ColorRect.new()
 	_earth_underfill.name = "EarthUnderfill"
 	_earth_underfill.z_index = -14
 	_earth_underfill.position = Vector2(-400.0, EARTH_TOP)
-	_earth_underfill.size = Vector2(3200.0, EARTH_DEPTH)
+	_earth_underfill.size = Vector2(DESERT_LOOP_PAD * 2.0 + 800.0, EARTH_DEPTH)
 	_earth_underfill.color = Color(0.20, 0.075, 0.025, 1.0)
 	_earth_underfill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_earth_underfill)
+
+	_sky_root = Node2D.new()
+	_sky_root.name = "SkyArt"
+	_sky_root.z_index = -19
+	add_child(_sky_root)
+
+	_hills_root = Node2D.new()
+	_hills_root.name = "HorizonHills"
+	_hills_root.z_index = -16
+	add_child(_hills_root)
+
 	_desert_root = Node2D.new()
 	_desert_root.name = "DesertFloor"
-	_desert_root.z_index = -12
+	_desert_root.z_index = 0
 	add_child(_desert_root)
-	_hills_root = get_node_or_null("HorizonHills") as Node2D
-	if _hills_root == null:
-		_hills_root = Node2D.new()
-		_hills_root.name = "RaceHills"
-		_hills_root.z_index = -16
-		add_child(_hills_root)
+
 	if _ground_visual != null:
+		_ground_visual.visible = false
 		_ground_visual.color = WildWestTheme.sand_color()
-	_extend_desert_to(2400.0)
+
+	_build_looping_desert_layers()
+	_sync_desert_loop(0.0)
 
 
-func _extend_desert_to(right_x: float) -> void:
+func _build_looping_desert_layers() -> void:
+	_sand_sprites.clear()
+	_dirt_sprites.clear()
+	_hill_sprites.clear()
+	_sky_sprites.clear()
+
 	var sand: Texture2D = load("res://assets/world/trail_desert_tile.png")
 	var dirt: Texture2D = load("res://assets/world/trail_dirt_tile.png")
 	var hills: Texture2D = load("res://assets/world/horizon_hills_strip.png")
-	var floor_y := 320.0
+	var sky: Texture2D = load("res://assets/world/sky_handdrawn.png")
+	var span := DESERT_LOOP_PAD * 2.0 + 800.0
+	var start_x := -DESERT_LOOP_PAD
+
 	if sand != null and _desert_root != null:
-		var tile_w := float(sand.get_width()) * 1.2
-		var x := _desert_built_to
-		if x <= 0.0:
-			x = -400.0
-		while x < right_x + 400.0:
+		var sand_size := sand.get_size()
+		var scale_y := SURFACE_THICKNESS / sand_size.y
+		var tile_w := sand_size.x * scale_y
+		var overlap := minf(24.0, tile_w * 0.18)
+		_sand_step = maxf(tile_w - overlap, 1.0)
+		var x := start_x
+		var i := 0
+		while x < start_x + span:
 			var sprite := Sprite2D.new()
+			sprite.name = "ChaseSand%d" % i
 			sprite.texture = sand
 			sprite.centered = false
-			sprite.position = Vector2(x, floor_y - 8.0)
-			sprite.scale = Vector2(1.2, 1.15)
+			sprite.position = Vector2(x, FLOOR_TOP)
+			sprite.scale = Vector2(scale_y, scale_y)
+			sprite.z_index = 1
 			_desert_root.add_child(sprite)
-			if dirt != null:
+			_sand_sprites.append(sprite)
+			x += _sand_step
+			i += 1
+
+	if dirt != null and _desert_root != null:
+		var dirt_size := dirt.get_size()
+		var dirt_h := dirt_size.y * (SURFACE_THICKNESS / maxf(dirt_size.y, 1.0))
+		var scale_y := dirt_h / dirt_size.y
+		var tile_w := dirt_size.x * scale_y
+		var overlap := minf(24.0, tile_w * 0.18)
+		_dirt_step = maxf(tile_w - overlap, 1.0)
+		var dirt_y0 := FLOOR_TOP + SURFACE_THICKNESS - 2.0
+		# A few dirt rows match TrailFloor crust depth; EarthUnderfill covers deeper.
+		for row in range(4):
+			var x := start_x
+			var i := 0
+			var y := dirt_y0 + row * (dirt_h - 2.0)
+			while x < start_x + span:
 				var under := Sprite2D.new()
+				under.name = "ChaseDirt%d_%d" % [row, i]
 				under.texture = dirt
 				under.centered = false
-				under.position = Vector2(x, floor_y + 36.0)
-				under.scale = Vector2(1.2, 1.0)
-				under.z_index = -1
+				under.position = Vector2(x, y)
+				under.scale = Vector2(scale_y, scale_y)
+				under.z_index = 0
 				_desert_root.add_child(under)
-			x += tile_w - 4.0
-		_desert_built_to = x
+				_dirt_sprites.append(under)
+				x += _dirt_step
+				i += 1
+
 	if hills != null and _hills_root != null:
-		var tile_w := float(hills.get_width()) * 1.35
-		var tile_h := 520.0
-		var x := _hills_built_to
-		if x <= 0.0:
-			x = -500.0
-		while x < right_x + 600.0:
+		var hill_size := hills.get_size()
+		var tile_w := hill_size.x * BACKDROP_SCALE
+		_hill_step = maxf(tile_w - HILL_OVERLAP, 1.0)
+		var hill_y := FLOOR_TOP - HILL_H + 10.0
+		var x := start_x - 100.0
+		var i := 0
+		while x < start_x + span + 200.0:
 			var hill := Sprite2D.new()
+			hill.name = "ChaseHill%d" % i
 			hill.texture = hills
 			hill.centered = false
-			hill.position = Vector2(x, floor_y - tile_h + 10.0)
-			hill.scale = Vector2(tile_w / float(hills.get_width()), tile_h / float(hills.get_height()))
+			hill.position = Vector2(x, hill_y)
+			hill.scale = Vector2(tile_w / hill_size.x, HILL_H / hill_size.y)
 			hill.modulate = Color(1, 1, 1, 0.98)
 			_hills_root.add_child(hill)
-			x += tile_w - 220.0
-		_hills_built_to = x
+			_hill_sprites.append(hill)
+			x += _hill_step
+			i += 1
+
+	if sky != null and _sky_root != null:
+		var sky_size := sky.get_size()
+		var tile_w := sky_size.x * BACKDROP_SCALE
+		_sky_step = maxf(tile_w - SKY_OVERLAP, 1.0)
+		var x := start_x - 100.0
+		var i := 0
+		while x < start_x + span + 200.0:
+			var sky_sprite := Sprite2D.new()
+			sky_sprite.name = "ChaseSky%d" % i
+			sky_sprite.texture = sky
+			sky_sprite.centered = false
+			sky_sprite.position = Vector2(x, SKY_Y)
+			sky_sprite.scale = Vector2(tile_w / sky_size.x, SKY_H / sky_size.y)
+			_sky_root.add_child(sky_sprite)
+			_sky_sprites.append(sky_sprite)
+			x += _sky_step
+			i += 1
+
+
+func _sync_desert_loop(focus_x: float) -> void:
+	## Recycle the same trail-matched tiles forever — identical look at any chase X.
+	_recycle_sprite_row(_sand_sprites, _sand_step, focus_x)
+	_recycle_sprite_row(_dirt_sprites, _dirt_step, focus_x)
+	_recycle_sprite_row(_hill_sprites, _hill_step, focus_x)
+	_recycle_sprite_row(_sky_sprites, _sky_step, focus_x)
+	if _earth_underfill != null:
+		_earth_underfill.position.x = focus_x - DESERT_LOOP_PAD
+		_earth_underfill.size.x = DESERT_LOOP_PAD * 2.0 + 800.0
+
+
+func _recycle_sprite_row(sprites: Array[Sprite2D], step: float, focus_x: float) -> void:
+	if sprites.is_empty() or step <= 0.0:
+		return
+	var min_x := INF
+	for sprite in sprites:
+		if not is_instance_valid(sprite):
+			continue
+		min_x = minf(min_x, sprite.position.x)
+	if min_x == INF:
+		return
+	var left_keep := focus_x - DESERT_LOOP_PAD
+	# Shift the whole strip by whole tile steps so the desert phase never drifts.
+	if min_x >= left_keep - step:
+		return
+	var shift_steps := int(floor((left_keep - min_x) / step))
+	if shift_steps <= 0:
+		return
+	var shift := float(shift_steps) * step
+	for sprite in sprites:
+		if is_instance_valid(sprite):
+			sprite.position.x += shift
+
+
+func desert_surface_scale() -> Vector2:
+	## Test helper: trail-matched sand scale must stay constant for the whole chase.
+	if _sand_sprites.is_empty() or not is_instance_valid(_sand_sprites[0]):
+		return Vector2.ZERO
+	return _sand_sprites[0].scale
+
+
+func desert_loop_coverage_at(focus_x: float) -> Dictionary:
+	## Test helper: after syncing to a large X, tiles must still bracket the focus.
+	_sync_desert_loop(focus_x)
+	var min_x := INF
+	var max_x := -INF
+	for sprite in _sand_sprites:
+		if not is_instance_valid(sprite):
+			continue
+		min_x = minf(min_x, sprite.position.x)
+		max_x = maxf(max_x, sprite.position.x + _sand_step)
+	return {
+		"min_x": min_x,
+		"max_x": max_x,
+		"step": _sand_step,
+		"count": _sand_sprites.size(),
+		"scale": desert_surface_scale(),
+	}
 
 
 func _player_run_speed() -> float:
@@ -253,8 +401,17 @@ func _update_chase(delta: float) -> void:
 func _ensure_world_ahead() -> void:
 	if _ground == null or player == null:
 		return
-	var need_right := maxf(player.global_position.x, _coach.global_position.x) + 2000.0
-	_extend_desert_to(need_right)
+	var focus_x := maxf(player.global_position.x, _coach.global_position.x if _coach != null else 0.0)
+	var need_right := focus_x + 2000.0
+	_sync_desert_loop(focus_x)
+	if _background != null:
+		_background.offset_left = focus_x - DESERT_LOOP_PAD
+		_background.offset_right = focus_x + DESERT_LOOP_PAD + 800.0
+		_background.color = WildWestTheme.desert_sky_color()
+	var sky_band := get_node_or_null("SkyBand") as ColorRect
+	if sky_band != null:
+		sky_band.offset_left = focus_x - DESERT_LOOP_PAD
+		sky_band.offset_right = focus_x + DESERT_LOOP_PAD + 800.0
 	var half := need_right * 0.5
 	if half <= _ground_half_w:
 		return
@@ -268,13 +425,6 @@ func _ensure_world_ahead() -> void:
 		var rect := (_ground_shape.shape as RectangleShape2D).duplicate() as RectangleShape2D
 		rect.size = Vector2(half * 2.0, 64.0)
 		_ground_shape.shape = rect
-	if _background != null:
-		_background.offset_left = -400.0
-		_background.offset_right = need_right + 800.0
-		_background.color = WildWestTheme.desert_sky_color()
-	if _earth_underfill != null:
-		_earth_underfill.position.x = -400.0
-		_earth_underfill.size.x = need_right + 1200.0
 
 
 func _bob_horses() -> void:

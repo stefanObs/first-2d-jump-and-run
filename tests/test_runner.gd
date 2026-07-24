@@ -359,6 +359,40 @@ func _test_boss_arenas() -> Variant:
 	):
 		coach.queue_free()
 		return "Midnight Coach ground needs deep, opaque earth below every camera view."
+	# Endless chase desert must keep the same trail-matched tiling forever.
+	if not coach.has_method("desert_loop_coverage_at") or not coach.has_method("desert_surface_scale"):
+		coach.queue_free()
+		return "Midnight Coach must expose desert loop helpers for continuity checks."
+	var sand_tex: Texture2D = load("res://assets/world/trail_desert_tile.png")
+	if sand_tex == null:
+		coach.queue_free()
+		return "Missing trail desert tile for coach chase."
+	var expected_scale := 56.0 / float(sand_tex.get_height())
+	var scale_at_start: Vector2 = coach.call("desert_surface_scale")
+	if (
+		scale_at_start == Vector2.ZERO
+		or absf(scale_at_start.x - expected_scale) > 0.001
+		or absf(scale_at_start.y - expected_scale) > 0.001
+	):
+		coach.queue_free()
+		return "Midnight Coach desert sand must use WildWestTheme trail surface scale."
+	var cover_near: Dictionary = coach.call("desert_loop_coverage_at", 400.0)
+	var cover_far: Dictionary = coach.call("desert_loop_coverage_at", 48000.0)
+	var scale_far: Vector2 = cover_far.get("scale", Vector2.ZERO)
+	if scale_far != scale_at_start:
+		coach.queue_free()
+		return "Midnight Coach desert style must stay identical after a long chase scroll."
+	if (
+		float(cover_far.get("min_x", 0.0)) > 48000.0 - 1800.0 + 2.0
+		or float(cover_far.get("max_x", 0.0)) < 48000.0 + 800.0
+		or int(cover_far.get("count", 0)) != int(cover_near.get("count", -1))
+		or int(cover_far.get("count", 0)) < 8
+	):
+		coach.queue_free()
+		return "Midnight Coach desert must loop the same tile set around the chase forever."
+	if coach.get_node_or_null("TrailFloor") != null:
+		coach.queue_free()
+		return "Midnight Coach must not keep the finite WildWestTheme TrailFloor during the chase."
 	coach.call("_apply_coach_frame", 3)
 	var door_frame_sprite := coach.get_node_or_null("Coach/Sprite2D") as Sprite2D
 	var door_frame_pos := Vector2.ZERO
