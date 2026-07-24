@@ -2546,6 +2546,18 @@ func _test_canyon_center_illustrated() -> Variant:
 	if not canyon_art.rims_reach_canyon_bottom():
 		controller.queue_free()
 		return "Canyon ridges must be full-height cliffs (top→bottom), not a short surface lip."
+	if not canyon_art.rims_are_thin_faces():
+		controller.queue_free()
+		return "Canyon ridges must be thin canyon-facing faces, not full bank slabs."
+	if not canyon_art.rim_bank_is_transparent():
+		controller.queue_free()
+		return "Canyon rim bank side must stay transparent so TrailFloor dirt shows."
+	if not canyon_art.rim_lip_is_straight():
+		controller.queue_free()
+		return "Canyon rim lip must be a straight vertical edge."
+	if not canyon_art.rim_crust_has_no_sky_slit():
+		controller.queue_free()
+		return "Canyon rim must seal under the sand crust (no sky slits)."
 	if not canyon_art.interior_stays_inside_gap():
 		controller.queue_free()
 		return "Canyon mouth must not paint a sky-fill column over desert banks."

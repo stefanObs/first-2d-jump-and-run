@@ -3,9 +3,10 @@ extends RefCounted
 
 ## Applies cheerful hand-drawn wild-west sky, hills, and trail floor art.
 
-## Clear Mesa/backdrop art well past canyon lips so buttes never silhouette
+## Clear Mesa/backdrop art just past canyon lips so buttes never silhouette
 ## inside the open mouth column (sky / Background only between the ridges).
-const CANYON_BACKDROP_PAD := 96.0
+## Keep pad modest so bank-side mesas are not hard-clipped far inland of the lip.
+const CANYON_BACKDROP_PAD := 40.0
 
 
 static func desert_sky_color() -> Color:
@@ -301,9 +302,10 @@ static func _make_contiguous_floors(level: Node) -> void:
 		abyss.z_index = -2
 		floor_root.add_child(abyss)
 
-	# Lip inset so desert crust ends under the ridge lip (not past it into the mouth).
-	const CANYON_SURFACE_INSET := 12.0
-	const CANYON_DIRT_INSET := 16.0
+	# Lip inset: sand stops just shy of the thin ridge face; dirt runs almost to
+	# the lip so the bank behind the transparent rim reads as normal TrailFloor earth.
+	const CANYON_SURFACE_INSET := 6.0
+	const CANYON_DIRT_INSET := 2.0
 
 	for i in range(merged.size()):
 		var strip: Dictionary = merged[i]
@@ -337,8 +339,8 @@ static func _make_contiguous_floors(level: Node) -> void:
 				"FloorSurface%d" % i
 			)
 
-		# Below: continue brown dirt under the bank, stopping before the canyon lip
-		# so cliff walls sit outside the desert brown face.
+		# Below: continue brown dirt under the bank almost to the canyon lip —
+		# the thin transparent-bank rim face draws on top at the edge.
 		if dirt != null:
 			var dirt_h := dirt.get_size().y * (surface_thickness / maxf(dirt.get_size().y, 1.0))
 			var y := top + surface_thickness - 2.0

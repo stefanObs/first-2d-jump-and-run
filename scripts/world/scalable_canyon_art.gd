@@ -1,23 +1,23 @@
 class_name ScalableCanyonArt
 extends Node2D
 
-## Hand-painted full-height cliff ridges outside the desert floor, framing an
-## open canyon mouth. Sky shows through naturally (no fill column) — no depth
-## shelves, floor wash, or mountain scenery inside. Rims stay warm and
-## trail-matched from the desert top down the full canyon face.
+## Slim hand-painted full-height cliff faces outside the desert floor, framing
+## an open canyon mouth. Only the canyon-facing edge is ridge art — the bank
+## side is transparent so TrailFloor dirt shows. Sky shows through the mouth
+## (no fill column) — no depth shelves, floor wash, or mountain scenery inside.
 
 const RIM_TEXTURE: Texture2D = preload("res://assets/world/canyon_rim_left.png")
 
-## World size of one ridge: wide enough to cover the bank cut, tall enough to
-## reach the bottom of the trail dirt / view (not a short surface lip).
-const RIM_SIZE := Vector2(200.0, 900.0)
+## World size of one ridge face: thin canyon lip, tall enough to reach the
+## bottom of the trail dirt / view (not a short surface lip).
+const RIM_SIZE := Vector2(72.0, 900.0)
 ## Pixel row of the painted desert sand crust on canyon_rim_left.png.
 ## Keep locked to the top plateau so ridge lips meet the trail surface.
 const RIM_SURFACE_TEX_Y := 4.0
-## Texture X of the canyon-facing lip (opaque right edge of the top crust).
+## Texture X of the canyon-facing lip (straight opaque right edge).
 ## Positioning uses this — not the full padded texture width — so the ridge
-## terminates the desert cleanly and lower strata do not float in the mouth.
-const RIM_LIP_TEX_X := 353.0
+## terminates the desert cleanly with no sky slits under the sand crust.
+const RIM_LIP_TEX_X := 74.0
 ## Draw above TrailFloor surface tiles (z 1) so ridge lips sit on the desert edge.
 const CANYON_DRAW_Z := 2
 ## How far below the desert top the ridge must reach (matches FloorAbyss depth).
@@ -108,12 +108,12 @@ func rim_bottom_world_y(rim: Sprite2D) -> float:
 
 
 func rims_match_desert_height(tolerance: float = 4.0) -> bool:
-	## Ridge tops sit 1px under the trail crust by design.
+	## Ridge tops sit flush under the trail sand crust (no sky seam).
 	if _left_rim == null or _right_rim == null:
 		return false
 	return (
-		absf(rim_surface_world_y(_left_rim) - (left_floor_top + 1.0)) <= tolerance
-		and absf(rim_surface_world_y(_right_rim) - (right_floor_top + 1.0)) <= tolerance
+		absf(rim_surface_world_y(_left_rim) - left_floor_top) <= tolerance
+		and absf(rim_surface_world_y(_right_rim) - right_floor_top) <= tolerance
 	)
 
 
@@ -127,6 +127,90 @@ func rims_reach_canyon_bottom(tolerance: float = 40.0) -> bool:
 		rim_bottom_world_y(_left_rim) >= left_target - tolerance
 		and rim_bottom_world_y(_right_rim) >= right_target - tolerance
 	)
+
+
+func rims_are_thin_faces(tolerance: float = 8.0) -> bool:
+	## Handcrafted art is only a slim canyon-facing strip (bank is TrailFloor dirt).
+	if _left_rim == null or _right_rim == null or _left_rim.texture == null:
+		return false
+	var tex_w := float(_left_rim.texture.get_size().x)
+	var world_w := tex_w * absf(_left_rim.scale.x)
+	return world_w <= RIM_SIZE.x + tolerance and RIM_SIZE.x <= 96.0
+
+
+func _rim_source_image() -> Image:
+	if RIM_TEXTURE == null:
+		return null
+	var img := RIM_TEXTURE.get_image()
+	if img == null:
+		return null
+	if img.is_compressed():
+		img = img.duplicate()
+		img.decompress()
+	return img
+
+
+func rim_bank_is_transparent() -> bool:
+	## Inland/bank side of the rim texture must let TrailFloor dirt show through.
+	var img := _rim_source_image()
+	if img == null:
+		return false
+	var w := img.get_width()
+	var h := img.get_height()
+	if w < 8 or h < 40:
+		return false
+	# Sample mid-height near the bank (left) edge — must be mostly clear.
+	var y := mini(h - 1, maxi(40, int(h * 0.35)))
+	var clear := 0
+	var samples := mini(10, w / 3)
+	for i in range(samples):
+		if img.get_pixel(i, y).a < 0.35:
+			clear += 1
+	return clear >= samples / 2
+
+
+func rim_lip_is_straight(tolerance_px: float = 2.0) -> bool:
+	## Canyon-facing edge is a clean vertical line (no sky pockets under the crust).
+	var img := _rim_source_image()
+	if img == null:
+		return false
+	var w := img.get_width()
+	var h := img.get_height()
+	var rights: Array[float] = []
+	var step := maxi(1, h / 40)
+	for y in range(0, h, step):
+		var right := -1
+		for x in range(w - 1, -1, -1):
+			if img.get_pixel(x, y).a > 0.15:
+				right = x
+				break
+		if right >= 0:
+			rights.append(float(right))
+	if rights.is_empty():
+		return false
+	var lo := rights[0]
+	var hi := rights[0]
+	for v in rights:
+		lo = minf(lo, v)
+		hi = maxf(hi, v)
+	return (hi - lo) <= tolerance_px
+
+
+func rim_crust_has_no_sky_slit() -> bool:
+	## Opaque face under the sand crust — no transparent cap that shows sky.
+	var img := _rim_source_image()
+	if img == null:
+		return false
+	var w := img.get_width()
+	var lip := int(RIM_LIP_TEX_X)
+	lip = clampi(lip, 0, w - 1)
+	for y in range(0, mini(36, img.get_height())):
+		if img.get_pixel(lip, y).a < 0.85:
+			return false
+		var inland := clampi(lip - 8, 0, w - 1)
+		if img.get_pixel(inland, y).a < 0.85:
+			return false
+	return true
 
 
 func interior_stays_inside_gap(tolerance: float = 0.5) -> bool:
@@ -189,12 +273,13 @@ func _layout_rims() -> void:
 	_left_rim.z_index = 1
 	_right_rim.z_index = 1
 
-	# Place rims OUTSIDE the desert floor gap: painted lip at the bank edge,
-	# rock body under the trail bank, drawn in front of desert tiles.
+	# Place rims OUTSIDE the desert floor gap: straight painted lip at the bank
+	# edge, thin rock face under the trail bank, drawn in front of desert tiles.
+	# Bank-side texels are transparent so TrailFloor dirt shows through.
 	var surface_from_center := (RIM_SURFACE_TEX_Y - tex_size.y * 0.5) * rim_scale.y
 	var lip_from_center := (RIM_LIP_TEX_X - tex_size.x * 0.5) * rim_scale.x
-	# +1px under the trail crust so the ridge top reads continuous with desert.
-	var surface_y := left_floor_top + 1.0
+	# Flush with the desert top so sand crust and ridge meet with no sky slit.
+	var surface_y := left_floor_top
 	_left_rim.position = Vector2(gap_left - lip_from_center, surface_y - surface_from_center)
-	surface_y = right_floor_top + 1.0
+	surface_y = right_floor_top
 	_right_rim.position = Vector2(gap_right + lip_from_center, surface_y - surface_from_center)

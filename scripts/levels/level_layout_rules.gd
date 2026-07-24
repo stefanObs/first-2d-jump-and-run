@@ -8,9 +8,9 @@ const ASSISTED_JUMP_HEIGHT := 190.0
 const SPRING_JUMP_HEIGHT := 250.0
 const BASE_HORIZONTAL_GAP := 230.0
 const ASSISTED_HORIZONTAL_GAP := 340.0
-const CACTUS_CANYON_CLEAR_PX := 240.0  ## Past hand-painted rim body (RIM_SIZE.x + margin).
+const CACTUS_CANYON_CLEAR_PX := 120.0  ## Past thin hand-painted rim face (RIM_SIZE.x + margin).
 ## Timed doors stay clear of the gap and the rim band (tall gates must not sit above mouths).
-const TIMED_DOOR_CANYON_CLEAR_PX := 260.0
+const TIMED_DOOR_CANYON_CLEAR_PX := 140.0
 const TIMED_DOOR_HALF_WIDTH := 45.0
 ## Conveyor push path must hit a timed door (or clear solid ground) before a canyon.
 const CONVEYOR_HALF_WIDTH := 80.0
