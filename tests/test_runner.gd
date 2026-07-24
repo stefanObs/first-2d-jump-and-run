@@ -1465,6 +1465,17 @@ func _test_level_09_raft_hop_boots() -> Variant:
 	if reward == null or boarding == null:
 		level.free()
 		return "Level 09 needs BootsHopLedge boarding and BootsRewardLedge reward."
+	WildWestTheme.apply_to_level(level)
+	if (
+		boarding.get_node_or_null("HandArt") == null
+		or reward.get_node_or_null("HandArt") == null
+	):
+		level.free()
+		return "Boots hop/reward ledges must use handcrafted plank art, not bare ColorRects."
+	var boarding_visual := boarding.get_node_or_null("Visual") as CanvasItem
+	if boarding_visual != null and boarding_visual.visible:
+		level.free()
+		return "BootsHopLedge ColorRect visual should be hidden under HandArt."
 
 	# Reward ledge must sit well above normal/spring reach from the gulch floor.
 	var ground_top := 320.0
@@ -2453,6 +2464,10 @@ func _test_trail_row_model() -> Variant:
 		if pit6_art != null and not pit6_art.rims_match_desert_height():
 			level2_controller.queue_free()
 			return "Level 2 Pit6 canyon rims must match adjacent desert bank heights."
+	# Height steps should use trail tiles, not flat polygon fills.
+	for node in level2_controller.find_children("FloorSlopeFill*", "Polygon2D", true, false):
+		level2_controller.queue_free()
+		return "Desert slopes must not use flat Polygon2D fills."
 	level2_controller.queue_free()
 	return null
 

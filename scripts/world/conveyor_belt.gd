@@ -17,6 +17,7 @@ func _ready() -> void:
 	_visual = get_node_or_null("Visual") as Node2D
 	var arrow := get_node_or_null("Arrow") as Label
 	if arrow != null:
+		arrow.visible = false
 		arrow.text = ">>>" if push_right else "<<<"
 	# Face the art the same way the belt pushes.
 	if _visual is Sprite2D:

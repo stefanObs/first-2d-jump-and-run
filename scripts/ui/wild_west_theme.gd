@@ -121,16 +121,34 @@ static func _clear_hills_over_canyons(
 	hill_h: float
 ) -> void:
 	var gaps := _canyon_gap_ranges(level)
+	var sky_tex: Texture2D = load("res://assets/world/sky_handdrawn.png")
 	for i in range(gaps.size()):
 		var gap: Vector2 = gaps[i]
-		var cover := ColorRect.new()
-		cover.name = "CanyonSkyGap%d" % i
-		cover.position = Vector2(gap.x - 6.0, hill_y - 8.0)
-		cover.size = Vector2(gap.y - gap.x + 12.0, hill_h)
-		cover.color = desert_sky_color()
-		cover.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		cover.z_index = 1
-		hills_root.add_child(cover)
+		var cover_root := Node2D.new()
+		cover_root.name = "CanyonSkyGap%d" % i
+		cover_root.z_index = 1
+		hills_root.add_child(cover_root)
+		var left := gap.x - 6.0
+		var width := gap.y - gap.x + 12.0
+		if sky_tex != null:
+			# Hand-drawn sky strip over the mountain silhouette in the canyon mouth.
+			var sprite := Sprite2D.new()
+			sprite.name = "SkyPatch"
+			sprite.texture = sky_tex
+			sprite.centered = false
+			sprite.position = Vector2(left, hill_y - 8.0)
+			var tex_size := sky_tex.get_size()
+			sprite.scale = Vector2(width / tex_size.x, hill_h / tex_size.y)
+			sprite.modulate = Color(1, 1, 1, 1)
+			cover_root.add_child(sprite)
+		else:
+			var cover := ColorRect.new()
+			cover.name = "SkyFlat"
+			cover.position = Vector2(left, hill_y - 8.0)
+			cover.size = Vector2(width, hill_h)
+			cover.color = desert_sky_color()
+			cover.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			cover_root.add_child(cover)
 
 
 static func _tile_backdrop(
@@ -175,6 +193,8 @@ static func _dress_platforms(level: Node) -> void:
 			or parent_name.begins_with("FerryIsle")
 			or parent_name.begins_with("PlankStep")
 			or parent_name.begins_with("PlankIsle")
+			or parent_name.contains("Ledge")
+			or parent_name.begins_with("Boots")
 		):
 			_replace_block_art(node, "res://assets/world/wood_plank.png")
 
@@ -409,19 +429,6 @@ static func _paint_slope_fill(
 			row += 1
 			if row > 12:
 				break
-
-	# Soft silhouette so the dirt wedge reads clearly under the crust.
-	var silhouette := Polygon2D.new()
-	silhouette.name = "FloorSlopeFill%d" % index
-	silhouette.color = Color(0.72, 0.48, 0.28, 0.55)
-	silhouette.z_index = 1
-	silhouette.polygon = PackedVector2Array([
-		Vector2(x_high, y_high + 6.0),
-		Vector2(x_low, y_low + 6.0),
-		Vector2(x_low, deep),
-		Vector2(x_high, deep),
-	])
-	parent.add_child(silhouette)
 
 
 static func _add_slope_collision(
