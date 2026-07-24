@@ -14,10 +14,13 @@ const RIM_SIZE := Vector2(72.0, 900.0)
 ## Pixel row of the painted desert sand crust on canyon_rim_left.png.
 ## Keep locked to the top plateau so ridge lips meet the trail surface.
 const RIM_SURFACE_TEX_Y := 4.0
-## Texture X of the canyon-facing lip (straight opaque right edge).
-## Positioning uses this — not the full padded texture width — so the ridge
-## terminates the desert cleanly with no sky slits under the sand crust.
+## Texture X of the outermost canyon-facing extent (jagged sky silhouette
+## insets from this). Positioning uses this — not the full padded texture
+## width — so the ridge terminates the desert cleanly with no sky slits under
+## the sand crust.
 const RIM_LIP_TEX_X := 74.0
+## Sand-crust rows at the top of the rim texture that must stay sealed.
+const RIM_CRUST_TEX_ROWS := 12
 ## Draw above TrailFloor surface tiles (z 1) so ridge lips sit on the desert edge.
 const CANYON_DRAW_Z := 2
 ## How far below the desert top the ridge must reach (matches FloorAbyss depth).
@@ -169,47 +172,57 @@ func rim_bank_is_transparent() -> bool:
 	return clear >= samples / 2
 
 
-func rim_lip_is_straight(tolerance_px: float = 2.0) -> bool:
-	## Canyon-facing edge is a clean vertical line (no sky pockets under the crust).
+func rim_sky_edge_is_irregular(min_spread_px: float = 8.0) -> bool:
+	## Canyon-facing edge against sky is jagged — not a ruler-straight cut.
+	## Requires non-constant lip X (multiple distinct columns) with enough span.
 	var img := _rim_source_image()
 	if img == null:
 		return false
 	var w := img.get_width()
 	var h := img.get_height()
-	var rights: Array[float] = []
-	var step := maxi(1, h / 40)
-	for y in range(0, h, step):
+	var lo := float(w)
+	var hi := -1.0
+	var samples := 0
+	var distinct := {}
+	# Skip the sealed sand crust; measure the cliff face silhouette below it.
+	var y0 := mini(RIM_CRUST_TEX_ROWS, h - 1)
+	# Dense enough to catch deep notches (not just the outer envelope).
+	var step := maxi(1, (h - y0) / 120)
+	for y in range(y0, h, step):
 		var right := -1
 		for x in range(w - 1, -1, -1):
 			if img.get_pixel(x, y).a > 0.15:
 				right = x
 				break
 		if right >= 0:
-			rights.append(float(right))
-	if rights.is_empty():
+			lo = minf(lo, float(right))
+			hi = maxf(hi, float(right))
+			distinct[right] = true
+			samples += 1
+	if samples < 8 or hi < 0.0:
 		return false
-	var lo := rights[0]
-	var hi := rights[0]
-	for v in rights:
-		lo = minf(lo, v)
-		hi = maxf(hi, v)
-	return (hi - lo) <= tolerance_px
+	return (hi - lo) >= min_spread_px and distinct.size() >= 3
 
 
 func rim_crust_has_no_sky_slit() -> bool:
-	## Opaque face under the sand crust — no transparent cap that shows sky.
+	## Opaque sand crust at the top — no transparent cap that shows sky.
 	var img := _rim_source_image()
 	if img == null:
 		return false
 	var w := img.get_width()
-	var lip := int(RIM_LIP_TEX_X)
-	lip = clampi(lip, 0, w - 1)
-	for y in range(0, mini(36, img.get_height())):
-		if img.get_pixel(lip, y).a < 0.85:
+	var crust_h := mini(RIM_CRUST_TEX_ROWS, img.get_height())
+	for y in range(0, crust_h):
+		var lip := -1
+		for x in range(w - 1, -1, -1):
+			if img.get_pixel(x, y).a > 0.15:
+				lip = x
+				break
+		if lip < 8:
 			return false
 		var inland := clampi(lip - 8, 0, w - 1)
-		if img.get_pixel(inland, y).a < 0.85:
-			return false
+		for x in range(inland, lip + 1):
+			if img.get_pixel(x, y).a < 0.85:
+				return false
 	return true
 
 
@@ -273,7 +286,7 @@ func _layout_rims() -> void:
 	_left_rim.z_index = 1
 	_right_rim.z_index = 1
 
-	# Place rims OUTSIDE the desert floor gap: straight painted lip at the bank
+	# Place rims OUTSIDE the desert floor gap: outermost sky lip at the bank
 	# edge, thin rock face under the trail bank, drawn in front of desert tiles.
 	# Bank-side texels are transparent so TrailFloor dirt shows through.
 	var surface_from_center := (RIM_SURFACE_TEX_Y - tex_size.y * 0.5) * rim_scale.y

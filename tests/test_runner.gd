@@ -2552,9 +2552,9 @@ func _test_canyon_center_illustrated() -> Variant:
 	if not canyon_art.rim_bank_is_transparent():
 		controller.queue_free()
 		return "Canyon rim bank side must stay transparent so TrailFloor dirt shows."
-	if not canyon_art.rim_lip_is_straight():
+	if not canyon_art.rim_sky_edge_is_irregular():
 		controller.queue_free()
-		return "Canyon rim lip must be a straight vertical edge."
+		return "Canyon rim sky edge must be jagged/irregular, not a ruler-straight cut."
 	if not canyon_art.rim_crust_has_no_sky_slit():
 		controller.queue_free()
 		return "Canyon rim must seal under the sand crust (no sky slits)."
