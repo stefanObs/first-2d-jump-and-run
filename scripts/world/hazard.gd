@@ -28,8 +28,11 @@ func _configure_visual() -> void:
 	var rim := get_node_or_null("PitRim") as CanvasItem
 	var label := get_node_or_null("PitLabel") as Label
 	var wide := is_canyon()
-	if sprite != null:
-		sprite.visible = not wide
+	if wide:
+		# Never leave a scaled cactus (or legacy pit art) floating in the mouth.
+		_strip_cactus_visuals()
+	elif sprite != null:
+		sprite.visible = true
 	if pit != null:
 		pit.visible = false
 	if rim != null:
@@ -43,6 +46,21 @@ func _configure_visual() -> void:
 	if wide:
 		# Temporary until WildWestTheme supplies the real floor gap.
 		align_canyon_to_gap(global_position.y - 80.0, global_position.x - 80.0, global_position.x + 80.0)
+
+
+func _strip_cactus_visuals() -> void:
+	## Canyon hazards reuse the cactus scene — remove every cactus/pit sprite so a
+	## huge scaled saguaro can never float in the gap (hide alone is not enough if
+	## debug overlays or late theme passes re-show children).
+	for child_name in ["Sprite2D", "PitVisual", "PitRim"]:
+		var node := get_node_or_null(child_name)
+		if node == null:
+			continue
+		if node is CanvasItem:
+			(node as CanvasItem).visible = false
+		if node is Sprite2D:
+			(node as Sprite2D).texture = null
+		node.modulate = Color(1, 1, 1, 0)
 
 
 func align_canyon_to_gap(
@@ -59,9 +77,7 @@ func align_canyon_to_gap(
 	if parent_sx <= 0.001:
 		parent_sx = 1.0
 
-	var old_pit := get_node_or_null("PitVisual") as CanvasItem
-	if old_pit != null:
-		old_pit.visible = false
+	_strip_cactus_visuals()
 
 	var gap_w := maxf(gap_right - gap_left, 40.0)
 	var opening_center_x := (gap_left + gap_right) * 0.5

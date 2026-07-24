@@ -2520,7 +2520,7 @@ func _test_canyon_center_illustrated() -> Variant:
 	if trail.find_child("CanyonAbyssSky0", true, false) != null:
 		controller.queue_free()
 		return "Canyon mouths must not use an abyss sky-fill column."
-	# Mesa/backdrop tiles must not sit inside the canyon gap column.
+	# Mesa/backdrop hill tiles must not sit inside the canyon gap column.
 	var gap_left := canyon_art.gap_left
 	var gap_right := canyon_art.gap_right
 	for tile in hills.find_children("HillTile*", "Sprite2D", false, false):
@@ -2533,18 +2533,11 @@ func _test_canyon_center_illustrated() -> Variant:
 		if tile_left < gap_right - 1.0 and tile_right > gap_left + 1.0:
 			controller.queue_free()
 			return "Horizon hill / Mesa backdrop overlaps canyon gap column."
-	var sky_art := controller.get_node_or_null("SkyArt") as Node2D
-	if sky_art != null:
-		for tile in sky_art.find_children("SkyTile*", "Sprite2D", false, false):
-			var sprite := tile as Sprite2D
-			var tex_w := 0.0
-			if sprite.texture != null:
-				tex_w = sprite.texture.get_size().x * absf(sprite.scale.x)
-			var tile_left := sprite.position.x
-			var tile_right := tile_left + tex_w
-			if tile_left < gap_right - 1.0 and tile_right > gap_left + 1.0:
-				controller.queue_free()
-				return "SkyArt tile overlaps canyon gap; leave Background sky in the opening."
+	# Canyon hazard must never show its reused cactus sprite in the mouth.
+	var cactus_sprite := canyon.get_node_or_null("Sprite2D") as Sprite2D
+	if cactus_sprite != null and (cactus_sprite.visible or cactus_sprite.texture != null):
+		controller.queue_free()
+		return "Canyon hazard still shows a cactus sprite inside the mouth."
 	var left_rim := canyon_art.get_node("LeftRim") as Sprite2D
 	if canyon_art.z_index < 1:
 		controller.queue_free()

@@ -333,16 +333,30 @@ static func _validate_cactus_clear_of_canyons(level: Node) -> PackedStringArray:
 	for cactus in cacti:
 		# Use the sprite body, not only the origin — a centered cactus can hang
 		# over the mouth while its position still sits on the bank.
-		var cactus_rect := _approx_rect(cactus, Vector2(40, 48))
+		var cactus_rect := _approx_rect(cactus, Vector2(52, 64))
 		var cactus_left := cactus_rect.position.x
 		var cactus_right := cactus_rect.end.x
 		for gap in gaps:
 			var gap_left := float(gap["left"])
 			var gap_right := float(gap["right"])
-			# Body overlapping the open mouth is always illegal.
+			# Body overlapping the open mouth is always illegal (incl. overhang).
 			if cactus_right > gap_left and cactus_left < gap_right:
 				errors.append(
 					"Cactus %s sits inside canyon gap %.0f..%.0f; remove it."
+					% [cactus.name, gap_left, gap_right]
+				)
+				break
+			# Also reject bodies that sit on the hand-painted ridge band.
+			var rim_band := CACTUS_CANYON_CLEAR_PX * 0.45
+			if cactus_right > gap_left - rim_band and cactus_left < gap_left:
+				errors.append(
+					"Cactus %s overlaps the left canyon ridge band at gap %.0f..%.0f."
+					% [cactus.name, gap_left, gap_right]
+				)
+				break
+			if cactus_left < gap_right + rim_band and cactus_right > gap_right:
+				errors.append(
+					"Cactus %s overlaps the right canyon ridge band at gap %.0f..%.0f."
 					% [cactus.name, gap_left, gap_right]
 				)
 				break

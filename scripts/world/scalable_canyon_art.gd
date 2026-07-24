@@ -13,11 +13,11 @@ const RIM_TEXTURE: Texture2D = preload("res://assets/world/canyon_rim_left.png")
 const RIM_SIZE := Vector2(200.0, 900.0)
 ## Pixel row of the painted desert sand crust on canyon_rim_left.png.
 ## Keep locked to the top plateau so ridge lips meet the trail surface.
-const RIM_SURFACE_TEX_Y := 3.0
+const RIM_SURFACE_TEX_Y := 4.0
 ## Texture X of the canyon-facing lip (opaque right edge of the top crust).
 ## Positioning uses this — not the full padded texture width — so the ridge
 ## terminates the desert cleanly and lower strata do not float in the mouth.
-const RIM_LIP_TEX_X := 257.0
+const RIM_LIP_TEX_X := 353.0
 ## Draw above TrailFloor surface tiles (z 1) so ridge lips sit on the desert edge.
 const CANYON_DRAW_Z := 2
 ## How far below the desert top the ridge must reach (matches FloorAbyss depth).

@@ -46,24 +46,9 @@ static func _dress_sky(level: Node) -> void:
 	var tex: Texture2D = load("res://assets/world/sky_handdrawn.png")
 	if tex == null:
 		return
-	# Tile sky beside canyon mouths so gap columns show clean Background blue
-	# (sky_handdrawn can carry mesa-tint strokes that read as backdrop in the opening).
-	var gaps := _canyon_gap_ranges(level)
-	var spans := _spans_excluding_gaps(-500.0, width + 600.0, gaps, CANYON_BACKDROP_PAD)
-	var index := 0
-	for span in spans:
-		index = _tile_backdrop_span(
-			root,
-			tex,
-			"SkyTile",
-			float(span["left"]),
-			float(span["right"]),
-			-520.0,
-			700.0,
-			8.0,
-			Color.WHITE,
-			index
-		)
+	# Continuous trail sky — punch only Mesa hills out of canyon columns so the
+	# opening does not get a mismatched Background-blue sky seam.
+	_tile_backdrop(root, tex, "SkyTile", width, -520.0, 700.0, 8.0, Color.WHITE)
 
 
 static func _dress_sun(level: Node) -> void:
