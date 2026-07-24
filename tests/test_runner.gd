@@ -2471,6 +2471,9 @@ func _test_canyon_center_illustrated() -> Variant:
 	if not canyon_art.rims_match_desert_height():
 		controller.queue_free()
 		return "Canyon rim desert top must align with the trail floor height."
+	if not canyon_art.rims_reach_canyon_bottom():
+		controller.queue_free()
+		return "Canyon ridges must be full-height cliffs (top→bottom), not a short surface lip."
 	if not canyon_art.interior_stays_inside_gap():
 		controller.queue_free()
 		return "Canyon mouth must not paint a sky-fill column over desert banks."
@@ -2515,6 +2518,31 @@ func _test_canyon_center_illustrated() -> Variant:
 	if trail.find_child("CanyonAbyssSky0", true, false) != null:
 		controller.queue_free()
 		return "Canyon mouths must not use an abyss sky-fill column."
+	# Mesa/backdrop tiles must not sit inside the canyon gap column.
+	var gap_left := canyon_art.gap_left
+	var gap_right := canyon_art.gap_right
+	for tile in hills.find_children("HillTile*", "Sprite2D", false, false):
+		var sprite := tile as Sprite2D
+		var tex_w := 0.0
+		if sprite.texture != null:
+			tex_w = sprite.texture.get_size().x * absf(sprite.scale.x)
+		var tile_left := sprite.position.x
+		var tile_right := tile_left + tex_w
+		if tile_left < gap_right - 1.0 and tile_right > gap_left + 1.0:
+			controller.queue_free()
+			return "Horizon hill / Mesa backdrop overlaps canyon gap column."
+	var sky_art := controller.get_node_or_null("SkyArt") as Node2D
+	if sky_art != null:
+		for tile in sky_art.find_children("SkyTile*", "Sprite2D", false, false):
+			var sprite := tile as Sprite2D
+			var tex_w := 0.0
+			if sprite.texture != null:
+				tex_w = sprite.texture.get_size().x * absf(sprite.scale.x)
+			var tile_left := sprite.position.x
+			var tile_right := tile_left + tex_w
+			if tile_left < gap_right - 1.0 and tile_right > gap_left + 1.0:
+				controller.queue_free()
+				return "SkyArt tile overlaps canyon gap; leave Background sky in the opening."
 	var left_rim := canyon_art.get_node("LeftRim") as Sprite2D
 	if canyon_art.z_index < 1:
 		controller.queue_free()
@@ -2526,13 +2554,17 @@ func _test_canyon_center_illustrated() -> Variant:
 	if canyon_art.z_index <= trail_surface_z:
 		controller.queue_free()
 		return "CanyonMouth z_index must be above TrailFloor surface (z > %d)." % trail_surface_z
-	var max_rim_scale := ScalableCanyonArt.RIM_SIZE / left_rim.texture.get_size()
+	# Widening must not stretch ridge WIDTH past the handmade max (height stays full).
+	var max_rim_scale_x := ScalableCanyonArt.RIM_SIZE.x / left_rim.texture.get_size().x
 	var wide_right := canyon_art.gap_right + 700.0
 	canyon_art.configure(canyon_art.floor_top, canyon_art.gap_left, wide_right)
 	var wide_scale := (canyon_art.get_node("LeftRim") as Sprite2D).scale
-	if wide_scale.x > max_rim_scale.x + 0.01 or wide_scale.y > max_rim_scale.y + 0.01:
+	if wide_scale.x > max_rim_scale_x + 0.01:
 		controller.queue_free()
 		return "Widening the canyon stretched the handmade rim."
+	if not canyon_art.rims_reach_canyon_bottom():
+		controller.queue_free()
+		return "Wide canyon lost full-height ridge coverage."
 	if not canyon_art.center_is_illustrated():
 		controller.queue_free()
 		return "Wide canyon lost open-sky center treatment."
@@ -3018,16 +3050,21 @@ func _test_art_and_music() -> Variant:
 		if absf(canyon_art.gap_left - gap_left) > 12.0 or absf(canyon_art.gap_right - gap_right) > 12.0:
 			controller.queue_free()
 			return "Canyon borders should match the fall gap."
-		var max_rim_scale := ScalableCanyonArt.RIM_SIZE / (canyon_art.get_node("LeftRim") as Sprite2D).texture.get_size()
+		var max_rim_scale_x := (
+			ScalableCanyonArt.RIM_SIZE.x
+			/ (canyon_art.get_node("LeftRim") as Sprite2D).texture.get_size().x
+		)
 		canyon_art.configure(floor_top, gap_left, gap_right + 600.0)
 		var wide_scale := (canyon_art.get_node("LeftRim") as Sprite2D).scale
 		if (
 			canyon_art.opening_width() < gap_right - gap_left + 590.0
-			or wide_scale.x > max_rim_scale.x + 0.01
-			or wide_scale.y > max_rim_scale.y + 0.01
+			or wide_scale.x > max_rim_scale_x + 0.01
 		):
 			controller.queue_free()
 			return "Canyon center should widen without stretching its handmade rims."
+		if not canyon_art.rims_reach_canyon_bottom():
+			controller.queue_free()
+			return "Canyon ridges must stay full-height after widening."
 	controller.queue_free()
 	return null
 

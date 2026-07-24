@@ -1,22 +1,27 @@
 class_name ScalableCanyonArt
 extends Node2D
 
-## Hand-painted cliff rims outside the desert floor, framing an open canyon
-## mouth. Sky shows through naturally (no fill column) — no depth shelves,
-## floor wash, or mountain scenery inside. Rims stay warm and trail-matched.
+## Hand-painted full-height cliff ridges outside the desert floor, framing an
+## open canyon mouth. Sky shows through naturally (no fill column) — no depth
+## shelves, floor wash, or mountain scenery inside. Rims stay warm and
+## trail-matched from the desert top down the full canyon face.
 
 const RIM_TEXTURE: Texture2D = preload("res://assets/world/canyon_rim_left.png")
 
-const RIM_SIZE := Vector2(220.0, 260.0)
+## World size of one ridge: wide enough to cover the bank cut, tall enough to
+## reach the bottom of the trail dirt / view (not a short surface lip).
+const RIM_SIZE := Vector2(200.0, 900.0)
 ## Pixel row of the painted desert sand crust on canyon_rim_left.png.
 ## Keep locked to the top plateau so ridge lips meet the trail surface.
 const RIM_SURFACE_TEX_Y := 3.0
 ## Texture X of the canyon-facing lip (opaque right edge of the top crust).
 ## Positioning uses this — not the full padded texture width — so the ridge
 ## terminates the desert cleanly and lower strata do not float in the mouth.
-const RIM_LIP_TEX_X := 262.0
+const RIM_LIP_TEX_X := 257.0
 ## Draw above TrailFloor surface tiles (z 1) so ridge lips sit on the desert edge.
 const CANYON_DRAW_Z := 2
+## How far below the desert top the ridge must reach (matches FloorAbyss depth).
+const RIM_DEPTH_PX := 880.0
 
 
 var gap_left: float
@@ -94,6 +99,14 @@ func rim_surface_world_y(rim: Sprite2D) -> float:
 	return rim.position.y + (RIM_SURFACE_TEX_Y - tex_h * 0.5) * rim.scale.y
 
 
+func rim_bottom_world_y(rim: Sprite2D) -> float:
+	## World Y of the bottom of the full-height ridge art.
+	if rim == null or rim.texture == null:
+		return floor_top
+	var tex_h := float(rim.texture.get_size().y)
+	return rim.position.y + (tex_h * 0.5) * rim.scale.y
+
+
 func rims_match_desert_height(tolerance: float = 4.0) -> bool:
 	## Ridge tops sit 1px under the trail crust by design.
 	if _left_rim == null or _right_rim == null:
@@ -101,6 +114,18 @@ func rims_match_desert_height(tolerance: float = 4.0) -> bool:
 	return (
 		absf(rim_surface_world_y(_left_rim) - (left_floor_top + 1.0)) <= tolerance
 		and absf(rim_surface_world_y(_right_rim) - (right_floor_top + 1.0)) <= tolerance
+	)
+
+
+func rims_reach_canyon_bottom(tolerance: float = 40.0) -> bool:
+	## Full-height ridges — not a short surface lip — cover the canyon face.
+	if _left_rim == null or _right_rim == null:
+		return false
+	var left_target := left_floor_top + RIM_DEPTH_PX
+	var right_target := right_floor_top + RIM_DEPTH_PX
+	return (
+		rim_bottom_world_y(_left_rim) >= left_target - tolerance
+		and rim_bottom_world_y(_right_rim) >= right_target - tolerance
 	)
 
 
@@ -150,11 +175,12 @@ func _make_rim(rim_name: String, flip: bool) -> Sprite2D:
 func _layout_rims() -> void:
 	var tex_size := RIM_TEXTURE.get_size()
 	var base_scale := RIM_SIZE / tex_size
+	# Narrow gaps shrink ridge WIDTH only — keep full cliff height.
 	var width := opening_width()
-	var fit := 1.0
+	var fit_x := 1.0
 	if width < 200.0:
-		fit = clampf(width / 200.0, 0.45, 1.0)
-	var rim_scale := base_scale * fit
+		fit_x = clampf(width / 200.0, 0.45, 1.0)
+	var rim_scale := Vector2(base_scale.x * fit_x, base_scale.y)
 	_left_rim.scale = rim_scale
 	_right_rim.scale = rim_scale
 	_right_rim.flip_h = true

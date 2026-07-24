@@ -3,6 +3,10 @@ extends RefCounted
 
 ## Applies cheerful hand-drawn wild-west sky, hills, and trail floor art.
 
+## Clear Mesa/backdrop art well past canyon lips so buttes never silhouette
+## inside the open mouth column (sky / Background only between the ridges).
+const CANYON_BACKDROP_PAD := 96.0
+
 
 static func desert_sky_color() -> Color:
 	return Color(0.58, 0.82, 0.96, 1.0)
@@ -42,8 +46,24 @@ static func _dress_sky(level: Node) -> void:
 	var tex: Texture2D = load("res://assets/world/sky_handdrawn.png")
 	if tex == null:
 		return
-	# Lower the sky wash so more blue sits behind the trail.
-	_tile_backdrop(root, tex, "SkyTile", width, -520.0, 700.0, 8.0, Color.WHITE)
+	# Tile sky beside canyon mouths so gap columns show clean Background blue
+	# (sky_handdrawn can carry mesa-tint strokes that read as backdrop in the opening).
+	var gaps := _canyon_gap_ranges(level)
+	var spans := _spans_excluding_gaps(-500.0, width + 600.0, gaps, CANYON_BACKDROP_PAD)
+	var index := 0
+	for span in spans:
+		index = _tile_backdrop_span(
+			root,
+			tex,
+			"SkyTile",
+			float(span["left"]),
+			float(span["right"]),
+			-520.0,
+			700.0,
+			8.0,
+			Color.WHITE,
+			index
+		)
 
 
 static func _dress_sun(level: Node) -> void:
@@ -89,10 +109,10 @@ static func _make_endless_hills(level: Node) -> void:
 	if tex == null:
 		return
 	var hill_y := floor_top - 520.0 + 10.0
-	# Tile hills only beside canyon mouths so real SkyArt shows through the gaps
-	# (no stretched sky-fill column over the mesas).
+	# Tile hills only beside canyon mouths so Background sky shows through the
+	# gaps — pad far enough that Mesa buttes never sit in the opening column.
 	var gaps := _canyon_gap_ranges(level)
-	var spans := _spans_excluding_gaps(-500.0, width + 600.0, gaps, 4.0)
+	var spans := _spans_excluding_gaps(-500.0, width + 600.0, gaps, CANYON_BACKDROP_PAD)
 	var index := 0
 	for span in spans:
 		index = _tile_backdrop_span(

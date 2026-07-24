@@ -86,10 +86,10 @@ Agents **must** honor these when editing levels or trail systems:
 ### Canyon art
 
 - Hand-painted **rims sit outside** desert floor banks — never cover the brown desert surface span with rim sprites.
-- Ridge tops use the same warm sand crust as the trail and **align with the desert top** (slightly under the trail tiles in Y). Rims draw **in front of** desert floor tiles so lips sit on the canyon edge. Desert surface/dirt tiles **inset at canyon lips** so sand never overhangs past the ridge into the mouth.
-- Between the ridges: **open sky only** — punch horizon hills and FloorAbyss out of the gap so the real trail sky / Background shows through. Do **not** paint a stretched sky-fill column, depth shelves, floor wash, inner-wall fill, or mountain scenery inside the mouth; **never** a featureless black / flat near-black void or black outline framing the lips.
-- Horizon hills must **not** silhouette over canyon openings (sky continues through the gap).
-- Widening a gap must not stretch handmade rim textures.
+- Ridges are **full-height cliff art**: from the desert top down the canyon face to the bottom of the trail dirt / view — not a short rim lip only at the surface. Ridge tops use the same warm sand crust as the trail and **align with the desert top** (slightly under the trail tiles in Y). Rims draw **in front of** desert floor tiles so lips sit on the canyon edge. Desert surface/dirt tiles **inset at canyon lips** so sand never overhangs past the ridge into the mouth.
+- Between the ridges: **open sky only** — punch horizon hills (Mesa backdrop), SkyArt mesa-tint strokes, and FloorAbyss out of the gap column so clean Background sky shows through. Do **not** paint a stretched sky-fill column, depth shelves, floor wash, inner-wall fill, or mountain scenery inside the mouth; **never** a featureless black / flat near-black void or black outline framing the lips.
+- Horizon hills / Mesa backdrop must **not** silhouette over or through canyon openings (sky continues through the gap).
+- Widening a gap must not stretch handmade rim textures (width may shrink to fit; cliff height stays full).
 
 ### Floor height
 
@@ -142,7 +142,7 @@ Safe stars, forward-only solvability, reachable platforms/stars, visible themed 
 
 1. Read this README; treat it as binding. Do not reintroduce “pits”, English-as-default, featureless black canyons, ferry-raft Level 4 look, or uncapped runaway wind.
 2. Call gaps **canyons** in player-facing strings.
-3. Canyon rims outside desert banks; illustrated interior with sky OK; never cover floor with rims; never featureless black.
+3. Canyon rims outside desert banks; full-height ridge cliffs; open sky in the mouth (no Mesa/backdrop in the gap); never cover floor with rims; never featureless black.
 4. Every canyon crossable with normal (or L1 mounted) jump hops / movers; no impossible gaps.
 5. Movers: one-way; reverse before floor/obstructions; paired opposite-phase when handoffs are intended; L4 = clouds + planks, not ferry-step. Conveyors must not push into open canyons (pair with a timed door on solid ground).
 6. Wind stays gentle and capped.
