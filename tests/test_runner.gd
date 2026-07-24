@@ -3041,6 +3041,10 @@ func _test_arrival_leaves_horse_at_spawn() -> Variant:
 	# Position must still be the spawn after the overlay closes (no ride-away).
 	if absf(horse.position.x - spawn.x) > 3.0:
 		error = "Horse must stay at the level start through the end of arrival."
+	elif transition.visible:
+		error = "Arrival overlay must hide when the horse arrival finishes."
+	elif transition.get_node_or_null("Banner") != null and not String((transition.get_node("Banner") as Label).text).is_empty():
+		error = "Arrival must clear the banner text so it does not linger."
 	transition.queue_free()
 	return error
 

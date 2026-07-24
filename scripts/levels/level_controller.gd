@@ -613,6 +613,8 @@ func _on_bounty_caught(opponent: Opponent, amount: int) -> void:
 
 
 func _on_celebration_finished() -> void:
+	if transition != null:
+		transition.hide_overlay()
 	if is_custom_level:
 		GameManager.return_from_custom_level()
 		return

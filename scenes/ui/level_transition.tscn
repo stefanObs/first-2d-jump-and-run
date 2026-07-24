@@ -5,6 +5,7 @@
 
 [node name="LevelTransition" type="CanvasLayer"]
 layer = 100
+visible = false
 script = ExtResource("1_transition")
 
 [node name="HandmadeSkyline" type="TextureRect" parent="."]
@@ -43,7 +44,7 @@ grow_vertical = 2
 pivot_offset = Vector2(280, 45)
 theme_override_colors/font_color = Color(0.35, 0.14, 0.05, 1)
 theme_override_font_sizes/font_size = 56
-text = "Yeehaw!"
+text = ""
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -59,5 +60,5 @@ offset_right = 260.0
 offset_bottom = 64.0
 theme_override_colors/font_color = Color(0.45, 0.22, 0.08, 1)
 theme_override_font_sizes/font_size = 24
-text = "Next trail ahead..."
+text = ""
 horizontal_alignment = 1

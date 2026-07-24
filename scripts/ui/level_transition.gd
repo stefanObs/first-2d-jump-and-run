@@ -58,7 +58,7 @@ func _ready() -> void:
 	_ensure_horse_art()
 	_place_badge_labels()
 	_apply_transparent_backdrop()
-	visible = false
+	hide_overlay()
 	layer = 100
 
 
@@ -405,11 +405,44 @@ func _run_arrival() -> void:
 		_subtitle.text = tr("Ready!")
 	var settle := create_tween()
 	settle.tween_interval(0.28)
+	settle.set_parallel(true)
 	settle.tween_property(_cowboy, "modulate:a", 0.0, 0.35)
+	if _banner != null:
+		settle.tween_property(_banner, "modulate:a", 0.0, 0.35)
+	if _subtitle != null:
+		settle.tween_property(_subtitle, "modulate:a", 0.0, 0.35)
 	await settle.finished
-	visible = false
+	hide_overlay()
 	_arrival_active = false
 	arrival_finished.emit()
+
+
+func hide_overlay() -> void:
+	## Fully dismiss transition chrome so banner/subtitle never linger in gameplay.
+	_arrival_active = false
+	_animating_rider = false
+	_animating_empty_horse = false
+	visible = false
+	if _banner != null:
+		_banner.text = ""
+		_banner.modulate.a = 0.0
+	if _subtitle != null:
+		_subtitle.text = ""
+		_subtitle.modulate.a = 0.0
+	if _horse != null:
+		_horse.visible = false
+		_horse.modulate.a = 0.0
+	if _rider != null:
+		_rider.visible = false
+		_rider.modulate.a = 0.0
+	if _cowboy != null:
+		_cowboy.visible = false
+		_cowboy.modulate.a = 0.0
+	if _saloon != null:
+		_saloon.visible = false
+	if _veil != null:
+		_veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_veil.color = Color(0.0, 0.0, 0.0, 0.0)
 
 
 func _ensure_horse_art() -> void:
