@@ -272,13 +272,14 @@ static func _make_contiguous_floors(level: Node) -> void:
 				if row > 40:
 					break
 
-		# Handpainted step faces where neighboring banks sit at different heights.
-		if dirt != null and i + 1 < merged.size():
-			_draw_step_face(floor_root, dirt, merged[i], merged[i + 1], i)
+		# Soft desert slopes where neighboring banks sit at different heights.
+		if i + 1 < merged.size():
+			_draw_bank_slope(floor_root, surface, dirt, merged[i], merged[i + 1], i)
 
 
-static func _draw_step_face(
+static func _draw_bank_slope(
 	parent: Node,
+	surface: Texture2D,
 	dirt: Texture2D,
 	left_strip: Dictionary,
 	right_strip: Dictionary,
@@ -290,20 +291,162 @@ static func _draw_step_face(
 	if step < 10.0:
 		return
 	var seam_x := (float(left_strip["right"]) + float(right_strip["left"])) * 0.5
-	var high_top := minf(left_top, right_top)
-	var low_top := maxf(left_top, right_top)
-	var face_w := clampf(step * 0.55, 18.0, 36.0)
-	var face_left := seam_x - face_w * 0.5
-	# Shade the riser with dirt tiles so stacked banks read as one carved ledge.
-	_tile_strip_row(parent, dirt, face_left, face_left + face_w, high_top, low_top - high_top, 2, "FloorStep%d" % index)
-	var lip := ColorRect.new()
-	lip.name = "FloorStepLip%d" % index
-	lip.position = Vector2(face_left - 2.0, high_top)
-	lip.size = Vector2(face_w + 4.0, 5.0)
-	lip.color = Color(0.91, 0.68, 0.36, 0.95)
-	lip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	lip.z_index = 3
-	parent.add_child(lip)
+	# Gentle kid-friendly grade (~2.5–3:1 run:rise), capped so it stays local.
+	var run := clampf(step * 2.75, 56.0, 150.0)
+	var left_is_high := left_top < right_top
+	var x_high: float
+	var y_high: float
+	var x_low: float
+	var y_low: float
+	if left_is_high:
+		x_high = seam_x - 6.0
+		y_high = left_top
+		x_low = seam_x + run
+		y_low = right_top
+	else:
+		x_high = seam_x + 6.0
+		y_high = right_top
+		x_low = seam_x - run
+		y_low = left_top
+
+	_paint_slope_fill(parent, dirt, x_high, y_high, x_low, y_low, index)
+	_paint_slope_crust(parent, surface, x_high, y_high, x_low, y_low, index)
+	_add_slope_collision(parent, x_high, y_high, x_low, y_low, index)
+
+
+static func _paint_slope_crust(
+	parent: Node,
+	surface: Texture2D,
+	x_high: float,
+	y_high: float,
+	x_low: float,
+	y_low: float,
+	index: int
+) -> void:
+	if surface == null:
+		return
+	var dx := x_low - x_high
+	var dy := y_low - y_high
+	var length := maxf(sqrt(dx * dx + dy * dy), 1.0)
+	var angle := atan2(dy, dx)
+	var tex_size := surface.get_size()
+	var crust_h := 42.0
+	var scale_y := crust_h / tex_size.y
+	var tile_w := tex_size.x * scale_y * 0.92
+	var along := 0.0
+	var tile_i := 0
+	while along < length - 1.0:
+		var use := minf(tile_w, length - along)
+		var t := (along + use * 0.5) / length
+		var mid := Vector2(lerpf(x_high, x_low, t), lerpf(y_high, y_low, t))
+		var sprite := Sprite2D.new()
+		sprite.name = "FloorSlope%d_%d" % [index, tile_i]
+		sprite.texture = surface
+		sprite.centered = true
+		sprite.position = mid + Vector2(0, crust_h * 0.28).rotated(angle)
+		sprite.rotation = angle
+		sprite.scale = Vector2(use / tex_size.x, scale_y)
+		sprite.z_index = 3
+		parent.add_child(sprite)
+		along += use * 0.78
+		tile_i += 1
+		if tile_i > 40:
+			break
+
+
+static func _paint_slope_fill(
+	parent: Node,
+	dirt: Texture2D,
+	x_high: float,
+	y_high: float,
+	x_low: float,
+	y_low: float,
+	index: int
+) -> void:
+	## Dirt wedge under the sand crust so the bank reads as one soft dune, not a cliff.
+	var x0 := minf(x_high, x_low)
+	var x1 := maxf(x_high, x_low)
+	var top_at := func(x: float) -> float:
+		if absf(x1 - x0) < 0.1:
+			return minf(y_high, y_low)
+		var t := (x - x0) / (x1 - x0)
+		# Map world x back onto the high→low line.
+		var y_at_x0 := y_high if x_high <= x_low else y_low
+		var y_at_x1 := y_low if x_high <= x_low else y_high
+		return lerpf(y_at_x0, y_at_x1, t)
+
+	var deep := maxf(y_high, y_low) + 96.0
+	if dirt != null:
+		var tex_size := dirt.get_size()
+		var row_h := 28.0
+		var scale_y := row_h / tex_size.y
+		var tile_w := tex_size.x * scale_y
+		var y := minf(y_high, y_low) + 18.0
+		var row := 0
+		while y < deep:
+			var x := x0
+			var tile_i := 0
+			while x < x1 - 0.5:
+				var surface_y: float = top_at.call(x + tile_w * 0.5)
+				if y + row_h < surface_y + 8.0:
+					x += tile_w * 0.85
+					continue
+				var use_w := minf(tile_w, x1 - x)
+				var sprite := Sprite2D.new()
+				sprite.name = "FloorSlopeDirt%d_%d_%d" % [index, row, tile_i]
+				sprite.texture = dirt
+				sprite.centered = false
+				sprite.position = Vector2(x, y)
+				sprite.scale = Vector2(use_w / tex_size.x, scale_y)
+				sprite.z_index = 2
+				sprite.modulate = Color(0.96, 0.9, 0.82, 1.0)
+				parent.add_child(sprite)
+				x += use_w * 0.85
+				tile_i += 1
+				if tile_i > 60:
+					break
+			y += row_h - 3.0
+			row += 1
+			if row > 12:
+				break
+
+	# Soft silhouette so the dirt wedge reads clearly under the crust.
+	var silhouette := Polygon2D.new()
+	silhouette.name = "FloorSlopeFill%d" % index
+	silhouette.color = Color(0.72, 0.48, 0.28, 0.55)
+	silhouette.z_index = 1
+	silhouette.polygon = PackedVector2Array([
+		Vector2(x_high, y_high + 6.0),
+		Vector2(x_low, y_low + 6.0),
+		Vector2(x_low, deep),
+		Vector2(x_high, deep),
+	])
+	parent.add_child(silhouette)
+
+
+static func _add_slope_collision(
+	parent: Node,
+	x_high: float,
+	y_high: float,
+	x_low: float,
+	y_low: float,
+	index: int
+) -> void:
+	var body := StaticBody2D.new()
+	body.name = "FloorSlopeBody%d" % index
+	body.collision_layer = 1
+	body.collision_mask = 0
+	var col := CollisionPolygon2D.new()
+	col.name = "CollisionPolygon2D"
+	var thick := 34.0
+	col.polygon = PackedVector2Array([
+		Vector2(x_high, y_high),
+		Vector2(x_low, y_low),
+		Vector2(x_low, y_low + thick),
+		Vector2(x_high, y_high + thick),
+	])
+	body.add_child(col)
+	parent.add_child(body)
 
 
 static func _tile_strip_row(

@@ -2380,17 +2380,22 @@ func _test_trail_row_model() -> Variant:
 		return "Two stacked dirt cells should merge into one taller bank, not two short boxes."
 	WildWestTheme.apply_to_level(level)
 	var has_surface := false
-	var has_step_lip := false
+	var has_slope := false
+	var has_slope_body := false
 	for node in level.find_children("*", "Node", true, false):
 		var node_name := String(node.name)
 		has_surface = has_surface or node_name.begins_with("FloorSurface")
-		has_step_lip = has_step_lip or node_name.begins_with("FloorStepLip")
+		has_slope = has_slope or node_name.begins_with("FloorSlope")
+		has_slope_body = has_slope_body or node_name.begins_with("FloorSlopeBody")
 	if not has_surface:
 		level.free()
 		return "Theme should paint desert surface over stacked dirt banks."
-	if not has_step_lip:
+	if not has_slope:
 		level.free()
-		return "Adjacent dirt height differences should paint a handpainted step face."
+		return "Adjacent dirt height differences should paint a natural desert slope."
+	if not has_slope_body:
+		level.free()
+		return "Desert height slopes need walkable collision."
 	level.free()
 	# Campaign levels 2 and 5 should include stacked dirt height differences.
 	for path in ["res://scenes/levels/level_02.tscn", "res://scenes/levels/level_05.tscn"]:
