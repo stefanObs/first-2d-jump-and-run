@@ -8,7 +8,7 @@ const ASSISTED_JUMP_HEIGHT := 190.0
 const SPRING_JUMP_HEIGHT := 250.0
 const BASE_HORIZONTAL_GAP := 230.0
 const ASSISTED_HORIZONTAL_GAP := 340.0
-const CACTUS_CANYON_CLEAR_PX := 200.0
+const CACTUS_CANYON_CLEAR_PX := 260.0  ## Past hand-painted rim body (RIM_SIZE.x + margin).
 const SPRING_APPROACH_PX := 350.0
 const CARRION_MAX_SCALE := 0.65
 const CARRION_VISUAL_HALF := Vector2(74.0, 46.0)
@@ -338,14 +338,19 @@ static func _validate_cactus_clear_of_canyons(level: Node) -> PackedStringArray:
 				edge_dist = 0.0
 			if edge_dist >= CACTUS_CANYON_CLEAR_PX:
 				continue
+			# Never keep a cactus inside the canyon mouth.
+			if side == "inside":
+				errors.append(
+					"Cactus %s sits inside canyon gap %.0f..%.0f; remove it."
+					% [cactus.name, gap_left, gap_right]
+				)
+				break
 			var spring_ok := false
 			for spring in springs:
 				var sx := spring.global_position.x
 				if side == "before" and gap_left - SPRING_APPROACH_PX <= sx and sx <= gap_left + 40.0:
 					spring_ok = true
 				elif side == "after" and gap_right - 40.0 <= sx and sx <= gap_right + SPRING_APPROACH_PX:
-					spring_ok = true
-				elif side == "inside" and gap_left - 50.0 <= sx and sx <= gap_right + 50.0:
 					spring_ok = true
 			if spring_ok:
 				continue

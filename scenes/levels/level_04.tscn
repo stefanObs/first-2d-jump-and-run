@@ -810,10 +810,6 @@ position = Vector2(2270, 330)
 position = Vector2(3650, 330)
 
 
-[node name="Cactus22" parent="." instance=ExtResource("5_hazard")]
-position = Vector2(5000, 330)
-
-
 [node name="Cactus34" parent="." instance=ExtResource("5_hazard")]
 position = Vector2(6880, 330)
 

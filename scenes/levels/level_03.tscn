@@ -694,20 +694,12 @@ color = Color(0.45, 0.72, 0.28, 1)
 shape = SubResource("GroundSeg")
 
 
-[node name="Cactus4" parent="." instance=ExtResource("5_hazard")]
-position = Vector2(1040, 330)
-
-
 [node name="Cactus10" parent="." instance=ExtResource("5_hazard")]
 position = Vector2(2270, 330)
 
 
 [node name="Cactus16" parent="." instance=ExtResource("5_hazard")]
 position = Vector2(3380, 330)
-
-
-[node name="Cactus22" parent="." instance=ExtResource("5_hazard")]
-position = Vector2(3920, 330)
 
 
 [node name="Cactus34" parent="." instance=ExtResource("5_hazard")]
