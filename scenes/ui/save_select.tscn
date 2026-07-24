@@ -237,6 +237,20 @@ theme_override_colors/font_color = Color(0.96, 0.86, 0.48, 1)
 theme_override_font_sizes/font_size = 19
 text = "Translation Editor"
 
+[node name="ElementReferenceButton" type="Button" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 28.0
+offset_top = -236.0
+offset_right = 248.0
+offset_bottom = -180.0
+theme_override_colors/font_color = Color(0.96, 0.86, 0.48, 1)
+theme_override_font_sizes/font_size = 20
+text = "Element Names"
+
 [node name="PromptBoard" type="Control" parent="."]
 layout_mode = 1
 anchors_preset = 7
@@ -300,6 +314,72 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 0
 color = Color(0.22, 0.1, 0.04, 0.45)
+
+[node name="ElementReferenceOverlay" type="Control" parent="."]
+visible = false
+z_index = 40
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Dim" type="ColorRect" parent="ElementReferenceOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0.18, 0.08, 0.03, 0.62)
+
+[node name="Panel" type="PanelContainer" parent="ElementReferenceOverlay"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -520.0
+offset_top = -330.0
+offset_right = 520.0
+offset_bottom = 330.0
+
+[node name="Margin" type="MarginContainer" parent="ElementReferenceOverlay/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 14
+
+[node name="VBox" type="VBoxContainer" parent="ElementReferenceOverlay/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="ElementReferenceOverlay/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.86, 0.48, 1)
+theme_override_colors/font_outline_color = Color(0.22, 0.08, 0.03, 0.9)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 28
+text = "Element name sheet"
+horizontal_alignment = 1
+
+[node name="Sheet" type="TextureRect" parent="ElementReferenceOverlay/Panel/Margin/VBox"]
+custom_minimum_size = Vector2(980, 520)
+layout_mode = 2
+size_flags_vertical = 3
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CloseButton" type="Button" parent="ElementReferenceOverlay/Panel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.86, 0.48, 1)
+theme_override_font_sizes/font_size = 22
+text = "Back"
 
 [node name="SettingsPanel" type="PanelContainer" parent="."]
 visible = false

@@ -8,6 +8,8 @@ const TITLE_CREAM_HOVER := Color(1.0, 0.92, 0.62, 1.0)
 const WOOD := Color(0.78, 0.48, 0.22, 0.96)
 const WOOD_HOVER := Color(0.90, 0.62, 0.30, 1.0)
 const SLOT_BOARD := preload("res://assets/ui/saloon_slot_board.png")
+## Canonical labeled collage of gameplay elements (class_name / node prefixes).
+const ELEMENT_REFERENCE_PATH := "res://docs/element_name_reference.png"
 
 var _cards: Array[Button] = []
 var _index: int = 0
@@ -16,6 +18,9 @@ var _hint: Label
 var _delete_dialog: ConfirmationDialog
 var _settings: SettingsPanel
 var _settings_dim: ColorRect
+var _element_ref_button: Button
+var _element_ref_overlay: Control
+var _element_ref_unlocked: bool = false
 
 
 func _ready() -> void:
@@ -24,8 +29,11 @@ func _ready() -> void:
 	_delete_dialog = get_node_or_null("DeleteConfirmation") as ConfirmationDialog
 	_settings = get_node_or_null("SettingsPanel") as SettingsPanel
 	_settings_dim = get_node_or_null("SettingsDim") as ColorRect
+	_element_ref_button = get_node_or_null("ElementReferenceButton") as Button
+	_element_ref_overlay = get_node_or_null("ElementReferenceOverlay") as Control
 	_localize_static_labels()
 	_style_screen()
+	_setup_element_reference()
 	if _delete_dialog != null:
 		_delete_dialog.confirmed.connect(_confirm_delete)
 		_style_delete_dialog()
@@ -44,7 +52,7 @@ func _ready() -> void:
 	if builder != null:
 		_style_action_button(builder)
 		builder.pressed.connect(func() -> void:
-			if _settings_open():
+			if _settings_open() or _element_reference_open():
 				return
 			AudioManager.ensure_gameplay_music()
 			GameManager.open_custom_level_hub()
@@ -53,7 +61,7 @@ func _ready() -> void:
 	if translation_editor != null:
 		_style_action_button(translation_editor)
 		translation_editor.pressed.connect(func() -> void:
-			if _settings_open():
+			if _settings_open() or _element_reference_open():
 				return
 			get_tree().change_scene_to_file("res://scenes/ui/translation_editor.tscn")
 		)
@@ -68,12 +76,12 @@ func _ready() -> void:
 			_style_slot_button(card)
 			var captured := i
 			card.pressed.connect(func() -> void:
-				if _settings_open():
+				if _settings_open() or _element_reference_open():
 					return
 				_select_slot(captured)
 			)
 			card.gui_input.connect(func(event: InputEvent) -> void:
-				if _settings_open():
+				if _settings_open() or _element_reference_open():
 					return
 				if (
 					event is InputEventMouseButton
@@ -85,13 +93,13 @@ func _ready() -> void:
 					_request_delete()
 			)
 			card.mouse_entered.connect(func() -> void:
-				if _settings_open():
+				if _settings_open() or _element_reference_open():
 					return
 				_index = captured
 				_highlight()
 			)
 			card.focus_entered.connect(func() -> void:
-				if _settings_open():
+				if _settings_open() or _element_reference_open():
 					return
 				_index = captured
 				_highlight()
@@ -124,11 +132,87 @@ func _localize_static_labels() -> void:
 	var translation_editor := get_node_or_null("TranslationEditorButton") as Button
 	if translation_editor != null:
 		translation_editor.text = tr("Translation Editor")
+	if _element_ref_button != null:
+		_element_ref_button.text = tr("Element Names")
+	var overlay_title := get_node_or_null("ElementReferenceOverlay/Panel/Margin/VBox/Title") as Label
+	if overlay_title != null:
+		overlay_title.text = tr("Element name sheet")
+	var overlay_close := get_node_or_null("ElementReferenceOverlay/Panel/Margin/VBox/CloseButton") as Button
+	if overlay_close != null:
+		overlay_close.text = tr("Back")
 	if _delete_dialog != null:
 		_delete_dialog.title = tr("Delete save?")
 		_delete_dialog.dialog_text = tr("Delete the selected save? This cannot be undone.")
 		_delete_dialog.ok_button_text = tr("Delete")
 		_delete_dialog.cancel_button_text = tr("Keep it")
+
+
+func _setup_element_reference() -> void:
+	if _element_ref_button != null:
+		_style_action_button(_element_ref_button)
+		_element_ref_button.visible = false
+		_element_ref_button.pressed.connect(_open_element_reference)
+	if _element_ref_overlay != null:
+		_element_ref_overlay.visible = false
+		_element_ref_overlay.process_mode = Node.PROCESS_MODE_ALWAYS
+		var panel := get_node_or_null("ElementReferenceOverlay/Panel") as PanelContainer
+		if panel != null:
+			panel.add_theme_stylebox_override(&"panel", _wood_style(WOOD, 14, 12))
+		var sheet := get_node_or_null("ElementReferenceOverlay/Panel/Margin/VBox/Sheet") as TextureRect
+		if sheet != null and ResourceLoader.exists(ELEMENT_REFERENCE_PATH):
+			sheet.texture = load(ELEMENT_REFERENCE_PATH) as Texture2D
+		var close_btn := get_node_or_null("ElementReferenceOverlay/Panel/Margin/VBox/CloseButton") as Button
+		if close_btn != null:
+			_style_action_button(close_btn)
+			close_btn.pressed.connect(_close_element_reference)
+		var dim := get_node_or_null("ElementReferenceOverlay/Dim") as ColorRect
+		if dim != null:
+			dim.gui_input.connect(func(event: InputEvent) -> void:
+				if event is InputEventMouseButton and (event as InputEventMouseButton).pressed:
+					_close_element_reference()
+			)
+	if not DebugLabels.enabled_changed.is_connected(_on_debug_labels_enabled_changed):
+		DebugLabels.enabled_changed.connect(_on_debug_labels_enabled_changed)
+	if DebugLabels.is_enabled():
+		_unlock_element_reference()
+
+
+func _on_debug_labels_enabled_changed(is_enabled: bool) -> void:
+	if is_enabled:
+		_unlock_element_reference()
+
+
+func _unlock_element_reference() -> void:
+	_element_ref_unlocked = true
+	if _element_ref_button != null:
+		_element_ref_button.visible = true
+
+
+func element_reference_unlocked() -> bool:
+	return _element_ref_unlocked
+
+
+func element_reference_path() -> String:
+	return ELEMENT_REFERENCE_PATH
+
+
+func _element_reference_open() -> bool:
+	return _element_ref_overlay != null and _element_ref_overlay.visible
+
+
+func _open_element_reference() -> void:
+	if _element_ref_overlay == null or not _element_ref_unlocked:
+		return
+	if _settings_open():
+		_close_settings()
+	_element_ref_overlay.visible = true
+
+
+func _close_element_reference() -> void:
+	if _element_ref_overlay != null:
+		_element_ref_overlay.visible = false
+	_refresh_prompts()
+	_highlight()
 
 
 func _style_screen() -> void:
@@ -280,6 +364,8 @@ func _settings_open() -> bool:
 func _open_settings() -> void:
 	if _settings == null:
 		return
+	if _element_reference_open():
+		_close_element_reference()
 	if _settings_dim != null:
 		_settings_dim.visible = true
 	_settings.visible = true
@@ -296,6 +382,11 @@ func _close_settings() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _element_reference_open():
+		if event.is_action_pressed(&"back") or event.is_action_pressed(&"pause"):
+			_close_element_reference()
+			get_viewport().set_input_as_handled()
+		return
 	if _settings_open():
 		return
 	if _delete_dialog != null and _delete_dialog.visible:

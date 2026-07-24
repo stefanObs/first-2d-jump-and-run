@@ -3,6 +3,8 @@ extends Node
 ## F1 toggles clear debug names above meaningful gameplay elements.
 ## Off by default so normal play never shows these labels.
 
+signal enabled_changed(is_enabled: bool)
+
 const LABEL_NODE_NAME := &"DebugNameLabel"
 const STATUS_LAYER := 120
 const REFRESH_INTERVAL := 0.35
@@ -44,6 +46,7 @@ func is_enabled() -> bool:
 
 
 func set_enabled(value: bool) -> void:
+	var changed := enabled != value
 	enabled = value
 	_ensure_status_ui()
 	if _status_label != null:
@@ -55,6 +58,8 @@ func set_enabled(value: bool) -> void:
 		_sync_labels()
 	else:
 		_clear_all_labels()
+	if changed:
+		enabled_changed.emit(enabled)
 
 
 func refresh_now() -> void:
