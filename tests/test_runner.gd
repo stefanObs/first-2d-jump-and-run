@@ -2185,7 +2185,7 @@ func _test_canyon_center_illustrated() -> Variant:
 		return "Canyon needs ScalableCanyonArt (CanyonMouth)."
 	if not canyon_art.center_is_illustrated():
 		controller.queue_free()
-		return "Canyon center is still flat/near-black instead of illustrated depth."
+		return "Canyon center must show open sky blue between the ridges."
 	if not canyon_art.rims_outside_floor():
 		controller.queue_free()
 		return "Canyon side walls overlap the desert floor; rims must sit outside the gap."
@@ -2194,7 +2194,7 @@ func _test_canyon_center_illustrated() -> Variant:
 		return "Canyon rim desert top must align with the trail floor height."
 	if not canyon_art.interior_stays_inside_gap():
 		controller.queue_free()
-		return "Canyon sky/depth must stay inside the mouth; do not paint over desert banks."
+		return "Canyon sky must stay inside the mouth; do not paint over desert banks."
 	var trail := controller.get_node_or_null("TrailFloor") as Node2D
 	var abyss := trail.get_node_or_null("FloorAbyss") as ColorRect if trail != null else null
 	if abyss == null:
@@ -2213,21 +2213,23 @@ func _test_canyon_center_illustrated() -> Variant:
 			controller.queue_free()
 			return "FloorAbyss starts above desert top %.0f (abyss y=%.0f)." % [float(strip["top"]), abyss.position.y]
 	var sky := canyon_art.get_node_or_null("SkyWash") as Sprite2D
-	var depth := canyon_art.get_node_or_null("DepthTiles") as Node2D
-	var floor_wash := canyon_art.get_node_or_null("FloorWash") as Sprite2D
-	var walls := canyon_art.get_node_or_null("LeftInnerWalls") as Node2D
-	if (
-		sky == null
-		or sky.texture == null
-		or depth == null
-		or depth.get_child_count() < 1
-		or floor_wash == null
-		or floor_wash.texture == null
-		or walls == null
-		or walls.get_child_count() < 1
-	):
+	if sky == null or sky.texture == null:
 		controller.queue_free()
-		return "Canyon center is missing handpainted sky / depth / floor layers."
+		return "Canyon mouth is missing the sky wash between the ridges."
+	# No mountain / depth / floor fill inside the canyon — sky only.
+	if canyon_art.get_node_or_null("DepthTiles") != null:
+		controller.queue_free()
+		return "Canyon must not paint depth/mountain tiles inside the mouth."
+	if canyon_art.get_node_or_null("FloorWash") != null:
+		controller.queue_free()
+		return "Canyon must not paint a floor wash inside the mouth."
+	if canyon_art.get_node_or_null("LeftInnerWalls") != null:
+		controller.queue_free()
+		return "Canyon must not paint inner-wall fill inside the mouth."
+	var hills := controller.get_node_or_null("HorizonHills") as Node2D
+	if hills == null or hills.find_child("CanyonSkyGap0", true, false) == null:
+		controller.queue_free()
+		return "Horizon hills must open to sky over canyon gaps (no mountains over the canyon)."
 	# Interior must look like open sky, not the same warm orange as the rims.
 	var sky_img := sky.texture.get_image()
 	if sky_img != null:
@@ -2237,7 +2239,7 @@ func _test_canyon_center_illustrated() -> Variant:
 			return "Canyon interior should show painted sky blue so it stays distinct from the rims."
 	if sky.z_index < 0:
 		controller.queue_free()
-		return "Canyon fill layers must stay at non-negative relative z above FloorAbyss."
+		return "Canyon sky must stay at non-negative relative z above FloorAbyss."
 	var left_rim := canyon_art.get_node("LeftRim") as Sprite2D
 	if left_rim.z_index > 0:
 		controller.queue_free()
@@ -2251,13 +2253,13 @@ func _test_canyon_center_illustrated() -> Variant:
 		return "Widening the canyon stretched the handmade rim."
 	if not canyon_art.center_is_illustrated():
 		controller.queue_free()
-		return "Wide canyon lost illustrated center treatment."
+		return "Wide canyon lost open-sky center treatment."
 	if not canyon_art.rims_outside_floor():
 		controller.queue_free()
 		return "Wide canyon rims drifted over the desert floor."
 	if not canyon_art.interior_stays_inside_gap():
 		controller.queue_free()
-		return "Wide canyon sky/depth spilled onto desert banks."
+		return "Wide canyon sky spilled onto desert banks."
 	controller.queue_free()
 	return null
 

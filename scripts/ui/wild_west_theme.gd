@@ -88,16 +88,49 @@ static func _make_endless_hills(level: Node) -> void:
 	var tex: Texture2D = load("res://assets/world/horizon_hills_strip.png")
 	if tex == null:
 		return
+	var hill_y := floor_top - 520.0 + 10.0
 	_tile_backdrop(
 		root,
 		tex,
 		"HillTile",
 		width,
-		floor_top - 520.0 + 10.0,
+		hill_y,
 		520.0,
 		220.0,
 		Color(1, 1, 1, 0.98)
 	)
+	# Open sky through canyon mouths — no mountain silhouette over the gaps.
+	_clear_hills_over_canyons(level, root, hill_y, 540.0)
+
+
+static func _canyon_gap_ranges(level: Node) -> Array[Vector2]:
+	var gaps: Array[Vector2] = []
+	var merged := _merge_segments(_collect_ground_segments(level))
+	for i in range(merged.size() - 1):
+		var left := float(merged[i]["right"])
+		var right := float(merged[i + 1]["left"])
+		if right - left > 8.0:
+			gaps.append(Vector2(left, right))
+	return gaps
+
+
+static func _clear_hills_over_canyons(
+	level: Node,
+	hills_root: Node2D,
+	hill_y: float,
+	hill_h: float
+) -> void:
+	var gaps := _canyon_gap_ranges(level)
+	for i in range(gaps.size()):
+		var gap: Vector2 = gaps[i]
+		var cover := ColorRect.new()
+		cover.name = "CanyonSkyGap%d" % i
+		cover.position = Vector2(gap.x - 6.0, hill_y - 8.0)
+		cover.size = Vector2(gap.y - gap.x + 12.0, hill_h)
+		cover.color = desert_sky_color()
+		cover.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		cover.z_index = 1
+		hills_root.add_child(cover)
 
 
 static func _tile_backdrop(
