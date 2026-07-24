@@ -151,11 +151,20 @@ func _make_rim(rim_name: String, flip: bool) -> Sprite2D:
 
 
 func _sky_reads_blue() -> bool:
+	## Canyon fill must match the desert Background sky blue.
 	var img: Image = SKY_TEXTURE.get_image()
 	if img == null:
 		return true
 	var sample: Color = img.get_pixel(img.get_width() / 2, maxi(1, img.get_height() / 5))
-	return sample.b > sample.r and sample.b > 0.45 and sample.g > 0.40
+	var sky := WildWestTheme.desert_sky_color()
+	return (
+		sample.b > sample.r
+		and sample.b > 0.45
+		and sample.g > 0.40
+		and absf(sample.r - sky.r) <= 0.12
+		and absf(sample.g - sky.g) <= 0.12
+		and absf(sample.b - sky.b) <= 0.12
+	)
 
 
 func _interior_bounds() -> Dictionary:
@@ -175,10 +184,11 @@ func _layout_sky() -> void:
 	var left: float = bounds["left"]
 	var right: float = bounds["right"]
 	var width := right - left
+	# Soft wash locked to desert Background sky blue (see canyon_sky_wash.png).
 	var sky_size: Vector2 = SKY_TEXTURE.get_size()
 	_sky.position = Vector2(left, top)
 	_sky.scale = Vector2(width / sky_size.x, DEPTH / sky_size.y)
-	_sky.modulate = Color(1, 1, 1, 1)
+	_sky.modulate = Color.WHITE
 
 
 func _layout_rims() -> void:
