@@ -23,7 +23,6 @@ var _settings: SettingsPanel
 var _settings_dim: ColorRect
 var _element_ref_button: Button
 var _element_ref_overlay: Control
-var _element_ref_unlocked: bool = false
 var _sheet: TextureRect
 var _sheet_scroll: ScrollContainer
 var _sheet_zoom_label: Label
@@ -206,23 +205,23 @@ func _setup_element_reference() -> void:
 		_refresh_sheet_zoom_label()
 	if not DebugLabels.enabled_changed.is_connected(_on_debug_labels_enabled_changed):
 		DebugLabels.enabled_changed.connect(_on_debug_labels_enabled_changed)
-	if DebugLabels.is_enabled():
-		_unlock_element_reference()
+	_sync_element_reference_visibility(DebugLabels.is_enabled())
 
 
 func _on_debug_labels_enabled_changed(is_enabled: bool) -> void:
-	if is_enabled:
-		_unlock_element_reference()
+	_sync_element_reference_visibility(is_enabled)
 
 
-func _unlock_element_reference() -> void:
-	_element_ref_unlocked = true
+func _sync_element_reference_visibility(is_enabled: bool) -> void:
 	if _element_ref_button != null:
-		_element_ref_button.visible = true
+		_element_ref_button.visible = is_enabled
+	if not is_enabled and _element_reference_open():
+		_close_element_reference()
 
 
 func element_reference_unlocked() -> bool:
-	return _element_ref_unlocked
+	## Visible only while debug mode (DebugLabels / F1) is on.
+	return DebugLabels.is_enabled()
 
 
 func element_reference_path() -> String:
@@ -246,7 +245,7 @@ func _element_reference_open() -> bool:
 
 
 func _open_element_reference() -> void:
-	if _element_ref_overlay == null or not _element_ref_unlocked:
+	if _element_ref_overlay == null or not DebugLabels.is_enabled():
 		return
 	if _settings_open():
 		_close_settings()

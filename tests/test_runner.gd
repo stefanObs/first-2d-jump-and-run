@@ -16,7 +16,7 @@ func _ready() -> void:
 	failures += await _run("Portable saves fall back when exe folder is read-only", _test_save_paths_writable_fallback)
 	failures += await _run("Save select scene loads", _test_save_select_scene)
 	failures += await _run(
-		"Element reference link unlocks on F1 and points at the sheet",
+		"Element reference link visible iff debug mode is on",
 		_test_element_reference_link
 	)
 	failures += await _run("German text and spoken-instruction settings work", _test_localization_settings)
@@ -736,15 +736,15 @@ func _test_element_reference_link() -> Variant:
 	elif zoom_in == null or zoom_out == null:
 		error = "Element reference overlay needs ZoomInButton and ZoomOutButton."
 	elif button.visible or scene.element_reference_unlocked():
-		error = "Element Names link must stay hidden until F1."
+		error = "Element Names link must stay hidden while debug mode is off."
 	elif overlay.visible:
 		error = "Element reference overlay must start closed."
 	else:
-		# F1 maps to toggle_debug_names; DebugLabels unlocks the start-screen link.
+		# F1 maps to toggle_debug_names; DebugLabels is the canonical debug mode.
 		DebugLabels.set_enabled(true)
 		await get_tree().process_frame
 		if not button.visible or not scene.element_reference_unlocked():
-			error = "Element Names link should appear after F1 / debug names enable."
+			error = "Element Names link should appear while debug mode is on."
 		elif scene.element_reference_path() != "res://docs/element_name_reference.png":
 			error = "Element reference path should point at docs/element_name_reference.png."
 		elif sheet.texture == null:
@@ -771,11 +771,13 @@ func _test_element_reference_link() -> Variant:
 						if float(scene.element_reference_zoom()) >= after_in:
 							error = "Zoom out should decrease the element reference zoom."
 						else:
-							# Stays visible after F1 toggles debug names off again.
+							# Visibility tracks debug mode; hide again when F1 turns it off.
 							DebugLabels.set_enabled(false)
 							await get_tree().process_frame
-							if not button.visible:
-								error = "Element Names link should stay visible after the first F1 unlock."
+							if button.visible or scene.element_reference_unlocked():
+								error = "Element Names link must hide when debug mode turns off."
+							elif overlay.visible:
+								error = "Element reference overlay should close when debug mode turns off."
 	DebugLabels.set_enabled(false)
 	scene.queue_free()
 	return error

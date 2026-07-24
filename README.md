@@ -67,7 +67,7 @@ After Kingpin: horizon victory ride, fade, dedication **VOM PAPI FÜR FINN**, th
 - **Canyons vs cactus:** canyon fall → spin recovery → camp. Cactus/bandit/carrion/snake hurt → camp (Bubble can block some damage). Call gaps **canyons**, never “pits”, in user-facing text.
 - **Stars:** optional; goals are saloon doorways (flying over counts). Level clear → horse ride-in/mount/ride-out → next level: ride in, dismount, and **leave the horse at the level start**. Handmade desert skyline behind transitions.
 
-Debug: F1 object names; numpad `+`×2 next level; `-`×2 boss jump/cycle.
+Debug: F1 object names (+ Element Names sheet on the start screen while debug is on); numpad `+`×2 next level; `-`×2 boss jump/cycle.
 
 ---
 
