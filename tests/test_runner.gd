@@ -714,9 +714,13 @@ func _test_element_reference_link() -> Variant:
 	var error: Variant = null
 	var button := scene.get_node_or_null("ElementReferenceButton") as Button
 	var overlay := scene.get_node_or_null("ElementReferenceOverlay") as Control
-	var sheet := scene.get_node_or_null("ElementReferenceOverlay/Panel/Margin/VBox/Sheet") as TextureRect
+	var sheet := scene.get_node_or_null("ElementReferenceOverlay/Panel/Margin/VBox/SheetScroll/Sheet") as TextureRect
+	var zoom_in := scene.get_node_or_null("ElementReferenceOverlay/Panel/Margin/VBox/ZoomBar/ZoomInButton") as Button
+	var zoom_out := scene.get_node_or_null("ElementReferenceOverlay/Panel/Margin/VBox/ZoomBar/ZoomOutButton") as Button
 	if button == null or overlay == null or sheet == null:
 		error = "Save select needs ElementReferenceButton + overlay with Sheet."
+	elif zoom_in == null or zoom_out == null:
+		error = "Element reference overlay needs ZoomInButton and ZoomOutButton."
 	elif button.visible or scene.element_reference_unlocked():
 		error = "Element Names link must stay hidden until F1."
 	elif overlay.visible:
@@ -737,14 +741,27 @@ func _test_element_reference_link() -> Variant:
 				error = "Overlay sheet texture should be element_name_reference.png (got %s)." % tex_path
 			else:
 				button.pressed.emit()
+				await get_tree().process_frame
 				if not overlay.visible:
 					error = "Element Names button should open the reference overlay."
+				elif not is_equal_approx(float(scene.element_reference_zoom()), 1.0):
+					error = "Element reference should open at 100%% zoom."
 				else:
-					# Stays visible after F1 toggles debug names off again.
-					DebugLabels.set_enabled(false)
-					await get_tree().process_frame
-					if not button.visible:
-						error = "Element Names link should stay visible after the first F1 unlock."
+					var before := float(scene.element_reference_zoom())
+					zoom_in.pressed.emit()
+					if float(scene.element_reference_zoom()) <= before:
+						error = "Zoom in should increase the element reference zoom."
+					else:
+						var after_in := float(scene.element_reference_zoom())
+						zoom_out.pressed.emit()
+						if float(scene.element_reference_zoom()) >= after_in:
+							error = "Zoom out should decrease the element reference zoom."
+						else:
+							# Stays visible after F1 toggles debug names off again.
+							DebugLabels.set_enabled(false)
+							await get_tree().process_frame
+							if not button.visible:
+								error = "Element Names link should stay visible after the first F1 unlock."
 	DebugLabels.set_enabled(false)
 	scene.queue_free()
 	return error

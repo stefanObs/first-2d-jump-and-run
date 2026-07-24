@@ -367,12 +367,58 @@ theme_override_font_sizes/font_size = 28
 text = "Element name sheet"
 horizontal_alignment = 1
 
-[node name="Sheet" type="TextureRect" parent="ElementReferenceOverlay/Panel/Margin/VBox"]
-custom_minimum_size = Vector2(980, 520)
+[node name="ZoomBar" type="HBoxContainer" parent="ElementReferenceOverlay/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="ZoomOutButton" type="Button" parent="ElementReferenceOverlay/Panel/Margin/VBox/ZoomBar"]
+custom_minimum_size = Vector2(48, 40)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.86, 0.48, 1)
+theme_override_font_sizes/font_size = 24
+text = "−"
+
+[node name="ZoomLabel" type="Label" parent="ElementReferenceOverlay/Panel/Margin/VBox/ZoomBar"]
+custom_minimum_size = Vector2(72, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.86, 0.48, 1)
+theme_override_colors/font_outline_color = Color(0.22, 0.08, 0.03, 0.85)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 20
+text = "100%"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ZoomInButton" type="Button" parent="ElementReferenceOverlay/Panel/Margin/VBox/ZoomBar"]
+custom_minimum_size = Vector2(48, 40)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.86, 0.48, 1)
+theme_override_font_sizes/font_size = 24
+text = "+"
+
+[node name="ZoomHint" type="Label" parent="ElementReferenceOverlay/Panel/Margin/VBox/ZoomBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.94, 0.84, 0.52, 1)
+theme_override_colors/font_outline_color = Color(0.24, 0.09, 0.04, 0.7)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 16
+text = "Mouse wheel zooms · drag to pan"
+vertical_alignment = 1
+
+[node name="SheetScroll" type="ScrollContainer" parent="ElementReferenceOverlay/Panel/Margin/VBox"]
+custom_minimum_size = Vector2(980, 480)
 layout_mode = 2
 size_flags_vertical = 3
-expand_mode = 1
-stretch_mode = 5
+horizontal_scroll_mode = 1
+vertical_scroll_mode = 1
+
+[node name="Sheet" type="TextureRect" parent="ElementReferenceOverlay/Panel/Margin/VBox/SheetScroll"]
+layout_mode = 2
+mouse_filter = 0
+expand_mode = 0
+stretch_mode = 0
 
 [node name="CloseButton" type="Button" parent="ElementReferenceOverlay/Panel/Margin/VBox"]
 custom_minimum_size = Vector2(0, 48)

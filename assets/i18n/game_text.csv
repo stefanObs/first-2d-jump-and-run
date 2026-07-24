@@ -129,6 +129,9 @@ Move: %s   Jump: %s   Lasso: %s   Pause: %s,Move: %s   Jump: %s   Lasso: %s   Pa
 Translation Editor,Translation Editor,Übersetzungseditor
 Element Names,Element Names,Elementnamen
 Element name sheet,Element name sheet,Elementnamen-Übersicht
+Zoom in,Zoom in,Vergrößern
+Zoom out,Zoom out,Verkleinern
+Mouse wheel zooms · drag to pan,Mouse wheel zooms · drag to pan,Mausrad zoomt · Ziehen zum Verschieben
 Edit English and German. Parameter examples appear below matching entries.,Edit English and German. Parameter examples appear below matching entries.,Bearbeite Englisch und Deutsch. Parameterbeispiele stehen unter den passenden Einträgen.
 Search keys or translations...,Search keys or translations...,Schlüssel oder Übersetzungen suchen...
 Example,Example,Beispiel

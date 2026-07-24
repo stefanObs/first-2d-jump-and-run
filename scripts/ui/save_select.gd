@@ -10,6 +10,9 @@ const WOOD_HOVER := Color(0.90, 0.62, 0.30, 1.0)
 const SLOT_BOARD := preload("res://assets/ui/saloon_slot_board.png")
 ## Canonical labeled collage of gameplay elements (class_name / node prefixes).
 const ELEMENT_REFERENCE_PATH := "res://docs/element_name_reference.png"
+const SHEET_ZOOM_MIN := 1.0
+const SHEET_ZOOM_MAX := 4.0
+const SHEET_ZOOM_STEP := 0.25
 
 var _cards: Array[Button] = []
 var _index: int = 0
@@ -21,6 +24,13 @@ var _settings_dim: ColorRect
 var _element_ref_button: Button
 var _element_ref_overlay: Control
 var _element_ref_unlocked: bool = false
+var _sheet: TextureRect
+var _sheet_scroll: ScrollContainer
+var _sheet_zoom_label: Label
+var _sheet_zoom: float = 1.0
+var _sheet_base_size: Vector2 = Vector2.ZERO
+var _sheet_panning: bool = false
+var _sheet_pan_last: Vector2 = Vector2.ZERO
 
 
 func _ready() -> void:
@@ -137,6 +147,15 @@ func _localize_static_labels() -> void:
 	var overlay_title := get_node_or_null("ElementReferenceOverlay/Panel/Margin/VBox/Title") as Label
 	if overlay_title != null:
 		overlay_title.text = tr("Element name sheet")
+	var zoom_out := get_node_or_null("ElementReferenceOverlay/Panel/Margin/VBox/ZoomBar/ZoomOutButton") as Button
+	if zoom_out != null:
+		zoom_out.tooltip_text = tr("Zoom out")
+	var zoom_in := get_node_or_null("ElementReferenceOverlay/Panel/Margin/VBox/ZoomBar/ZoomInButton") as Button
+	if zoom_in != null:
+		zoom_in.tooltip_text = tr("Zoom in")
+	var zoom_hint := get_node_or_null("ElementReferenceOverlay/Panel/Margin/VBox/ZoomBar/ZoomHint") as Label
+	if zoom_hint != null:
+		zoom_hint.text = tr("Mouse wheel zooms · drag to pan")
 	var overlay_close := get_node_or_null("ElementReferenceOverlay/Panel/Margin/VBox/CloseButton") as Button
 	if overlay_close != null:
 		overlay_close.text = tr("Back")
@@ -158,9 +177,22 @@ func _setup_element_reference() -> void:
 		var panel := get_node_or_null("ElementReferenceOverlay/Panel") as PanelContainer
 		if panel != null:
 			panel.add_theme_stylebox_override(&"panel", _wood_style(WOOD, 14, 12))
-		var sheet := get_node_or_null("ElementReferenceOverlay/Panel/Margin/VBox/Sheet") as TextureRect
-		if sheet != null and ResourceLoader.exists(ELEMENT_REFERENCE_PATH):
-			sheet.texture = load(ELEMENT_REFERENCE_PATH) as Texture2D
+		_sheet_scroll = get_node_or_null("ElementReferenceOverlay/Panel/Margin/VBox/SheetScroll") as ScrollContainer
+		_sheet = get_node_or_null("ElementReferenceOverlay/Panel/Margin/VBox/SheetScroll/Sheet") as TextureRect
+		_sheet_zoom_label = get_node_or_null("ElementReferenceOverlay/Panel/Margin/VBox/ZoomBar/ZoomLabel") as Label
+		if _sheet != null and ResourceLoader.exists(ELEMENT_REFERENCE_PATH):
+			_sheet.texture = load(ELEMENT_REFERENCE_PATH) as Texture2D
+			_sheet.gui_input.connect(_on_sheet_gui_input)
+		if _sheet_scroll != null:
+			_sheet_scroll.resized.connect(_recompute_sheet_base_size)
+		var zoom_out := get_node_or_null("ElementReferenceOverlay/Panel/Margin/VBox/ZoomBar/ZoomOutButton") as Button
+		if zoom_out != null:
+			_style_action_button(zoom_out)
+			zoom_out.pressed.connect(func() -> void: nudge_element_reference_zoom(-SHEET_ZOOM_STEP))
+		var zoom_in := get_node_or_null("ElementReferenceOverlay/Panel/Margin/VBox/ZoomBar/ZoomInButton") as Button
+		if zoom_in != null:
+			_style_action_button(zoom_in)
+			zoom_in.pressed.connect(func() -> void: nudge_element_reference_zoom(SHEET_ZOOM_STEP))
 		var close_btn := get_node_or_null("ElementReferenceOverlay/Panel/Margin/VBox/CloseButton") as Button
 		if close_btn != null:
 			_style_action_button(close_btn)
@@ -171,6 +203,7 @@ func _setup_element_reference() -> void:
 				if event is InputEventMouseButton and (event as InputEventMouseButton).pressed:
 					_close_element_reference()
 			)
+		_refresh_sheet_zoom_label()
 	if not DebugLabels.enabled_changed.is_connected(_on_debug_labels_enabled_changed):
 		DebugLabels.enabled_changed.connect(_on_debug_labels_enabled_changed)
 	if DebugLabels.is_enabled():
@@ -196,6 +229,18 @@ func element_reference_path() -> String:
 	return ELEMENT_REFERENCE_PATH
 
 
+func element_reference_zoom() -> float:
+	return _sheet_zoom
+
+
+func nudge_element_reference_zoom(delta: float) -> void:
+	_apply_sheet_zoom(_sheet_zoom + delta)
+
+
+func set_element_reference_zoom(zoom: float) -> void:
+	_apply_sheet_zoom(zoom)
+
+
 func _element_reference_open() -> bool:
 	return _element_ref_overlay != null and _element_ref_overlay.visible
 
@@ -205,14 +250,106 @@ func _open_element_reference() -> void:
 		return
 	if _settings_open():
 		_close_settings()
+	_sheet_zoom = 1.0
+	_sheet_panning = false
 	_element_ref_overlay.visible = true
+	# Defer fit until SheetScroll has a real size after becoming visible.
+	call_deferred("_finish_open_element_reference")
+
+
+func _finish_open_element_reference() -> void:
+	if not _element_reference_open():
+		return
+	_recompute_sheet_base_size()
+	if _sheet_scroll != null:
+		_sheet_scroll.scroll_horizontal = 0
+		_sheet_scroll.scroll_vertical = 0
 
 
 func _close_element_reference() -> void:
+	_sheet_panning = false
 	if _element_ref_overlay != null:
 		_element_ref_overlay.visible = false
 	_refresh_prompts()
 	_highlight()
+
+
+func _sheet_viewport_size() -> Vector2:
+	if _sheet_scroll == null:
+		return Vector2(980, 480)
+	var size := _sheet_scroll.size
+	if size.x < 2.0 or size.y < 2.0:
+		return Vector2(980, 480)
+	return size
+
+
+func _recompute_sheet_base_size() -> void:
+	if _sheet == null or _sheet.texture == null:
+		return
+	var tex_size := _sheet.texture.get_size()
+	if tex_size.x < 1.0 or tex_size.y < 1.0:
+		return
+	var view := _sheet_viewport_size()
+	var fit := minf(view.x / tex_size.x, view.y / tex_size.y)
+	_sheet_base_size = tex_size * fit
+	_apply_sheet_zoom(_sheet_zoom, false)
+
+
+func _apply_sheet_zoom(zoom: float, keep_center: bool = true) -> void:
+	var old_zoom := _sheet_zoom
+	_sheet_zoom = clampf(zoom, SHEET_ZOOM_MIN, SHEET_ZOOM_MAX)
+	_refresh_sheet_zoom_label()
+	if _sheet == null or _sheet_base_size.x < 1.0:
+		return
+	var center := Vector2.ZERO
+	if keep_center and _sheet_scroll != null and old_zoom > 0.0:
+		center = Vector2(
+			float(_sheet_scroll.scroll_horizontal) + _sheet_scroll.size.x * 0.5,
+			float(_sheet_scroll.scroll_vertical) + _sheet_scroll.size.y * 0.5
+		)
+	var new_size := _sheet_base_size * _sheet_zoom
+	_sheet.custom_minimum_size = new_size
+	_sheet.size = new_size
+	if keep_center and _sheet_scroll != null and old_zoom > 0.0:
+		var factor := _sheet_zoom / old_zoom
+		_sheet_scroll.scroll_horizontal = int(center.x * factor - _sheet_scroll.size.x * 0.5)
+		_sheet_scroll.scroll_vertical = int(center.y * factor - _sheet_scroll.size.y * 0.5)
+
+
+func _refresh_sheet_zoom_label() -> void:
+	if _sheet_zoom_label != null:
+		_sheet_zoom_label.text = "%d%%" % int(roundf(_sheet_zoom * 100.0))
+
+
+func _on_sheet_gui_input(event: InputEvent) -> void:
+	if _sheet == null:
+		return
+	if event is InputEventMagnifyGesture:
+		var magnify := event as InputEventMagnifyGesture
+		_apply_sheet_zoom(_sheet_zoom * magnify.factor)
+		_sheet.accept_event()
+		return
+	if event is InputEventMouseButton:
+		var mouse := event as InputEventMouseButton
+		if mouse.button_index == MOUSE_BUTTON_WHEEL_UP and mouse.pressed:
+			nudge_element_reference_zoom(SHEET_ZOOM_STEP)
+			_sheet.accept_event()
+		elif mouse.button_index == MOUSE_BUTTON_WHEEL_DOWN and mouse.pressed:
+			nudge_element_reference_zoom(-SHEET_ZOOM_STEP)
+			_sheet.accept_event()
+		elif mouse.button_index == MOUSE_BUTTON_LEFT:
+			_sheet_panning = mouse.pressed
+			_sheet_pan_last = mouse.global_position
+			if mouse.pressed:
+				_sheet.accept_event()
+		return
+	if event is InputEventMouseMotion and _sheet_panning and _sheet_scroll != null:
+		var motion := event as InputEventMouseMotion
+		var delta := motion.global_position - _sheet_pan_last
+		_sheet_pan_last = motion.global_position
+		_sheet_scroll.scroll_horizontal -= int(delta.x)
+		_sheet_scroll.scroll_vertical -= int(delta.y)
+		_sheet.accept_event()
 
 
 func _style_screen() -> void:
