@@ -3296,9 +3296,9 @@ func _test_wind_zone_force_overlap() -> Variant:
 	player.external_velocity = Vector2.ZERO
 	wind._physics_process(delta)
 	var one_tick := player.external_velocity.x
-	if one_tick < 34.0:
+	if one_tick < 39.0:
 		error = "Wind should be stronger than the old barely noticeable 20 px/s nudge."
-	elif one_tick > 36.0:
+	elif one_tick > 42.0:
 		error = "Wind should only accelerate gently per tick, not slam the cowboy."
 
 	# 2) Sustained overlap must settle at a noticeable 35-50 px/s, never runaway.

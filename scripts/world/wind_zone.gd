@@ -7,7 +7,7 @@ signal first_touch
 ## sideways acceleration in px/s^2 applied while the cowboy is inside.
 ## Opposing movement gets a reduced push so the cowboy always retains control.
 ## The Y component is a gentle upward acceleration that only helps while airborne.
-@export var wind_force: Vector2 = Vector2(2100, -560)
+@export var wind_force: Vector2 = Vector2(2415, -644)
 
 ## Hard cap (px/s) on how fast the wind alone can push the cowboy sideways, so it
 ## can never keep accelerating forever. Player input can still push past this.
