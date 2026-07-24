@@ -866,12 +866,6 @@ patrol_width = 80.0
 move_speed = 46.0
 
 
-[node name="Carrion4" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(3550, 183)
-patrol_width = 95.0
-move_speed = 50.0
-
-
 [node name="Carrion5" parent="." instance=ExtResource("18_carrion")]
 position = Vector2(4580, 35)
 patrol_width = 100.0
@@ -890,28 +884,10 @@ patrol_width = 95.0
 move_speed = 54.0
 
 
-[node name="Carrion8" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(3900, -15)
-patrol_width = 70.0
-move_speed = 56.0
-
-
 [node name="Carrion9" parent="." instance=ExtResource("18_carrion")]
 position = Vector2(1050, -180)
 patrol_width = 150.0
 move_speed = 48.0
-
-
-[node name="Carrion10" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(2480, 110)
-patrol_width = 90.0
-move_speed = 52.0
-
-
-[node name="Carrion11" parent="." instance=ExtResource("18_carrion")]
-position = Vector2(4200, 55)
-patrol_width = 85.0
-move_speed = 54.0
 
 
 [node name="Carrion12" parent="." instance=ExtResource("18_carrion")]
