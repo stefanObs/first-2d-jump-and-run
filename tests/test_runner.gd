@@ -15,6 +15,10 @@ func _ready() -> void:
 	failures += await _run("GameManager save slots persist", _test_save_slots)
 	failures += await _run("Portable saves fall back when exe folder is read-only", _test_save_paths_writable_fallback)
 	failures += await _run("Save select scene loads", _test_save_select_scene)
+	failures += await _run(
+		"Element reference link unlocks on F1 and points at the sheet",
+		_test_element_reference_link
+	)
 	failures += await _run("German text and spoken-instruction settings work", _test_localization_settings)
 	failures += await _run("Narrator falls back to any installed voice", _test_narrator_voice_fallback)
 	failures += await _run("Settings language dropdown persists and supports controller use", _test_settings_language_dropdown)
@@ -993,11 +997,13 @@ func _test_level_01_world_objects() -> Variant:
 			error = "Level 1 should keep a first-canyon cactus for trail teaching."
 		else:
 			var gap_left := float(gaps[0]["left"])
+			var cactus_rect := LevelLayoutRules._approx_rect(cactus, Vector2(40, 48))
 			var rim_clear := ScalableCanyonArt.RIM_SIZE.x + 40.0
-			if gap_left - cactus.global_position.x < rim_clear:
+			var clear := gap_left - cactus_rect.end.x
+			if clear < rim_clear:
 				error = (
 					"Level 1 first cactus overlaps the canyon rim art (need %.0fpx clear, got %.0f)."
-					% [rim_clear, gap_left - cactus.global_position.x]
+					% [rim_clear, clear]
 				)
 	_free_level(node)
 	return error
@@ -2373,7 +2379,7 @@ func _test_canyon_center_illustrated() -> Variant:
 		return "Canyon needs ScalableCanyonArt (CanyonMouth)."
 	if not canyon_art.center_is_illustrated():
 		controller.queue_free()
-		return "Canyon center must show open sky blue between the ridges."
+		return "Canyon center must stay open sky between the ridges (no fill column)."
 	if not canyon_art.rims_outside_floor():
 		controller.queue_free()
 		return "Canyon side walls overlap the desert floor; rims must sit outside the gap."
@@ -2382,7 +2388,7 @@ func _test_canyon_center_illustrated() -> Variant:
 		return "Canyon rim desert top must align with the trail floor height."
 	if not canyon_art.interior_stays_inside_gap():
 		controller.queue_free()
-		return "Canyon sky must stay inside the mouth; do not paint over desert banks."
+		return "Canyon mouth must not paint a sky-fill column over desert banks."
 	var trail := controller.get_node_or_null("TrailFloor") as Node2D
 	var abyss := trail.get_node_or_null("FloorAbyss") as ColorRect if trail != null else null
 	if abyss == null:
@@ -2394,17 +2400,17 @@ func _test_canyon_center_illustrated() -> Variant:
 	if not canyon_art.top_level or canyon_art.z_index <= -2:
 		controller.queue_free()
 		return "CanyonMouth must be top_level above FloorAbyss (z > -2)."
-	# Abyss must never start above a walk surface (dark band over desert).
-	var merged := WildWestTheme._merge_segments(WildWestTheme._collect_ground_segments(controller))
-	for strip in merged:
-		if abyss.position.y + 0.5 < float(strip["top"]):
+	# Abyss only under banks — must not span the canyon mouth as a dark/blue column.
+	var gap_mid := (canyon_art.gap_left + canyon_art.gap_right) * 0.5
+	for abyss_node in trail.find_children("FloorAbyss*", "ColorRect", false, false):
+		var strip := abyss_node as ColorRect
+		if strip.position.x < gap_mid and strip.position.x + strip.size.x > gap_mid:
 			controller.queue_free()
-			return "FloorAbyss starts above desert top %.0f (abyss y=%.0f)." % [float(strip["top"]), abyss.position.y]
-	var sky := canyon_art.get_node_or_null("SkyWash") as Sprite2D
-	if sky == null or sky.texture == null:
+			return "FloorAbyss spans the canyon mouth; leave the gap open to Background sky."
+	# No mountain / depth / floor / sky-fill inside the canyon — open sky only.
+	if canyon_art.get_node_or_null("SkyWash") != null:
 		controller.queue_free()
-		return "Canyon mouth is missing the sky wash between the ridges."
-	# No mountain / depth / floor fill inside the canyon — sky only.
+		return "Canyon must not paint a sky-fill column between the ridges."
 	if canyon_art.get_node_or_null("DepthTiles") != null:
 		controller.queue_free()
 		return "Canyon must not paint depth/mountain tiles inside the mouth."
@@ -2418,32 +2424,19 @@ func _test_canyon_center_illustrated() -> Variant:
 	if hills == null or hills.find_child("CanyonSkyGap0", true, false) == null:
 		controller.queue_free()
 		return "Horizon hills must open to sky over canyon gaps (no mountains over the canyon)."
-	# Interior must look like open sky, not the same warm orange as the rims.
-	var sky_img := sky.texture.get_image()
-	if sky_img != null:
-		var sample := sky_img.get_pixel(sky_img.get_width() / 2, maxi(1, sky_img.get_height() / 5))
-		if sample.b <= sample.r or sample.b < 0.40:
-			controller.queue_free()
-			return "Canyon interior should show painted sky blue so it stays distinct from the rims."
-	# Mouth sky must use the same hand-drawn sky as SkyArt (not a mismatched flat wash).
-	var sky_art_tex: Texture2D = load("res://assets/world/sky_handdrawn.png")
-	if sky.texture != sky_art_tex:
+	if hills.find_child("SkyPatch", true, false) != null:
 		controller.queue_free()
-		return "Canyon sky wash must match the trail sky_handdrawn texture."
-	if sky.z_index < 0:
+		return "Canyon mouths must not use a sky-fill patch over the hills."
+	if trail.find_child("CanyonAbyssSky0", true, false) != null:
 		controller.queue_free()
-		return "Canyon sky must stay at non-negative relative z above FloorAbyss."
-	# No black FloorAbyss border framing the mouth.
-	if trail.find_child("CanyonAbyssSky0", true, false) == null:
-		controller.queue_free()
-		return "Canyon mouths need sky cover over FloorAbyss so lips have no black border."
+		return "Canyon mouths must not use an abyss sky-fill column."
 	var left_rim := canyon_art.get_node("LeftRim") as Sprite2D
 	if canyon_art.z_index < 1:
 		controller.queue_free()
 		return "Canyon ridges must draw in front of the desert floor tiles."
 	if left_rim.z_index < 1:
 		controller.queue_free()
-		return "Canyon rim sprites must sit above the canyon sky wash."
+		return "Canyon rim sprites must sit above the open mouth."
 	var trail_surface_z := 1
 	if canyon_art.z_index <= trail_surface_z:
 		controller.queue_free()
@@ -2463,7 +2456,7 @@ func _test_canyon_center_illustrated() -> Variant:
 		return "Wide canyon rims drifted over the desert floor."
 	if not canyon_art.interior_stays_inside_gap():
 		controller.queue_free()
-		return "Wide canyon sky spilled onto desert banks."
+		return "Wide canyon gained a sky-fill column."
 	controller.queue_free()
 	return null
 

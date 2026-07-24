@@ -89,18 +89,30 @@ static func _make_endless_hills(level: Node) -> void:
 	if tex == null:
 		return
 	var hill_y := floor_top - 520.0 + 10.0
-	_tile_backdrop(
-		root,
-		tex,
-		"HillTile",
-		width,
-		hill_y,
-		520.0,
-		220.0,
-		Color(1, 1, 1, 0.98)
-	)
-	# Open sky through canyon mouths — no mountain silhouette over the gaps.
-	_clear_hills_over_canyons(level, root, hill_y, 540.0)
+	# Tile hills only beside canyon mouths so real SkyArt shows through the gaps
+	# (no stretched sky-fill column over the mesas).
+	var gaps := _canyon_gap_ranges(level)
+	var spans := _spans_excluding_gaps(-500.0, width + 600.0, gaps, 4.0)
+	var index := 0
+	for span in spans:
+		index = _tile_backdrop_span(
+			root,
+			tex,
+			"HillTile",
+			float(span["left"]),
+			float(span["right"]),
+			hill_y,
+			520.0,
+			220.0,
+			Color(1, 1, 1, 0.98),
+			index
+		)
+	# Marker nodes so tests can confirm mouths open to sky (no mountain cover).
+	for i in range(gaps.size()):
+		var marker := Node2D.new()
+		marker.name = "CanyonSkyGap%d" % i
+		marker.position = Vector2((gaps[i].x + gaps[i].y) * 0.5, hill_y)
+		root.add_child(marker)
 
 
 static func _canyon_gap_ranges(level: Node) -> Array[Vector2]:
@@ -114,41 +126,29 @@ static func _canyon_gap_ranges(level: Node) -> Array[Vector2]:
 	return gaps
 
 
-static func _clear_hills_over_canyons(
-	level: Node,
-	hills_root: Node2D,
-	hill_y: float,
-	hill_h: float
-) -> void:
-	var gaps := _canyon_gap_ranges(level)
-	var sky_tex: Texture2D = load("res://assets/world/sky_handdrawn.png")
-	for i in range(gaps.size()):
-		var gap: Vector2 = gaps[i]
-		var cover_root := Node2D.new()
-		cover_root.name = "CanyonSkyGap%d" % i
-		cover_root.z_index = 1
-		hills_root.add_child(cover_root)
-		var left := gap.x - 6.0
-		var width := gap.y - gap.x + 12.0
-		if sky_tex != null:
-			# Hand-drawn sky strip over the mountain silhouette in the canyon mouth.
-			var sprite := Sprite2D.new()
-			sprite.name = "SkyPatch"
-			sprite.texture = sky_tex
-			sprite.centered = false
-			sprite.position = Vector2(left, hill_y - 8.0)
-			var tex_size := sky_tex.get_size()
-			sprite.scale = Vector2(width / tex_size.x, hill_h / tex_size.y)
-			sprite.modulate = Color(1, 1, 1, 1)
-			cover_root.add_child(sprite)
-		else:
-			var cover := ColorRect.new()
-			cover.name = "SkyFlat"
-			cover.position = Vector2(left, hill_y - 8.0)
-			cover.size = Vector2(width, hill_h)
-			cover.color = desert_sky_color()
-			cover.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			cover_root.add_child(cover)
+static func _spans_excluding_gaps(
+	span_left: float,
+	span_right: float,
+	gaps: Array[Vector2],
+	pad: float
+) -> Array[Dictionary]:
+	var cuts: Array[Vector2] = []
+	for gap in gaps:
+		var left := gap.x - pad
+		var right := gap.y + pad
+		if right <= span_left or left >= span_right:
+			continue
+		cuts.append(Vector2(maxf(left, span_left), minf(right, span_right)))
+	cuts.sort_custom(func(a: Vector2, b: Vector2) -> bool: return a.x < b.x)
+	var spans: Array[Dictionary] = []
+	var cursor := span_left
+	for cut in cuts:
+		if cut.x > cursor + 1.0:
+			spans.append({"left": cursor, "right": cut.x})
+		cursor = maxf(cursor, cut.y)
+	if span_right > cursor + 1.0:
+		spans.append({"left": cursor, "right": span_right})
+	return spans
 
 
 static func _tile_backdrop(
@@ -161,21 +161,59 @@ static func _tile_backdrop(
 	overlap: float,
 	modulate: Color
 ) -> void:
+	_tile_backdrop_span(
+		parent, tex, name_prefix, -500.0, level_width + 600.0, y, tile_h, overlap, modulate, 0
+	)
+
+
+static func _tile_backdrop_span(
+	parent: Node,
+	tex: Texture2D,
+	name_prefix: String,
+	span_left: float,
+	span_right: float,
+	y: float,
+	tile_h: float,
+	overlap: float,
+	modulate: Color,
+	start_index: int
+) -> int:
 	var tex_size := tex.get_size()
 	var tile_w := tex_size.x * 1.35
+	# Keep world-aligned tiling so spans share the same UV phase as a full strip.
+	var step := tile_w - overlap
 	var x := -500.0
-	var index := 0
-	while x < level_width + 600.0:
-		var sprite := Sprite2D.new()
-		sprite.name = "%s%d" % [name_prefix, index]
-		sprite.texture = tex
-		sprite.centered = false
-		sprite.position = Vector2(x, y)
-		sprite.scale = Vector2(tile_w / tex_size.x, tile_h / tex_size.y)
-		sprite.modulate = modulate
-		parent.add_child(sprite)
-		x += tile_w - overlap
-		index += 1
+	while x + tile_w <= span_left:
+		x += step
+	var index := start_index
+	while x < span_right - 0.5:
+		var draw_left := maxf(x, span_left)
+		var draw_right := minf(x + tile_w, span_right)
+		if draw_right - draw_left > 1.0:
+			var sprite := Sprite2D.new()
+			sprite.name = "%s%d" % [name_prefix, index]
+			sprite.texture = tex
+			sprite.centered = false
+			sprite.position = Vector2(draw_left, y)
+			var use_w := draw_right - draw_left
+			# Region-crop when the span clips a tile so UVs stay aligned.
+			if absf(use_w - tile_w) > 0.5:
+				var atlas := AtlasTexture.new()
+				atlas.atlas = tex
+				var u0 := (draw_left - x) / tile_w * tex_size.x
+				var uw := use_w / tile_w * tex_size.x
+				atlas.region = Rect2(u0, 0.0, uw, tex_size.y)
+				sprite.texture = atlas
+				sprite.scale = Vector2(use_w / maxf(uw, 1.0), tile_h / tex_size.y)
+			else:
+				sprite.scale = Vector2(tile_w / tex_size.x, tile_h / tex_size.y)
+			sprite.modulate = modulate
+			parent.add_child(sprite)
+			index += 1
+		x += step
+		if index > 400:
+			break
+	return index
 
 
 static func _dress_platforms(level: Node) -> void:
@@ -234,24 +272,6 @@ static func _make_contiguous_floors(level: Node) -> void:
 	if background != null:
 		level_left = minf(background.offset_left, background.offset_right)
 		level_right = maxf(background.offset_left, background.offset_right)
-	# FloorAbyss must start at or below every walk surface. Using the highest bank
-	# top (min y) paints a dark band over lower desert strips (Level 2 bug).
-	var abyss_top := float(merged[0]["top"])
-	for strip in merged:
-		abyss_top = maxf(abyss_top, float(strip["top"]))
-
-	# Deep underworld safety fill only — canyon art must paint over canyon openings.
-	# Keep abyss under dirt banks; never let it frame canyon mouths as a black border.
-	var abyss := ColorRect.new()
-	abyss.name = "FloorAbyss"
-	abyss.position = Vector2(level_left, abyss_top)
-	abyss.size = Vector2(level_right - level_left, 900.0)
-	abyss.color = Color(0.22, 0.10, 0.12, 1.0)
-	abyss.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	abyss.z_index = -2
-	floor_root.add_child(abyss)
-	_cover_abyss_under_canyons(floor_root, merged, abyss_top)
-
 	# Stretch first/last walkable strips to the level edges.
 	if not merged.is_empty():
 		merged[0]["left"] = minf(float(merged[0]["left"]), level_left)
@@ -259,6 +279,26 @@ static func _make_contiguous_floors(level: Node) -> void:
 			float(merged[merged.size() - 1]["right"]),
 			level_right
 		)
+
+	# Deep underworld fill only under dirt banks — never across canyon mouths —
+	# so the real Background sky shows through the gap (no blue fill column).
+	for i in range(merged.size()):
+		var abyss_strip: Dictionary = merged[i]
+		var abyss := ColorRect.new()
+		abyss.name = "FloorAbyss%d" % i if i > 0 else "FloorAbyss"
+		abyss.position = Vector2(float(abyss_strip["left"]), float(abyss_strip["top"]))
+		abyss.size = Vector2(
+			float(abyss_strip["right"]) - float(abyss_strip["left"]),
+			900.0
+		)
+		abyss.color = Color(0.22, 0.10, 0.12, 1.0)
+		abyss.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		abyss.z_index = -2
+		floor_root.add_child(abyss)
+
+	# Lip inset so desert crust ends under the ridge lip (not past it into the mouth).
+	const CANYON_SURFACE_INSET := 12.0
+	const CANYON_DIRT_INSET := 16.0
 
 	for i in range(merged.size()):
 		var strip: Dictionary = merged[i]
@@ -271,22 +311,38 @@ static func _make_contiguous_floors(level: Node) -> void:
 		# Keep a thin desert crust on top; tall stacked banks stay dirt underneath.
 		var surface_thickness := minf(maxf(height, 36.0), 56.0)
 
-		# Surface row only — never overhang into canyon gaps.
-		if surface != null:
-			_tile_strip_row(floor_root, surface, left, right, top, surface_thickness, 1, "FloorSurface%d" % i)
+		var surface_left := left
+		var surface_right := right
+		# Only inset at true canyon lips — continuous height steps stay flush.
+		if i + 1 < merged.size() and _is_canyon_between(merged[i], merged[i + 1]):
+			surface_right = minf(surface_right, right - CANYON_SURFACE_INSET)
+		if i > 0 and _is_canyon_between(merged[i - 1], merged[i]):
+			surface_left = maxf(surface_left, left + CANYON_SURFACE_INSET)
 
-		# Below: continue brown dirt under the bank, stopping a few pixels before the
-		# canyon lip so cliff walls sit outside the desert brown face.
+		# Surface row only — never overhang into canyon gaps.
+		if surface != null and surface_right > surface_left + 1.0:
+			_tile_strip_row(
+				floor_root,
+				surface,
+				surface_left,
+				surface_right,
+				top,
+				surface_thickness,
+				1,
+				"FloorSurface%d" % i
+			)
+
+		# Below: continue brown dirt under the bank, stopping before the canyon lip
+		# so cliff walls sit outside the desert brown face.
 		if dirt != null:
 			var dirt_h := dirt.get_size().y * (surface_thickness / maxf(dirt.get_size().y, 1.0))
 			var y := top + surface_thickness - 2.0
 			var dirt_left := left
 			var dirt_right := right
-			# Only inset at true canyon lips — continuous height steps stay flush.
 			if i + 1 < merged.size() and _is_canyon_between(merged[i], merged[i + 1]):
-				dirt_right = minf(dirt_right, right - 10.0)
+				dirt_right = minf(dirt_right, right - CANYON_DIRT_INSET)
 			if i > 0 and _is_canyon_between(merged[i - 1], merged[i]):
-				dirt_left = maxf(dirt_left, left + 10.0)
+				dirt_left = maxf(dirt_left, left + CANYON_DIRT_INSET)
 			var row := 0
 			while y < deep_bottom - 1.0:
 				_tile_strip_row(floor_root, dirt, dirt_left, dirt_right, y, dirt_h, 0, "FloorDirt%d_%d" % [i, row])
@@ -303,42 +359,6 @@ static func _make_contiguous_floors(level: Node) -> void:
 static func _is_canyon_between(left_strip: Dictionary, right_strip: Dictionary) -> bool:
 	## Same threshold as canyon gap detection — canyon is the height transition.
 	return float(right_strip["left"]) - float(left_strip["right"]) > 8.0
-
-
-static func _cover_abyss_under_canyons(
-	floor_root: Node2D,
-	merged: Array,
-	abyss_top: float
-) -> void:
-	## Hide the dark FloorAbyss inside canyon mouths so lips have no black border.
-	var sky_tex: Texture2D = load("res://assets/world/sky_handdrawn.png")
-	for i in range(merged.size() - 1):
-		if not _is_canyon_between(merged[i], merged[i + 1]):
-			continue
-		var left := float(merged[i]["right"])
-		var right := float(merged[i + 1]["left"])
-		var width := right - left
-		if width <= 8.0:
-			continue
-		if sky_tex != null:
-			var sprite := Sprite2D.new()
-			sprite.name = "CanyonAbyssSky%d" % i
-			sprite.texture = sky_tex
-			sprite.centered = false
-			sprite.position = Vector2(left, abyss_top)
-			var tex_size := sky_tex.get_size()
-			sprite.scale = Vector2(width / tex_size.x, 900.0 / tex_size.y)
-			sprite.z_index = -1
-			floor_root.add_child(sprite)
-		else:
-			var cover := ColorRect.new()
-			cover.name = "CanyonAbyssSky%d" % i
-			cover.position = Vector2(left, abyss_top)
-			cover.size = Vector2(width, 900.0)
-			cover.color = desert_sky_color()
-			cover.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			cover.z_index = -1
-			floor_root.add_child(cover)
 
 
 static func _draw_bank_slope(

@@ -2,22 +2,19 @@ class_name ScalableCanyonArt
 extends Node2D
 
 ## Hand-painted cliff rims outside the desert floor, framing an open canyon
-## mouth. Only sky blue fills the gap — no depth shelves, floor wash, or
-## mountain scenery inside. Rims stay warm and trail-matched.
+## mouth. Sky shows through naturally (no fill column) — no depth shelves,
+## floor wash, or mountain scenery inside. Rims stay warm and trail-matched.
 
 const RIM_TEXTURE: Texture2D = preload("res://assets/world/canyon_rim_left.png")
-## Same hand-drawn sky as SkyArt / CanyonSkyGap so the mouth matches the trail sky.
-const SKY_TEXTURE: Texture2D = preload("res://assets/world/sky_handdrawn.png")
 
 const RIM_SIZE := Vector2(220.0, 260.0)
-const DEPTH := 320.0
 ## Pixel row of the painted desert sand crust on canyon_rim_left.png.
 ## Keep locked to the top plateau so ridge lips meet the trail surface.
 const RIM_SURFACE_TEX_Y := 3.0
-## Sky flush to the bank lips — any inset lets FloorAbyss show as a black border.
-const INTERIOR_INSET := 0.0
-## Drop the sky wash just under the desert crust / rim lip.
-const INTERIOR_TOP_PAD := 2.0
+## Texture X of the canyon-facing lip (opaque right edge of the top crust).
+## Positioning uses this — not the full padded texture width — so the ridge
+## terminates the desert cleanly and lower strata do not float in the mouth.
+const RIM_LIP_TEX_X := 262.0
 ## Draw above TrailFloor surface tiles (z 1) so ridge lips sit on the desert edge.
 const CANYON_DRAW_Z := 2
 
@@ -28,7 +25,6 @@ var floor_top: float
 var left_floor_top: float
 var right_floor_top: float
 
-var _sky: Sprite2D
 var _left_rim: Sprite2D
 var _right_rim: Sprite2D
 
@@ -58,7 +54,6 @@ func configure(
 	gap_right = maxf(new_gap_left, new_gap_right)
 	_ensure_parts()
 	global_position = Vector2.ZERO
-	_layout_sky()
 	_layout_rims()
 
 
@@ -67,20 +62,28 @@ func opening_width() -> float:
 
 
 func center_is_illustrated() -> bool:
-	## Open sky blue between the ridges — no dark void, no mountain fill.
-	if _sky == null:
+	## Open mouth: rims only — no sky-fill column, depth shelves, or inner walls.
+	if _left_rim == null or _right_rim == null:
 		return false
-	return _sky.texture == SKY_TEXTURE and _sky_reads_blue()
+	if get_node_or_null("SkyWash") != null:
+		return false
+	if get_node_or_null("DepthTiles") != null:
+		return false
+	if get_node_or_null("FloorWash") != null:
+		return false
+	if get_node_or_null("LeftInnerWalls") != null:
+		return false
+	return _left_rim.texture == RIM_TEXTURE and _right_rim.texture == RIM_TEXTURE
 
 
 func rims_outside_floor() -> bool:
-	## Left rim body sits left of the gap; right rim body sits right of the gap.
+	## Left rim lip sits at the left bank; right rim lip at the right bank.
 	if _left_rim == null or _right_rim == null:
 		return false
-	var half_w := absf(_left_rim.scale.x) * RIM_TEXTURE.get_size().x * 0.5
-	var left_right_edge := _left_rim.position.x + half_w
-	var right_left_edge := _right_rim.position.x - half_w
-	return left_right_edge <= gap_left + 14.0 and right_left_edge >= gap_right - 14.0
+	return (
+		absf(_rim_lip_world_x(_left_rim, false) - gap_left) <= 14.0
+		and absf(_rim_lip_world_x(_right_rim, true) - gap_right) <= 14.0
+	)
 
 
 func rim_surface_world_y(rim: Sprite2D) -> float:
@@ -102,41 +105,31 @@ func rims_match_desert_height(tolerance: float = 4.0) -> bool:
 
 
 func interior_stays_inside_gap(tolerance: float = 0.5) -> bool:
-	## Sky must not paint over desert banks beside the mouth.
-	if _sky == null:
+	## No sky-fill column — mouth is open; always true when SkyWash is absent.
+	if get_node_or_null("SkyWash") != null:
 		return false
-	return _sprite_inside_x(_sky, gap_left - tolerance, gap_right + tolerance)
+	return opening_width() > tolerance
 
 
-func _sprite_inside_x(sprite: Sprite2D, left: float, right: float) -> bool:
-	if sprite == null or sprite.texture == null:
-		return false
-	var tex_w := float(sprite.texture.get_size().x)
-	var x0: float
-	var x1: float
-	if sprite.centered:
-		var half := tex_w * absf(sprite.scale.x) * 0.5
-		x0 = sprite.position.x - half
-		x1 = sprite.position.x + half
-	else:
-		x0 = sprite.position.x
-		x1 = sprite.position.x + tex_w * absf(sprite.scale.x)
-	return x0 >= left and x1 <= right
+func _rim_lip_world_x(rim: Sprite2D, flip: bool) -> float:
+	if rim == null or rim.texture == null:
+		return gap_left if not flip else gap_right
+	var tex_w := float(rim.texture.get_size().x)
+	var lip_from_center := (RIM_LIP_TEX_X - tex_w * 0.5) * rim.scale.x
+	if flip:
+		# Mirrored: lip is on the left side of the sprite.
+		return rim.position.x - lip_from_center
+	return rim.position.x + lip_from_center
 
 
 func _ensure_parts() -> void:
-	if _sky != null:
+	# Drop any legacy sky-fill column from older builds.
+	var legacy_sky := get_node_or_null("SkyWash")
+	if legacy_sky != null:
+		legacy_sky.free()
+	if _left_rim != null:
 		return
 
-	_sky = Sprite2D.new()
-	_sky.name = "SkyWash"
-	_sky.texture = SKY_TEXTURE
-	_sky.centered = false
-	_sky.z_as_relative = true
-	_sky.z_index = 0
-	add_child(_sky)
-
-	# Rims after sky so tree order covers the seam; relative z above sky wash.
 	_left_rim = _make_rim("LeftRim", false)
 	_right_rim = _make_rim("RightRim", true)
 	add_child(_left_rim)
@@ -152,40 +145,6 @@ func _make_rim(rim_name: String, flip: bool) -> Sprite2D:
 	rim.z_as_relative = true
 	rim.z_index = 1
 	return rim
-
-
-func _sky_reads_blue() -> bool:
-	## Canyon fill must match the hand-drawn trail sky (not a mismatched flat blue).
-	var img: Image = SKY_TEXTURE.get_image()
-	if img == null:
-		return true
-	var sample: Color = img.get_pixel(img.get_width() / 2, maxi(1, img.get_height() / 5))
-	return sample.b > sample.r and sample.b > 0.40 and sample.g > 0.35
-
-
-func _interior_bounds() -> Dictionary:
-	var inset := minf(INTERIOR_INSET, opening_width() * 0.08)
-	var left := gap_left + inset
-	var right := gap_right - inset
-	if right - left < 8.0:
-		left = gap_left
-		right = gap_right
-	var top := floor_top + INTERIOR_TOP_PAD
-	return {"left": left, "right": right, "top": top, "bottom": top + DEPTH}
-
-
-func _layout_sky() -> void:
-	var bounds := _interior_bounds()
-	var top: float = bounds["top"]
-	var left: float = bounds["left"]
-	var right: float = bounds["right"]
-	var width := right - left
-	# Soft wash locked to the same hand-drawn sky as SkyArt / hill gap covers.
-	var sky_size: Vector2 = SKY_TEXTURE.get_size()
-	_sky.position = Vector2(left, top)
-	_sky.scale = Vector2(width / sky_size.x, DEPTH / sky_size.y)
-	_sky.modulate = Color.WHITE
-	_sky.z_index = 0
 
 
 func _layout_rims() -> void:
@@ -204,14 +163,12 @@ func _layout_rims() -> void:
 	_left_rim.z_index = 1
 	_right_rim.z_index = 1
 
-	# Place rims OUTSIDE the desert floor gap: cliff lip at the bank edge,
-	# rock body under the trail bank (never over the sand span), drawn in front
-	# of desert tiles so the ridge lip reads on top of the canyon edge.
-	# Align the painted desert top in the rim texture to each adjacent bank.
-	var half_w := RIM_SIZE.x * 0.5 * fit
+	# Place rims OUTSIDE the desert floor gap: painted lip at the bank edge,
+	# rock body under the trail bank, drawn in front of desert tiles.
 	var surface_from_center := (RIM_SURFACE_TEX_Y - tex_size.y * 0.5) * rim_scale.y
+	var lip_from_center := (RIM_LIP_TEX_X - tex_size.x * 0.5) * rim_scale.x
 	# +1px under the trail crust so the ridge top reads continuous with desert.
 	var surface_y := left_floor_top + 1.0
-	_left_rim.position = Vector2(gap_left - half_w - 2.0 * fit, surface_y - surface_from_center)
+	_left_rim.position = Vector2(gap_left - lip_from_center, surface_y - surface_from_center)
 	surface_y = right_floor_top + 1.0
-	_right_rim.position = Vector2(gap_right + half_w + 2.0 * fit, surface_y - surface_from_center)
+	_right_rim.position = Vector2(gap_right + lip_from_center, surface_y - surface_from_center)
