@@ -3153,10 +3153,12 @@ func _test_empty_horse_gallop_animation() -> Variant:
 
 
 func _test_transition_gallop_frame_size() -> Variant:
+	## Canvas size alone is not enough: edge-filled gallops looked oversized next to ride art.
 	var standing: Texture2D = LevelTransition.HORSE_TEXTURE
 	var gallop0: Texture2D = LevelTransition.HORSE_GALLOP_0
 	var gallop1: Texture2D = LevelTransition.HORSE_GALLOP_1
-	if standing == null or gallop0 == null or gallop1 == null:
+	var ride: Texture2D = LevelTransition.RIDE_TEXTURE_0
+	if standing == null or gallop0 == null or gallop1 == null or ride == null:
 		return "Transition horse textures failed to load."
 	if gallop0.get_width() != standing.get_width() or gallop0.get_height() != standing.get_height():
 		return (
@@ -3168,7 +3170,48 @@ func _test_transition_gallop_frame_size() -> Variant:
 			"Gallop frame 1 must match trail_horse size (%dx%d), got %dx%d."
 			% [standing.get_width(), standing.get_height(), gallop1.get_width(), gallop1.get_height()]
 		)
+	var ride_dist := _texture_lower_body_foot_dist(ride)
+	var g0_dist := _texture_lower_body_foot_dist(gallop0)
+	var g1_dist := _texture_lower_body_foot_dist(gallop1)
+	if ride_dist <= 0.0 or g0_dist <= 0.0 or g1_dist <= 0.0:
+		return "Could not measure horse body size from transition textures."
+	# Empty gallop body mass must stay within ~8% of the mounted ride horse.
+	var max_ratio := 1.08
+	if g0_dist > ride_dist * max_ratio:
+		return (
+			"Gallop frame 0 body is oversized vs ride art (foot-dist %.1f vs %.1f)."
+			% [g0_dist, ride_dist]
+		)
+	if g1_dist > ride_dist * max_ratio:
+		return (
+			"Gallop frame 1 body is oversized vs ride art (foot-dist %.1f vs %.1f)."
+			% [g1_dist, ride_dist]
+		)
 	return null
+
+
+func _texture_lower_body_foot_dist(tex: Texture2D) -> float:
+	## Distance from lower-body opacity centroid to the content foot line.
+	var img: Image = tex.get_image()
+	if img == null:
+		return -1.0
+	if img.is_compressed():
+		img = img.duplicate()
+		img.decompress()
+	var used := img.get_used_rect()
+	if used.size.y <= 0:
+		return -1.0
+	var y0 := used.position.y + int(used.size.y * 0.4)
+	var sum_y := 0.0
+	var count := 0
+	for y in range(y0, used.end.y):
+		for x in range(used.position.x, used.end.x):
+			if img.get_pixel(x, y).a > 0.15:
+				sum_y += float(y)
+				count += 1
+	if count == 0:
+		return -1.0
+	return float(used.end.y) - sum_y / float(count)
 
 
 func _test_arrival_uses_ground_under_spawn() -> Variant:
