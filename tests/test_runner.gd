@@ -56,6 +56,7 @@ func _ready() -> void:
 	failures += await _run("Gameplay obstacles do not display floating text", _test_obstacle_labels_hidden)
 	failures += await _run("Untied bandits restore normal standing size", _test_untie_restores_stand_scale)
 	failures += await _run("Bandits stand on the desert surface", _test_bandits_stand_on_desert)
+	failures += await _run("Bandits play walk animation while moving", _test_bandit_walk_animation)
 	failures += await _run("Campaign hazards are no longer blocked by plank highways", _test_no_plank_highways)
 	failures += await _run(
 		"Canyon ferry uses synchronized opposite-phase cloud pairs",
@@ -1665,6 +1666,75 @@ func _test_bandits_stand_on_desert() -> Variant:
 			king.queue_free()
 			return "%s must stand on the desert (feet y=%.1f, floor=%.1f)." % [guard_name, guard_feet, desert_top]
 	king.queue_free()
+	return null
+
+
+func _test_bandit_walk_animation() -> Variant:
+	## Patrol movement must play the walk cycle; standing still uses idle.
+	var packed: PackedScene = load("res://scenes/world/opponent.tscn")
+	if packed == null:
+		return "Missing opponent scene."
+	# Flat ground so edge-turn rays do not cancel the patrol.
+	var ground := StaticBody2D.new()
+	ground.collision_layer = 1
+	ground.collision_mask = 0
+	var ground_shape := CollisionShape2D.new()
+	var ground_rect := RectangleShape2D.new()
+	ground_rect.size = Vector2(600.0, 40.0)
+	ground_shape.shape = ground_rect
+	ground_shape.position = Vector2(400.0, 340.0)
+	ground.add_child(ground_shape)
+	add_child(ground)
+	var bandit := packed.instantiate() as Opponent
+	bandit.position = Vector2(400.0, 320.0)
+	bandit.point_a = Vector2(-80.0, 0.0)
+	bandit.point_b = Vector2(80.0, 0.0)
+	bandit.move_speed = 80.0
+	add_child(bandit)
+	await get_tree().process_frame
+	var walk := bandit.get_node_or_null("WalkSprite") as AnimatedSprite2D
+	if walk == null or walk.sprite_frames == null:
+		bandit.queue_free()
+		ground.queue_free()
+		return "Bandit WalkSprite frames were not set up."
+	for anim_name in [&"idle", &"walk"]:
+		if not walk.sprite_frames.has_animation(anim_name):
+			bandit.queue_free()
+			ground.queue_free()
+			return "Missing bandit animation: %s" % String(anim_name)
+		if walk.sprite_frames.get_frame_count(anim_name) < 1:
+			bandit.queue_free()
+			ground.queue_free()
+			return "Bandit animation has no frames: %s" % String(anim_name)
+	if walk.sprite_frames.get_frame_count(&"walk") < 2:
+		bandit.queue_free()
+		ground.queue_free()
+		return "Bandit walk needs at least two frames."
+	# Let patrol move for a short stretch.
+	var start_x := bandit.global_position.x
+	for _i in range(12):
+		await get_tree().physics_frame
+	if absf(bandit.global_position.x - start_x) < 1.0:
+		bandit.queue_free()
+		ground.queue_free()
+		return "Bandit did not patrol, so walk animation could not be verified."
+	if walk.animation != &"walk" or not walk.is_playing():
+		bandit.queue_free()
+		ground.queue_free()
+		return "Moving bandits must play the walk animation."
+	# Park at the current spot so the next physics tick reports no travel.
+	bandit.point_a = Vector2.ZERO
+	bandit.point_b = Vector2.ZERO
+	bandit._origin = bandit.global_position
+	bandit._going_to_b = true
+	for _i in range(4):
+		await get_tree().physics_frame
+	if walk.animation != &"idle":
+		bandit.queue_free()
+		ground.queue_free()
+		return "Stationary bandits must return to the idle pose."
+	bandit.queue_free()
+	ground.queue_free()
 	return null
 
 

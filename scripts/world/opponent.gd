@@ -12,8 +12,9 @@ const STAND_SCALE := 1.15
 const TIED_SCALE := 0.7
 const STOMP_BOUNCE := -420.0
 ## Sprite offset so feet sit on local y=0 (desert surface when root is on the trail floor).
-const STAND_FOOT_OFFSET := Vector2(0, -45)
-const TIED_FOOT_OFFSET := Vector2(0, -45)
+## Offset is scaled with the sprite (Godot CanvasItem), so use -half_height, not -half_height*scale.
+const STAND_FOOT_OFFSET := Vector2(0, -40)
+const TIED_FOOT_OFFSET := Vector2(0, -65)
 
 @export var point_a: Vector2 = Vector2(-80, 0)
 @export var point_b: Vector2 = Vector2(80, 0)
@@ -55,7 +56,7 @@ func _ready() -> void:
 
 func _setup_sprite() -> void:
 	var old := get_node_or_null("Sprite2D") as Node
-	var frames := _make_walk_frames()
+	var frames := _make_sprite_frames()
 	_sprite = AnimatedSprite2D.new()
 	_sprite.name = "WalkSprite"
 	_sprite.sprite_frames = frames
@@ -64,7 +65,7 @@ func _setup_sprite() -> void:
 	_sprite.offset = STAND_FOOT_OFFSET
 	_sprite.scale = Vector2(STAND_SCALE, STAND_SCALE)
 	_apply_facing(1.0)
-	_sprite.play(&"walk")
+	_sprite.play(&"idle")
 	add_child(_sprite)
 	if old != null:
 		old.visible = false
@@ -73,22 +74,44 @@ func _setup_sprite() -> void:
 		_label.add_theme_color_override(&"font_color", Color(0.75, 0.08, 0.05, 1.0))
 
 
-func _make_walk_frames() -> SpriteFrames:
+func _make_sprite_frames() -> SpriteFrames:
 	var frames := SpriteFrames.new()
-	frames.add_animation(&"walk")
-	frames.set_animation_speed(&"walk", 6.0)
-	frames.set_animation_loop(&"walk", true)
 	var suffix := "_red" if bounty_bandit else ""
+	var stand_path := "res://assets/world/bandit%s.png" % suffix
+	frames.add_animation(&"idle")
+	frames.set_animation_speed(&"idle", 1.0)
+	frames.set_animation_loop(&"idle", true)
+	var stand_tex: Texture2D = load(stand_path)
+	if stand_tex != null:
+		frames.add_frame(&"idle", stand_tex)
+	frames.add_animation(&"walk")
+	frames.set_animation_speed(&"walk", 8.0)
+	frames.set_animation_loop(&"walk", true)
 	for path in [
 		"res://assets/world/bandit_walk_0%s.png" % suffix,
-		"res://assets/world/bandit%s.png" % suffix,
+		stand_path,
 		"res://assets/world/bandit_walk_1%s.png" % suffix,
-		"res://assets/world/bandit%s.png" % suffix,
+		stand_path,
 	]:
 		var tex: Texture2D = load(path)
 		if tex != null:
 			frames.add_frame(&"walk", tex)
 	return frames
+
+
+func _make_walk_frames() -> SpriteFrames:
+	## Kept for callers/tests that still expect the old helper name.
+	return _make_sprite_frames()
+
+
+func _set_move_animation(moving: bool) -> void:
+	if _sprite == null or _tied or _shooting:
+		return
+	if moving:
+		if _sprite.animation != &"walk" or not _sprite.is_playing():
+			_sprite.play(&"walk")
+	elif _sprite.animation != &"idle" or not _sprite.is_playing():
+		_sprite.play(&"idle")
 
 
 func _process(delta: float) -> void:
@@ -125,17 +148,18 @@ func _physics_process(delta: float) -> void:
 		_apply_facing(1.0 if _going_to_b else -1.0)
 		return
 	var previous := global_position
-	global_position = global_position.move_toward(target, move_speed * delta)
-	var dx := global_position.x - previous.x
+	var next := previous.move_toward(target, move_speed * delta)
+	# AnimatableBody2D defers transform writes, so do not infer motion by
+	# reading global_position back in the same frame.
+	var dx := next.x - previous.x
+	var dy := next.y - previous.y
+	var moving := absf(dx) > 0.01 or absf(dy) > 0.01
+	global_position = next
 	if absf(dx) > 0.01:
 		_facing = 1.0 if dx > 0.0 else -1.0
-		if _sprite != null:
-			_apply_facing(_facing)
-			if not _sprite.is_playing():
-				_sprite.play(&"walk")
-	elif _sprite != null and _sprite.is_playing():
-		_sprite.pause()
-	if global_position.distance_to(target) < 2.0:
+		_apply_facing(_facing)
+	_set_move_animation(moving)
+	if next.distance_to(target) < 2.0:
 		_going_to_b = not _going_to_b
 		_apply_facing(1.0 if _going_to_b else -1.0)
 
@@ -172,6 +196,7 @@ func get_stand_scale() -> float:
 
 func foot_contact_y() -> float:
 	## World Y of the standing (or tied) sprite feet for desert-surface checks.
+	## Sprite offset is in local (pre-scale) space; scale applies to offset + half-height.
 	if _sprite == null or _sprite.sprite_frames == null:
 		return INF
 	var anim := _sprite.animation
@@ -180,8 +205,8 @@ func foot_contact_y() -> float:
 	var tex: Texture2D = _sprite.sprite_frames.get_frame_texture(anim, _sprite.frame)
 	if tex == null:
 		return INF
-	var from_center := float(tex.get_height()) * 0.5 * absf(_sprite.scale.y)
-	return global_position.y + _sprite.offset.y + from_center
+	var from_center := float(tex.get_height()) * 0.5
+	return global_position.y + (_sprite.offset.y + from_center) * absf(_sprite.scale.y)
 
 
 func tie_up(award_bounty: bool = true) -> void:
@@ -287,12 +312,12 @@ func untie_for_respawn() -> void:
 	if _revolver != null:
 		_revolver.hide_gun()
 	if _sprite != null:
-		_sprite.sprite_frames = _make_walk_frames()
+		_sprite.sprite_frames = _make_sprite_frames()
 		_sprite.rotation = 0.0
 		_sprite.offset = STAND_FOOT_OFFSET
 		_sprite.scale = Vector2(STAND_SCALE, STAND_SCALE)
 		_apply_facing(_facing)
-		_sprite.play(&"walk")
+		_sprite.play(&"idle")
 	if _label != null:
 		_label.position.y = 0.0
 		_label.text = "BOUNTY!" if bounty_bandit else "BANDIT"
@@ -344,7 +369,7 @@ func _shoot_at(player: Player) -> void:
 	_facing = 1.0 if player.global_position.x >= global_position.x else -1.0
 	_apply_facing(_facing)
 	if _sprite != null:
-		_sprite.pause()
+		_sprite.play(&"idle")
 	if _revolver != null:
 		_revolver.show_aim(_facing)
 	if _label != null:
@@ -370,8 +395,6 @@ func _shoot_at(player: Player) -> void:
 		_revolver.hide_gun()
 	if not _tied:
 		_shooting = false
-		if _sprite != null:
-			_sprite.play(&"walk")
 		if _label != null:
 			_label.text = "BOUNTY!" if bounty_bandit else "BANDIT"
 			_label.modulate = Color.WHITE
