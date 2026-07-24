@@ -280,9 +280,10 @@ static func _make_contiguous_floors(level: Node) -> void:
 			var y := top + surface_thickness - 2.0
 			var dirt_left := left
 			var dirt_right := right
-			if i + 1 < merged.size():
+			# Only inset at true canyon lips — continuous height steps stay flush.
+			if i + 1 < merged.size() and _is_canyon_between(merged[i], merged[i + 1]):
 				dirt_right = minf(dirt_right, right - 10.0)
-			if i > 0:
+			if i > 0 and _is_canyon_between(merged[i - 1], merged[i]):
 				dirt_left = maxf(dirt_left, left + 10.0)
 			var row := 0
 			while y < deep_bottom - 1.0:
@@ -292,9 +293,14 @@ static func _make_contiguous_floors(level: Node) -> void:
 				if row > 40:
 					break
 
-		# Soft desert slopes where neighboring banks sit at different heights.
-		if i + 1 < merged.size():
+		# Soft desert slopes only for continuous height steps (no canyon between).
+		if i + 1 < merged.size() and not _is_canyon_between(merged[i], merged[i + 1]):
 			_draw_bank_slope(floor_root, surface, dirt, merged[i], merged[i + 1], i)
+
+
+static func _is_canyon_between(left_strip: Dictionary, right_strip: Dictionary) -> bool:
+	## Same threshold as canyon gap detection — canyon is the height transition.
+	return float(right_strip["left"]) - float(left_strip["right"]) > 8.0
 
 
 static func _draw_bank_slope(
@@ -309,6 +315,8 @@ static func _draw_bank_slope(
 	var right_top := float(right_strip["top"])
 	var step := absf(left_top - right_top)
 	if step < 10.0:
+		return
+	if _is_canyon_between(left_strip, right_strip):
 		return
 	var seam_x := (float(left_strip["right"]) + float(right_strip["left"])) * 0.5
 	# Gentle kid-friendly grade (~2.5–3:1 run:rise), capped so it stays local.

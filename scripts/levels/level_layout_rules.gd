@@ -31,6 +31,7 @@ static func validate_level_node(level: Node) -> PackedStringArray:
 	errors.append_array(_validate_cactus_clear_of_springs(level))
 	errors.append_array(_validate_cactus_clear_of_canyons(level))
 	errors.append_array(_validate_timed_doors_clear_of_canyons(level))
+	errors.append_array(_validate_no_slopes_across_canyons(level))
 	errors.append_array(_validate_carrion_flight_paths(level))
 	errors.append_array(_validate_mode_item_spacing(level))
 	errors.append_array(_validate_visuals(level))
@@ -383,6 +384,36 @@ static func _validate_timed_doors_clear_of_canyons(level: Node) -> PackedStringA
 				% [door.name, gap_left, gap_right]
 			)
 			break
+	return errors
+
+
+static func _validate_no_slopes_across_canyons(level: Node) -> PackedStringArray:
+	## Height changes across a canyon use the canyon itself — never a painted slope.
+	var errors: PackedStringArray = []
+	var gaps := _ground_canyon_gaps(level)
+	if gaps.is_empty():
+		return errors
+	for body in level.find_children("FloorSlopeBody*", "StaticBody2D", true, false):
+		var col := body.get_node_or_null("CollisionPolygon2D") as CollisionPolygon2D
+		if col == null or col.polygon.size() < 2:
+			continue
+		var min_x := INF
+		var max_x := -INF
+		for point in col.polygon:
+			var local_point: Vector2 = point
+			var world_x: float = body.to_global(local_point).x
+			min_x = minf(min_x, world_x)
+			max_x = maxf(max_x, world_x)
+		for gap in gaps:
+			var gap_left := float(gap["left"])
+			var gap_right := float(gap["right"])
+			var overlap := minf(max_x, gap_right) - maxf(min_x, gap_left)
+			if overlap > 16.0:
+				errors.append(
+					"Desert slope %s crosses canyon gap %.0f..%.0f; canyon is the height transition."
+					% [body.name, gap_left, gap_right]
+				)
+				break
 	return errors
 
 

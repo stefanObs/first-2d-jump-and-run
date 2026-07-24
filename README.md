@@ -2,7 +2,7 @@
 
 Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, no lives/game-over, nonviolent lasso. **German is the default language**; English is fully supported. Optional spoken instructions use local OS TTS (Narrator).
 
-**Content version:** `1.3.41` (see `content_version.txt`). Launchers reimport when this stamp changes.
+**Content version:** `1.3.42` (see `content_version.txt`). Launchers reimport when this stamp changes.
 
 This README is the **binding source of truth** for gameplay, level design, art, i18n, and audio. Agents and contributors must follow it (see [Agent / contributor rules](#agent--contributor-rules)).
 
@@ -92,7 +92,8 @@ Agents **must** honor these when editing levels or trail systems:
 
 ### Floor height
 
-- Where desert banks sit at different heights, paint a **natural soft slope** with trail desert/dirt art (not a flat cliff face or ColorRect step). Slopes must be walkable.
+- Where desert banks sit at different heights **with continuous ground** (no canyon between), paint a **natural soft slope** with trail desert/dirt art (not a flat cliff face or ColorRect step). Slopes must be walkable.
+- If a **canyon** separates banks at different heights, the canyon is the transition — do **not** paint a slope (or slope collision) across the gap.
 
 ### Canyon crossing
 

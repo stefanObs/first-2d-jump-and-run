@@ -2416,6 +2416,28 @@ func _test_trail_row_model() -> Variant:
 		level.free()
 		return "Desert height slopes need walkable collision."
 	level.free()
+	# Height difference across a canyon must NOT get a bridging slope — canyon is the step.
+	var canyon_step := CustomLevelStore.default_level(slot)
+	canyon_step["objects"] = [
+		{"type": "ground", "x": 2, "y": trail},
+		{"type": "ground", "x": 2, "y": trail - 1},
+		{"type": "canyon", "x": 3, "y": trail},
+		{"type": "ground", "x": 4, "y": trail},
+		{"type": "goal", "x": 5, "y": trail},
+	]
+	var canyon_level := LevelController.new()
+	CustomLevelBuilder.build(canyon_level, canyon_step)
+	WildWestTheme.apply_to_level(canyon_level)
+	var canyon_slope_errors := LevelLayoutRules._validate_no_slopes_across_canyons(canyon_level)
+	var canyon_has_slope := false
+	for node in canyon_level.find_children("FloorSlope*", "Node", true, false):
+		canyon_has_slope = true
+		break
+	if canyon_has_slope or not canyon_slope_errors.is_empty():
+		var detail := canyon_slope_errors[0] if not canyon_slope_errors.is_empty() else "FloorSlope* present across canyon"
+		canyon_level.free()
+		return "Canyon-separated banks must not paint a desert slope: %s" % detail
+	canyon_level.free()
 	# Campaign levels 2 and 5 should include stacked dirt height differences.
 	for path in ["res://scenes/levels/level_02.tscn", "res://scenes/levels/level_05.tscn"]:
 		var packed: PackedScene = load(path)
