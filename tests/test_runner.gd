@@ -55,6 +55,7 @@ func _ready() -> void:
 	)
 	failures += await _run("Gameplay obstacles do not display floating text", _test_obstacle_labels_hidden)
 	failures += await _run("Untied bandits restore normal standing size", _test_untie_restores_stand_scale)
+	failures += await _run("Bandits stand on the desert surface", _test_bandits_stand_on_desert)
 	failures += await _run("Campaign hazards are no longer blocked by plank highways", _test_no_plank_highways)
 	failures += await _run(
 		"Canyon ferry uses synchronized opposite-phase cloud pairs",
@@ -401,6 +402,19 @@ func _test_boss_arenas() -> Variant:
 	if coach.get_node_or_null("TrailFloor") != null:
 		coach.queue_free()
 		return "Midnight Coach must not keep the finite WildWestTheme TrailFloor during the chase."
+	# Wheels must sit on the looping desert surface for the whole chase.
+	if not coach.has_method("coach_wheel_contact_y") or not coach.has_method("desert_surface_y"):
+		coach.queue_free()
+		return "Midnight Coach must expose wheel/desert surface helpers."
+	var coach_floor: float = coach.call("desert_surface_y")
+	var wheel_y: float = coach.call("coach_wheel_contact_y")
+	var coach_node := coach.get_node_or_null("Coach") as Node2D
+	if coach_node == null or absf(coach_node.position.y - coach_floor) > 0.5:
+		coach.queue_free()
+		return "Midnight Coach root must sit on the desert surface Y."
+	if absf(wheel_y - coach_floor) > 2.5:
+		coach.queue_free()
+		return "Midnight Coach wheels must sit on the desert (wheel y=%.1f, floor=%.1f)." % [wheel_y, coach_floor]
 	coach.call("_apply_coach_frame", 3)
 	var door_frame_sprite := coach.get_node_or_null("Coach/Sprite2D") as Sprite2D
 	var door_frame_pos := Vector2.ZERO
@@ -1596,6 +1610,60 @@ func _test_untie_restores_stand_scale() -> Variant:
 		error = "Respawned bandit width should match standing size."
 	bandit.queue_free()
 	return error
+
+
+func _test_bandits_stand_on_desert() -> Variant:
+	## Bandit / kingpin-guard feet must sit on the desert top (root at trail floor Y).
+	var packed: PackedScene = load("res://scenes/world/opponent.tscn")
+	if packed == null:
+		return "Missing opponent scene."
+	var desert_top := 320.0
+	var bandit := packed.instantiate() as Opponent
+	bandit.position = Vector2(400.0, desert_top)
+	add_child(bandit)
+	await get_tree().process_frame
+	if not bandit.has_method("foot_contact_y"):
+		bandit.queue_free()
+		return "Opponent must expose foot_contact_y for desert grounding checks."
+	var stand_feet: float = bandit.call("foot_contact_y")
+	if absf(stand_feet - desert_top) > 2.5:
+		bandit.queue_free()
+		return "Standing bandits must stand on the desert (feet y=%.1f, floor=%.1f)." % [stand_feet, desert_top]
+	var walk := bandit.get_node_or_null("WalkSprite") as AnimatedSprite2D
+	if walk == null or walk.offset != Opponent.STAND_FOOT_OFFSET:
+		bandit.queue_free()
+		return "Standing bandits must use the desert foot offset."
+	bandit.tie_up(false)
+	# Wait out the short tying flourish before measuring the seated pose.
+	await get_tree().create_timer(0.5).timeout
+	var tied_feet: float = bandit.call("foot_contact_y")
+	if walk.offset != Opponent.TIED_FOOT_OFFSET:
+		bandit.queue_free()
+		return "Tied bandits must keep the desert seat offset."
+	bandit.queue_free()
+	if absf(tied_feet - desert_top) > 2.5:
+		return "Tied bandits must sit on the desert (feet y=%.1f, floor=%.1f)." % [tied_feet, desert_top]
+	# Kingpin arena guards share the Opponent scene on the same desert line.
+	var king_packed: PackedScene = load("res://scenes/bosses/boss_outlaw_kingpin.tscn")
+	if king_packed == null:
+		return "Missing kingpin arena."
+	var king := king_packed.instantiate()
+	add_child(king)
+	await get_tree().process_frame
+	for guard_name in ["Guard0", "Guard1"]:
+		var guard := king.get_node_or_null(guard_name) as Opponent
+		if guard == null:
+			king.queue_free()
+			return "Kingpin arena missing %s." % guard_name
+		if absf(guard.position.y - desert_top) > 0.5:
+			king.queue_free()
+			return "%s root must sit on the desert surface Y." % guard_name
+		var guard_feet: float = guard.call("foot_contact_y")
+		if absf(guard_feet - desert_top) > 2.5:
+			king.queue_free()
+			return "%s must stand on the desert (feet y=%.1f, floor=%.1f)." % [guard_name, guard_feet, desert_top]
+	king.queue_free()
+	return null
 
 
 func _test_no_plank_highways() -> Variant:

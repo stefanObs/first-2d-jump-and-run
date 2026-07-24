@@ -26,6 +26,13 @@ const SKY_OVERLAP := 8.0
 const SKY_Y := -520.0
 const SKY_H := 700.0
 const HILL_H := 520.0
+## Coach root sits on FLOOR_TOP; sprite/horse local Y place wheels and hooves on that line.
+const COACH_SCALE := 0.92
+const COACH_SPRITE_POS := Vector2(-20.0, -119.0)
+const HORSE_NEAR_POS := Vector2(190.0, -56.0)
+const HORSE_FAR_POS := Vector2(240.0, -50.0)
+const DOOR_Y := -89.0
+const DRIVER_GUN_Y := -136.0
 
 var _coach: Node2D
 var _coach_sprite: Sprite2D
@@ -83,7 +90,7 @@ func _ready() -> void:
 	_driver_gun = RevolverOverlay.new()
 	_driver_gun.name = "DriverGun"
 	_driver_gun.z_index = 5
-	_driver_gun.position = Vector2(148, -95)
+	_driver_gun.position = Vector2(148.0, DRIVER_GUN_Y)
 	_driver_gun.scale = Vector2(1.15, 1.15)
 	_driver_gun.visible = false
 	_coach.add_child(_driver_gun)
@@ -127,12 +134,12 @@ func _face_coach_forward() -> void:
 	## Coach art faces left; flip the whole team so it races to the right.
 	if _coach_sprite != null:
 		_coach_sprite.flip_h = true
-		_coach_sprite.position = Vector2(-20, -78)
+		_coach_sprite.position = COACH_SPRITE_POS
 	if _horse_near != null:
-		_horse_near.position = Vector2(190, -42)
+		_horse_near.position = HORSE_NEAR_POS
 		_horse_near.flip_h = false
 	if _horse_far != null:
-		_horse_far.position = Vector2(240, -48)
+		_horse_far.position = HORSE_FAR_POS
 		_horse_far.flip_h = false
 	_update_reins()
 	# Rear door closest to the chasing player (left), then mid, then front.
@@ -140,7 +147,7 @@ func _face_coach_forward() -> void:
 	for i in range(3):
 		var door := _coach.get_node_or_null("Door%d" % i) as Node2D
 		if door != null:
-			door.position = Vector2(door_xs[i], -48.0)
+			door.position = Vector2(door_xs[i], DOOR_Y)
 
 
 func _setup_desert_floor() -> void:
@@ -327,6 +334,20 @@ func desert_surface_scale() -> Vector2:
 	return _sand_sprites[0].scale
 
 
+func desert_surface_y() -> float:
+	## Trail-matched sand top (same as WildWestTheme floor).
+	return FLOOR_TOP
+
+
+func coach_wheel_contact_y() -> float:
+	## World Y of the coach wheel bottoms (sprite is centered).
+	if _coach == null or _coach_sprite == null or _coach_sprite.texture == null:
+		return INF
+	var tex_h := float(_coach_sprite.texture.get_height())
+	var from_center := (tex_h * 0.5) * absf(_coach_sprite.scale.y)
+	return _coach.global_position.y + _coach_sprite.position.y + from_center
+
+
 func desert_loop_coverage_at(focus_x: float) -> Dictionary:
 	## Test helper: after syncing to a large X, tiles must still bracket the focus.
 	_sync_desert_loop(focus_x)
@@ -430,9 +451,9 @@ func _ensure_world_ahead() -> void:
 func _bob_horses() -> void:
 	var amp := 5.0 if (not _waiting) else 1.5
 	if _horse_near != null:
-		_horse_near.position.y = -42.0 + sin(_gallop_t) * amp
+		_horse_near.position.y = HORSE_NEAR_POS.y + sin(_gallop_t) * amp
 	if _horse_far != null:
-		_horse_far.position.y = -48.0 + sin(_gallop_t + 0.7) * amp
+		_horse_far.position.y = HORSE_FAR_POS.y + sin(_gallop_t + 0.7) * amp
 	_update_reins()
 
 
@@ -441,14 +462,14 @@ func _update_reins() -> void:
 	# the gap when the team bobs through its gallop cycle.
 	if _harness_near != null and _horse_near != null:
 		_harness_near.points = PackedVector2Array([
-			Vector2(110.0, -96.0),
-			Vector2(150.0, -82.0),
+			Vector2(110.0, DRIVER_GUN_Y + 40.0),
+			Vector2(150.0, DRIVER_GUN_Y + 54.0),
 			_horse_near.position + Vector2(48.0, -12.0),
 		])
 	if _harness_far != null and _horse_far != null:
 		_harness_far.points = PackedVector2Array([
-			Vector2(104.0, -92.0),
-			Vector2(168.0, -80.0),
+			Vector2(104.0, DRIVER_GUN_Y + 44.0),
+			Vector2(168.0, DRIVER_GUN_Y + 56.0),
 			_horse_far.position + Vector2(48.0, -10.0),
 		])
 
@@ -460,8 +481,8 @@ func _apply_coach_frame(open_count: int) -> void:
 	_coach_sprite.texture = COACH_FRAMES[idx]
 	_coach_sprite.centered = true
 	_coach_sprite.flip_h = true
-	_coach_sprite.scale = Vector2(0.92, 0.92)
-	_coach_sprite.position = Vector2(-20, -78)
+	_coach_sprite.scale = Vector2(COACH_SCALE, COACH_SCALE)
+	_coach_sprite.position = COACH_SPRITE_POS
 
 
 func _active_door() -> BossLassoTarget:
@@ -493,7 +514,7 @@ func _fire_warning_shot() -> void:
 	if player != null and player.global_position.x > _coach.global_position.x:
 		face = 1.0
 	if _driver_gun != null:
-		_driver_gun.position = Vector2(140.0 + 8.0 * face, -95.0)
+		_driver_gun.position = Vector2(140.0 + 8.0 * face, DRIVER_GUN_Y)
 		_driver_gun.show_aim(face)
 	report_progress("LOOK OUT!")
 	await get_tree().create_timer(0.4).timeout
@@ -511,7 +532,7 @@ func _fire_warning_shot() -> void:
 			fail_soft()
 	)
 	add_child(bullet)
-	var muzzle := _coach.global_position + Vector2(140.0 + 40.0 * face, -95.0)
+	var muzzle := _coach.global_position + Vector2(140.0 + 40.0 * face, DRIVER_GUN_Y)
 	if _driver_gun != null:
 		muzzle = _driver_gun.global_position + _driver_gun.muzzle_position()
 	bullet.global_position = muzzle
@@ -538,13 +559,13 @@ func _start_speed_burst() -> void:
 			fail_soft()
 	)
 	add_child(dust)
-	dust.global_position = _coach.global_position + Vector2(-90.0, -10.0)
+	dust.global_position = _coach.global_position + Vector2(-90.0, -51.0)
 	var follow_t := 0.0
 	while follow_t < 1.0 and is_instance_valid(dust) and not _won:
 		await get_tree().process_frame
 		follow_t += get_process_delta_time()
 		if is_instance_valid(dust) and _coach != null:
-			dust.global_position = _coach.global_position + Vector2(-75.0, -10.0)
+			dust.global_position = _coach.global_position + Vector2(-75.0, -51.0)
 	_bursting = false
 	_burst_timer = randf_range(4.5, 6.5)
 
@@ -555,8 +576,8 @@ func _toss_lantern() -> void:
 	report_progress("Lantern!")
 	var lantern := CoachLantern.new()
 	lantern.name = "CoachLantern"
-	var from := _coach.global_position + Vector2(130.0, -110.0)
-	var ground_y := 318.0
+	var from := _coach.global_position + Vector2(130.0, DRIVER_GUN_Y - 15.0)
+	var ground_y := FLOOR_TOP
 	lantern.setup(from, player.global_position.x, ground_y)
 	lantern.hit_player.connect(func(hit: Player) -> void:
 		if hit != null and not hit.is_invulnerable():
@@ -569,7 +590,7 @@ func get_heart_drop_position() -> Vector2:
 	var rx := 220.0
 	if _coach != null:
 		rx = _coach.global_position.x - 200.0
-	return Vector2(rx, 320.0)
+	return Vector2(rx, FLOOR_TOP)
 
 
 func _on_heart_recovered() -> void:
@@ -645,8 +666,8 @@ func _apply_surrender_pose() -> void:
 	_coach_sprite.texture = COACH_SURRENDER
 	_coach_sprite.centered = true
 	_coach_sprite.flip_h = true
-	_coach_sprite.scale = Vector2(0.92, 0.92)
-	_coach_sprite.position = Vector2(-20, -78)
+	_coach_sprite.scale = Vector2(COACH_SCALE, COACH_SCALE)
+	_coach_sprite.position = COACH_SPRITE_POS
 
 
 func _refresh_door_hints() -> void:

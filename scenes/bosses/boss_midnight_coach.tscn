@@ -65,7 +65,7 @@ position = Vector2(800, 320)
 
 [node name="HorseFar" type="Sprite2D" parent="Coach"]
 z_index = -2
-position = Vector2(-240, -48)
+position = Vector2(240, -50)
 scale = Vector2(0.36, 0.36)
 texture = ExtResource("8")
 flip_h = true
@@ -73,7 +73,7 @@ modulate = Color(0.82, 0.78, 0.72, 1)
 
 [node name="HorseNear" type="Sprite2D" parent="Coach"]
 z_index = -1
-position = Vector2(-190, -42)
+position = Vector2(190, -56)
 scale = Vector2(0.4, 0.4)
 texture = ExtResource("8")
 flip_h = true
@@ -91,7 +91,8 @@ width = 2.5
 default_color = Color(0.28, 0.18, 0.1, 0.85)
 
 [node name="Sprite2D" type="Sprite2D" parent="Coach"]
-position = Vector2(20, -78)
+position = Vector2(-20, -119)
+scale = Vector2(0.92, 0.92)
 texture = ExtResource("6")
 
 [node name="Door0" type="Area2D" parent="Coach"]

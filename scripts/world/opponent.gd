@@ -11,6 +11,9 @@ signal bounty_caught(opponent: Opponent, amount: int)
 const STAND_SCALE := 1.15
 const TIED_SCALE := 0.7
 const STOMP_BOUNCE := -420.0
+## Sprite offset so feet sit on local y=0 (desert surface when root is on the trail floor).
+const STAND_FOOT_OFFSET := Vector2(0, -45)
+const TIED_FOOT_OFFSET := Vector2(0, -45)
 
 @export var point_a: Vector2 = Vector2(-80, 0)
 @export var point_b: Vector2 = Vector2(80, 0)
@@ -58,7 +61,7 @@ func _setup_sprite() -> void:
 	_sprite.sprite_frames = frames
 	_sprite.centered = true
 	# Feet on the desert top (collision bottom at local y=0).
-	_sprite.offset = Vector2(0, -35)
+	_sprite.offset = STAND_FOOT_OFFSET
 	_sprite.scale = Vector2(STAND_SCALE, STAND_SCALE)
 	_apply_facing(1.0)
 	_sprite.play(&"walk")
@@ -167,6 +170,20 @@ func get_stand_scale() -> float:
 	return STAND_SCALE
 
 
+func foot_contact_y() -> float:
+	## World Y of the standing (or tied) sprite feet for desert-surface checks.
+	if _sprite == null or _sprite.sprite_frames == null:
+		return INF
+	var anim := _sprite.animation
+	if not _sprite.sprite_frames.has_animation(anim):
+		return INF
+	var tex: Texture2D = _sprite.sprite_frames.get_frame_texture(anim, _sprite.frame)
+	if tex == null:
+		return INF
+	var from_center := float(tex.get_height()) * 0.5 * absf(_sprite.scale.y)
+	return global_position.y + _sprite.offset.y + from_center
+
+
 func tie_up(award_bounty: bool = true) -> void:
 	if _tied:
 		return
@@ -272,7 +289,7 @@ func untie_for_respawn() -> void:
 	if _sprite != null:
 		_sprite.sprite_frames = _make_walk_frames()
 		_sprite.rotation = 0.0
-		_sprite.offset = Vector2(0, -35)
+		_sprite.offset = STAND_FOOT_OFFSET
 		_sprite.scale = Vector2(STAND_SCALE, STAND_SCALE)
 		_apply_facing(_facing)
 		_sprite.play(&"walk")
@@ -314,7 +331,7 @@ func _show_floor_bound_pose() -> void:
 	# Scale it to the same on-screen height instead of enlarging the capture.
 	_sprite.scale = Vector2(TIED_SCALE * face, TIED_SCALE)
 	# Feet/seat on the desert top (collision bottom at local y=0).
-	_sprite.offset = Vector2(0, -45)
+	_sprite.offset = TIED_FOOT_OFFSET
 	_sprite.play(&"tied")
 
 
