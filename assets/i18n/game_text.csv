@@ -185,11 +185,14 @@ Stamp: Dirt — keep a dirt path under the cowboy and saloon.,Stamp: Dirt — ke
 Export Trails,Export Trails,Pfade exportieren
 Import Trails,Import Trails,Pfade importieren
 Export Trail,Export Trail,Pfad exportieren
+Import Trail,Import Trail,Pfad importieren
 No custom trails to export.,No custom trails to export.,Keine eigenen Pfade zum Exportieren.
 Could not write trail pack.,Could not write trail pack.,Pfad-Paket konnte nicht geschrieben werden.
 Exported %d trail(s).,Exported %d trail(s).,%d Pfad(e) exportiert.
 Could not import trail pack.,Could not import trail pack.,Pfad-Paket konnte nicht importiert werden.
 Trail exported.,Trail exported.,Pfad exportiert.
+Trail imported.,Trail imported.,Pfad importiert.
+Imported first of %d trails.,Imported first of %d trails.,Ersten von %d Pfaden importiert.
 Edit level,Edit level,Level bearbeiten
 Add before,Add before,Davor einfügen
 Restore original,Restore original,Original wiederherstellen

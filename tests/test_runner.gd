@@ -107,6 +107,7 @@ func _ready() -> void:
 	failures += await _run("Trail workshop uses one trail row and stacked dirt", _test_trail_row_model)
 	failures += await _run("Campaign workshop edits and inserts levels", _test_campaign_workshop)
 	failures += await _run("Trail share pack export and import round-trip", _test_trail_share_pack)
+	failures += await _run("Trail editor single-level export and import", _test_trail_editor_single_share)
 	failures += await _run("Trail editor saves and resets explicit snapshots", _test_trail_editor_save_reset)
 	failures += await _run("Hand-drawn celebration art and cheerful music load", _test_art_and_music)
 	failures += await _run("Mid-trail save data persists and loads", _test_mid_trail_save)
@@ -3277,6 +3278,73 @@ func _test_trail_share_pack() -> Variant:
 		var restore_override := FileAccess.open(override_path, FileAccess.WRITE)
 		if restore_override != null:
 			restore_override.store_buffer(override_backup)
+	return error
+
+
+func _test_trail_editor_single_share() -> Variant:
+	var slot := CustomLevelStore.SLOT_COUNT - 3
+	var path := CustomLevelStore.SavePaths.custom_level_path(slot)
+	var existed := FileAccess.file_exists(path)
+	var backup := FileAccess.get_file_as_bytes(path) if existed else PackedByteArray()
+	if existed:
+		DirAccess.remove_absolute(path)
+	var pack_path := CustomLevelStore.SavePaths.root_dir().path_join("test_editor_single.cowboytrail")
+	if FileAccess.file_exists(pack_path):
+		DirAccess.remove_absolute(pack_path)
+
+	var current := CustomLevelStore.default_level(slot)
+	current["kind"] = "extra"
+	current["insert_position"] = 6
+	current["title"] = "Before Import"
+	var exported := current.duplicate(true)
+	exported["title"] = "Shared Single Trail"
+	exported["objects"].append({"type": "star", "x": 5, "y": CustomLevelStore.trail_row(int(exported["height"])) - 1})
+
+	var error: Variant = null
+	if not CustomLevelStore.write_share_pack(pack_path, [exported]):
+		error = "Single-trail export failed."
+	else:
+		var read := CustomLevelStore.read_share_pack(pack_path)
+		if not bool(read.get("ok", false)):
+			error = "Single-trail read failed: %s" % str(read.get("message", ""))
+		elif int(read.get("trail_count", 0)) != 1:
+			error = "Single-trail pack should contain exactly one trail."
+		else:
+			var merged := CustomLevelStore.merge_imported_trail(current, (read["trails"] as Array)[0], slot)
+			if str(merged.get("title", "")) != "Shared Single Trail":
+				error = "Merged import should take the shared trail layout."
+			elif str(merged.get("kind", "")) != "extra" or int(merged.get("insert_position", 0)) != 6:
+				error = "Editor import should keep the current slot campaign metadata."
+			elif int(merged.get("slot", -1)) != slot:
+				error = "Editor import should stay on the active custom slot."
+			else:
+				GameManager.active_custom_slot = slot
+				GameManager.custom_level_draft = {}
+				if not CustomLevelStore.save(slot, current):
+					error = "Could not seed the editor slot before import."
+				else:
+					var packed: PackedScene = load("res://scenes/ui/level_editor.tscn")
+					var editor = packed.instantiate()
+					add_child(editor)
+					editor._on_import_selected(pack_path)
+					if str(editor._data.get("title", "")) != "Shared Single Trail":
+						error = "Import Trail should load the shared document into the editor."
+					elif not editor._dirty:
+						error = "Import Trail should mark the working document dirty for Save."
+					elif str(editor._data.get("kind", "")) != "extra":
+						error = "Import Trail should not overwrite the current trail kind."
+					elif editor.find_child("ImportTrailButton", true, false) == null:
+						error = "The trail editor should expose an Import Trail button."
+					editor.queue_free()
+
+	if FileAccess.file_exists(pack_path):
+		DirAccess.remove_absolute(pack_path)
+	if FileAccess.file_exists(path):
+		DirAccess.remove_absolute(path)
+	if existed:
+		var restore := FileAccess.open(path, FileAccess.WRITE)
+		if restore != null:
+			restore.store_buffer(backup)
 	return error
 
 

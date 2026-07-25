@@ -205,6 +205,65 @@ static func import_share_pack(path: String) -> Dictionary:
 	return result
 
 
+static func read_share_pack(path: String) -> Dictionary:
+	var result := {
+		"ok": false,
+		"message": "",
+		"trails": [],
+		"trail_count": 0,
+	}
+	if not FileAccess.file_exists(path):
+		result["message"] = "Pack file not found."
+		return result
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		result["message"] = "Could not read pack file."
+		return result
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	if typeof(parsed) != TYPE_DICTIONARY:
+		result["message"] = "Invalid pack format."
+		return result
+	var pack := parsed as Dictionary
+	if str(pack.get("format", "")) != SHARE_PACK_FORMAT:
+		result["message"] = "Unsupported pack format."
+		return result
+	if int(pack.get("version", 0)) != SHARE_PACK_VERSION:
+		result["message"] = "Unsupported pack version."
+		return result
+	var trails: Variant = pack.get("trails", [])
+	if not (trails is Array) or (trails as Array).is_empty():
+		result["message"] = "Pack contains no trails."
+		return result
+	var trail_docs: Array = []
+	for value in trails:
+		if value is Dictionary:
+			trail_docs.append(value as Dictionary)
+	if trail_docs.is_empty():
+		result["message"] = "Pack contains no trails."
+		return result
+	result["trails"] = trail_docs
+	result["trail_count"] = trail_docs.size()
+	result["ok"] = true
+	return result
+
+
+static func merge_imported_trail(
+	current: Dictionary, imported: Dictionary, slot_index: int
+) -> Dictionary:
+	var merged := sanitize(imported, slot_index)
+	merged["kind"] = str(current.get("kind", merged.get("kind", "standalone")))
+	merged["source_level"] = clampi(
+		int(current.get("source_level", merged.get("source_level", 0))), 0, BUILTIN_COUNT
+	)
+	merged["insert_position"] = clampi(
+		int(current.get("insert_position", merged.get("insert_position", 11))),
+		1,
+		BUILTIN_COUNT + 1,
+	)
+	merged["slot"] = slot_index
+	return merged
+
+
 static func erase(slot_index: int) -> void:
 	var path := SavePaths.custom_level_path(slot_index)
 	if FileAccess.file_exists(path):

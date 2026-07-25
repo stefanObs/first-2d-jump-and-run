@@ -92,6 +92,7 @@ const _PREVIEW_MIN_SIZE := Vector2(640, 300)
 var _hover_column: int = -1
 var _syncing_scroll := false
 var _export_dialog: FileDialog
+var _import_dialog: FileDialog
 
 const TRAIL_PACK_FILTER := "*.cowboytrail ; Cowboy Trail Pack"
 
@@ -260,6 +261,7 @@ func _build_ui() -> void:
 	_save_button = _add_action(actions, tr("Save Trail"), _save, "SaveButton")
 	_reset_button = _add_action(actions, tr("Reset Changes"), _request_reset, "ResetButton")
 	_add_action(actions, tr("Export Trail"), _open_export_dialog, "ExportTrailButton")
+	_add_action(actions, tr("Import Trail"), _open_import_dialog, "ImportTrailButton")
 	_add_action(actions, tr("Play Test"), _play_test, "PlayTestButton")
 	_add_action(
 		actions,
@@ -299,6 +301,14 @@ func _build_ui() -> void:
 	_export_dialog.title = tr("Export Trail")
 	_export_dialog.file_selected.connect(_on_export_selected)
 	add_child(_export_dialog)
+
+	_import_dialog = FileDialog.new()
+	_import_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	_import_dialog.access = FileDialog.ACCESS_FILESYSTEM
+	_import_dialog.filters = PackedStringArray([TRAIL_PACK_FILTER])
+	_import_dialog.title = tr("Import Trail")
+	_import_dialog.file_selected.connect(_on_import_selected)
+	add_child(_import_dialog)
 
 
 func _style_dropdown(dropdown: OptionButton) -> void:
@@ -758,11 +768,77 @@ func _open_export_dialog() -> void:
 	_export_dialog.popup_centered(Vector2i(900, 600))
 
 
+func _open_import_dialog() -> void:
+	_import_dialog.popup_centered(Vector2i(900, 600))
+
+
+func _ensure_pack_extension(path: String) -> String:
+	if path.get_extension().is_empty():
+		return "%s.cowboytrail" % path
+	return path
+
+
 func _on_export_selected(path: String) -> void:
-	var export_path := path
-	if export_path.get_extension().is_empty():
-		export_path = "%s.cowboytrail" % export_path
+	var export_path := _ensure_pack_extension(path)
 	if CustomLevelStore.write_share_pack(export_path, [_data]):
 		_status.text = tr("Trail exported.")
 	else:
 		_status.text = tr("Could not write trail pack.")
+
+
+func _on_import_selected(path: String) -> void:
+	var result := CustomLevelStore.read_share_pack(path)
+	if not bool(result.get("ok", false)):
+		_status.text = tr("Could not import trail pack.")
+		return
+	var trails := result.get("trails", []) as Array
+	if trails.is_empty() or not (trails[0] is Dictionary):
+		_status.text = tr("Could not import trail pack.")
+		return
+	var slot := GameManager.active_custom_slot
+	_data = CustomLevelStore.merge_imported_trail(_data, trails[0] as Dictionary, slot)
+	_title_edit.set_block_signals(true)
+	_title_edit.text = str(_data.get("title", "Family Trail"))
+	_title_edit.set_block_signals(false)
+	_rebuild_stamp_grid_if_needed()
+	_refresh_grid()
+	_dirty = true
+	_update_action_state()
+	var trail_count := int(result.get("trail_count", trails.size()))
+	if trail_count > 1:
+		_status.text = tr("Imported first of %d trails.") % trail_count
+	else:
+		_status.text = tr("Trail imported.")
+
+
+func _rebuild_stamp_grid_if_needed() -> void:
+	var width := int(_data.get("width", 24))
+	var height := int(_data.get("height", 8))
+	if _cells.size() == width * height:
+		return
+	_rebuild_stamp_grid()
+
+
+func _rebuild_stamp_grid() -> void:
+	if _grid == null:
+		return
+	for cell in _cells:
+		if is_instance_valid(cell):
+			cell.queue_free()
+	_cells.clear()
+	_grid.columns = int(_data.get("width", 24))
+	var width := int(_data.get("width", 24))
+	var height := int(_data.get("height", 8))
+	for y in range(height):
+		for x in range(width):
+			var cell := Button.new()
+			cell.custom_minimum_size = Vector2(_CELL_WIDTH, _COMFORT_CELL_HEIGHT)
+			cell.add_theme_font_size_override(&"font_size", 9)
+			var cell_x := x
+			var cell_y := y
+			cell.pressed.connect(func() -> void: _place(cell_x, cell_y))
+			cell.mouse_entered.connect(func() -> void: _set_hover_column(cell_x))
+			_grid.add_child(cell)
+			_cells.append(cell)
+	call_deferred("_fit_grid_layout")
+	call_deferred("_sync_scroll_range")
