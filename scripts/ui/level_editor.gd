@@ -103,6 +103,12 @@ const _EDGE_SCROLL_SPEED := 320.0
 const _DROPDOWN_FONT_SIZE := 10
 const _DROPDOWN_HEIGHT := 18.0
 const _PALETTE_ICON_SIZE := 16.0
+const _DROPDOWN_INK := Color(0.28, 0.12, 0.04, 1.0)
+const _DROPDOWN_INK_HOVER := Color(0.45, 0.2, 0.06, 1.0)
+const _DROPDOWN_INK_DISABLED := Color(0.45, 0.35, 0.28, 1.0)
+const _DROPDOWN_PANEL := Color(1.0, 0.93, 0.78, 1.0)
+const _DROPDOWN_PANEL_HOVER := Color(1.0, 0.86, 0.5, 1.0)
+const _DROPDOWN_BORDER := Color(0.45, 0.24, 0.08, 1.0)
 
 const TRAIL_PACK_FILTER := "*.cowboytrail ; Cowboy Trail Pack"
 
@@ -337,24 +343,47 @@ func _build_ui() -> void:
 
 func _style_dropdown(dropdown: OptionButton) -> void:
 	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(1.0, 0.93, 0.78, 1.0)
+	normal.bg_color = _DROPDOWN_PANEL
 	normal.set_border_width_all(1)
-	normal.border_color = Color(0.45, 0.24, 0.08, 1.0)
+	normal.border_color = _DROPDOWN_BORDER
 	normal.set_corner_radius_all(4)
 	normal.content_margin_left = 6
 	normal.content_margin_top = 2
 	normal.content_margin_right = 6
 	normal.content_margin_bottom = 2
+	var hover := normal.duplicate() as StyleBoxFlat
+	hover.bg_color = _DROPDOWN_PANEL_HOVER
 	dropdown.add_theme_stylebox_override(&"normal", normal)
-	dropdown.add_theme_stylebox_override(&"hover", normal)
-	dropdown.add_theme_stylebox_override(&"pressed", normal)
-	dropdown.add_theme_stylebox_override(&"focus", normal)
-	dropdown.add_theme_color_override(&"font_color", Color(0.35, 0.16, 0.05))
+	dropdown.add_theme_stylebox_override(&"hover", hover)
+	dropdown.add_theme_stylebox_override(&"pressed", hover)
+	dropdown.add_theme_stylebox_override(&"focus", hover)
+	dropdown.add_theme_color_override(&"font_color", _DROPDOWN_INK)
+	dropdown.add_theme_color_override(&"font_hover_color", _DROPDOWN_INK_HOVER)
+	dropdown.add_theme_color_override(&"font_pressed_color", _DROPDOWN_INK)
+	dropdown.add_theme_color_override(&"font_focus_color", _DROPDOWN_INK)
+	dropdown.add_theme_color_override(&"font_disabled_color", _DROPDOWN_INK_DISABLED)
 	dropdown.add_theme_constant_override(&"icon_max_width", int(_PALETTE_ICON_SIZE))
 	var popup := dropdown.get_popup()
 	popup.add_theme_font_size_override(&"font_size", _DROPDOWN_FONT_SIZE)
 	popup.add_theme_constant_override(&"icon_max_width", int(_PALETTE_ICON_SIZE))
 	popup.add_theme_constant_override(&"v_separation", 2)
+	popup.add_theme_color_override(&"font_color", _DROPDOWN_INK)
+	popup.add_theme_color_override(&"font_hover_color", _DROPDOWN_INK_HOVER)
+	popup.add_theme_color_override(&"font_disabled_color", _DROPDOWN_INK_DISABLED)
+	var popup_panel := StyleBoxFlat.new()
+	popup_panel.bg_color = _DROPDOWN_PANEL
+	popup_panel.set_border_width_all(1)
+	popup_panel.border_color = _DROPDOWN_BORDER
+	popup_panel.set_corner_radius_all(4)
+	popup_panel.content_margin_left = 4
+	popup_panel.content_margin_top = 4
+	popup_panel.content_margin_right = 4
+	popup_panel.content_margin_bottom = 4
+	popup.add_theme_stylebox_override(&"panel", popup_panel)
+	var item_hover := StyleBoxFlat.new()
+	item_hover.bg_color = _DROPDOWN_PANEL_HOVER
+	item_hover.set_corner_radius_all(2)
+	popup.add_theme_stylebox_override(&"hover", item_hover)
 
 
 func _populate_category_dropdown() -> void:
