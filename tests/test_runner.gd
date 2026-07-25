@@ -3162,6 +3162,7 @@ func _test_campaign_workshop() -> Variant:
 	GameManager.active_custom_slot = 2
 	var editor := editor_packed.instantiate()
 	add_child(editor)
+	await get_tree().process_frame
 	var embedded_preview := editor.find_child("LevelPreview", true, false) as LevelPreview
 	var category_dropdown := editor.find_child("StampCategory", true, false) as OptionButton
 	var tool_dropdown := editor.find_child("StampTool", true, false) as OptionButton
@@ -3192,8 +3193,12 @@ func _test_campaign_workshop() -> Variant:
 			error = "The editor pane should keep the stamp grid from collapsing."
 		elif editor._cells.is_empty() or editor._cells[0].custom_minimum_size.y < 10.0:
 			error = "Stamp grid cells should stay tall enough to tap."
-		elif category_example == null or category_example.custom_minimum_size.y < 30.0:
+		elif category_example == null or category_example.custom_minimum_size.y < 20.0:
 			error = "Each stamp category should show an example thumbnail."
+		elif category_dropdown.custom_minimum_size.y > 24.0 or tool_dropdown.custom_minimum_size.y > 24.0:
+			error = "Stamp dropdowns should stay compact to leave room for the grid and preview."
+		elif grid_scroll.horizontal_scroll_mode == ScrollContainer.SCROLL_MODE_SHOW_ALWAYS:
+			error = "The stamp grid should hide its built-in horizontal scrollbar."
 		else:
 			var icon_tools := 0
 			for category_index in range(category_dropdown.item_count):
@@ -3222,6 +3227,31 @@ func _test_campaign_workshop() -> Variant:
 						error = "The live preview should include sky above the top stamp row."
 					elif float(metrics["bottom_y"]) < float(metrics["trail"]) * grid:
 						error = "The live preview should show ground through the trail row."
+					else:
+						grid_scroll.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+						grid_scroll.custom_minimum_size = Vector2(180.0, grid_scroll.custom_minimum_size.y)
+						grid_scroll.size = Vector2(180.0, grid_scroll.size.y)
+						await get_tree().process_frame
+						editor._sync_scroll_range()
+						var max_scroll: float = editor._horizontal_scroll_max()
+						if max_scroll <= 0.0:
+							error = (
+								"The stamp grid should allow sideways scrolling on narrow panes (pane=%s)."
+								% str(grid_scroll.size)
+							)
+						else:
+							var before := float(grid_scroll.scroll_horizontal)
+							trail_bar.value = before + minf(48.0, max_scroll)
+							if float(grid_scroll.scroll_horizontal) <= before:
+								error = "The horizontal slide bar should scroll the stamp grid sideways."
+							else:
+								trail_bar.value = before
+								var wheel := InputEventMouseButton.new()
+								wheel.button_index = MOUSE_BUTTON_WHEEL_LEFT
+								wheel.pressed = true
+								grid_scroll._gui_input(wheel)
+								if float(grid_scroll.scroll_horizontal) != before:
+									error = "Horizontal wheel scrolling over the grid should stay disabled."
 			editor._sync_tool_dropdowns()
 	editor.queue_free()
 	for i in range(paths.size()):

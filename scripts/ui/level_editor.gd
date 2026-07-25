@@ -98,6 +98,10 @@ var _hover_column: int = -1
 var _syncing_scroll := false
 var _export_dialog: FileDialog
 var _import_dialog: FileDialog
+const _EDGE_SCROLL_ZONE := 28.0
+const _EDGE_SCROLL_SPEED := 320.0
+const _DROPDOWN_HEIGHT := 22.0
+const _PALETTE_ICON_SIZE := 24.0
 
 const TRAIL_PACK_FILTER := "*.cowboytrail ; Cowboy Trail Pack"
 
@@ -181,14 +185,14 @@ func _build_ui() -> void:
 	palette.add_child(category_label)
 	_category_example = TextureRect.new()
 	_category_example.name = "CategoryExample"
-	_category_example.custom_minimum_size = Vector2(36, 36)
+	_category_example.custom_minimum_size = Vector2(_PALETTE_ICON_SIZE, _PALETTE_ICON_SIZE)
 	_category_example.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
 	_category_example.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	palette.add_child(_category_example)
 	_category_dropdown = OptionButton.new()
 	_category_dropdown.name = "StampCategory"
-	_category_dropdown.custom_minimum_size = Vector2(180, 32)
-	_category_dropdown.add_theme_font_size_override(&"font_size", 13)
+	_category_dropdown.custom_minimum_size = Vector2(168, _DROPDOWN_HEIGHT)
+	_category_dropdown.add_theme_font_size_override(&"font_size", 12)
 	_category_dropdown.item_selected.connect(_on_category_selected)
 	palette.add_child(_category_dropdown)
 	var tool_label := Label.new()
@@ -200,8 +204,8 @@ func _build_ui() -> void:
 	_tool_label = tool_label
 	_tool_dropdown = OptionButton.new()
 	_tool_dropdown.name = "StampTool"
-	_tool_dropdown.custom_minimum_size = Vector2(200, 32)
-	_tool_dropdown.add_theme_font_size_override(&"font_size", 13)
+	_tool_dropdown.custom_minimum_size = Vector2(188, _DROPDOWN_HEIGHT)
+	_tool_dropdown.add_theme_font_size_override(&"font_size", 12)
 	_tool_dropdown.item_selected.connect(_on_tool_selected)
 	palette.add_child(_tool_dropdown)
 	_trail_tool_bar = HBoxContainer.new()
@@ -212,7 +216,7 @@ func _build_ui() -> void:
 	_build_trail_tool_bar()
 	_tool_icon = TextureRect.new()
 	_tool_icon.name = "StampToolIcon"
-	_tool_icon.custom_minimum_size = Vector2(36, 36)
+	_tool_icon.custom_minimum_size = Vector2(_PALETTE_ICON_SIZE, _PALETTE_ICON_SIZE)
 	_tool_icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
 	_tool_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	palette.add_child(_tool_icon)
@@ -233,7 +237,7 @@ func _build_ui() -> void:
 	_grid_scroll.name = "GridScroll"
 	_grid_scroll.custom_minimum_size = Vector2(0, _MIN_GRID_HEIGHT)
 	_grid_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_grid_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_ALWAYS
+	_grid_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
 	_grid_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	_grid_scroll.gui_input.connect(_on_grid_scroll_gui)
 	_grid_scroll.resized.connect(_fit_grid_layout)
@@ -264,8 +268,8 @@ func _build_ui() -> void:
 	_h_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_h_scroll.value_changed.connect(_on_h_scroll_changed)
 	_editor_pane.add_child(_h_scroll)
-	_grid_scroll.get_h_scroll_bar().value_changed.connect(_on_grid_h_changed)
 	call_deferred("_sync_scroll_range")
+	set_process(true)
 
 	_status = Label.new()
 	_status.text = tr("Stamp: Dirt — keep a dirt path under the cowboy and saloon.")
@@ -333,18 +337,22 @@ func _build_ui() -> void:
 func _style_dropdown(dropdown: OptionButton) -> void:
 	var normal := StyleBoxFlat.new()
 	normal.bg_color = Color(1.0, 0.93, 0.78, 1.0)
-	normal.set_border_width_all(3)
+	normal.set_border_width_all(2)
 	normal.border_color = Color(0.45, 0.24, 0.08, 1.0)
-	normal.set_corner_radius_all(8)
-	normal.content_margin_left = 10
-	normal.content_margin_top = 6
-	normal.content_margin_right = 10
-	normal.content_margin_bottom = 6
+	normal.set_corner_radius_all(6)
+	normal.content_margin_left = 8
+	normal.content_margin_top = 2
+	normal.content_margin_right = 8
+	normal.content_margin_bottom = 2
 	dropdown.add_theme_stylebox_override(&"normal", normal)
 	dropdown.add_theme_stylebox_override(&"hover", normal)
 	dropdown.add_theme_stylebox_override(&"pressed", normal)
 	dropdown.add_theme_stylebox_override(&"focus", normal)
 	dropdown.add_theme_color_override(&"font_color", Color(0.35, 0.16, 0.05))
+	var popup := dropdown.get_popup()
+	popup.add_theme_font_size_override(&"font_size", 11)
+	popup.add_theme_constant_override(&"icon_max_width", int(_PALETTE_ICON_SIZE))
+	popup.add_theme_constant_override(&"v_separation", 0)
 
 
 func _populate_category_dropdown() -> void:
@@ -381,7 +389,7 @@ func _build_trail_tool_bar() -> void:
 			var button := Button.new()
 			button.name = "TrailTool_%s" % type_id
 			button.tooltip_text = tr(label_key)
-			button.custom_minimum_size = Vector2(44, 36)
+			button.custom_minimum_size = Vector2(32, _PALETTE_ICON_SIZE)
 			button.focus_mode = Control.FOCUS_NONE
 			if not texture_path.is_empty() and ResourceLoader.exists(texture_path):
 				button.icon = load(texture_path) as Texture2D
@@ -574,57 +582,84 @@ func _set_hover_column(column: int) -> void:
 	_hover_column = column
 	if _preview != null:
 		_preview.set_hover_column(column)
-	_scroll_column_into_view(column)
 
 
 func _on_preview_hover_column(column: int) -> void:
 	_hover_column = column
 	_refresh_grid_highlights()
-	_scroll_column_into_view(column)
 
 
-func _scroll_column_into_view(column: int) -> void:
-	if _grid_scroll == null or column < 0 or _cells.is_empty():
+func _horizontal_scroll_max() -> float:
+	if _grid_scroll == null or _grid == null:
+		return 0.0
+	var content_w := _grid.size.x
+	if content_w <= 0.0:
+		var width := int(_data.get("width", 24))
+		var h_sep := float(_grid.get_theme_constant(&"h_separation", "GridContainer"))
+		content_w = _CELL_WIDTH * float(width) + h_sep * float(maxi(width - 1, 0))
+	return maxf(content_w - _grid_scroll.size.x, 0.0)
+
+
+func _apply_horizontal_scroll(value: float) -> void:
+	if _grid_scroll == null:
 		return
-	var cell := _cells[column]
-	var target := maxf(cell.position.x - _grid_scroll.size.x * 0.4, 0.0)
+	var clamped := clampf(value, 0.0, _horizontal_scroll_max())
 	_syncing_scroll = true
-	_grid_scroll.scroll_horizontal = int(target)
+	_grid_scroll.scroll_horizontal = int(clamped)
 	if _h_scroll != null:
-		_h_scroll.value = target
+		_h_scroll.value = clamped
 	_syncing_scroll = false
 
 
 func _sync_scroll_range() -> void:
-	if _grid_scroll == null or _h_scroll == null:
+	if _grid_scroll == null or _h_scroll == null or _grid == null:
 		return
-	var bar := _grid_scroll.get_h_scroll_bar()
-	_h_scroll.min_value = bar.min_value
-	_h_scroll.max_value = bar.max_value
-	_h_scroll.page = bar.page
+	var max_val := _horizontal_scroll_max()
+	_h_scroll.min_value = 0.0
+	_h_scroll.max_value = max_val
+	_h_scroll.page = _grid_scroll.size.x
 	_h_scroll.step = 1.0
-	_h_scroll.value = bar.value
+	_apply_horizontal_scroll(_grid_scroll.scroll_horizontal)
 
 
 func _on_h_scroll_changed(value: float) -> void:
 	if _syncing_scroll or _grid_scroll == null:
 		return
-	_syncing_scroll = true
-	_grid_scroll.scroll_horizontal = int(value)
-	_syncing_scroll = false
+	_apply_horizontal_scroll(value)
 
 
-func _on_grid_h_changed(value: float) -> void:
-	if _syncing_scroll or _h_scroll == null:
+func _process(delta: float) -> void:
+	if _grid_scroll == null or not _grid_scroll.get_global_rect().has_point(get_global_mouse_position()):
 		return
-	_syncing_scroll = true
-	_h_scroll.value = value
-	_syncing_scroll = false
+	var max_scroll := _horizontal_scroll_max()
+	if max_scroll <= 0.0:
+		return
+	var local := _grid_scroll.get_local_mouse_position()
+	var delta_x := 0.0
+	if local.x < _EDGE_SCROLL_ZONE:
+		var t := 1.0 - local.x / _EDGE_SCROLL_ZONE
+		delta_x = -_EDGE_SCROLL_SPEED * t * delta
+	elif local.x > _grid_scroll.size.x - _EDGE_SCROLL_ZONE:
+		var dist := local.x - (_grid_scroll.size.x - _EDGE_SCROLL_ZONE)
+		delta_x = _EDGE_SCROLL_SPEED * (dist / _EDGE_SCROLL_ZONE) * delta
+	if absf(delta_x) > 0.01:
+		_apply_horizontal_scroll(_grid_scroll.scroll_horizontal + delta_x)
 
 
 func _on_grid_scroll_gui(event: InputEvent) -> void:
-	if event is InputEventMouseButton and (event as InputEventMouseButton).pressed:
-		call_deferred("_sync_scroll_range")
+	if event is InputEventMouseButton:
+		var mouse := event as InputEventMouseButton
+		if mouse.button_index in [MOUSE_BUTTON_WHEEL_LEFT, MOUSE_BUTTON_WHEEL_RIGHT, MOUSE_BUTTON_MIDDLE]:
+			_grid_scroll.accept_event()
+			return
+		if mouse.pressed:
+			call_deferred("_sync_scroll_range")
+	elif event is InputEventPanGesture:
+		_grid_scroll.accept_event()
+	elif event is InputEventMouseMotion:
+		var motion := event as InputEventMouseMotion
+		if motion.button_mask & MOUSE_BUTTON_MASK_MIDDLE:
+			_grid_scroll.accept_event()
 
 
 func _place(x: int, y: int) -> void:
