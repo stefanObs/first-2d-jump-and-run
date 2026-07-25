@@ -1,15 +1,16 @@
 class_name LevelPreview
 extends Control
 
-## Live 3/4-size gameplay preview centered on the editor cursor column.
+## Live gameplay preview centered on the editor cursor column.
 
 signal hover_column_changed(column: int)
 
-const GAME_SIZE := Vector2(1280, 720)
 const FRAME_CONTENT_MARGIN := 6.0
 const MIN_PREVIEW_SIZE := Vector2(160, 120)
 const SKY_PADDING_CELLS := 0.75
 const GROUND_PADDING_CELLS := 0.65
+## Match WildWestTheme.configure_player_camera so stamp scale matches play mode.
+const GAMEPLAY_CAMERA_ZOOM := 0.84
 
 var _data: Dictionary = {}
 var _hover_column: int = -1
@@ -73,19 +74,15 @@ func _build_viewport() -> void:
 	_frame.add_theme_stylebox_override(&"panel", style)
 	add_child(_frame)
 
-	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_frame.add_child(center)
-
 	_container = SubViewportContainer.new()
 	_container.name = "LivePreviewContainer"
-	_container.stretch = true
-	_container.stretch_shrink = 1
-	center.add_child(_container)
+	_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_container.stretch = false
+	_frame.add_child(_container)
 
 	_viewport = SubViewport.new()
 	_viewport.name = "LivePreviewViewport"
-	_viewport.size = Vector2i(int(GAME_SIZE.x), int(GAME_SIZE.y))
+	_viewport.size = Vector2i(320, 180)
 	_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	_viewport.handle_input_locally = false
 	_viewport.gui_disable_input = true
@@ -190,28 +187,25 @@ func _frame_insets() -> Vector2:
 func _preview_display_rect() -> Rect2:
 	var insets := _frame_insets()
 	var available := size - insets
-	if available.y <= 1.0:
+	if available.x <= 1.0 or available.y <= 1.0:
 		return Rect2(Vector2.ZERO, Vector2.ZERO)
-	var aspect := GAME_SIZE.x / GAME_SIZE.y
-	var display_height := available.y
-	var display_width := display_height * aspect
-	var origin := Vector2(
-		FRAME_CONTENT_MARGIN + maxf(0.0, (available.x - display_width) * 0.5),
-		FRAME_CONTENT_MARGIN
-	)
-	return Rect2(origin, Vector2(display_width, display_height))
+	return Rect2(Vector2(FRAME_CONTENT_MARGIN, FRAME_CONTENT_MARGIN), available)
 
 
 func _fit_preview_to_pane() -> void:
-	if _container == null:
+	if _container == null or _viewport == null:
 		return
 	var display := _preview_display_rect()
-	if display.size.y <= 1.0:
+	if display.size.x <= 1.0 or display.size.y <= 1.0:
 		return
-	if _container.size.is_equal_approx(display.size):
-		return
-	_container.custom_minimum_size = display.size
-	_container.size = display.size
+	var viewport_size := Vector2i(
+		maxi(int(round(display.size.x)), 1),
+		maxi(int(round(display.size.y)), 1)
+	)
+	var viewport_changed := _viewport.size != viewport_size
+	if viewport_changed:
+		_viewport.size = viewport_size
+	_update_camera()
 
 
 func _view_metrics() -> Dictionary:
@@ -222,7 +216,9 @@ func _view_metrics() -> Dictionary:
 	var top_y := grid * 0.5 - grid * SKY_PADDING_CELLS
 	var bottom_y := float(trail) * grid + grid * GROUND_PADDING_CELLS
 	var world_height := bottom_y - top_y
-	var zoom := clampf(GAME_SIZE.y / maxf(world_height, grid), 0.35, 2.0)
+	var viewport_height := float(_viewport.size.y) if _viewport != null else 180.0
+	var fit_zoom := viewport_height / maxf(world_height, grid)
+	var zoom := minf(GAMEPLAY_CAMERA_ZOOM, fit_zoom)
 	return {
 		"grid": grid,
 		"width": width,
@@ -230,6 +226,8 @@ func _view_metrics() -> Dictionary:
 		"trail": trail,
 		"top_y": top_y,
 		"bottom_y": bottom_y,
+		"world_height": world_height,
+		"viewport_height": viewport_height,
 		"center_y": (top_y + bottom_y) * 0.5,
 		"zoom": zoom,
 	}

@@ -3234,20 +3234,52 @@ func _test_campaign_workshop() -> Variant:
 						await get_tree().process_frame
 						var display := embedded_preview._preview_display_rect()
 						var insets := embedded_preview._frame_insets()
+						var expected_width := 400.0 - insets.x
 						var expected_height := 300.0 - insets.y
 						if absf(display.size.y - expected_height) > 1.0:
 							error = "The live preview should scale to fill the pane height."
-						elif absf(display.size.x / display.size.y - 1280.0 / 720.0) > 0.01:
-							error = "The live preview should keep the gameplay aspect ratio."
+						elif absf(display.size.x - expected_width) > 1.0:
+							error = "The live preview should fill the pane width."
 						else:
 							var live_container := embedded_preview.find_child(
 								"LivePreviewContainer", true, false
 							) as SubViewportContainer
-							if (
-								live_container == null
-								or not live_container.size.is_equal_approx(display.size)
+							var live_viewport := embedded_preview.find_child(
+								"LivePreviewViewport", true, false
+							) as SubViewport
+							if live_container == null or live_viewport == null:
+								error = "The live preview viewport should match the fitted display size."
+							elif (
+								absf(float(live_viewport.size.x) - display.size.x) > 1.0
+								or absf(float(live_viewport.size.y) - display.size.y) > 1.0
 							):
 								error = "The live preview viewport should match the fitted display size."
+							else:
+								var fitted_metrics := embedded_preview._view_metrics()
+								var expected_zoom := minf(
+									0.84,
+									float(fitted_metrics["viewport_height"])
+									/ float(fitted_metrics["world_height"])
+								)
+								if absf(float(fitted_metrics["zoom"]) - expected_zoom) > 0.02:
+									error = (
+										"The live preview should match gameplay camera zoom when the pane is tall enough."
+									)
+								else:
+									var visible_height := (
+										float(fitted_metrics["viewport_height"])
+										/ float(fitted_metrics["zoom"])
+									)
+									if visible_height + 0.5 < float(fitted_metrics["world_height"]):
+										error = "The live preview should frame the full vertical level slice."
+									else:
+										embedded_preview.size = Vector2(400.0, 520.0)
+										await get_tree().process_frame
+										var tall_metrics := embedded_preview._view_metrics()
+										if absf(float(tall_metrics["zoom"]) - 0.84) > 0.02:
+											error = (
+												"Tall preview panes should keep normal gameplay camera zoom."
+											)
 					if error == null:
 						grid_scroll.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 						grid_scroll.custom_minimum_size = Vector2(180.0, grid_scroll.custom_minimum_size.y)
