@@ -53,7 +53,7 @@ After Kingpin: horizon victory ride, fade, dedication **VOM PAPI FÜR FINN**, th
 
 **Saves:** three slots; auto-save; local `savegames/` (gitignored). `SAVE_VERSION` 4 — older formats discarded. Delete via card context / Space / Xbox Y + confirm.
 
-**Campaign Workshop / trail editor:** Upper half edits the trail with icon stamps (Dirt, Canyon, planks, hazards, mode items, saloon, erase) and a scrollable stamp grid plus a horizontal slide bar to reach the end. Lower half shows a **live 3/4-size gameplay preview** (same build/theme as play) centered on the stamp cursor. Explicit **Save Trail** and **Reset Changes**. Translation editor edits DE/EN CSV export into `savegames/`.
+**Campaign Workshop / trail editor:** Upper half edits the trail with icon stamps (Dirt, Canyon, planks, hazards, mode items, saloon, erase) and a scrollable stamp grid plus a horizontal slide bar to reach the end. Lower half shows a **live 3/4-size gameplay preview** (same build/theme as play) centered on the stamp cursor. Explicit **Save Trail** and **Reset Changes**. **Export Trails / Import Trails** in the workshop (or **Export Trail** in the editor) share custom levels as one portable `.cowboytrail` JSON pack. Translation editor (debug-only, F1 on save select) edits DE/EN CSV export into `savegames/`.
 
 ---
 
@@ -67,7 +67,7 @@ After Kingpin: horizon victory ride, fade, dedication **VOM PAPI FÜR FINN**, th
 - **Canyons vs cactus:** canyon fall → spin recovery → camp. Cactus/bandit/carrion/snake hurt → camp (Bubble can block some damage). Call gaps **canyons**, never “pits”, in user-facing text.
 - **Stars:** optional; goals are saloon doorways (flying over counts). Level clear → horse ride-in/mount/ride-out → next level: ride in, dismount, and **leave the horse at the level start**. Handmade desert skyline behind transitions.
 
-Debug: F1 object names (+ Element Names sheet on the start screen while debug is on); numpad `+`×2 next level; `-`×2 boss jump/cycle.
+Debug: F1 object names (+ Element Names sheet and Translation Editor on the start screen while debug is on); numpad `+`×2 next level; `-`×2 boss jump/cycle.
 
 ---
 

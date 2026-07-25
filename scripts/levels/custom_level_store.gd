@@ -4,6 +4,8 @@ extends RefCounted
 ## Versioned local storage for campaign overrides and inserted family trails.
 
 const VERSION := 4
+const SHARE_PACK_FORMAT := "cowboy_trail_pack"
+const SHARE_PACK_VERSION := 1
 const BUILTIN_SLOT_START := 3
 const BUILTIN_COUNT := 10
 const EXTRA_SLOT_START := 13
@@ -86,6 +88,121 @@ static func load_level(slot_index: int) -> Dictionary:
 
 static func exists(slot_index: int) -> bool:
 	return FileAccess.file_exists(SavePaths.custom_level_path(slot_index))
+
+
+static func existing_custom_slots() -> Array[int]:
+	var slots: Array[int] = []
+	for slot in range(BUILTIN_SLOT_START, SLOT_COUNT):
+		if exists(slot):
+			slots.append(slot)
+	return slots
+
+
+static func free_extra_slots() -> Array[int]:
+	var slots: Array[int] = []
+	for slot in range(EXTRA_SLOT_START, SLOT_COUNT):
+		if not exists(slot):
+			slots.append(slot)
+	return slots
+
+
+static func export_share_pack(path: String, slots: Array = []) -> bool:
+	var target_slots: Array[int] = []
+	if slots.is_empty():
+		target_slots = existing_custom_slots()
+	else:
+		for value in slots:
+			var slot := int(value)
+			if slot >= BUILTIN_SLOT_START and slot < SLOT_COUNT and exists(slot):
+				target_slots.append(slot)
+	if target_slots.is_empty():
+		return false
+	var trails: Array = []
+	for slot in target_slots:
+		trails.append(sanitize(load_level(slot), slot))
+	return write_share_pack(path, trails)
+
+
+static func write_share_pack(path: String, trail_docs: Array) -> bool:
+	var trails: Array = []
+	for value in trail_docs:
+		if not (value is Dictionary):
+			continue
+		var source := value as Dictionary
+		var slot := int(source.get("slot", 0))
+		trails.append(sanitize(source, slot))
+	if trails.is_empty():
+		return false
+	var pack := {
+		"format": SHARE_PACK_FORMAT,
+		"version": SHARE_PACK_VERSION,
+		"exported_at": Time.get_datetime_string_from_system(true),
+		"trails": trails,
+	}
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	if file == null:
+		return false
+	file.store_string(JSON.stringify(pack, "\t"))
+	return true
+
+
+static func import_share_pack(path: String) -> Dictionary:
+	var result := {
+		"ok": false,
+		"imported_count": 0,
+		"message": "",
+		"errors": PackedStringArray(),
+	}
+	if not FileAccess.file_exists(path):
+		result["message"] = "Pack file not found."
+		return result
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		result["message"] = "Could not read pack file."
+		return result
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	if typeof(parsed) != TYPE_DICTIONARY:
+		result["message"] = "Invalid pack format."
+		return result
+	var pack := parsed as Dictionary
+	if str(pack.get("format", "")) != SHARE_PACK_FORMAT:
+		result["message"] = "Unsupported pack format."
+		return result
+	if int(pack.get("version", 0)) != SHARE_PACK_VERSION:
+		result["message"] = "Unsupported pack version."
+		return result
+	var trails: Variant = pack.get("trails", [])
+	if not (trails is Array) or (trails as Array).is_empty():
+		result["message"] = "Pack contains no trails."
+		return result
+	var free_slots := free_extra_slots()
+	var imported := 0
+	var errors: PackedStringArray = []
+	for value in trails:
+		if imported >= free_slots.size():
+			errors.append("No free extra slots remaining.")
+			break
+		if not (value is Dictionary):
+			errors.append("Skipped invalid trail entry.")
+			continue
+		var slot := free_slots[imported]
+		var doc := sanitize(value as Dictionary, slot)
+		doc["kind"] = "extra"
+		doc["source_level"] = 0
+		if not save(slot, doc):
+			errors.append("Could not save imported trail.")
+			continue
+		imported += 1
+	result["imported_count"] = imported
+	result["ok"] = imported > 0
+	if imported == 0:
+		result["message"] = errors[0] if not errors.is_empty() else "No trails imported."
+	elif errors.is_empty():
+		result["message"] = "Imported %d trail(s)." % imported
+	else:
+		result["message"] = "Imported %d trail(s) with warnings." % imported
+	result["errors"] = errors
+	return result
 
 
 static func erase(slot_index: int) -> void:

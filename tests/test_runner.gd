@@ -19,6 +19,10 @@ func _ready() -> void:
 		"Element reference link visible iff debug mode is on",
 		_test_element_reference_link
 	)
+	failures += await _run(
+		"Translation editor button visible iff debug mode is on",
+		_test_translation_editor_button_debug_gate
+	)
 	failures += await _run("German text and language settings work", _test_localization_settings)
 	failures += await _run("Settings language dropdown persists and supports controller use", _test_settings_language_dropdown)
 	failures += await _run("Translation CSV parses and round-trips safely", _test_translation_csv_round_trip)
@@ -102,6 +106,7 @@ func _ready() -> void:
 	failures += await _run("Custom level store and builder work", _test_custom_level_builder)
 	failures += await _run("Trail workshop uses one trail row and stacked dirt", _test_trail_row_model)
 	failures += await _run("Campaign workshop edits and inserts levels", _test_campaign_workshop)
+	failures += await _run("Trail share pack export and import round-trip", _test_trail_share_pack)
 	failures += await _run("Trail editor saves and resets explicit snapshots", _test_trail_editor_save_reset)
 	failures += await _run("Hand-drawn celebration art and cheerful music load", _test_art_and_music)
 	failures += await _run("Mid-trail save data persists and loads", _test_mid_trail_save)
@@ -672,7 +677,7 @@ func _test_save_select_scene() -> Variant:
 	if error == null and scene.get_node_or_null("BuildTrailButton") == null:
 		error = "Save select needs Campaign Workshop access."
 	if error == null and scene.get_node_or_null("TranslationEditorButton") == null:
-		error = "Save select needs Translation Editor access."
+		error = "Save select needs a Translation Editor button (debug-gated)."
 	var delete_dialog := scene.get_node_or_null("DeleteConfirmation") as ConfirmationDialog
 	if error == null and delete_dialog == null:
 		error = "Save deletion needs a confirmation dialog."
@@ -790,6 +795,35 @@ func _test_element_reference_link() -> Variant:
 								error = "Element Names link must hide when debug mode turns off."
 							elif overlay.visible:
 								error = "Element reference overlay should close when debug mode turns off."
+	DebugLabels.set_enabled(false)
+	scene.queue_free()
+	return error
+
+
+func _test_translation_editor_button_debug_gate() -> Variant:
+	DebugLabels.set_enabled(false)
+	var packed: PackedScene = load("res://scenes/ui/save_select.tscn")
+	if packed == null:
+		return "Missing save select scene."
+	var scene := packed.instantiate()
+	add_child(scene)
+	await get_tree().process_frame
+	var error: Variant = null
+	var button := scene.get_node_or_null("TranslationEditorButton") as Button
+	if button == null:
+		error = "Save select needs TranslationEditorButton."
+	elif button.visible or scene.translation_editor_unlocked():
+		error = "Translation Editor button must stay hidden while debug mode is off."
+	else:
+		DebugLabels.set_enabled(true)
+		await get_tree().process_frame
+		if not button.visible or not scene.translation_editor_unlocked():
+			error = "Translation Editor button should appear while debug mode is on."
+		else:
+			DebugLabels.set_enabled(false)
+			await get_tree().process_frame
+			if button.visible or scene.translation_editor_unlocked():
+				error = "Translation Editor button must hide when debug mode turns off."
 	DebugLabels.set_enabled(false)
 	scene.queue_free()
 	return error
@@ -3117,6 +3151,96 @@ func _test_campaign_workshop() -> Variant:
 			var restore := FileAccess.open(paths[i], FileAccess.WRITE)
 			if restore != null:
 				restore.store_buffer(backups[i])
+	return error
+
+
+func _test_trail_share_pack() -> Variant:
+	var override_slot := CustomLevelStore.override_slot_for(2)
+	var extra_slot := CustomLevelStore.SLOT_COUNT - 2
+	var override_path := CustomLevelStore.SavePaths.custom_level_path(override_slot)
+	var override_existed := FileAccess.file_exists(override_path)
+	var override_backup := (
+		FileAccess.get_file_as_bytes(override_path) if override_existed else PackedByteArray()
+	)
+	var backups: Array[PackedByteArray] = []
+	var existed: Array[bool] = []
+	for slot in range(CustomLevelStore.EXTRA_SLOT_START, CustomLevelStore.SLOT_COUNT):
+		var path := CustomLevelStore.SavePaths.custom_level_path(slot)
+		existed.append(FileAccess.file_exists(path))
+		backups.append(FileAccess.get_file_as_bytes(path) if FileAccess.file_exists(path) else PackedByteArray())
+		if FileAccess.file_exists(path):
+			DirAccess.remove_absolute(path)
+	if override_existed:
+		DirAccess.remove_absolute(override_path)
+	var pack_path := CustomLevelStore.SavePaths.root_dir().path_join("test_share_pack.cowboytrail")
+	if FileAccess.file_exists(pack_path):
+		DirAccess.remove_absolute(pack_path)
+	var override := CustomLevelStore.import_builtin(2)
+	override["title"] = "Share Pack Override"
+	var extra := CustomLevelStore.default_level(extra_slot)
+	extra["kind"] = "extra"
+	extra["insert_position"] = 3
+	extra["title"] = "Share Pack Extra"
+	var error: Variant = null
+	if not CustomLevelStore.save(override_slot, override):
+		error = "Could not save override trail for share pack test."
+	elif not CustomLevelStore.save(extra_slot, extra):
+		error = "Could not save extra trail for share pack test."
+	elif not CustomLevelStore.exists(override_slot) or not CustomLevelStore.exists(extra_slot):
+		error = "Share pack test trails were not written to disk."
+	elif not CustomLevelStore.export_share_pack(pack_path, [override_slot, extra_slot]):
+		error = "Share pack export failed."
+	elif not FileAccess.file_exists(pack_path):
+		error = "Share pack file was not written."
+	else:
+		var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(pack_path))
+		if typeof(parsed) != TYPE_DICTIONARY:
+			error = "Share pack is not valid JSON."
+		elif str((parsed as Dictionary).get("format", "")) != CustomLevelStore.SHARE_PACK_FORMAT:
+			error = "Share pack format marker is wrong."
+		elif ((parsed as Dictionary).get("trails", []) as Array).size() != 2:
+			error = "Share pack should contain both exported trails."
+		else:
+			if FileAccess.file_exists(override_path):
+				DirAccess.remove_absolute(override_path)
+			if FileAccess.file_exists(CustomLevelStore.SavePaths.custom_level_path(extra_slot)):
+				DirAccess.remove_absolute(CustomLevelStore.SavePaths.custom_level_path(extra_slot))
+			var result := CustomLevelStore.import_share_pack(pack_path)
+			if not bool(result.get("ok", false)):
+				error = "Share pack import failed: %s" % str(result.get("message", ""))
+			elif int(result.get("imported_count", 0)) != 2:
+				error = "Share pack should import both exported trails."
+			else:
+				var saw_override_title := false
+				var saw_extra_title := false
+				for slot in range(CustomLevelStore.EXTRA_SLOT_START, CustomLevelStore.SLOT_COUNT):
+					if not CustomLevelStore.exists(slot):
+						continue
+					var imported := CustomLevelStore.load_level(slot)
+					if str(imported.get("kind", "")) != "extra":
+						error = "Imported trails should become extra campaign entries."
+						break
+					var title := str(imported.get("title", ""))
+					saw_override_title = saw_override_title or title == "Share Pack Override"
+					saw_extra_title = saw_extra_title or title == "Share Pack Extra"
+				if error == null and (not saw_override_title or not saw_extra_title):
+					error = "Imported trail titles should survive the round trip."
+	if FileAccess.file_exists(pack_path):
+		DirAccess.remove_absolute(pack_path)
+	for slot in range(CustomLevelStore.EXTRA_SLOT_START, CustomLevelStore.SLOT_COUNT):
+		var path := CustomLevelStore.SavePaths.custom_level_path(slot)
+		if FileAccess.file_exists(path):
+			DirAccess.remove_absolute(path)
+		if existed[slot - CustomLevelStore.EXTRA_SLOT_START]:
+			var restore := FileAccess.open(path, FileAccess.WRITE)
+			if restore != null:
+				restore.store_buffer(backups[slot - CustomLevelStore.EXTRA_SLOT_START])
+	if FileAccess.file_exists(override_path):
+		DirAccess.remove_absolute(override_path)
+	if override_existed:
+		var restore_override := FileAccess.open(override_path, FileAccess.WRITE)
+		if restore_override != null:
+			restore_override.store_buffer(override_backup)
 	return error
 
 

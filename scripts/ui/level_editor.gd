@@ -39,6 +39,9 @@ var _grid_scroll: ScrollContainer
 var _h_scroll: HScrollBar
 var _hover_column: int = -1
 var _syncing_scroll := false
+var _export_dialog: FileDialog
+
+const TRAIL_PACK_FILTER := "*.cowboytrail ; Cowboy Trail Pack"
 
 
 func _ready() -> void:
@@ -179,6 +182,7 @@ func _build_ui() -> void:
 	root.add_child(actions)
 	_save_button = _add_action(actions, tr("Save Trail"), _save, "SaveButton")
 	_reset_button = _add_action(actions, tr("Reset Changes"), _request_reset, "ResetButton")
+	_add_action(actions, tr("Export Trail"), _open_export_dialog, "ExportTrailButton")
 	_add_action(actions, tr("Play Test"), _play_test, "PlayTestButton")
 	_add_action(
 		actions,
@@ -208,6 +212,14 @@ func _build_ui() -> void:
 	_reset_dialog.cancel_button_text = tr("Keep editing")
 	_reset_dialog.confirmed.connect(_reset)
 	add_child(_reset_dialog)
+
+	_export_dialog = FileDialog.new()
+	_export_dialog.file_mode = FileDialog.FILE_MODE_SAVE_FILE
+	_export_dialog.access = FileDialog.ACCESS_FILESYSTEM
+	_export_dialog.filters = PackedStringArray([TRAIL_PACK_FILTER])
+	_export_dialog.title = tr("Export Trail")
+	_export_dialog.file_selected.connect(_on_export_selected)
+	add_child(_export_dialog)
 
 
 func _make_stamp_button(type_id: String, label_key: String, texture_path: String) -> Button:
@@ -551,3 +563,17 @@ func _play_test() -> void:
 		_status.text = tr("Add Dirt and a Saloon before play-testing.")
 		return
 	GameManager.play_custom_level(GameManager.active_custom_slot, true)
+
+
+func _open_export_dialog() -> void:
+	_export_dialog.popup_centered(Vector2i(900, 600))
+
+
+func _on_export_selected(path: String) -> void:
+	var export_path := path
+	if export_path.get_extension().is_empty():
+		export_path = "%s.cowboytrail" % export_path
+	if CustomLevelStore.write_share_pack(export_path, [_data]):
+		_status.text = tr("Trail exported.")
+	else:
+		_status.text = tr("Could not write trail pack.")

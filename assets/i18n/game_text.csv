@@ -172,3 +172,21 @@ Erase,Erase,Radierer
 Live preview (3/4 size) — follows the stamp cursor,Live preview (3/4 size) — follows the stamp cursor,Live-Vorschau (3/4 Größe) — folgt dem Stempel-Cursor
 Stamp: Dirt — keep a dirt path under the cowboy and saloon.,Stamp: Dirt — keep a dirt path under the cowboy and saloon.,Stempel: Erde — halte einen Erdpfad unter Cowboy und Saloon.
 "Add Dirt and a Saloon before play-testing.","Add Dirt and a Saloon before play-testing.","Füge Erde und einen Saloon hinzu, bevor du testest."
+"Edit a copy of any campaign level, or insert a new trail before any level.","Edit a copy of any campaign level, or insert a new trail before any level.","Bearbeite eine Kopie eines Kampagnen-Levels oder füge einen neuen Pfad vor einem Level ein."
+Export Trails,Export Trails,Pfade exportieren
+Import Trails,Import Trails,Pfade importieren
+Export Trail,Export Trail,Pfad exportieren
+No custom trails to export.,No custom trails to export.,Keine eigenen Pfade zum Exportieren.
+Could not write trail pack.,Could not write trail pack.,Pfad-Paket konnte nicht geschrieben werden.
+Exported %d trail(s).,Exported %d trail(s).,%d Pfad(e) exportiert.
+Could not import trail pack.,Could not import trail pack.,Pfad-Paket konnte nicht importiert werden.
+Trail exported.,Trail exported.,Pfad exportiert.
+Edit level,Edit level,Level bearbeiten
+Add before,Add before,Davor einfügen
+Restore original,Restore original,Original wiederherstellen
+Extra before position %d: %s,Extra before position %d: %s,Extra vor Position %d: %s
+Extra Trail,Extra Trail,Extra-Pfad
+Edit,Edit,Bearbeiten
+Remove,Remove,Entfernen
++ Add a new level after Level 10,+ Add a new level after Level 10,+ Neues Level nach Level 10 hinzufügen
+Back to Cowboy Trail,Back to Cowboy Trail,Zurück zum Cowboy-Pfad

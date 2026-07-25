@@ -22,6 +22,7 @@ var _delete_dialog: ConfirmationDialog
 var _settings: SettingsPanel
 var _settings_dim: ColorRect
 var _element_ref_button: Button
+var _translation_editor_button: Button
 var _element_ref_overlay: Control
 var _sheet: TextureRect
 var _sheet_scroll: ScrollContainer
@@ -66,11 +67,14 @@ func _ready() -> void:
 			AudioManager.ensure_gameplay_music()
 			GameManager.open_custom_level_hub()
 		)
-	var translation_editor := get_node_or_null("TranslationEditorButton") as Button
-	if translation_editor != null:
-		_style_action_button(translation_editor)
-		translation_editor.pressed.connect(func() -> void:
+	_translation_editor_button = get_node_or_null("TranslationEditorButton") as Button
+	if _translation_editor_button != null:
+		_style_action_button(_translation_editor_button)
+		_translation_editor_button.visible = false
+		_translation_editor_button.pressed.connect(func() -> void:
 			if _settings_open() or _element_reference_open():
+				return
+			if not DebugLabels.is_enabled():
 				return
 			get_tree().change_scene_to_file("res://scenes/ui/translation_editor.tscn")
 		)
@@ -210,8 +214,15 @@ func _on_debug_labels_enabled_changed(is_enabled: bool) -> void:
 func _sync_element_reference_visibility(is_enabled: bool) -> void:
 	if _element_ref_button != null:
 		_element_ref_button.visible = is_enabled
+	if _translation_editor_button != null:
+		_translation_editor_button.visible = is_enabled
 	if not is_enabled and _element_reference_open():
 		_close_element_reference()
+
+
+func translation_editor_unlocked() -> bool:
+	## Visible only while debug mode (DebugLabels / F1) is on.
+	return DebugLabels.is_enabled()
 
 
 func element_reference_unlocked() -> bool:
