@@ -1,8 +1,8 @@
 # Cowboy Trail
 
-Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, no lives/game-over, nonviolent lasso. **German is the default language**; English is fully supported. Optional spoken instructions use local OS TTS (Narrator).
+Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, no lives/game-over, nonviolent lasso. **German is the default language**; English is fully supported.
 
-**Content version:** `1.3.62` (see `content_version.txt`). Launchers reimport when this stamp changes.
+**Content version:** `1.3.63` (see `content_version.txt`). Launchers reimport when this stamp changes.
 
 This README is the **binding source of truth** for gameplay, level design, art, i18n, and audio. Agents and contributors must follow it (see [Agent / contributor rules](#agent--contributor-rules)).
 
@@ -133,8 +133,6 @@ Safe stars, forward-only solvability, reachable platforms/stars, visible themed 
 ## Audio
 
 - **SFX / music:** `AudioManager` (`play_sfx`, trail/boot/finale music, volume settings).
-- **Narration:** `Narrator` + setting `narration` (default on). Prefers a **male** voice; German locale preferred; on Windows with no DE voice, fall back to male English then any voice (never stay silent if a voice exists).
-- Project setting: `audio/general/text_to_speech=true`.
 - Default settings language: **`de`**; `internationalization/locale/fallback="de"`.
 
 ---
@@ -150,7 +148,7 @@ Safe stars, forward-only solvability, reachable platforms/stars, visible themed 
 5. Movers: one-way; reverse before floor/obstructions; paired opposite-phase when handoffs are intended; L4 = clouds + planks, not ferry-step. Conveyors must not push into open canyons (pair with a timed door on solid ground).
 6. Wind stays gentle and capped.
 7. Bandits: stomp/lasso tie; side hurt; turn at plank edges.
-8. Keep handmade western UI/art language; SFX via AudioManager; male-preferring Narrator TTS; German default.
+8. Keep handmade western UI/art language; SFX via AudioManager; German default.
 9. Run the headless test runner (and obstruction test when touching movers) for layout/gameplay changes.
 10. If a change **requires** altering a documented rule, **update this README in the same change**.
 

@@ -83,7 +83,6 @@ func show_toast(text: String, duration: float = 2.0) -> void:
 		return
 	_prompt_label.text = tr(text)
 	_toast_remaining = duration
-	Narrator.speak(_prompt_label.text)
 
 
 func set_trail_progress(ratio: float) -> void:

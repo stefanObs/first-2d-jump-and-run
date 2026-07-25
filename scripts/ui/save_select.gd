@@ -120,11 +120,6 @@ func _ready() -> void:
 	_highlight()
 	_pulse_sun()
 	_bob_title()
-	var subtitle := get_node_or_null("Subtitle") as Label
-	if subtitle != null:
-		Narrator.speak(tr("Help Lucky Mario Luke on his quest to make the wild west a safer place."))
-
-
 func _localize_static_labels() -> void:
 	var title := get_node_or_null("Title") as Label
 	if title != null:

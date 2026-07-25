@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Honor README.md
 
-`README.md` at the repository root is the **binding source of truth** for this Godot cowboy platformer: gameplay rules, campaign/level design, canyon and mover conventions, UI/art style, i18n (German default), and audio/TTS.
+`README.md` at the repository root is the **binding source of truth** for this Godot cowboy platformer: gameplay rules, campaign/level design, canyon and mover conventions, UI/art style, i18n (German default), and audio.
 
 ## Before changing those areas
 

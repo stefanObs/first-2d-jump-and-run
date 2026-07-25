@@ -17,17 +17,12 @@ boot_splash/fullsize=true
 boot_splash/use_filter=true
 boot_splash/minimum_display_time=1200
 
-[audio]
-
-general/text_to_speech=true
-
 [autoload]
 
 InputBindings="*res://scripts/autoload/input_bindings.gd"
 InputManager="*res://scripts/autoload/input_manager.gd"
 GameManager="*res://scripts/autoload/game_manager.gd"
 AudioManager="*res://scripts/autoload/audio_manager.gd"
-Narrator="*res://scripts/autoload/narrator.gd"
 DebugLabels="*res://scripts/autoload/debug_labels.gd"
 
 [display]

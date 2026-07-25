@@ -53,7 +53,6 @@ func _run() -> void:
 	sub.add_theme_color_override(&"font_color", Color(0.4, 0.16, 0.06, 1))
 	sub.modulate.a = 0.0
 	add_child(sub)
-	Narrator.speak("%s %s" % [title.text, sub.text])
 
 	var ground_y := view.y * 0.72
 	var rider := Sprite2D.new()
@@ -153,7 +152,6 @@ func _run() -> void:
 	var ft := create_tween()
 	ft.tween_property(end_fade, "color:a", 1.0, 0.9)
 	await ft.finished
-	Narrator.speak(dedication.text)
 	var dt := create_tween()
 	dt.tween_property(dedication, "modulate:a", 1.0, 0.8)
 	await dt.finished

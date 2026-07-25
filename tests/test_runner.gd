@@ -19,8 +19,7 @@ func _ready() -> void:
 		"Element reference link visible iff debug mode is on",
 		_test_element_reference_link
 	)
-	failures += await _run("German text and spoken-instruction settings work", _test_localization_settings)
-	failures += await _run("Narrator falls back to any installed voice", _test_narrator_voice_fallback)
+	failures += await _run("German text and language settings work", _test_localization_settings)
 	failures += await _run("Settings language dropdown persists and supports controller use", _test_settings_language_dropdown)
 	failures += await _run("Translation CSV parses and round-trips safely", _test_translation_csv_round_trip)
 	failures += await _run("Translation placeholders render and validate", _test_translation_placeholders)
@@ -800,62 +799,19 @@ func _test_localization_settings() -> Variant:
 	var defaults := GameManager._default_data()
 	if String(defaults.get("settings", {}).get("language", "")) != "de":
 		return "German must be the default language for new saves."
+	if defaults.get("settings", {}).has("narration"):
+		return "Narration setting must be removed from default saves."
 	if String(ProjectSettings.get_setting("internationalization/locale/fallback", "")) != "de":
 		# Project setting path may differ; also accept TranslationServer after fresh apply.
 		pass
 	var previous_language := String(GameManager.get_settings().get("language", "de"))
-	var previous_narration := bool(GameManager.get_settings().get("narration", true))
 	GameManager.set_setting("language", "de")
 	if not TranslationServer.get_locale().begins_with("de"):
 		return "German language setting should update TranslationServer."
 	if tr("Settings") != "Einstellungen":
 		GameManager.set_setting("language", previous_language)
 		return "German translation catalog is not loaded."
-	GameManager.set_setting("narration", false)
-	if bool(GameManager.get_settings().get("narration", true)):
-		GameManager.set_setting("language", previous_language)
-		return "Spoken instructions setting should be saved."
-	GameManager.set_setting("narration", previous_narration)
 	GameManager.set_setting("language", previous_language)
-	return null
-
-
-func _test_narrator_voice_fallback() -> Variant:
-	# Windows ships English SAPI voices but usually no German one. A German trail
-	# must still speak by falling back English -> any voice, never returning "".
-	# The cowboy narrator must prefer a male voice whenever one is available.
-	var narrator := preload("res://scripts/autoload/narrator.gd")
-	var windows_default := [
-		{"id": "sapi_zira", "name": "Microsoft Zira Desktop", "language": "en-US"},
-		{"id": "sapi_david", "name": "Microsoft David Desktop", "language": "en-US"},
-	]
-	# German requested, only English installed -> male English (David), not Zira.
-	if narrator.select_voice(windows_default, "de") != "sapi_david":
-		return "German narration should fall back to a male English voice, not a female one."
-	# German requested and installed -> prefer the German male voice over Hedda.
-	var with_german := windows_default + [
-		{"id": "sapi_hedda", "name": "Microsoft Hedda Desktop", "language": "de-DE"},
-		{"id": "sapi_stefan", "name": "Microsoft Stefan Desktop", "language": "de-DE"},
-	]
-	if narrator.select_voice(with_german, "de") != "sapi_stefan":
-		return "A male German voice should be preferred when German is installed."
-	# English requested -> David even when Zira is listed first.
-	if narrator.select_voice(windows_default, "en") != "sapi_david":
-		return "English narration should pick the male David voice."
-	# Only female voices installed -> still speak (better audible than silent).
-	var only_french := [{"id": "sapi_hortense", "name": "Hortense", "language": "fr-FR"}]
-	if narrator.select_voice(only_french, "de") != "sapi_hortense":
-		return "With no language match, narration should still use any installed voice."
-	# Mixed non-matching languages -> prefer the male one.
-	var mixed := [
-		{"id": "sapi_hortense", "name": "Hortense", "language": "fr-FR"},
-		{"id": "sapi_paul", "name": "Paul", "language": "fr-FR"},
-	]
-	if narrator.select_voice(mixed, "de") != "sapi_paul":
-		return "When falling back across languages, narration should still prefer a male voice."
-	# No voices installed at all -> the one legitimate silent case.
-	if narrator.select_voice([], "en") != "":
-		return "With zero installed voices, voice selection must report none available."
 	return null
 
 

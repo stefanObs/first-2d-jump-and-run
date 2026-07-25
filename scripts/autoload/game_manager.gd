@@ -442,7 +442,6 @@ func _default_data() -> Dictionary:
 			"vibration": true,
 			"fullscreen": false,
 			"language": "de",
-			"narration": true,
 		},
 	}
 

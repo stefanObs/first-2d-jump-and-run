@@ -98,8 +98,6 @@ func play_celebration(
 	if _subtitle != null:
 		_subtitle.text = tr("Badges found: %d") % stars
 		_subtitle.modulate.a = 1.0
-	if _banner != null and _subtitle != null:
-		Narrator.speak("%s %s" % [_banner.text, _subtitle.text])
 	_resolve_presentation(view_size, saloon_screen_position, floor_screen_y, world_to_screen_scale)
 	_apply_ride_scales()
 	var ride_y := _ride_center_y()
@@ -373,8 +371,6 @@ func _run_arrival() -> void:
 	if _subtitle != null:
 		_subtitle.text = tr("The cowboy rides in...")
 		_subtitle.modulate.a = 1.0
-	if _banner != null and _subtitle != null:
-		Narrator.speak("%s %s" % [_banner.text, _subtitle.text])
 	_saloon.visible = false
 	_cowboy.visible = false
 	_horse.visible = false
