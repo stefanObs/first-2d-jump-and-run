@@ -84,6 +84,11 @@ var _grid_scroll: ScrollContainer
 var _editor_pane: VBoxContainer
 var _h_scroll: HScrollBar
 const _CELL_WIDTH := 42.0
+const _MIN_CELL_HEIGHT := 14.0
+const _COMFORT_CELL_HEIGHT := 28.0
+const _MAX_CELL_HEIGHT := 52.0
+const _MIN_GRID_HEIGHT := 140.0
+const _PREVIEW_MIN_SIZE := Vector2(640, 300)
 var _hover_column: int = -1
 var _syncing_scroll := false
 var _export_dialog: FileDialog
@@ -198,16 +203,18 @@ func _build_ui() -> void:
 	_editor_pane = VBoxContainer.new()
 	_editor_pane.name = "EditorPane"
 	_editor_pane.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_editor_pane.size_flags_stretch_ratio = 1.0
+	_editor_pane.size_flags_stretch_ratio = 1.35
+	_editor_pane.custom_minimum_size = Vector2(0, _MIN_GRID_HEIGHT + 26.0)
 	_editor_pane.add_theme_constant_override(&"separation", 4)
 	_editor_pane.resized.connect(_fit_grid_layout)
 	root.add_child(_editor_pane)
 
 	_grid_scroll = ScrollContainer.new()
 	_grid_scroll.name = "GridScroll"
+	_grid_scroll.custom_minimum_size = Vector2(0, _MIN_GRID_HEIGHT)
 	_grid_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_grid_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_ALWAYS
-	_grid_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_grid_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	_grid_scroll.gui_input.connect(_on_grid_scroll_gui)
 	_grid_scroll.resized.connect(_fit_grid_layout)
 	_editor_pane.add_child(_grid_scroll)
@@ -270,9 +277,11 @@ func _build_ui() -> void:
 
 	_preview = LevelPreview.new()
 	_preview.name = "LevelPreview"
-	_preview.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_preview.hover_column_changed.connect(_on_preview_hover_column)
 	root.add_child(_preview)
+	_preview.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_preview.size_flags_stretch_ratio = 0.75
+	_preview.custom_minimum_size = _PREVIEW_MIN_SIZE
 
 	_reset_dialog = ConfirmationDialog.new()
 	_reset_dialog.name = "ResetConfirmation"
@@ -409,15 +418,25 @@ func _on_tool_selected(index: int) -> void:
 
 
 func _fit_grid_layout() -> void:
-	if _grid_scroll == null or _cells.is_empty():
+	if _grid_scroll == null or _cells.is_empty() or _grid == null:
 		return
 	var height := maxi(int(_data.get("height", 8)), 1)
-	var available := _grid_scroll.size.y
-	if available < 24.0:
-		return
 	var separation := float(_grid.get_theme_constant(&"v_separation", "GridContainer"))
+	var needed_at_min := float(height) * _MIN_CELL_HEIGHT + separation * float(height - 1)
+	_grid_scroll.custom_minimum_size.y = maxf(_MIN_GRID_HEIGHT, needed_at_min)
+	if _editor_pane != null:
+		_editor_pane.custom_minimum_size.y = _grid_scroll.custom_minimum_size.y + 26.0
+
+	var available := maxf(_grid_scroll.size.y, _grid_scroll.custom_minimum_size.y)
 	var cell_h := floorf((available - separation * float(height - 1)) / float(height))
-	cell_h = clampf(cell_h, 16.0, 52.0)
+	cell_h = clampf(cell_h, _MIN_CELL_HEIGHT, _MAX_CELL_HEIGHT)
+	var total := cell_h * float(height) + separation * float(height - 1)
+	if total > available + 0.5:
+		cell_h = _COMFORT_CELL_HEIGHT
+		total = cell_h * float(height) + separation * float(height - 1)
+		_grid_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	else:
+		_grid_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	for cell in _cells:
 		cell.custom_minimum_size = Vector2(_CELL_WIDTH, cell_h)
 

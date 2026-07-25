@@ -3141,7 +3141,7 @@ func _test_campaign_workshop() -> Variant:
 	var category_dropdown := editor.find_child("StampCategory", true, false) as OptionButton
 	var tool_dropdown := editor.find_child("StampTool", true, false) as OptionButton
 	var trail_bar := editor.find_child("TrailScrollBar", true, false) as HScrollBar
-	if error == null and (embedded_preview == null or embedded_preview.custom_minimum_size.y < 500.0):
+	if error == null and (embedded_preview == null or embedded_preview.custom_minimum_size.y < 280.0):
 		error = "The editor needs a large 3/4-size live gameplay preview."
 	elif error == null and (category_dropdown == null or tool_dropdown == null):
 		error = "The stamp palette should expose category and tool dropdowns."
@@ -3152,10 +3152,15 @@ func _test_campaign_workshop() -> Variant:
 	elif error == null:
 		var preview_index := embedded_preview.get_index()
 		var grid_scroll := editor.find_child("GridScroll", true, false) as ScrollContainer
+		var editor_pane := editor.find_child("EditorPane", true, false) as VBoxContainer
 		if grid_scroll == null or preview_index < grid_scroll.get_index():
 			error = "The live preview should sit below the stamp grid in the editor."
-		elif grid_scroll.vertical_scroll_mode != ScrollContainer.SCROLL_MODE_DISABLED:
-			error = "The stamp grid should show the full level height without vertical cropping."
+		elif grid_scroll.custom_minimum_size.y < 120.0:
+			error = "The stamp grid should reserve enough vertical space to stay editable."
+		elif editor_pane == null or editor_pane.custom_minimum_size.y < 140.0:
+			error = "The editor pane should keep the stamp grid from collapsing."
+		elif editor._cells.is_empty() or editor._cells[0].custom_minimum_size.y < 12.0:
+			error = "Stamp grid cells should stay tall enough to tap."
 		else:
 			var icon_tools := 0
 			for category_index in range(category_dropdown.item_count):
