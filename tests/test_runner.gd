@@ -3230,6 +3230,25 @@ func _test_campaign_workshop() -> Variant:
 					elif float(metrics["bottom_y"]) < float(metrics["trail"]) * grid:
 						error = "The live preview should show ground through the trail row."
 					else:
+						embedded_preview.size = Vector2(400.0, 300.0)
+						await get_tree().process_frame
+						var display := embedded_preview._preview_display_rect()
+						var insets := embedded_preview._frame_insets()
+						var expected_height := 300.0 - insets.y
+						if absf(display.size.y - expected_height) > 1.0:
+							error = "The live preview should scale to fill the pane height."
+						elif absf(display.size.x / display.size.y - 1280.0 / 720.0) > 0.01:
+							error = "The live preview should keep the gameplay aspect ratio."
+						else:
+							var live_container := embedded_preview.find_child(
+								"LivePreviewContainer", true, false
+							) as SubViewportContainer
+							if (
+								live_container == null
+								or not live_container.size.is_equal_approx(display.size)
+							):
+								error = "The live preview viewport should match the fitted display size."
+					if error == null:
 						grid_scroll.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 						grid_scroll.custom_minimum_size = Vector2(180.0, grid_scroll.custom_minimum_size.y)
 						grid_scroll.size = Vector2(180.0, grid_scroll.size.y)

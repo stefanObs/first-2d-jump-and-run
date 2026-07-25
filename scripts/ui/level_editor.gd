@@ -297,7 +297,7 @@ func _build_ui() -> void:
 	)
 
 	var preview_label := Label.new()
-	preview_label.text = tr("Live preview (3/4 size) — full height, follows stamp cursor")
+	preview_label.text = tr("Live preview — full height, follows stamp cursor")
 	preview_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	preview_label.add_theme_font_size_override(&"font_size", 13)
 	preview_label.add_theme_color_override(&"font_color", Color(0.35, 0.16, 0.05))

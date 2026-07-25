@@ -6,13 +6,14 @@ extends Control
 signal hover_column_changed(column: int)
 
 const GAME_SIZE := Vector2(1280, 720)
-const PREVIEW_SCALE := 0.65
-const PREVIEW_SIZE := Vector2(640, 360)
+const FRAME_CONTENT_MARGIN := 6.0
+const MIN_PREVIEW_SIZE := Vector2(160, 120)
 const SKY_PADDING_CELLS := 0.75
 const GROUND_PADDING_CELLS := 0.65
 
 var _data: Dictionary = {}
 var _hover_column: int = -1
+var _frame: PanelContainer
 var _container: SubViewportContainer
 var _viewport: SubViewport
 var _world: LevelController
@@ -23,13 +24,19 @@ var _last_built_hash := ""
 
 
 func _ready() -> void:
-	custom_minimum_size = PREVIEW_SIZE
+	custom_minimum_size = MIN_PREVIEW_SIZE
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_build_viewport()
+	call_deferred("_fit_preview_to_pane")
 	if not _data.is_empty():
 		_queue_rebuild()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_RESIZED:
+		_fit_preview_to_pane()
 
 
 func show_level(data: Dictionary) -> void:
@@ -52,27 +59,26 @@ func get_hover_column() -> int:
 
 
 func _build_viewport() -> void:
-	var frame := PanelContainer.new()
-	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_frame = PanelContainer.new()
+	_frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.22, 0.1, 0.04, 1)
 	style.set_border_width_all(4)
 	style.border_color = Color(0.45, 0.24, 0.08, 1)
 	style.set_corner_radius_all(10)
-	style.content_margin_left = 6
-	style.content_margin_top = 6
-	style.content_margin_right = 6
-	style.content_margin_bottom = 6
-	frame.add_theme_stylebox_override(&"panel", style)
-	add_child(frame)
+	style.content_margin_left = FRAME_CONTENT_MARGIN
+	style.content_margin_top = FRAME_CONTENT_MARGIN
+	style.content_margin_right = FRAME_CONTENT_MARGIN
+	style.content_margin_bottom = FRAME_CONTENT_MARGIN
+	_frame.add_theme_stylebox_override(&"panel", style)
+	add_child(_frame)
 
 	var center := CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	frame.add_child(center)
+	_frame.add_child(center)
 
 	_container = SubViewportContainer.new()
 	_container.name = "LivePreviewContainer"
-	_container.custom_minimum_size = PREVIEW_SIZE
 	_container.stretch = true
 	_container.stretch_shrink = 1
 	center.add_child(_container)
@@ -177,6 +183,37 @@ func _update_camera() -> void:
 			marker.size = Vector2(8.0, bottom_y - top_y)
 
 
+func _frame_insets() -> Vector2:
+	return Vector2(FRAME_CONTENT_MARGIN * 2.0, FRAME_CONTENT_MARGIN * 2.0)
+
+
+func _preview_display_rect() -> Rect2:
+	var insets := _frame_insets()
+	var available := size - insets
+	if available.y <= 1.0:
+		return Rect2(Vector2.ZERO, Vector2.ZERO)
+	var aspect := GAME_SIZE.x / GAME_SIZE.y
+	var display_height := available.y
+	var display_width := display_height * aspect
+	var origin := Vector2(
+		FRAME_CONTENT_MARGIN + maxf(0.0, (available.x - display_width) * 0.5),
+		FRAME_CONTENT_MARGIN
+	)
+	return Rect2(origin, Vector2(display_width, display_height))
+
+
+func _fit_preview_to_pane() -> void:
+	if _container == null:
+		return
+	var display := _preview_display_rect()
+	if display.size.y <= 1.0:
+		return
+	if _container.size.is_equal_approx(display.size):
+		return
+	_container.custom_minimum_size = display.size
+	_container.size = display.size
+
+
 func _view_metrics() -> Dictionary:
 	var grid := float(_data.get("grid", 40))
 	var width := maxi(int(_data.get("width", 24)), 1)
@@ -202,9 +239,10 @@ func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion or event is InputEventMouseButton:
 		var local := (event as InputEventMouse).position
 		var width := maxi(int(_data.get("width", 24)), 1)
-		if size.x <= 1.0:
+		var preview_rect := _preview_display_rect()
+		if preview_rect.size.x <= 1.0 or not preview_rect.has_point(local):
 			return
-		var rel := clampf(local.x / size.x, 0.0, 0.999)
+		var rel := clampf((local.x - preview_rect.position.x) / preview_rect.size.x, 0.0, 0.999)
 		# Map click across the visible window (~half the trail around cursor).
 		var window := mini(14, width)
 		var start := _window_start(width, window)
