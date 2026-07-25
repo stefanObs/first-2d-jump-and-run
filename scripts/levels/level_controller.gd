@@ -40,9 +40,13 @@ var _loaded_run_state: bool = false
 var _next_level_tap_time_msec: int = -1000
 var _next_boss_tap_time_msec: int = -1000
 var _is_recovering: bool = false
+## When true, _ready does not call setup_level (editor live preview).
+var skip_auto_setup: bool = false
 
 
 func _ready() -> void:
+	if skip_auto_setup:
+		return
 	setup_level()
 
 

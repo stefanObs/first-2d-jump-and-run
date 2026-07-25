@@ -352,7 +352,8 @@ static func sanitize(source: Dictionary, slot_index: int) -> Dictionary:
 static func _valid_object(object: Dictionary, trail: int) -> bool:
 	var valid_types := [
 		"ground", "platform", "star", "cactus", "canyon", "pit",
-		"checkpoint", "spring", "goal", "bandit",
+		"checkpoint", "spring", "goal", "bandit", "rattlesnake",
+		"wings", "boots", "speed", "shield",
 	]
 	var type_name := str(object.get("type", ""))
 	if type_name not in valid_types:

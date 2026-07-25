@@ -10,12 +10,14 @@ const HAZARD := preload("res://scenes/world/hazard.tscn")
 const STAR := preload("res://scenes/world/star.tscn")
 const SPRING := preload("res://scenes/world/spring_pad.tscn")
 const BANDIT := preload("res://scenes/world/opponent.tscn")
+const RATTLESNAKE := preload("res://scenes/world/rattlesnake.tscn")
+const MODE_ITEM := preload("res://scenes/world/mode_item.tscn")
 const HUD := preload("res://scenes/ui/hud.tscn")
 const PAUSE := preload("res://scenes/ui/pause_menu.tscn")
 const TRANSITION := preload("res://scenes/ui/level_transition.tscn")
 
 
-static func build(level: LevelController, data: Dictionary) -> void:
+static func build(level: LevelController, data: Dictionary, preview: bool = false) -> void:
 	var grid := float(data.get("grid", 40))
 	var width := int(data.get("width", 24))
 	var height := int(data.get("height", 8))
@@ -61,6 +63,12 @@ static func build(level: LevelController, data: Dictionary) -> void:
 				_add_scene(level, SPRING, "Spring%d" % index, position)
 			"bandit":
 				_add_scene(level, BANDIT, "Opponent%d" % index, position)
+			"rattlesnake":
+				_add_scene(level, RATTLESNAKE, "Rattlesnake%d" % index, position)
+			"wings", "boots", "speed", "shield":
+				var mode_item := _add_scene(level, MODE_ITEM, "ModeItem%d" % index, position) as ModeItem
+				if mode_item != null:
+					mode_item.mode = _mode_for_type(type_name)
 			"goal":
 				if not has_goal:
 					_add_scene(level, GOAL, "Goal", position)
@@ -76,9 +84,26 @@ static func build(level: LevelController, data: Dictionary) -> void:
 		player.start_mounted = true
 	level.add_child(player)
 	player.position = spawn.position
-	level.add_child(TRANSITION.instantiate())
-	level.add_child(HUD.instantiate())
-	level.add_child(PAUSE.instantiate())
+	if preview:
+		player.set_input_enabled(false)
+		player.set_physics_process(false)
+		player.set_process(false)
+	else:
+		level.add_child(TRANSITION.instantiate())
+		level.add_child(HUD.instantiate())
+		level.add_child(PAUSE.instantiate())
+
+
+static func _mode_for_type(type_name: String) -> ModeController.Mode:
+	match type_name:
+		"boots":
+			return ModeController.Mode.MAGIC_BOOTS
+		"speed":
+			return ModeController.Mode.SPEED_STAR
+		"shield":
+			return ModeController.Mode.BUBBLE_SHIELD
+		_:
+			return ModeController.Mode.WINGS
 
 
 ## Merge vertically stacked dirt cells into one tall bank so steps look handpainted.

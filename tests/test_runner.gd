@@ -3054,13 +3054,26 @@ func _test_campaign_workshop() -> Variant:
 	var editor := editor_packed.instantiate()
 	add_child(editor)
 	var embedded_preview := editor.find_child("LevelPreview", true, false) as LevelPreview
-	if error == null and (embedded_preview == null or embedded_preview.custom_minimum_size.y < 200.0):
-		error = "The editor needs a large game-like hover preview at the top."
+	var palette := editor.find_child("Palette", true, false) as HBoxContainer
+	var trail_bar := editor.find_child("TrailScrollBar", true, false) as HScrollBar
+	if error == null and (embedded_preview == null or embedded_preview.custom_minimum_size.y < 500.0):
+		error = "The editor needs a large 3/4-size live gameplay preview."
+	elif error == null and (palette == null or palette.get_child_count() < 10):
+		error = "The stamp palette should show detailed selectable stamps with icons."
+	elif error == null and trail_bar == null:
+		error = "The trail editor needs a horizontal slide bar to scroll to the end."
 	elif error == null:
 		var preview_index := embedded_preview.get_index()
-		var grid_scroll := editor.find_children("*", "ScrollContainer", true, false)
-		if grid_scroll.is_empty() or preview_index > grid_scroll[0].get_index():
-			error = "The magnified hover preview should sit above the stamp grid."
+		var grid_scroll := editor.find_child("GridScroll", true, false) as ScrollContainer
+		if grid_scroll == null or preview_index < grid_scroll.get_index():
+			error = "The live preview should sit below the stamp grid in the editor."
+		else:
+			var icon_stamps := 0
+			for child in palette.get_children():
+				if child is Button and (child as Button).icon != null:
+					icon_stamps += 1
+			if icon_stamps < 8:
+				error = "Stamp buttons should include example images kids can recognize."
 	editor.queue_free()
 	for i in range(paths.size()):
 		if FileAccess.file_exists(paths[i]):
