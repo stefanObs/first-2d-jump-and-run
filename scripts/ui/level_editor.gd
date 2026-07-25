@@ -1,29 +1,74 @@
 extends Control
 
-## Grid/stamp editor: detailed palette + scrollable trail grid above a live preview.
+## Grid/stamp editor: typed stamp dropdowns + scrollable trail grid above a live preview.
 
-const TYPES := [
-	["ground", "Dirt", "res://assets/world/trail_desert_tile.png"],
-	["canyon", "Canyon", "res://assets/world/canyon_rim_left.png"],
-	["platform", "Plank", "res://assets/world/trail_dirt_tile.png"],
-	["star", "Badge", "res://assets/world/star_badge.png"],
-	["cactus", "Cactus", "res://assets/world/cactus.png"],
-	["spring", "Spring", "res://assets/world/spring.png"],
-	["checkpoint", "Camp", "res://assets/world/checkpoint_active.png"],
-	["bandit", "Bandit", "res://assets/world/bandit.png"],
-	["rattlesnake", "Rattlesnake", "res://assets/world/rattlesnake_idle.png"],
-	["wings", "Wings", "res://assets/world/modes/wings.png"],
-	["boots", "Magic Boots", "res://assets/world/modes/magic_boots.png"],
-	["speed", "Speed Star", "res://assets/world/modes/speed_badge.png"],
-	["shield", "Bubble Shield", "res://assets/world/modes/bubble_shield.png"],
-	["goal", "Saloon", "res://assets/world/goal_saloon.png"],
-	["erase", "Erase", ""],
+const TOOL_CATEGORIES: Array = [
+	{
+		"id": "trail",
+		"label": "Trail",
+		"tools": [
+			["ground", "Dirt", "res://assets/world/trail_desert_tile.png"],
+			["canyon", "Canyon", "res://assets/world/canyon_rim_left.png"],
+			["platform", "Plank", "res://assets/world/trail_dirt_tile.png"],
+		],
+	},
+	{
+		"id": "pickups",
+		"label": "Pickups",
+		"tools": [
+			["star", "Badge", "res://assets/world/star_badge.png"],
+			["checkpoint", "Camp", "res://assets/world/checkpoint_active.png"],
+		],
+	},
+	{
+		"id": "hazards",
+		"label": "Hazards",
+		"tools": [
+			["cactus", "Cactus", "res://assets/world/cactus.png"],
+			["spring", "Spring", "res://assets/world/spring.png"],
+		],
+	},
+	{
+		"id": "enemies",
+		"label": "Enemies",
+		"tools": [
+			["bandit", "Bandit", "res://assets/world/bandit.png"],
+			["rattlesnake", "Rattlesnake", "res://assets/world/rattlesnake_idle.png"],
+		],
+	},
+	{
+		"id": "powerups",
+		"label": "Power-ups",
+		"tools": [
+			["wings", "Wings", "res://assets/world/modes/wings.png"],
+			["boots", "Magic Boots", "res://assets/world/modes/magic_boots.png"],
+			["speed", "Speed Star", "res://assets/world/modes/speed_badge.png"],
+			["shield", "Bubble Shield", "res://assets/world/modes/bubble_shield.png"],
+		],
+	},
+	{
+		"id": "goal",
+		"label": "Goal",
+		"tools": [
+			["goal", "Saloon", "res://assets/world/goal_saloon.png"],
+		],
+	},
+	{
+		"id": "tools",
+		"label": "Tools",
+		"tools": [
+			["erase", "Erase", ""],
+		],
+	},
 ]
 
 var _data: Dictionary
 var _selected_type: String = "ground"
 var _cells: Array[Button] = []
-var _palette_buttons: Array[Button] = []
+var _category_dropdown: OptionButton
+var _tool_dropdown: OptionButton
+var _tool_icon: TextureRect
+var _syncing_tool_ui := false
 var _status: Label
 var _title_edit: LineEdit
 var _preview: LevelPreview
@@ -36,7 +81,9 @@ var _has_saved_state := false
 var _dirty := false
 var _grid: GridContainer
 var _grid_scroll: ScrollContainer
+var _editor_pane: VBoxContainer
 var _h_scroll: HScrollBar
+const _CELL_WIDTH := 42.0
 var _hover_column: int = -1
 var _syncing_scroll := false
 var _export_dialog: FileDialog
@@ -66,7 +113,7 @@ func _ready() -> void:
 	_build_ui()
 	_refresh_grid()
 	_update_action_state()
-	_highlight_palette()
+	_sync_tool_dropdowns()
 
 
 func _build_ui() -> void:
@@ -111,36 +158,59 @@ func _build_ui() -> void:
 	trail_help.add_theme_color_override(&"font_color", Color(0.4, 0.2, 0.08))
 	root.add_child(trail_help)
 
-	var palette_scroll := ScrollContainer.new()
-	palette_scroll.name = "PaletteScroll"
-	palette_scroll.custom_minimum_size = Vector2(0, 92)
-	palette_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-	palette_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	palette_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	root.add_child(palette_scroll)
 	var palette := HBoxContainer.new()
 	palette.name = "Palette"
 	palette.alignment = BoxContainer.ALIGNMENT_CENTER
-	palette.add_theme_constant_override(&"separation", 8)
-	palette_scroll.add_child(palette)
-	for item in TYPES:
-		palette.add_child(_make_stamp_button(str(item[0]), str(item[1]), str(item[2])))
+	palette.add_theme_constant_override(&"separation", 10)
+	root.add_child(palette)
+	var category_label := Label.new()
+	category_label.text = tr("Stamp category")
+	category_label.add_theme_font_size_override(&"font_size", 15)
+	category_label.add_theme_color_override(&"font_color", Color(0.35, 0.16, 0.05))
+	palette.add_child(category_label)
+	_category_dropdown = OptionButton.new()
+	_category_dropdown.name = "StampCategory"
+	_category_dropdown.custom_minimum_size = Vector2(220, 42)
+	_category_dropdown.add_theme_font_size_override(&"font_size", 15)
+	_category_dropdown.item_selected.connect(_on_category_selected)
+	palette.add_child(_category_dropdown)
+	var tool_label := Label.new()
+	tool_label.text = tr("Stamp tool")
+	tool_label.add_theme_font_size_override(&"font_size", 15)
+	tool_label.add_theme_color_override(&"font_color", Color(0.35, 0.16, 0.05))
+	palette.add_child(tool_label)
+	_tool_dropdown = OptionButton.new()
+	_tool_dropdown.name = "StampTool"
+	_tool_dropdown.custom_minimum_size = Vector2(260, 42)
+	_tool_dropdown.add_theme_font_size_override(&"font_size", 15)
+	_tool_dropdown.item_selected.connect(_on_tool_selected)
+	palette.add_child(_tool_dropdown)
+	_tool_icon = TextureRect.new()
+	_tool_icon.name = "StampToolIcon"
+	_tool_icon.custom_minimum_size = Vector2(52, 52)
+	_tool_icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	_tool_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	palette.add_child(_tool_icon)
+	_style_dropdown(_category_dropdown)
+	_style_dropdown(_tool_dropdown)
+	_populate_category_dropdown()
 
-	var editor_pane := VBoxContainer.new()
-	editor_pane.name = "EditorPane"
-	editor_pane.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	editor_pane.size_flags_stretch_ratio = 1.0
-	editor_pane.add_theme_constant_override(&"separation", 4)
-	root.add_child(editor_pane)
+	_editor_pane = VBoxContainer.new()
+	_editor_pane.name = "EditorPane"
+	_editor_pane.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_editor_pane.size_flags_stretch_ratio = 1.0
+	_editor_pane.add_theme_constant_override(&"separation", 4)
+	_editor_pane.resized.connect(_fit_grid_layout)
+	root.add_child(_editor_pane)
 
 	_grid_scroll = ScrollContainer.new()
 	_grid_scroll.name = "GridScroll"
-	_grid_scroll.custom_minimum_size = Vector2(0, 160)
 	_grid_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_grid_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_ALWAYS
-	_grid_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	_grid_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_grid_scroll.gui_input.connect(_on_grid_scroll_gui)
-	editor_pane.add_child(_grid_scroll)
+	_grid_scroll.resized.connect(_fit_grid_layout)
+	_editor_pane.add_child(_grid_scroll)
 	_grid = GridContainer.new()
 	_grid.name = "StampGrid"
 	_grid.columns = int(_data.get("width", 24))
@@ -152,7 +222,7 @@ func _build_ui() -> void:
 	for y in range(height):
 		for x in range(width):
 			var cell := Button.new()
-			cell.custom_minimum_size = Vector2(42, 34)
+			cell.custom_minimum_size = Vector2(_CELL_WIDTH, 28)
 			cell.add_theme_font_size_override(&"font_size", 9)
 			var cell_x := x
 			var cell_y := y
@@ -166,7 +236,7 @@ func _build_ui() -> void:
 	_h_scroll.custom_minimum_size = Vector2(0, 22)
 	_h_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_h_scroll.value_changed.connect(_on_h_scroll_changed)
-	editor_pane.add_child(_h_scroll)
+	_editor_pane.add_child(_h_scroll)
 	_grid_scroll.get_h_scroll_bar().value_changed.connect(_on_grid_h_changed)
 	call_deferred("_sync_scroll_range")
 
@@ -192,7 +262,7 @@ func _build_ui() -> void:
 	)
 
 	var preview_label := Label.new()
-	preview_label.text = tr("Live preview (3/4 size) — follows the stamp cursor")
+	preview_label.text = tr("Live preview (3/4 size) — full height, follows stamp cursor")
 	preview_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	preview_label.add_theme_font_size_override(&"font_size", 15)
 	preview_label.add_theme_color_override(&"font_color", Color(0.35, 0.16, 0.05))
@@ -222,35 +292,134 @@ func _build_ui() -> void:
 	add_child(_export_dialog)
 
 
-func _make_stamp_button(type_id: String, label_key: String, texture_path: String) -> Button:
-	var button := Button.new()
-	button.name = "Stamp_%s" % type_id
-	button.toggle_mode = true
-	button.custom_minimum_size = Vector2(88, 82)
-	button.clip_text = true
-	button.add_theme_font_size_override(&"font_size", 12)
-	button.text = tr(label_key)
-	if not texture_path.is_empty() and ResourceLoader.exists(texture_path):
-		var tex := load(texture_path) as Texture2D
-		if tex != null:
-			button.icon = tex
-			button.expand_icon = true
-			button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			button.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
-	button.pressed.connect(func() -> void:
-		_selected_type = type_id
-		_status.text = "%s: %s" % [tr("Stamp"), tr(label_key)]
-		_highlight_palette()
-	)
-	_palette_buttons.append(button)
-	return button
+func _style_dropdown(dropdown: OptionButton) -> void:
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = Color(1.0, 0.93, 0.78, 1.0)
+	normal.set_border_width_all(3)
+	normal.border_color = Color(0.45, 0.24, 0.08, 1.0)
+	normal.set_corner_radius_all(8)
+	normal.content_margin_left = 10
+	normal.content_margin_top = 6
+	normal.content_margin_right = 10
+	normal.content_margin_bottom = 6
+	dropdown.add_theme_stylebox_override(&"normal", normal)
+	dropdown.add_theme_stylebox_override(&"hover", normal)
+	dropdown.add_theme_stylebox_override(&"pressed", normal)
+	dropdown.add_theme_stylebox_override(&"focus", normal)
+	dropdown.add_theme_color_override(&"font_color", Color(0.35, 0.16, 0.05))
 
 
-func _highlight_palette() -> void:
-	for button in _palette_buttons:
-		var type_id := String(button.name).trim_prefix("Stamp_")
-		button.button_pressed = type_id == _selected_type
-		button.modulate = Color(1.15, 1.08, 0.85) if type_id == _selected_type else Color.WHITE
+func _populate_category_dropdown() -> void:
+	_category_dropdown.clear()
+	for i in range(TOOL_CATEGORIES.size()):
+		var category := TOOL_CATEGORIES[i] as Dictionary
+		_category_dropdown.add_item(tr(str(category.get("label", ""))), i)
+
+
+func _populate_tool_dropdown(category_index: int) -> void:
+	_tool_dropdown.clear()
+	if category_index < 0 or category_index >= TOOL_CATEGORIES.size():
+		return
+	var category := TOOL_CATEGORIES[category_index] as Dictionary
+	for tool in category.get("tools", []) as Array:
+		var entry := tool as Array
+		var type_id := str(entry[0])
+		var label_key := str(entry[1])
+		var texture_path := str(entry[2])
+		var item_index := _tool_dropdown.item_count
+		_tool_dropdown.add_item(tr(label_key))
+		_tool_dropdown.set_item_metadata(item_index, type_id)
+		if not texture_path.is_empty() and ResourceLoader.exists(texture_path):
+			_tool_dropdown.set_item_icon(item_index, load(texture_path) as Texture2D)
+
+
+func _tool_entry(type_id: String) -> Array:
+	for category in TOOL_CATEGORIES:
+		for tool in (category as Dictionary).get("tools", []) as Array:
+			if str((tool as Array)[0]) == type_id:
+				return tool as Array
+	return ["ground", "Dirt", "res://assets/world/trail_desert_tile.png"]
+
+
+func _category_index_for_type(type_id: String) -> int:
+	for i in range(TOOL_CATEGORIES.size()):
+		for tool in (TOOL_CATEGORIES[i] as Dictionary).get("tools", []) as Array:
+			if str((tool as Array)[0]) == type_id:
+				return i
+	return 0
+
+
+func _tool_index_for_type(category_index: int, type_id: String) -> int:
+	if category_index < 0 or category_index >= TOOL_CATEGORIES.size():
+		return 0
+	var tools := (TOOL_CATEGORIES[category_index] as Dictionary).get("tools", []) as Array
+	for i in range(tools.size()):
+		if str((tools[i] as Array)[0]) == type_id:
+			return i
+	return 0
+
+
+func _sync_tool_dropdowns() -> void:
+	if _category_dropdown == null or _tool_dropdown == null:
+		return
+	_syncing_tool_ui = true
+	var category_index := _category_index_for_type(_selected_type)
+	_category_dropdown.select(category_index)
+	_populate_tool_dropdown(category_index)
+	var tool_index := _tool_index_for_type(category_index, _selected_type)
+	if tool_index >= 0 and tool_index < _tool_dropdown.item_count:
+		_tool_dropdown.select(tool_index)
+	_update_tool_icon()
+	_syncing_tool_ui = false
+
+
+func _update_tool_icon() -> void:
+	if _tool_icon == null:
+		return
+	var entry := _tool_entry(_selected_type)
+	var texture_path := str(entry[2])
+	if texture_path.is_empty() or not ResourceLoader.exists(texture_path):
+		_tool_icon.texture = null
+		return
+	_tool_icon.texture = load(texture_path) as Texture2D
+
+
+func _select_tool(type_id: String) -> void:
+	_selected_type = type_id
+	var entry := _tool_entry(type_id)
+	_status.text = "%s: %s" % [tr("Stamp"), tr(str(entry[1]))]
+	_sync_tool_dropdowns()
+
+
+func _on_category_selected(index: int) -> void:
+	if _syncing_tool_ui:
+		return
+	_populate_tool_dropdown(index)
+	if _tool_dropdown.item_count > 0:
+		_on_tool_selected(0)
+
+
+func _on_tool_selected(index: int) -> void:
+	if _syncing_tool_ui or _tool_dropdown == null:
+		return
+	var type_id := str(_tool_dropdown.get_item_metadata(index))
+	if type_id.is_empty():
+		return
+	_select_tool(type_id)
+
+
+func _fit_grid_layout() -> void:
+	if _grid_scroll == null or _cells.is_empty():
+		return
+	var height := maxi(int(_data.get("height", 8)), 1)
+	var available := _grid_scroll.size.y
+	if available < 24.0:
+		return
+	var separation := float(_grid.get_theme_constant(&"v_separation", "GridContainer"))
+	var cell_h := floorf((available - separation * float(height - 1)) / float(height))
+	cell_h = clampf(cell_h, 16.0, 52.0)
+	for cell in _cells:
+		cell.custom_minimum_size = Vector2(_CELL_WIDTH, cell_h)
 
 
 func _add_action(
@@ -433,6 +602,7 @@ func _refresh_grid() -> void:
 					cell.modulate = Color(0.82, 0.7, 0.5)
 	_refresh_grid_highlights()
 	call_deferred("_sync_scroll_range")
+	call_deferred("_fit_grid_layout")
 	if _preview != null:
 		_preview.show_level(_data)
 		if _hover_column >= 0:

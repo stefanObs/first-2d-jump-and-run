@@ -3068,6 +3068,21 @@ func _test_trail_row_model() -> Variant:
 	return null
 
 
+func _editor_tool_count(editor: Node) -> int:
+	var category := editor.find_child("StampCategory", true, false) as OptionButton
+	if category == null:
+		return 0
+	var total := 0
+	for category_index in range(category.item_count):
+		category.select(category_index)
+		var tool := editor.find_child("StampTool", true, false) as OptionButton
+		if tool == null:
+			continue
+		editor._populate_tool_dropdown(category_index)
+		total += tool.item_count
+	return total
+
+
 func _test_campaign_workshop() -> Variant:
 	var override_slot := CustomLevelStore.override_slot_for(1)
 	var extra_slot := CustomLevelStore.SLOT_COUNT - 1
@@ -3123,12 +3138,15 @@ func _test_campaign_workshop() -> Variant:
 	var editor := editor_packed.instantiate()
 	add_child(editor)
 	var embedded_preview := editor.find_child("LevelPreview", true, false) as LevelPreview
-	var palette := editor.find_child("Palette", true, false) as HBoxContainer
+	var category_dropdown := editor.find_child("StampCategory", true, false) as OptionButton
+	var tool_dropdown := editor.find_child("StampTool", true, false) as OptionButton
 	var trail_bar := editor.find_child("TrailScrollBar", true, false) as HScrollBar
 	if error == null and (embedded_preview == null or embedded_preview.custom_minimum_size.y < 500.0):
 		error = "The editor needs a large 3/4-size live gameplay preview."
-	elif error == null and (palette == null or palette.get_child_count() < 10):
-		error = "The stamp palette should show detailed selectable stamps with icons."
+	elif error == null and (category_dropdown == null or tool_dropdown == null):
+		error = "The stamp palette should expose category and tool dropdowns."
+	elif error == null and _editor_tool_count(editor) < 15:
+		error = "Every stamp tool should be reachable via the typed dropdown UI."
 	elif error == null and trail_bar == null:
 		error = "The trail editor needs a horizontal slide bar to scroll to the end."
 	elif error == null:
@@ -3136,13 +3154,26 @@ func _test_campaign_workshop() -> Variant:
 		var grid_scroll := editor.find_child("GridScroll", true, false) as ScrollContainer
 		if grid_scroll == null or preview_index < grid_scroll.get_index():
 			error = "The live preview should sit below the stamp grid in the editor."
+		elif grid_scroll.vertical_scroll_mode != ScrollContainer.SCROLL_MODE_DISABLED:
+			error = "The stamp grid should show the full level height without vertical cropping."
 		else:
-			var icon_stamps := 0
-			for child in palette.get_children():
-				if child is Button and (child as Button).icon != null:
-					icon_stamps += 1
-			if icon_stamps < 8:
-				error = "Stamp buttons should include example images kids can recognize."
+			var icon_tools := 0
+			for category_index in range(category_dropdown.item_count):
+				editor._populate_tool_dropdown(category_index)
+				for i in range(tool_dropdown.item_count):
+					if tool_dropdown.get_item_icon(i) != null:
+						icon_tools += 1
+			if icon_tools < 8:
+				error = "Stamp tools should include example images kids can recognize."
+			else:
+				embedded_preview.show_level(imported)
+				var metrics := embedded_preview._view_metrics()
+				var grid := float(metrics["grid"])
+				if float(metrics["top_y"]) > grid * 0.5:
+					error = "The live preview should include sky above the top stamp row."
+				elif float(metrics["bottom_y"]) < float(metrics["trail"]) * grid:
+					error = "The live preview should show ground through the trail row."
+			editor._sync_tool_dropdowns()
 	editor.queue_free()
 	for i in range(paths.size()):
 		if FileAccess.file_exists(paths[i]):

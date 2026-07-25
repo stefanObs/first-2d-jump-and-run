@@ -8,6 +8,8 @@ signal hover_column_changed(column: int)
 const GAME_SIZE := Vector2(1280, 720)
 const PREVIEW_SCALE := 0.75
 const PREVIEW_SIZE := Vector2(960, 540)
+const SKY_PADDING_CELLS := 0.75
+const GROUND_PADDING_CELLS := 0.65
 
 var _data: Dictionary = {}
 var _hover_column: int = -1
@@ -141,6 +143,7 @@ func _rebuild_world() -> void:
 	_cursor_marker = Node2D.new()
 	_cursor_marker.name = "EditorCursor"
 	var marker := ColorRect.new()
+	marker.name = "CursorBand"
 	marker.size = Vector2(8, 120)
 	marker.position = Vector2(-4, -120)
 	marker.color = Color(1.0, 0.85, 0.15, 0.85)
@@ -155,17 +158,44 @@ func _rebuild_world() -> void:
 func _update_camera() -> void:
 	if _camera == null or not is_instance_valid(_camera) or _data.is_empty():
 		return
+	var metrics := _view_metrics()
+	var grid: float = metrics["grid"]
+	var width: int = metrics["width"]
+	var trail: int = metrics["trail"]
+	var focus_x := _hover_column if _hover_column >= 0 else int((_data.get("spawn", [2, trail]) as Array)[0])
+	focus_x = clampi(focus_x, 0, width - 1)
+	var world_x := (float(focus_x) + 0.5) * grid
+	_camera.zoom = Vector2(metrics["zoom"], metrics["zoom"])
+	_camera.position = Vector2(world_x, metrics["center_y"])
+	if _cursor_marker != null and is_instance_valid(_cursor_marker):
+		_cursor_marker.position = Vector2(world_x, float(trail) * grid)
+		var marker := _cursor_marker.get_node_or_null("CursorBand") as ColorRect
+		if marker != null:
+			var top_y: float = metrics["top_y"]
+			var bottom_y: float = metrics["bottom_y"]
+			marker.position = Vector2(-4.0, top_y - float(trail) * grid)
+			marker.size = Vector2(8.0, bottom_y - top_y)
+
+
+func _view_metrics() -> Dictionary:
 	var grid := float(_data.get("grid", 40))
 	var width := maxi(int(_data.get("width", 24)), 1)
 	var height := maxi(int(_data.get("height", 8)), 1)
 	var trail := CustomLevelStore.trail_row(height)
-	var focus_x := _hover_column if _hover_column >= 0 else int((_data.get("spawn", [2, trail]) as Array)[0])
-	focus_x = clampi(focus_x, 0, width - 1)
-	var world_x := (float(focus_x) + 0.5) * grid
-	var world_y := float(trail) * grid - 80.0
-	_camera.position = Vector2(world_x, world_y)
-	if _cursor_marker != null and is_instance_valid(_cursor_marker):
-		_cursor_marker.position = Vector2(world_x, float(trail) * grid)
+	var top_y := grid * 0.5 - grid * SKY_PADDING_CELLS
+	var bottom_y := float(trail) * grid + grid * GROUND_PADDING_CELLS
+	var world_height := bottom_y - top_y
+	var zoom := clampf(GAME_SIZE.y / maxf(world_height, grid), 0.35, 2.0)
+	return {
+		"grid": grid,
+		"width": width,
+		"height": height,
+		"trail": trail,
+		"top_y": top_y,
+		"bottom_y": bottom_y,
+		"center_y": (top_y + bottom_y) * 0.5,
+		"zoom": zoom,
+	}
 
 
 func _gui_input(event: InputEvent) -> void:

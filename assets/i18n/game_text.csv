@@ -158,6 +158,15 @@ Add Campaign Level,Add Campaign Level,Kampagnen-Level hinzufügen
 "1. Pick a stamp   2. Pick a square   3. Save or Play Test","1. Pick a stamp   2. Pick a square   3. Save or Play Test","1. Stempel wählen   2. Feld wählen   3. Speichern oder Test spielen"
 Bottom row is the trail: Dirt or Canyon sets the ground and what sits below it.,Bottom row is the trail: Dirt or Canyon sets the ground and what sits below it.,Die unterste Zeile ist der Pfad: Erde oder Canyon legt den Boden und das darunter fest.
 Stamp,Stamp,Stempel
+Stamp category,Stamp category,Stempel-Kategorie
+Stamp tool,Stamp tool,Stempel-Werkzeug
+Trail,Trail,Pfad
+Pickups,Pickups,Sammelobjekte
+Hazards,Hazards,Gefahren
+Enemies,Enemies,Gegner
+Power-ups,Power-ups,Power-ups
+Goal,Goal,Ziel
+Tools,Tools,Werkzeug
 Dirt,Dirt,Erde
 Plank,Plank,Brett
 Badge,Badge,Stern
@@ -169,7 +178,7 @@ Bandit,Bandit,Bandit
 Rattlesnake,Rattlesnake,Klapperschlange
 Saloon,Saloon,Saloon
 Erase,Erase,Radierer
-Live preview (3/4 size) — follows the stamp cursor,Live preview (3/4 size) — follows the stamp cursor,Live-Vorschau (3/4 Größe) — folgt dem Stempel-Cursor
+Live preview (3/4 size) — full height, follows stamp cursor,Live preview (3/4 size) — full height, follows stamp cursor,Live-Vorschau (3/4 Größe) — volle Höhe folgt dem Stempel-Cursor
 Stamp: Dirt — keep a dirt path under the cowboy and saloon.,Stamp: Dirt — keep a dirt path under the cowboy and saloon.,Stempel: Erde — halte einen Erdpfad unter Cowboy und Saloon.
 "Add Dirt and a Saloon before play-testing.","Add Dirt and a Saloon before play-testing.","Füge Erde und einen Saloon hinzu, bevor du testest."
 "Edit a copy of any campaign level, or insert a new trail before any level.","Edit a copy of any campaign level, or insert a new trail before any level.","Bearbeite eine Kopie eines Kampagnen-Levels oder füge einen neuen Pfad vor einem Level ein."
