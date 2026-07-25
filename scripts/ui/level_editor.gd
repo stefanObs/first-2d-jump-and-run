@@ -100,8 +100,11 @@ var _export_dialog: FileDialog
 var _import_dialog: FileDialog
 const _EDGE_SCROLL_ZONE := 28.0
 const _EDGE_SCROLL_SPEED := 320.0
-const _DROPDOWN_HEIGHT := 22.0
-const _PALETTE_ICON_SIZE := 24.0
+## Matches DebugLabels element tag cap height (debug_labels.gd font_size 14).
+const _DEBUG_NAMES_TEXT_HEIGHT := 14.0
+const _DROPDOWN_FONT_SIZE := 11
+const _DROPDOWN_HEIGHT := 16.0
+const _PALETTE_ICON_SIZE := _DEBUG_NAMES_TEXT_HEIGHT
 
 const TRAIL_PACK_FILTER := "*.cowboytrail ; Cowboy Trail Pack"
 
@@ -176,11 +179,11 @@ func _build_ui() -> void:
 	var palette := HBoxContainer.new()
 	palette.name = "Palette"
 	palette.alignment = BoxContainer.ALIGNMENT_CENTER
-	palette.add_theme_constant_override(&"separation", 6)
+	palette.add_theme_constant_override(&"separation", 4)
 	root.add_child(palette)
 	var category_label := Label.new()
 	category_label.text = tr("Stamp category")
-	category_label.add_theme_font_size_override(&"font_size", 13)
+	category_label.add_theme_font_size_override(&"font_size", _DROPDOWN_FONT_SIZE)
 	category_label.add_theme_color_override(&"font_color", Color(0.35, 0.16, 0.05))
 	palette.add_child(category_label)
 	_category_example = TextureRect.new()
@@ -191,26 +194,26 @@ func _build_ui() -> void:
 	palette.add_child(_category_example)
 	_category_dropdown = OptionButton.new()
 	_category_dropdown.name = "StampCategory"
-	_category_dropdown.custom_minimum_size = Vector2(168, _DROPDOWN_HEIGHT)
-	_category_dropdown.add_theme_font_size_override(&"font_size", 12)
+	_category_dropdown.custom_minimum_size = Vector2(132, _DROPDOWN_HEIGHT)
+	_category_dropdown.add_theme_font_size_override(&"font_size", _DROPDOWN_FONT_SIZE)
 	_category_dropdown.item_selected.connect(_on_category_selected)
 	palette.add_child(_category_dropdown)
 	var tool_label := Label.new()
 	tool_label.name = "StampToolLabel"
 	tool_label.text = tr("Stamp tool")
-	tool_label.add_theme_font_size_override(&"font_size", 13)
+	tool_label.add_theme_font_size_override(&"font_size", _DROPDOWN_FONT_SIZE)
 	tool_label.add_theme_color_override(&"font_color", Color(0.35, 0.16, 0.05))
 	palette.add_child(tool_label)
 	_tool_label = tool_label
 	_tool_dropdown = OptionButton.new()
 	_tool_dropdown.name = "StampTool"
-	_tool_dropdown.custom_minimum_size = Vector2(188, _DROPDOWN_HEIGHT)
-	_tool_dropdown.add_theme_font_size_override(&"font_size", 12)
+	_tool_dropdown.custom_minimum_size = Vector2(148, _DROPDOWN_HEIGHT)
+	_tool_dropdown.add_theme_font_size_override(&"font_size", _DROPDOWN_FONT_SIZE)
 	_tool_dropdown.item_selected.connect(_on_tool_selected)
 	palette.add_child(_tool_dropdown)
 	_trail_tool_bar = HBoxContainer.new()
 	_trail_tool_bar.name = "TrailPathTools"
-	_trail_tool_bar.add_theme_constant_override(&"separation", 6)
+	_trail_tool_bar.add_theme_constant_override(&"separation", 4)
 	_trail_tool_bar.visible = false
 	palette.add_child(_trail_tool_bar)
 	_build_trail_tool_bar()
@@ -337,20 +340,21 @@ func _build_ui() -> void:
 func _style_dropdown(dropdown: OptionButton) -> void:
 	var normal := StyleBoxFlat.new()
 	normal.bg_color = Color(1.0, 0.93, 0.78, 1.0)
-	normal.set_border_width_all(2)
+	normal.set_border_width_all(1)
 	normal.border_color = Color(0.45, 0.24, 0.08, 1.0)
-	normal.set_corner_radius_all(6)
-	normal.content_margin_left = 8
-	normal.content_margin_top = 2
-	normal.content_margin_right = 8
-	normal.content_margin_bottom = 2
+	normal.set_corner_radius_all(4)
+	normal.content_margin_left = 6
+	normal.content_margin_top = 1
+	normal.content_margin_right = 6
+	normal.content_margin_bottom = 1
 	dropdown.add_theme_stylebox_override(&"normal", normal)
 	dropdown.add_theme_stylebox_override(&"hover", normal)
 	dropdown.add_theme_stylebox_override(&"pressed", normal)
 	dropdown.add_theme_stylebox_override(&"focus", normal)
 	dropdown.add_theme_color_override(&"font_color", Color(0.35, 0.16, 0.05))
+	dropdown.add_theme_constant_override(&"icon_max_width", int(_PALETTE_ICON_SIZE))
 	var popup := dropdown.get_popup()
-	popup.add_theme_font_size_override(&"font_size", 11)
+	popup.add_theme_font_size_override(&"font_size", 10)
 	popup.add_theme_constant_override(&"icon_max_width", int(_PALETTE_ICON_SIZE))
 	popup.add_theme_constant_override(&"v_separation", 0)
 
@@ -389,7 +393,7 @@ func _build_trail_tool_bar() -> void:
 			var button := Button.new()
 			button.name = "TrailTool_%s" % type_id
 			button.tooltip_text = tr(label_key)
-			button.custom_minimum_size = Vector2(32, _PALETTE_ICON_SIZE)
+			button.custom_minimum_size = Vector2(20, _DROPDOWN_HEIGHT)
 			button.focus_mode = Control.FOCUS_NONE
 			if not texture_path.is_empty() and ResourceLoader.exists(texture_path):
 				button.icon = load(texture_path) as Texture2D

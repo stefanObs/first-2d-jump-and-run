@@ -3193,9 +3193,11 @@ func _test_campaign_workshop() -> Variant:
 			error = "The editor pane should keep the stamp grid from collapsing."
 		elif editor._cells.is_empty() or editor._cells[0].custom_minimum_size.y < 10.0:
 			error = "Stamp grid cells should stay tall enough to tap."
-		elif category_example == null or category_example.custom_minimum_size.y < 20.0:
+		elif category_example == null or category_example.custom_minimum_size.y < 12.0:
 			error = "Each stamp category should show an example thumbnail."
-		elif category_dropdown.custom_minimum_size.y > 24.0 or tool_dropdown.custom_minimum_size.y > 24.0:
+		elif category_example.custom_minimum_size.y > 16.0:
+			error = "Stamp palette icons should stay as compact as debug name labels."
+		elif category_dropdown.custom_minimum_size.y > 18.0 or tool_dropdown.custom_minimum_size.y > 18.0:
 			error = "Stamp dropdowns should stay compact to leave room for the grid and preview."
 		elif grid_scroll.horizontal_scroll_mode == ScrollContainer.SCROLL_MODE_SHOW_ALWAYS:
 			error = "The stamp grid should hide its built-in horizontal scrollbar."
