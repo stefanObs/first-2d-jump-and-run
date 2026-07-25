@@ -214,7 +214,23 @@ static func _validate_checkpoints(level: Node) -> PackedStringArray:
 	var errors: PackedStringArray = []
 	var grounds: Array[Dictionary] = []
 	for node in level.find_children("*", "PhysicsBody2D", true, false):
-		if String(node.name).begins_with("Ground"):
+		var node_name := String(node.name)
+		if node_name.begins_with("Ground") or node_name.begins_with("FloorSlopeBody"):
+			if node_name.ends_with("Fill"):
+				continue
+			if node_name.begins_with("FloorSlopeBody"):
+				var col := (node as Node).get_node_or_null("CollisionPolygon2D") as CollisionPolygon2D
+				if col == null or col.polygon.size() < 2:
+					continue
+				var min_x := INF
+				var max_x := -INF
+				for point in col.polygon:
+					var world: Vector2 = (node as Node2D).to_global(point)
+					min_x = minf(min_x, world.x)
+					max_x = maxf(max_x, world.x)
+				if max_x > min_x:
+					grounds.append({"left": min_x, "right": max_x})
+				continue
 			var surface := _surface_for(node as Node2D)
 			if not surface.is_empty():
 				grounds.append(surface)
@@ -254,7 +270,11 @@ static func _validate_visuals(level: Node) -> PackedStringArray:
 
 	for node in level.find_children("*", "PhysicsBody2D", true, false):
 		if _is_platform(node) and not _has_visible_art(node):
-			if String(node.name).begins_with("Ground") and level.get_node_or_null("TrailFloor") != null:
+			var node_name := String(node.name)
+			if node_name.begins_with("Ground") and level.get_node_or_null("TrailFloor") != null:
+				continue
+			if node_name.begins_with("FloorSlopeBody"):
+				# Dune collision is styled by FloorSlope* sprites on TrailFloor.
 				continue
 			errors.append("Platform %s has no visible styling." % node.name)
 	for node in level.find_children("*", "Area2D", true, false):
@@ -284,6 +304,8 @@ static func _validate_ground_props_clear_of_raised_platforms(level: Node) -> Pac
 	var raised: Array[Dictionary] = []
 	for node in level.find_children("*", "PhysicsBody2D", true, false):
 		if not _is_platform(node):
+			continue
+		if String(node.name).begins_with("FloorSlopeBody"):
 			continue
 		var surface := _surface_for(node as Node2D)
 		if not surface.is_empty() and float(surface["top"]) < 290.0:
@@ -507,20 +529,18 @@ static func _validate_rattlesnakes_clear_of_canyons(level: Node) -> PackedString
 static func _validate_canyon_up_needs_spring(level: Node) -> PackedStringArray:
 	## Far bank higher than near bank requires a spring on the approach side.
 	var errors: PackedStringArray = []
-	var spans := _ground_surface_spans(level)
-	if spans.size() < 2:
+	var gaps := _ground_canyon_gaps(level)
+	if gaps.is_empty():
 		return errors
 	var springs: Array[Node2D] = []
 	for node in level.find_children("*", "Area2D", true, false):
 		if node is SpringPad:
 			springs.append(node as Node2D)
-	for index in range(spans.size() - 1):
-		var left_end := float(spans[index]["right"])
-		var right_start := float(spans[index + 1]["left"])
-		if right_start - left_end <= 20.0:
-			continue
-		var near_top := float(spans[index]["top"])
-		var far_top := float(spans[index + 1]["top"])
+	for gap in gaps:
+		var left_end := float(gap["left"])
+		var right_start := float(gap["right"])
+		var near_top := float(gap["near_top"])
+		var far_top := float(gap["far_top"])
 		var rise := near_top - far_top
 		if rise < CANYON_HEIGHT_STEP_PX:
 			continue
@@ -727,7 +747,42 @@ static func _ground_canyon_gaps(level: Node) -> Array[Dictionary]:
 				"near_top": float(spans[index]["top"]),
 				"far_top": float(spans[index + 1]["top"]),
 			})
-	return gaps
+	# Dune slopes carve Ground cliff faces, leaving a gap that FloorSlopeBody walks.
+	# Those carved seams are not canyons — filter them out.
+	return _gaps_without_slope_bridges(level, gaps)
+
+
+static func _gaps_without_slope_bridges(level: Node, gaps: Array[Dictionary]) -> Array[Dictionary]:
+	if gaps.is_empty():
+		return gaps
+	var bridges: Array[Dictionary] = []
+	for body in level.find_children("FloorSlopeBody*", "StaticBody2D", true, false):
+		var col := body.get_node_or_null("CollisionPolygon2D") as CollisionPolygon2D
+		if col == null or col.polygon.size() < 2:
+			continue
+		var min_x := INF
+		var max_x := -INF
+		for point in col.polygon:
+			var world_x: float = body.to_global(point).x
+			min_x = minf(min_x, world_x)
+			max_x = maxf(max_x, world_x)
+		if max_x > min_x:
+			bridges.append({"left": min_x, "right": max_x})
+	if bridges.is_empty():
+		return gaps
+	var real_gaps: Array[Dictionary] = []
+	for gap in gaps:
+		var gap_left := float(gap["left"])
+		var gap_right := float(gap["right"])
+		var bridged := false
+		for bridge in bridges:
+			var overlap := minf(gap_right, float(bridge["right"])) - maxf(gap_left, float(bridge["left"]))
+			if overlap > (gap_right - gap_left) * 0.5:
+				bridged = true
+				break
+		if not bridged:
+			real_gaps.append(gap)
+	return real_gaps
 
 
 static func _solid_rect_for(node: Node2D) -> Rect2:
@@ -766,6 +821,7 @@ static func _is_platform(node: Node) -> bool:
 	var name_text := String(node.name)
 	return (
 		name_text.begins_with("Ground")
+		or name_text.begins_with("FloorSlopeBody")
 		or name_text.contains("Platform")
 		or name_text.begins_with("Moving")
 		or name_text.begins_with("Cloud")
@@ -776,6 +832,22 @@ static func _is_platform(node: Node) -> bool:
 
 
 static func _surface_for(node: Node2D) -> Dictionary:
+	var name_text := String(node.name)
+	if name_text.begins_with("FloorSlopeBody"):
+		var col := node.get_node_or_null("CollisionPolygon2D") as CollisionPolygon2D
+		if col == null or col.polygon.size() < 2:
+			return {}
+		var min_x := INF
+		var max_x := -INF
+		var min_y := INF
+		for point in col.polygon:
+			var world: Vector2 = node.to_global(point)
+			min_x = minf(min_x, world.x)
+			max_x = maxf(max_x, world.x)
+			min_y = minf(min_y, world.y)
+		if max_x <= min_x:
+			return {}
+		return {"name": name_text, "left": min_x, "right": max_x, "top": min_y}
 	var shape_node := node.get_node_or_null("CollisionShape2D") as CollisionShape2D
 	if shape_node == null or not (shape_node.shape is RectangleShape2D):
 		return {}

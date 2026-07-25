@@ -383,31 +383,108 @@ static func _draw_bank_slope(
 		return
 	if _is_canyon_between(left_strip, right_strip):
 		return
-	# Gentle kid-friendly dune (~4.5:1 run:rise) so walking needs no jump.
-	# Smoothstep max grade is ~1.5× the average, so keep run long enough.
-	var run := clampf(step * 4.5, 100.0, 240.0)
-	# Bite a little into each flat bank so slope crust meets desert top with no stepped lip.
-	const BANK_OVERLAP := 14.0
+	# Kid-walkable dune: keep peak grade under ~floor_max_angle (45°).
+	# Smoothstep peaks at ~1.5× average grade, so run ≈ 6.5× rise (and ≥160px).
+	var min_run := clampf(maxf(step * 6.5, step / tan(0.55)), 160.0, 420.0)
+	# Stay inside these two banks only — never spill into a neighboring canyon.
+	var bank_left := float(left_strip["left"]) + 4.0
+	var bank_right := float(right_strip["right"]) - 4.0
+	var avail := maxf(bank_right - bank_left, 40.0)
+	var run := minf(min_run, avail)
+	const BANK_OVERLAP := 20.0
+	var rising_right := left_top > right_top
 	var x_start: float
-	var y_start: float
 	var x_end: float
-	var y_end: float
-	# Dune always runs left→right from near bank desert onto the next bank desert.
-	x_start = float(left_strip["right"]) - BANK_OVERLAP
-	y_start = left_top
-	x_end = x_start + run
-	y_end = right_top
-	if left_top > right_top:
-		# Rising to the right — end flush on the high bank desert top.
-		var high_edge := float(right_strip["left"]) + BANK_OVERLAP
-		if x_end > high_edge:
-			x_end = high_edge
-			run = maxf(x_end - x_start, 80.0)
-			x_end = x_start + run
+	var y_start := left_top
+	var y_end := right_top
+	if rising_right:
+		# Climb onto the higher right bank; prefer ending on the high lip.
+		x_end = clampf(float(right_strip["left"]) + BANK_OVERLAP, bank_left + 20.0, bank_right)
+		x_start = clampf(x_end - run, bank_left, x_end - 40.0)
+		x_end = minf(x_start + run, bank_right)
+	else:
+		# Descend from the higher left bank.
+		x_start = clampf(float(left_strip["right"]) - BANK_OVERLAP, bank_left, bank_right - 20.0)
+		x_end = clampf(x_start + run, x_start + 40.0, bank_right)
+		x_start = maxf(x_end - run, bank_left)
+	# Final guard: keep the dune strictly between these banks.
+	x_start = clampf(x_start, bank_left, bank_right - 40.0)
+	x_end = clampf(x_end, x_start + 40.0, bank_right)
+	if x_end - x_start < 40.0:
+		return
+	# When the banks are too short for a full smoothstep dune, use a linear
+	# collision grade (lower peak angle) so kids can still walk it.
+	var curved := (x_end - x_start) >= min_run * 0.85
 
-	_paint_slope_fill(parent, dirt, x_start, y_start, x_end, y_end, index)
-	_paint_slope_crust(parent, surface, x_start, y_start, x_end, y_end, index)
-	_add_slope_collision(parent, x_start, y_start, x_end, y_end, index)
+	_paint_slope_fill(parent, dirt, x_start, y_start, x_end, y_end, index, curved)
+	_paint_slope_crust(parent, surface, x_start, y_start, x_end, y_end, index, curved)
+	_add_slope_collision(parent, x_start, y_start, x_end, y_end, index, curved)
+	# Remove the vertical cliff faces of Ground* boxes so the dune is walkable.
+	var level := parent.get_parent()
+	if level != null:
+		_carve_ground_walls_for_slope(level, x_start, y_start, x_end, y_end)
+
+
+static func _carve_ground_walls_for_slope(
+	level: Node,
+	x_start: float,
+	y_start: float,
+	x_end: float,
+	y_end: float
+) -> void:
+	## Inset Ground collision on the slope-facing bank edges so the old cliff wall
+	## cannot block walking; FloorSlopeBody provides the walk surface instead.
+	var high_y := minf(y_start, y_end)
+	var low_y := maxf(y_start, y_end)
+	var rising_right := y_start > y_end
+	var slope_left := minf(x_start, x_end) - 8.0
+	var slope_right := maxf(x_start, x_end) + 8.0
+	for node in level.find_children("Ground*", "StaticBody2D", true, false):
+		var body := node as StaticBody2D
+		if body == null:
+			continue
+		var shape_node := body.get_node_or_null("CollisionShape2D") as CollisionShape2D
+		if shape_node == null or not (shape_node.shape is RectangleShape2D):
+			continue
+		var rect := (shape_node.shape as RectangleShape2D).duplicate() as RectangleShape2D
+		var center := shape_node.global_position
+		var half := rect.size * 0.5
+		var left := center.x - half.x
+		var right := center.x + half.x
+		var top := center.y - half.y
+		# Only carve banks that touch this dune — not every same-height bank in the level.
+		if right < slope_left or left > slope_right:
+			continue
+		# Only carve banks that match this step's desert tops.
+		var on_high := absf(top - high_y) <= 18.0
+		var on_low := absf(top - low_y) <= 18.0
+		if not on_high and not on_low:
+			continue
+		var new_left := left
+		var new_right := right
+		if on_high:
+			# Pull the high bank's cliff face back under the dune top.
+			if rising_right:
+				new_left = maxf(left, x_end - 6.0)
+			else:
+				new_right = minf(right, x_start + 6.0)
+		if on_low:
+			# Keep the low bank from sticking a lip into the dune start.
+			if rising_right:
+				new_right = minf(right, x_start + 6.0)
+			else:
+				new_left = maxf(left, x_end - 6.0)
+		var new_w := new_right - new_left
+		if new_w < 24.0:
+			# Too narrow to walk — disable this cliff remnant.
+			shape_node.disabled = true
+			continue
+		if is_equal_approx(new_left, left) and is_equal_approx(new_right, right):
+			continue
+		rect.size = Vector2(new_w, rect.size.y)
+		shape_node.shape = rect
+		var delta_x := ((new_left + new_right) * 0.5) - center.x
+		shape_node.position.x += delta_x
 
 
 static func _slope_ease(t: float) -> float:
@@ -416,22 +493,31 @@ static func _slope_ease(t: float) -> float:
 	return x * x * (3.0 - 2.0 * x)
 
 
-static func _slope_y_at(x: float, x0: float, y0: float, x1: float, y1: float) -> float:
+static func _slope_y_at(
+	x: float, x0: float, y0: float, x1: float, y1: float, curved: bool = true
+) -> float:
 	var span := x1 - x0
 	if absf(span) < 0.1:
 		return y0
 	var t := (x - x0) / span
-	return lerpf(y0, y1, _slope_ease(t))
+	if curved:
+		return lerpf(y0, y1, _slope_ease(t))
+	return lerpf(y0, y1, clampf(t, 0.0, 1.0))
 
 
-static func _slope_tangent_angle(x: float, x0: float, y0: float, x1: float, y1: float) -> float:
+static func _slope_tangent_angle(
+	x: float, x0: float, y0: float, x1: float, y1: float, curved: bool = true
+) -> float:
 	var span := x1 - x0
 	if absf(span) < 0.1:
 		return 0.0
 	var t := clampf((x - x0) / span, 0.0, 1.0)
-	# d(smoothstep)/dt = 6t(1-t); world dy/dx = (y1-y0)/span * that.
-	var d_ease := 6.0 * t * (1.0 - t)
-	var dy_dx := ((y1 - y0) / span) * d_ease
+	var dy_dx: float
+	if curved:
+		var d_ease := 6.0 * t * (1.0 - t)
+		dy_dx = ((y1 - y0) / span) * d_ease
+	else:
+		dy_dx = (y1 - y0) / span
 	return atan(dy_dx)
 
 
@@ -442,7 +528,8 @@ static func _paint_slope_crust(
 	y_start: float,
 	x_end: float,
 	y_end: float,
-	index: int
+	index: int,
+	curved: bool = true
 ) -> void:
 	if surface == null:
 		return
@@ -457,8 +544,8 @@ static func _paint_slope_crust(
 	while along < length - 1.0:
 		var use := minf(tile_w, length - along)
 		var x := lerpf(x_start, x_end, (along + use * 0.5) / length)
-		var y := _slope_y_at(x, x_start, y_start, x_end, y_end)
-		var angle := _slope_tangent_angle(x, x_start, y_start, x_end, y_end)
+		var y := _slope_y_at(x, x_start, y_start, x_end, y_end, curved)
+		var angle := _slope_tangent_angle(x, x_start, y_start, x_end, y_end, curved)
 		var into_ground := Vector2(-sin(angle), cos(angle))
 		var sprite := Sprite2D.new()
 		sprite.name = "FloorSlope%d_%d" % [index, tile_i]
@@ -482,7 +569,8 @@ static func _paint_slope_fill(
 	y_start: float,
 	x_end: float,
 	y_end: float,
-	index: int
+	index: int,
+	curved: bool = true
 ) -> void:
 	## Dirt under the curved sand crust so the bank reads as one soft dune, not a cliff.
 	var x0 := minf(x_start, x_end)
@@ -499,7 +587,9 @@ static func _paint_slope_fill(
 			var x := x0
 			var tile_i := 0
 			while x < x1 - 0.5:
-				var surface_y: float = _slope_y_at(x + tile_w * 0.5, x_start, y_start, x_end, y_end)
+				var surface_y: float = _slope_y_at(
+					x + tile_w * 0.5, x_start, y_start, x_end, y_end, curved
+				)
 				if y + row_h < surface_y + 8.0:
 					x += tile_w * 0.85
 					continue
@@ -529,7 +619,8 @@ static func _add_slope_collision(
 	y_start: float,
 	x_end: float,
 	y_end: float,
-	index: int
+	index: int,
+	curved: bool = true
 ) -> void:
 	var body := StaticBody2D.new()
 	body.name = "FloorSlopeBody%d" % index
@@ -544,7 +635,7 @@ static func _add_slope_collision(
 	for i in range(samples + 1):
 		var t := float(i) / float(samples)
 		var x := lerpf(x_start, x_end, t)
-		var y := _slope_y_at(x, x_start, y_start, x_end, y_end)
+		var y := _slope_y_at(x, x_start, y_start, x_end, y_end, curved)
 		top_pts.append(Vector2(x, y))
 		bottom_pts.append(Vector2(x, y + thick))
 	# Walkable curved top, then reverse along the underside.

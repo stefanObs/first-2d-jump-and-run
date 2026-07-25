@@ -2912,14 +2912,49 @@ func _test_trail_row_model() -> Variant:
 		var mid: Vector2 = col.polygon[mid_i]
 		var last_top: Vector2 = col.polygon[int(col.polygon.size() / 2) - 1]
 		var end_run := absf(last_top.x - first.x)
-		if end_run < 90.0:
+		if end_run < 40.0:
 			level.free()
 			return "Walkable dunes need a gentle run (start/end on desert level)."
-		var mid_drop := absf(mid.y - first.y)
 		var total_drop := absf(last_top.y - first.y)
-		if total_drop > 1.0 and mid_drop < total_drop * 0.2:
+		if total_drop > 1.0:
+			var peak_grade := total_drop / end_run
+			# Smoothstep dunes peak ~1.5× average; linear dunes use average.
+			if col.polygon.size() >= 12:
+				peak_grade *= 1.5
+			if peak_grade > tan(deg_to_rad(55.0)):
+				level.free()
+				return "Desert dunes are too steep to walk — lengthen the run."
+		var mid_drop := absf(mid.y - first.y)
+		if total_drop > 1.0 and mid_drop < total_drop * 0.15:
 			level.free()
 			return "Desert slope mid-point should follow a curved dune profile."
+		# High-bank Ground cliff must be carved so the dune is not blocked.
+		var high_y := minf(first.y, last_top.y)
+		var rising_right := first.y > last_top.y
+		var carved := false
+		for ground_body in level.find_children("Ground*", "StaticBody2D", true, false):
+			var shape_node := (ground_body as Node).get_node_or_null("CollisionShape2D") as CollisionShape2D
+			if shape_node == null:
+				continue
+			if shape_node.disabled:
+				carved = true
+				continue
+			if not (shape_node.shape is RectangleShape2D):
+				continue
+			var rect := shape_node.shape as RectangleShape2D
+			var center := shape_node.global_position
+			var top := center.y - rect.size.y * 0.5
+			if absf(top - high_y) > 18.0:
+				continue
+			var left := center.x - rect.size.x * 0.5
+			var right := center.x + rect.size.x * 0.5
+			if rising_right and left >= last_top.x - 8.0:
+				carved = true
+			elif (not rising_right) and right <= first.x + 8.0:
+				carved = true
+		if not carved and total_drop > 20.0:
+			level.free()
+			return "Ground cliff walls must be carved open so dunes are walkable."
 	level.free()
 	# Height difference across a canyon must NOT get a bridging slope — canyon is the step.
 	var canyon_step := CustomLevelStore.default_level(slot)

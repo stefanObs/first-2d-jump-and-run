@@ -8,9 +8,9 @@ size = Vector2(28, 44)
 [node name="Player" type="CharacterBody2D"]
 collision_layer = 2
 collision_mask = 1
-floor_stop_on_slope = true
+floor_stop_on_slope = false
 floor_constant_speed = true
-floor_max_angle = 0.785398
+floor_max_angle = 0.959931
 script = ExtResource("1_player")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
