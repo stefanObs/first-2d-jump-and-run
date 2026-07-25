@@ -100,11 +100,9 @@ var _export_dialog: FileDialog
 var _import_dialog: FileDialog
 const _EDGE_SCROLL_ZONE := 28.0
 const _EDGE_SCROLL_SPEED := 320.0
-## Matches DebugLabels element tag cap height (debug_labels.gd font_size 14).
-const _DEBUG_NAMES_TEXT_HEIGHT := 14.0
-const _DROPDOWN_FONT_SIZE := 11
-const _DROPDOWN_HEIGHT := 16.0
-const _PALETTE_ICON_SIZE := _DEBUG_NAMES_TEXT_HEIGHT
+const _DROPDOWN_FONT_SIZE := 10
+const _DROPDOWN_HEIGHT := 18.0
+const _PALETTE_ICON_SIZE := 16.0
 
 const TRAIL_PACK_FILTER := "*.cowboytrail ; Cowboy Trail Pack"
 
@@ -344,9 +342,9 @@ func _style_dropdown(dropdown: OptionButton) -> void:
 	normal.border_color = Color(0.45, 0.24, 0.08, 1.0)
 	normal.set_corner_radius_all(4)
 	normal.content_margin_left = 6
-	normal.content_margin_top = 1
+	normal.content_margin_top = 2
 	normal.content_margin_right = 6
-	normal.content_margin_bottom = 1
+	normal.content_margin_bottom = 2
 	dropdown.add_theme_stylebox_override(&"normal", normal)
 	dropdown.add_theme_stylebox_override(&"hover", normal)
 	dropdown.add_theme_stylebox_override(&"pressed", normal)
@@ -354,9 +352,9 @@ func _style_dropdown(dropdown: OptionButton) -> void:
 	dropdown.add_theme_color_override(&"font_color", Color(0.35, 0.16, 0.05))
 	dropdown.add_theme_constant_override(&"icon_max_width", int(_PALETTE_ICON_SIZE))
 	var popup := dropdown.get_popup()
-	popup.add_theme_font_size_override(&"font_size", 10)
+	popup.add_theme_font_size_override(&"font_size", _DROPDOWN_FONT_SIZE)
 	popup.add_theme_constant_override(&"icon_max_width", int(_PALETTE_ICON_SIZE))
-	popup.add_theme_constant_override(&"v_separation", 0)
+	popup.add_theme_constant_override(&"v_separation", 2)
 
 
 func _populate_category_dropdown() -> void:
@@ -393,7 +391,7 @@ func _build_trail_tool_bar() -> void:
 			var button := Button.new()
 			button.name = "TrailTool_%s" % type_id
 			button.tooltip_text = tr(label_key)
-			button.custom_minimum_size = Vector2(20, _DROPDOWN_HEIGHT)
+			button.custom_minimum_size = Vector2(22, _DROPDOWN_HEIGHT)
 			button.focus_mode = Control.FOCUS_NONE
 			if not texture_path.is_empty() and ResourceLoader.exists(texture_path):
 				button.icon = load(texture_path) as Texture2D
