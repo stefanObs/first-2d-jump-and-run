@@ -383,108 +383,123 @@ static func _draw_bank_slope(
 		return
 	if _is_canyon_between(left_strip, right_strip):
 		return
-	# Gentle kid-friendly grade (~2.5–3:1 run:rise), capped so it stays local.
-	var run := clampf(step * 2.75, 56.0, 150.0)
-	var left_is_high := left_top < right_top
+	# Gentle kid-friendly dune (~4.5:1 run:rise) so walking needs no jump.
+	# Smoothstep max grade is ~1.5× the average, so keep run long enough.
+	var run := clampf(step * 4.5, 100.0, 240.0)
 	# Bite a little into each flat bank so slope crust meets desert top with no stepped lip.
 	const BANK_OVERLAP := 14.0
-	var x_high: float
-	var y_high: float
-	var x_low: float
-	var y_low: float
-	if left_is_high:
-		x_high = float(left_strip["right"]) - BANK_OVERLAP
-		y_high = left_top
-		x_low = x_high + run
-		y_low = right_top
-	else:
-		x_high = float(right_strip["left"]) + BANK_OVERLAP
-		y_high = right_top
-		x_low = x_high - run
-		y_low = left_top
+	var x_start: float
+	var y_start: float
+	var x_end: float
+	var y_end: float
+	# Dune always runs left→right from near bank desert onto the next bank desert.
+	x_start = float(left_strip["right"]) - BANK_OVERLAP
+	y_start = left_top
+	x_end = x_start + run
+	y_end = right_top
+	if left_top > right_top:
+		# Rising to the right — end flush on the high bank desert top.
+		var high_edge := float(right_strip["left"]) + BANK_OVERLAP
+		if x_end > high_edge:
+			x_end = high_edge
+			run = maxf(x_end - x_start, 80.0)
+			x_end = x_start + run
 
-	_paint_slope_fill(parent, dirt, x_high, y_high, x_low, y_low, index)
-	_paint_slope_crust(parent, surface, x_high, y_high, x_low, y_low, index)
-	_add_slope_collision(parent, x_high, y_high, x_low, y_low, index)
+	_paint_slope_fill(parent, dirt, x_start, y_start, x_end, y_end, index)
+	_paint_slope_crust(parent, surface, x_start, y_start, x_end, y_end, index)
+	_add_slope_collision(parent, x_start, y_start, x_end, y_end, index)
+
+
+static func _slope_ease(t: float) -> float:
+	## Smoothstep — flat derivative at both desert ends (gentle dune, not a ramp lip).
+	var x := clampf(t, 0.0, 1.0)
+	return x * x * (3.0 - 2.0 * x)
+
+
+static func _slope_y_at(x: float, x0: float, y0: float, x1: float, y1: float) -> float:
+	var span := x1 - x0
+	if absf(span) < 0.1:
+		return y0
+	var t := (x - x0) / span
+	return lerpf(y0, y1, _slope_ease(t))
+
+
+static func _slope_tangent_angle(x: float, x0: float, y0: float, x1: float, y1: float) -> float:
+	var span := x1 - x0
+	if absf(span) < 0.1:
+		return 0.0
+	var t := clampf((x - x0) / span, 0.0, 1.0)
+	# d(smoothstep)/dt = 6t(1-t); world dy/dx = (y1-y0)/span * that.
+	var d_ease := 6.0 * t * (1.0 - t)
+	var dy_dx := ((y1 - y0) / span) * d_ease
+	return atan(dy_dx)
 
 
 static func _paint_slope_crust(
 	parent: Node,
 	surface: Texture2D,
-	x_high: float,
-	y_high: float,
-	x_low: float,
-	y_low: float,
+	x_start: float,
+	y_start: float,
+	x_end: float,
+	y_end: float,
 	index: int
 ) -> void:
 	if surface == null:
 		return
-	var dx := x_low - x_high
-	var dy := y_low - y_high
-	var length := maxf(sqrt(dx * dx + dy * dy), 1.0)
-	var angle := atan2(dy, dx)
+	var length := maxf(absf(x_end - x_start), 1.0)
 	var tex_size := surface.get_size()
 	# Match flat FloorSurface thickness so ends seam with the desert crust.
 	var crust_h := 48.0
 	var scale_y := crust_h / tex_size.y
 	var tile_w := tex_size.x * scale_y * 0.92
-	# Perpendicular into the bank — half crust so the upper face sits on the desert top line.
-	var into_ground := Vector2(-sin(angle), cos(angle))
 	var along := 0.0
 	var tile_i := 0
 	while along < length - 1.0:
 		var use := minf(tile_w, length - along)
-		var t := (along + use * 0.5) / length
-		var mid := Vector2(lerpf(x_high, x_low, t), lerpf(y_high, y_low, t))
+		var x := lerpf(x_start, x_end, (along + use * 0.5) / length)
+		var y := _slope_y_at(x, x_start, y_start, x_end, y_end)
+		var angle := _slope_tangent_angle(x, x_start, y_start, x_end, y_end)
+		var into_ground := Vector2(-sin(angle), cos(angle))
 		var sprite := Sprite2D.new()
 		sprite.name = "FloorSlope%d_%d" % [index, tile_i]
 		sprite.texture = surface
 		sprite.centered = true
-		sprite.position = mid + into_ground * (crust_h * 0.5)
+		sprite.position = Vector2(x, y) + into_ground * (crust_h * 0.5)
 		sprite.rotation = angle
 		sprite.scale = Vector2(use / tex_size.x, scale_y)
 		sprite.z_index = 3
 		parent.add_child(sprite)
 		along += use * 0.78
 		tile_i += 1
-		if tile_i > 40:
+		if tile_i > 50:
 			break
 
 
 static func _paint_slope_fill(
 	parent: Node,
 	dirt: Texture2D,
-	x_high: float,
-	y_high: float,
-	x_low: float,
-	y_low: float,
+	x_start: float,
+	y_start: float,
+	x_end: float,
+	y_end: float,
 	index: int
 ) -> void:
-	## Dirt wedge under the sand crust so the bank reads as one soft dune, not a cliff.
-	var x0 := minf(x_high, x_low)
-	var x1 := maxf(x_high, x_low)
-	var top_at := func(x: float) -> float:
-		if absf(x1 - x0) < 0.1:
-			return minf(y_high, y_low)
-		var t := (x - x0) / (x1 - x0)
-		# Map world x back onto the high→low line.
-		var y_at_x0 := y_high if x_high <= x_low else y_low
-		var y_at_x1 := y_low if x_high <= x_low else y_high
-		return lerpf(y_at_x0, y_at_x1, t)
-
-	var deep := maxf(y_high, y_low) + 96.0
+	## Dirt under the curved sand crust so the bank reads as one soft dune, not a cliff.
+	var x0 := minf(x_start, x_end)
+	var x1 := maxf(x_start, x_end)
+	var deep := maxf(y_start, y_end) + 96.0
 	if dirt != null:
 		var tex_size := dirt.get_size()
 		var row_h := 28.0
 		var scale_y := row_h / tex_size.y
 		var tile_w := tex_size.x * scale_y
-		var y := minf(y_high, y_low) + 18.0
+		var y := minf(y_start, y_end) + 18.0
 		var row := 0
 		while y < deep:
 			var x := x0
 			var tile_i := 0
 			while x < x1 - 0.5:
-				var surface_y: float = top_at.call(x + tile_w * 0.5)
+				var surface_y: float = _slope_y_at(x + tile_w * 0.5, x_start, y_start, x_end, y_end)
 				if y + row_h < surface_y + 8.0:
 					x += tile_w * 0.85
 					continue
@@ -510,10 +525,10 @@ static func _paint_slope_fill(
 
 static func _add_slope_collision(
 	parent: Node,
-	x_high: float,
-	y_high: float,
-	x_low: float,
-	y_low: float,
+	x_start: float,
+	y_start: float,
+	x_end: float,
+	y_end: float,
 	index: int
 ) -> void:
 	var body := StaticBody2D.new()
@@ -523,12 +538,22 @@ static func _add_slope_collision(
 	var col := CollisionPolygon2D.new()
 	col.name = "CollisionPolygon2D"
 	var thick := 34.0
-	col.polygon = PackedVector2Array([
-		Vector2(x_high, y_high),
-		Vector2(x_low, y_low),
-		Vector2(x_low, y_low + thick),
-		Vector2(x_high, y_high + thick),
-	])
+	var samples := 10
+	var top_pts: PackedVector2Array = []
+	var bottom_pts: PackedVector2Array = []
+	for i in range(samples + 1):
+		var t := float(i) / float(samples)
+		var x := lerpf(x_start, x_end, t)
+		var y := _slope_y_at(x, x_start, y_start, x_end, y_end)
+		top_pts.append(Vector2(x, y))
+		bottom_pts.append(Vector2(x, y + thick))
+	# Walkable curved top, then reverse along the underside.
+	var poly: PackedVector2Array = []
+	for p in top_pts:
+		poly.append(p)
+	for i in range(bottom_pts.size() - 1, -1, -1):
+		poly.append(bottom_pts[i])
+	col.polygon = poly
 	body.add_child(col)
 	parent.add_child(body)
 

@@ -565,7 +565,7 @@ scale = Vector2(4.8, 1.8)
 
 
 [node name="Ground9" type="StaticBody2D" parent="."]
-position = Vector2(4530, 312)
+position = Vector2(4530, 352)
 [node name="Visual" type="ColorRect" parent="Ground9"]
 offset_left = -210.0
 offset_top = -32.0
@@ -581,22 +581,6 @@ color = Color(0.45, 0.72, 0.28, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground9"]
 shape = SubResource("GroundSeg")
 
-[node name="Ground9Fill" type="StaticBody2D" parent="."]
-position = Vector2(4530, 352)
-[node name="Visual" type="ColorRect" parent="Ground9Fill"]
-offset_left = -210.0
-offset_top = -32.0
-offset_right = 210.0
-offset_bottom = 32.0
-color = Color(0.72, 0.46, 0.22, 1)
-[node name="TopStripe" type="ColorRect" parent="Ground9Fill"]
-offset_left = -210.0
-offset_top = -32.0
-offset_right = 210.0
-offset_bottom = -18.0
-color = Color(0.45, 0.72, 0.28, 1)
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Ground9Fill"]
-shape = SubResource("GroundSeg")
 
 
 [node name="Ground10" type="StaticBody2D" parent="."]
@@ -736,9 +720,6 @@ position = Vector2(2270, 330)
 [node name="Cactus16" parent="." instance=ExtResource("5_hazard")]
 position = Vector2(3380, 330)
 
-
-[node name="Rattlesnake22" parent="." instance=ExtResource("18_snake")]
-position = Vector2(4100, 330)
 
 
 [node name="Cactus34" parent="." instance=ExtResource("5_hazard")]

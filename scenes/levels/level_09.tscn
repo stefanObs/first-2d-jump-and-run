@@ -465,7 +465,7 @@ shape = SubResource("GroundSeg")
 
 
 [node name="Ground4" type="StaticBody2D" parent="."]
-position = Vector2(2080, 352)
+position = Vector2(2080, 312)
 [node name="Visual" type="ColorRect" parent="Ground4"]
 offset_left = -210.0
 offset_top = -32.0
@@ -482,8 +482,27 @@ color = Color(0.45, 0.72, 0.28, 1)
 shape = SubResource("GroundSeg")
 
 
+[node name="Ground4Fill" type="StaticBody2D" parent="."]
+position = Vector2(2080, 352)
+[node name="Visual" type="ColorRect" parent="Ground4Fill"]
+offset_left = -210.0
+offset_top = -32.0
+offset_right = 210.0
+offset_bottom = 32.0
+color = Color(0.72, 0.46, 0.22, 1)
+[node name="TopStripe" type="ColorRect" parent="Ground4Fill"]
+offset_left = -210.0
+offset_top = -32.0
+offset_right = 210.0
+offset_bottom = -18.0
+color = Color(0.45, 0.72, 0.28, 1)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Ground4Fill"]
+shape = SubResource("GroundSeg")
+
+
+
 [node name="Ground5" type="StaticBody2D" parent="."]
-position = Vector2(2510, 352)
+position = Vector2(2510, 312)
 [node name="Visual" type="ColorRect" parent="Ground5"]
 offset_left = -210.0
 offset_top = -32.0
@@ -498,6 +517,25 @@ offset_bottom = -18.0
 color = Color(0.45, 0.72, 0.28, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground5"]
 shape = SubResource("GroundSeg")
+
+
+[node name="Ground5Fill" type="StaticBody2D" parent="."]
+position = Vector2(2510, 352)
+[node name="Visual" type="ColorRect" parent="Ground5Fill"]
+offset_left = -210.0
+offset_top = -32.0
+offset_right = 210.0
+offset_bottom = 32.0
+color = Color(0.72, 0.46, 0.22, 1)
+[node name="TopStripe" type="ColorRect" parent="Ground5Fill"]
+offset_left = -210.0
+offset_top = -32.0
+offset_right = 210.0
+offset_bottom = -18.0
+color = Color(0.45, 0.72, 0.28, 1)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Ground5Fill"]
+shape = SubResource("GroundSeg")
+
 
 
 [node name="Pit6" parent="." instance=ExtResource("5_hazard")]
@@ -641,8 +679,11 @@ color = Color(0.45, 0.72, 0.28, 1)
 shape = SubResource("GroundSeg")
 
 
+
+
+
 [node name="Ground13" type="StaticBody2D" parent="."]
-position = Vector2(6400, 352)
+position = Vector2(6400, 312)
 [node name="Visual" type="ColorRect" parent="Ground13"]
 offset_left = -210.0
 offset_top = -32.0
@@ -657,6 +698,25 @@ offset_bottom = -18.0
 color = Color(0.45, 0.72, 0.28, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground13"]
 shape = SubResource("GroundSeg")
+
+
+[node name="Ground13Fill" type="StaticBody2D" parent="."]
+position = Vector2(6400, 352)
+[node name="Visual" type="ColorRect" parent="Ground13Fill"]
+offset_left = -210.0
+offset_top = -32.0
+offset_right = 210.0
+offset_bottom = 32.0
+color = Color(0.72, 0.46, 0.22, 1)
+[node name="TopStripe" type="ColorRect" parent="Ground13Fill"]
+offset_left = -210.0
+offset_top = -32.0
+offset_right = 210.0
+offset_bottom = -18.0
+color = Color(0.45, 0.72, 0.28, 1)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Ground13Fill"]
+shape = SubResource("GroundSeg")
+
 
 
 [node name="Ground14" type="StaticBody2D" parent="."]
@@ -708,11 +768,11 @@ position = Vector2(4845, 330)
 
 
 [node name="Cactus34" parent="." instance=ExtResource("5_hazard")]
-position = Vector2(6250, 330)
+position = Vector2(5980, 330)
 
 
 [node name="Checkpoint" parent="." instance=ExtResource("3_checkpoint")]
-position = Vector2(2160, 320)
+position = Vector2(2160, 280)
 
 
 [node name="CheckpointB" parent="." instance=ExtResource("3_checkpoint")]
@@ -859,12 +919,12 @@ position = Vector2(5740, 150)
 
 
 [node name="Spring5" parent="." instance=ExtResource("11_spring")]
-position = Vector2(6640, 320)
+position = Vector2(6720, 320)
 bounce_velocity = -820.0
 
 
 [node name="SpringLedge5" type="StaticBody2D" parent="."]
-position = Vector2(6800, 200)
+position = Vector2(6880, 200)
 [node name="Visual" type="ColorRect" parent="SpringLedge5"]
 offset_left = -110.0
 offset_top = -16.0
@@ -882,7 +942,7 @@ shape = SubResource("BlockWide")
 
 
 [node name="SpringStar5" parent="." instance=ExtResource("9_star")]
-position = Vector2(6800, 150)
+position = Vector2(6880, 150)
 
 
 [node name="BootsHopLedge" type="StaticBody2D" parent="."]
@@ -977,7 +1037,7 @@ move_speed = 48.0
 
 
 [node name="Opponent1" parent="." instance=ExtResource("13_opp")]
-position = Vector2(2500, 320)
+position = Vector2(2500, 280)
 point_a = Vector2(-60, 0)
 point_b = Vector2(60, 0)
 move_speed = 48.0

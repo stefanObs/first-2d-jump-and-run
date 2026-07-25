@@ -2,7 +2,7 @@
 
 Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, no lives/game-over, nonviolent lasso. **German is the default language**; English is fully supported. Optional spoken instructions use local OS TTS (Narrator).
 
-**Content version:** `1.3.61` (see `content_version.txt`). Launchers reimport when this stamp changes.
+**Content version:** `1.3.62` (see `content_version.txt`). Launchers reimport when this stamp changes.
 
 This README is the **binding source of truth** for gameplay, level design, art, i18n, and audio. Agents and contributors must follow it (see [Agent / contributor rules](#agent--contributor-rules)).
 
@@ -80,6 +80,7 @@ Agents **must** honor these when editing levels or trail systems:
 - User-facing and UI copy: **canyon**, not pit (legacy node names like `PitMouth` may remain internally).
 - Bandits: head stomp / lasso tie; side contact hurts; **turn at plank edges** (do not walk off).
 - **No cactus inside canyon mouths** or on hand-painted rim bands (keep clear of the rim body past the gap).
+- **No rattlesnake directly in front of** (approaching) a canyon mouth.
 - **No timed doors** (`TimedDoor`) over ground canyon gaps or on rim bands (tall gates must not sit above canyon mouths).
 - **Conveyors** must not push the cowboy into a canyon. Pair each belt with a timed door on **solid ground** in the push direction (Door0/Door4 pattern), or keep clear solid runout — never a belt that dumps into an open gap after a rim door was removed.
 
@@ -93,8 +94,10 @@ Agents **must** honor these when editing levels or trail systems:
 
 ### Floor height
 
-- Where desert banks sit at different heights **with continuous ground** (no canyon between), paint a **natural soft slope** with trail desert/dirt art (not a flat cliff face or ColorRect step). Slopes must be walkable; slope crust ends must **meet the flat desert top** (same height/seam, no stepped lip).
+- Where desert banks sit at different heights **with continuous ground** (no canyon between), paint a **natural soft curved slope** (gentle dune) with trail desert/dirt art (not a flat cliff face or ColorRect step). Slopes must be **walkable without jumping**; slope crust ends must **start and end on the flat desert tops** (same height/seam, no stepped lip).
 - If a **canyon** separates banks at different heights, the canyon is the transition — do **not** paint a slope (or slope collision) across the gap.
+- If the far bank after a canyon is **higher** than the near bank, there **must** be a spring on the approach (near) side so the jump is solvable. Without that spring, the far bank must be the same height or lower.
+- Levels **7–10** each need **2–10** continuous height differences (distinct walk-surface Y changes along continuous ground; canyon-only transitions do not count).
 
 ### Canyon crossing
 

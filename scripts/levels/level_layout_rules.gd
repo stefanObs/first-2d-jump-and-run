@@ -17,6 +17,11 @@ const CONVEYOR_HALF_WIDTH := 80.0
 const CONVEYOR_CANYON_PROBE_PX := 720.0
 const CONVEYOR_DOOR_CATCH_PX := 55.0
 const SPRING_APPROACH_PX := 350.0
+const RATTLESNAKE_CANYON_CLEAR_PX := 120.0
+const CANYON_HEIGHT_STEP_PX := 10.0
+const CONTINUOUS_HEIGHT_STEP_PX := 10.0
+const LATE_LEVEL_HEIGHT_DIFF_MIN := 2
+const LATE_LEVEL_HEIGHT_DIFF_MAX := 10
 const CARRION_MAX_SCALE := 0.65
 const CARRION_VISUAL_HALF := Vector2(74.0, 46.0)
 const PLAYER_BODY_HEIGHT := 44.0
@@ -37,9 +42,12 @@ static func validate_level_node(level: Node) -> PackedStringArray:
 	errors.append_array(_validate_ground_props_clear_of_raised_platforms(level))
 	errors.append_array(_validate_cactus_clear_of_springs(level))
 	errors.append_array(_validate_cactus_clear_of_canyons(level))
+	errors.append_array(_validate_rattlesnakes_clear_of_canyons(level))
+	errors.append_array(_validate_canyon_up_needs_spring(level))
 	errors.append_array(_validate_timed_doors_clear_of_canyons(level))
 	errors.append_array(_validate_conveyors_not_pushing_into_canyons(level))
 	errors.append_array(_validate_no_slopes_across_canyons(level))
+	errors.append_array(_validate_late_level_height_differences(level))
 	errors.append_array(_validate_carrion_flight_paths(level))
 	errors.append_array(_validate_mode_item_spacing(level))
 	errors.append_array(_validate_visuals(level))
@@ -461,6 +469,108 @@ static func _validate_conveyors_not_pushing_into_canyons(level: Node) -> PackedS
 	return errors
 
 
+static func _validate_rattlesnakes_clear_of_canyons(level: Node) -> PackedStringArray:
+	## Snakes must not sit on the approach (near) bank right in front of a canyon mouth.
+	var errors: PackedStringArray = []
+	var gaps := _ground_canyon_gaps(level)
+	if gaps.is_empty():
+		return errors
+	for node in level.find_children("*", "Area2D", true, false):
+		if not (node is Rattlesnake):
+			continue
+		var snake := node as Node2D
+		var snake_rect := _approx_rect(snake, Vector2(88, 28))
+		var snake_right := snake_rect.end.x
+		for gap in gaps:
+			var gap_left := float(gap["left"])
+			var gap_right := float(gap["right"])
+			if snake_right > gap_left and snake_rect.position.x < gap_right:
+				errors.append(
+					"Rattlesnake %s sits inside canyon gap %.0f..%.0f; remove it."
+					% [snake.name, gap_left, gap_right]
+				)
+				break
+			# Approaching from the left (campaign runs rightward).
+			if snake_right > gap_left:
+				continue
+			var edge_dist := gap_left - snake_right
+			if edge_dist >= RATTLESNAKE_CANYON_CLEAR_PX:
+				continue
+			errors.append(
+				"Rattlesnake %s is directly in front of canyon gap %.0f..%.0f."
+				% [snake.name, gap_left, gap_right]
+			)
+			break
+	return errors
+
+
+static func _validate_canyon_up_needs_spring(level: Node) -> PackedStringArray:
+	## Far bank higher than near bank requires a spring on the approach side.
+	var errors: PackedStringArray = []
+	var spans := _ground_surface_spans(level)
+	if spans.size() < 2:
+		return errors
+	var springs: Array[Node2D] = []
+	for node in level.find_children("*", "Area2D", true, false):
+		if node is SpringPad:
+			springs.append(node as Node2D)
+	for index in range(spans.size() - 1):
+		var left_end := float(spans[index]["right"])
+		var right_start := float(spans[index + 1]["left"])
+		if right_start - left_end <= 20.0:
+			continue
+		var near_top := float(spans[index]["top"])
+		var far_top := float(spans[index + 1]["top"])
+		var rise := near_top - far_top
+		if rise < CANYON_HEIGHT_STEP_PX:
+			continue
+		var spring_ok := false
+		for spring in springs:
+			var sx := spring.global_position.x
+			if left_end - SPRING_APPROACH_PX <= sx and sx <= left_end + 40.0:
+				spring_ok = true
+				break
+		if spring_ok:
+			continue
+		errors.append(
+			"Canyon gap %.0f..%.0f ends higher (rise %.0f) without an approach spring."
+			% [left_end, right_start, rise]
+		)
+	return errors
+
+
+static func _validate_late_level_height_differences(level: Node) -> PackedStringArray:
+	## Levels 7–10 need a modest amount of continuous bank height steps (not canyon-only).
+	var errors: PackedStringArray = []
+	var level_number := 0
+	if level is LevelController:
+		level_number = (level as LevelController).level_number
+	elif level.get("level_number") != null:
+		level_number = int(level.get("level_number"))
+	if level_number < 7 or level_number > 10:
+		return errors
+	var count := count_continuous_height_differences(level)
+	if count < LATE_LEVEL_HEIGHT_DIFF_MIN or count > LATE_LEVEL_HEIGHT_DIFF_MAX:
+		errors.append(
+			"Level %d needs %d–%d continuous height differences (found %d)."
+			% [level_number, LATE_LEVEL_HEIGHT_DIFF_MIN, LATE_LEVEL_HEIGHT_DIFF_MAX, count]
+		)
+	return errors
+
+
+static func count_continuous_height_differences(level: Node) -> int:
+	## Distinct walk-surface Y changes along continuous ground (excludes canyon transitions).
+	var merged := WildWestTheme._merge_segments(WildWestTheme._collect_ground_segments(level))
+	var count := 0
+	for index in range(merged.size() - 1):
+		if WildWestTheme._is_canyon_between(merged[index], merged[index + 1]):
+			continue
+		var step := absf(float(merged[index]["top"]) - float(merged[index + 1]["top"]))
+		if step >= CONTINUOUS_HEIGHT_STEP_PX:
+			count += 1
+	return count
+
+
 static func _validate_no_slopes_across_canyons(level: Node) -> PackedStringArray:
 	## Height changes across a canyon use the canyon itself — never a painted slope.
 	var errors: PackedStringArray = []
@@ -590,20 +700,33 @@ static func _validate_carrion_flight_paths(level: Node) -> PackedStringArray:
 	return errors
 
 
-static func _ground_canyon_gaps(level: Node) -> Array[Dictionary]:
+static func _ground_surface_spans(level: Node) -> Array[Dictionary]:
 	var spans: Array[Dictionary] = []
 	for body in level.find_children("Ground*", "StaticBody2D", true, false):
+		# Fill blocks only pad under raised banks — walk top comes from the non-Fill ground.
+		if String(body.name).ends_with("Fill"):
+			continue
 		var surface := _surface_for(body as Node2D)
 		if surface.is_empty():
 			continue
 		spans.append(surface)
 	spans.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["left"]) < float(b["left"]))
+	return spans
+
+
+static func _ground_canyon_gaps(level: Node) -> Array[Dictionary]:
+	var spans := _ground_surface_spans(level)
 	var gaps: Array[Dictionary] = []
 	for index in range(spans.size() - 1):
 		var left_end := float(spans[index]["right"])
 		var right_start := float(spans[index + 1]["left"])
 		if right_start - left_end > 20.0:
-			gaps.append({"left": left_end, "right": right_start})
+			gaps.append({
+				"left": left_end,
+				"right": right_start,
+				"near_top": float(spans[index]["top"]),
+				"far_top": float(spans[index + 1]["top"]),
+			})
 	return gaps
 
 

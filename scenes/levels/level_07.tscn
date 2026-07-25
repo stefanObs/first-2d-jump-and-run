@@ -490,7 +490,7 @@ shape = SubResource("GroundSeg")
 
 
 [node name="Ground5" type="StaticBody2D" parent="."]
-position = Vector2(2510, 352)
+position = Vector2(2510, 312)
 [node name="Visual" type="ColorRect" parent="Ground5"]
 offset_left = -210.0
 offset_top = -32.0
@@ -505,6 +505,25 @@ offset_bottom = -18.0
 color = Color(0.45, 0.72, 0.28, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground5"]
 shape = SubResource("GroundSeg")
+
+
+[node name="Ground5Fill" type="StaticBody2D" parent="."]
+position = Vector2(2510, 352)
+[node name="Visual" type="ColorRect" parent="Ground5Fill"]
+offset_left = -210.0
+offset_top = -32.0
+offset_right = 210.0
+offset_bottom = 32.0
+color = Color(0.72, 0.46, 0.22, 1)
+[node name="TopStripe" type="ColorRect" parent="Ground5Fill"]
+offset_left = -210.0
+offset_top = -32.0
+offset_right = 210.0
+offset_bottom = -18.0
+color = Color(0.45, 0.72, 0.28, 1)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Ground5Fill"]
+shape = SubResource("GroundSeg")
+
 
 
 [node name="Pit6" parent="." instance=ExtResource("5_hazard")]
@@ -528,6 +547,9 @@ offset_bottom = -18.0
 color = Color(0.45, 0.72, 0.28, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground6"]
 shape = SubResource("GroundSeg")
+
+
+
 
 
 [node name="Ground7" type="StaticBody2D" parent="."]
@@ -590,7 +612,7 @@ shape = SubResource("GroundSeg")
 
 
 [node name="Ground10" type="StaticBody2D" parent="."]
-position = Vector2(4960, 352)
+position = Vector2(4960, 312)
 [node name="Visual" type="ColorRect" parent="Ground10"]
 offset_left = -210.0
 offset_top = -32.0
@@ -605,6 +627,25 @@ offset_bottom = -18.0
 color = Color(0.45, 0.72, 0.28, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground10"]
 shape = SubResource("GroundSeg")
+
+
+[node name="Ground10Fill" type="StaticBody2D" parent="."]
+position = Vector2(4960, 352)
+[node name="Visual" type="ColorRect" parent="Ground10Fill"]
+offset_left = -210.0
+offset_top = -32.0
+offset_right = 210.0
+offset_bottom = 32.0
+color = Color(0.72, 0.46, 0.22, 1)
+[node name="TopStripe" type="ColorRect" parent="Ground10Fill"]
+offset_left = -210.0
+offset_top = -32.0
+offset_right = 210.0
+offset_bottom = -18.0
+color = Color(0.45, 0.72, 0.28, 1)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Ground10Fill"]
+shape = SubResource("GroundSeg")
+
 
 
 [node name="Ground11" type="StaticBody2D" parent="."]

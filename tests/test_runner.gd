@@ -40,6 +40,18 @@ func _ready() -> void:
 		"Levels complete; platforms reachable; effects and environments styled",
 		_test_level_layout_rules
 	)
+	failures += await _run(
+		"Rattlesnakes stay clear of canyon approaches",
+		_test_rattlesnakes_clear_of_canyons
+	)
+	failures += await _run(
+		"Canyons that end higher need an approach spring",
+		_test_canyon_up_needs_spring
+	)
+	failures += await _run(
+		"Levels 7-10 keep 2-10 continuous height differences",
+		_test_late_level_height_differences
+	)
 	failures += await _run("Cowboy player has movement animations", _test_cowboy_animations)
 	failures += await _run("Lasso ties bandits and makes them pass-through", _test_lasso_ties_bandit)
 	failures += await _run("Lasso cast ties bandits via HurtArea", _test_lasso_cast_hits_hurt_area)
@@ -1246,6 +1258,150 @@ func _test_level_layout_rules() -> Variant:
 		level.queue_free()
 		if not errors.is_empty():
 			return "%s -> %s" % [path, ", ".join(errors)]
+	return null
+
+
+func _test_rattlesnakes_clear_of_canyons() -> Variant:
+	for path in GameManager.LEVEL_SCENES:
+		var packed: PackedScene = load(path)
+		if packed == null:
+			return "Missing level: %s" % path
+		var level: Node = packed.instantiate()
+		add_child(level)
+		if level is LevelController:
+			(level as LevelController).setup_level()
+		var errors := LevelLayoutRules._validate_rattlesnakes_clear_of_canyons(level)
+		level.queue_free()
+		if not errors.is_empty():
+			return "%s -> %s" % [path, errors[0]]
+	# Synthetic: snake planted on the approach lip must fail.
+	var probe := Node2D.new()
+	add_child(probe)
+	var left := StaticBody2D.new()
+	left.name = "GroundA"
+	left.position = Vector2(200, 352)
+	var left_shape := CollisionShape2D.new()
+	left_shape.name = "CollisionShape2D"
+	var left_rect := RectangleShape2D.new()
+	left_rect.size = Vector2(400, 64)
+	left_shape.shape = left_rect
+	left.add_child(left_shape)
+	probe.add_child(left)
+	var right := StaticBody2D.new()
+	right.name = "GroundB"
+	right.position = Vector2(800, 352)
+	var right_shape := CollisionShape2D.new()
+	right_shape.name = "CollisionShape2D"
+	var right_rect := RectangleShape2D.new()
+	right_rect.size = Vector2(400, 64)
+	right_shape.shape = right_rect
+	right.add_child(right_shape)
+	probe.add_child(right)
+	var snake_scene: PackedScene = load("res://scenes/world/rattlesnake.tscn")
+	if snake_scene == null:
+		probe.queue_free()
+		return "Missing rattlesnake scene."
+	var snake := snake_scene.instantiate() as Node2D
+	snake.name = "RattlesnakeProbe"
+	# GroundA ends at x=400; plant snake just before the mouth.
+	snake.position = Vector2(360, 330)
+	probe.add_child(snake)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var bad := LevelLayoutRules._validate_rattlesnakes_clear_of_canyons(probe)
+	probe.queue_free()
+	if bad.is_empty():
+		return "Layout rules must reject a rattlesnake planted directly in front of a canyon."
+	return null
+
+
+func _test_canyon_up_needs_spring() -> Variant:
+	for path in GameManager.LEVEL_SCENES:
+		var packed: PackedScene = load(path)
+		if packed == null:
+			return "Missing level: %s" % path
+		var level: Node = packed.instantiate()
+		add_child(level)
+		if level is LevelController:
+			(level as LevelController).setup_level()
+		var errors := LevelLayoutRules._validate_canyon_up_needs_spring(level)
+		level.queue_free()
+		if not errors.is_empty():
+			return "%s -> %s" % [path, errors[0]]
+	# Synthetic up-canyon without spring must fail; with spring must pass.
+	var probe := Node2D.new()
+	add_child(probe)
+	var near := StaticBody2D.new()
+	near.name = "GroundA"
+	near.position = Vector2(200, 352)
+	var near_shape := CollisionShape2D.new()
+	near_shape.name = "CollisionShape2D"
+	var near_rect := RectangleShape2D.new()
+	near_rect.size = Vector2(400, 64)
+	near_shape.shape = near_rect
+	near.add_child(near_shape)
+	probe.add_child(near)
+	var far := StaticBody2D.new()
+	far.name = "GroundB"
+	far.position = Vector2(800, 312)
+	var far_shape := CollisionShape2D.new()
+	far_shape.name = "CollisionShape2D"
+	var far_rect := RectangleShape2D.new()
+	far_rect.size = Vector2(400, 64)
+	far_shape.shape = far_rect
+	far.add_child(far_shape)
+	probe.add_child(far)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var bad := LevelLayoutRules._validate_canyon_up_needs_spring(probe)
+	if bad.is_empty():
+		probe.queue_free()
+		return "Layout rules must reject a canyon that ends higher without an approach spring."
+	var spring_scene: PackedScene = load("res://scenes/world/spring_pad.tscn")
+	if spring_scene == null:
+		probe.queue_free()
+		return "Missing spring pad scene."
+	var spring := spring_scene.instantiate() as Node2D
+	spring.name = "SpringProbe"
+	# GroundA ends at x=400; spring on the approach bank.
+	spring.position = Vector2(320, 320)
+	probe.add_child(spring)
+	await get_tree().process_frame
+	var good := LevelLayoutRules._validate_canyon_up_needs_spring(probe)
+	probe.queue_free()
+	if not good.is_empty():
+		return "Approach spring should allow a canyon that ends higher: %s" % good[0]
+	return null
+
+
+func _test_late_level_height_differences() -> Variant:
+	for level_number in range(7, 11):
+		var path: String = GameManager.LEVEL_SCENES[level_number - 1]
+		var packed: PackedScene = load(path)
+		if packed == null:
+			return "Missing level: %s" % path
+		var level: Node = packed.instantiate()
+		add_child(level)
+		if level is LevelController:
+			(level as LevelController).setup_level()
+		var count := LevelLayoutRules.count_continuous_height_differences(level)
+		var errors := LevelLayoutRules._validate_late_level_height_differences(level)
+		level.queue_free()
+		if not errors.is_empty():
+			return "%s -> %s" % [path, errors[0]]
+		if (
+			count < LevelLayoutRules.LATE_LEVEL_HEIGHT_DIFF_MIN
+			or count > LevelLayoutRules.LATE_LEVEL_HEIGHT_DIFF_MAX
+		):
+			return (
+				"%s height differences %d outside %d–%d."
+				% [
+					path.get_file(),
+					count,
+					LevelLayoutRules.LATE_LEVEL_HEIGHT_DIFF_MIN,
+					LevelLayoutRules.LATE_LEVEL_HEIGHT_DIFF_MAX,
+				]
+			)
 	return null
 
 
@@ -2787,6 +2943,27 @@ func _test_trail_row_model() -> Variant:
 	if not has_slope_body:
 		level.free()
 		return "Desert height slopes need walkable collision."
+	# Curved dune collision (smoothstep) — more than a 4-point linear ramp.
+	var slope_body := level.find_child("FloorSlopeBody0", true, false) as StaticBody2D
+	if slope_body != null:
+		var col := slope_body.get_node_or_null("CollisionPolygon2D") as CollisionPolygon2D
+		if col == null or col.polygon.size() < 8:
+			level.free()
+			return "Desert slopes should use a curved collision polygon, not a straight ramp."
+		# Ends must sit on the flat desert tops (zero-ish end grade via smoothstep).
+		var first: Vector2 = col.polygon[0]
+		var mid_i := int(col.polygon.size() / 4)
+		var mid: Vector2 = col.polygon[mid_i]
+		var last_top: Vector2 = col.polygon[int(col.polygon.size() / 2) - 1]
+		var end_run := absf(last_top.x - first.x)
+		if end_run < 90.0:
+			level.free()
+			return "Walkable dunes need a gentle run (start/end on desert level)."
+		var mid_drop := absf(mid.y - first.y)
+		var total_drop := absf(last_top.y - first.y)
+		if total_drop > 1.0 and mid_drop < total_drop * 0.2:
+			level.free()
+			return "Desert slope mid-point should follow a curved dune profile."
 	level.free()
 	# Height difference across a canyon must NOT get a bridging slope — canyon is the step.
 	var canyon_step := CustomLevelStore.default_level(slot)
