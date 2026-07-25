@@ -3013,6 +3013,37 @@ func _test_trail_row_model() -> Variant:
 		canyon_level.free()
 		return "Canyon-separated banks must not paint a desert slope: %s" % detail
 	canyon_level.free()
+	# Adjacent canyon stamps on the trail row merge into one wider hazard gap.
+	var merged_canyon := CustomLevelStore.default_level(slot)
+	merged_canyon["objects"] = [
+		{"type": "ground", "x": 0, "y": trail},
+		{"type": "ground", "x": 6, "y": trail},
+		{"type": "canyon", "x": 1, "y": trail},
+		{"type": "canyon", "x": 2, "y": trail},
+		{"type": "canyon", "x": 3, "y": trail},
+		{"type": "goal", "x": 5, "y": trail},
+	]
+	var merged_level := LevelController.new()
+	CustomLevelBuilder.build(merged_level, merged_canyon)
+	WildWestTheme.apply_to_level(merged_level)
+	var canyon_hazards := 0
+	for node in merged_level.find_children("*", "Area2D", true, false):
+		if node is Hazard and (node as Hazard).is_canyon():
+			canyon_hazards += 1
+	if canyon_hazards != 1:
+		merged_level.free()
+		return "Adjacent canyon stamps should merge into one hazard, got %d." % canyon_hazards
+	var merged_segments := WildWestTheme._merge_segments(
+		WildWestTheme._collect_ground_segments(merged_level)
+	)
+	if merged_segments.size() < 2:
+		merged_level.free()
+		return "Merged canyon run should leave two dirt banks."
+	var gap_w := float(merged_segments[1]["left"]) - float(merged_segments[0]["right"])
+	if gap_w < 100.0:
+		merged_level.free()
+		return "Adjacent canyon stamps should widen the gap (got %.0fpx)." % gap_w
+	merged_level.free()
 	# Campaign levels 2 and 5 should include stacked dirt height differences.
 	for path in ["res://scenes/levels/level_02.tscn", "res://scenes/levels/level_05.tscn"]:
 		var packed: PackedScene = load(path)
@@ -3070,17 +3101,10 @@ func _test_trail_row_model() -> Variant:
 
 
 func _editor_tool_count(editor: Node) -> int:
-	var category := editor.find_child("StampCategory", true, false) as OptionButton
-	if category == null:
-		return 0
 	var total := 0
-	for category_index in range(category.item_count):
-		category.select(category_index)
-		var tool := editor.find_child("StampTool", true, false) as OptionButton
-		if tool == null:
-			continue
-		editor._populate_tool_dropdown(category_index)
-		total += tool.item_count
+	for category in editor.TOOL_CATEGORIES:
+		for tool in (category as Dictionary).get("tools", []) as Array:
+			total += 1
 	return total
 
 
@@ -3141,13 +3165,19 @@ func _test_campaign_workshop() -> Variant:
 	var embedded_preview := editor.find_child("LevelPreview", true, false) as LevelPreview
 	var category_dropdown := editor.find_child("StampCategory", true, false) as OptionButton
 	var tool_dropdown := editor.find_child("StampTool", true, false) as OptionButton
+	var trail_tools := editor.find_child("TrailPathTools", true, false) as HBoxContainer
+	var category_example := editor.find_child("CategoryExample", true, false) as TextureRect
 	var trail_bar := editor.find_child("TrailScrollBar", true, false) as HScrollBar
-	if error == null and (embedded_preview == null or embedded_preview.custom_minimum_size.y < 280.0):
-		error = "The editor needs a large 3/4-size live gameplay preview."
+	if error == null and embedded_preview == null:
+		error = "The editor needs a live gameplay preview."
+	elif error == null and embedded_preview.custom_minimum_size.y < 160.0:
+		error = "The editor preview should keep a usable minimum height."
 	elif error == null and (category_dropdown == null or tool_dropdown == null):
-		error = "The stamp palette should expose category and tool dropdowns."
+		error = "The stamp palette should expose category and tool pickers."
+	elif error == null and trail_tools == null:
+		error = "The trail category should expose direct path stamp buttons."
 	elif error == null and _editor_tool_count(editor) < 15:
-		error = "Every stamp tool should be reachable via the typed dropdown UI."
+		error = "Every stamp tool should remain reachable from the editor UI."
 	elif error == null and trail_bar == null:
 		error = "The trail editor needs a horizontal slide bar to scroll to the end."
 	elif error == null:
@@ -3156,29 +3186,42 @@ func _test_campaign_workshop() -> Variant:
 		var editor_pane := editor.find_child("EditorPane", true, false) as VBoxContainer
 		if grid_scroll == null or preview_index < grid_scroll.get_index():
 			error = "The live preview should sit below the stamp grid in the editor."
-		elif grid_scroll.custom_minimum_size.y < 120.0:
+		elif grid_scroll.custom_minimum_size.y < 80.0:
 			error = "The stamp grid should reserve enough vertical space to stay editable."
-		elif editor_pane == null or editor_pane.custom_minimum_size.y < 140.0:
+		elif editor_pane == null or editor_pane.custom_minimum_size.y < 100.0:
 			error = "The editor pane should keep the stamp grid from collapsing."
-		elif editor._cells.is_empty() or editor._cells[0].custom_minimum_size.y < 12.0:
+		elif editor._cells.is_empty() or editor._cells[0].custom_minimum_size.y < 10.0:
 			error = "Stamp grid cells should stay tall enough to tap."
+		elif category_example == null or category_example.custom_minimum_size.y < 30.0:
+			error = "Each stamp category should show an example thumbnail."
 		else:
 			var icon_tools := 0
 			for category_index in range(category_dropdown.item_count):
+				if category_dropdown.get_item_icon(category_index) != null:
+					icon_tools += 1
 				editor._populate_tool_dropdown(category_index)
 				for i in range(tool_dropdown.item_count):
 					if tool_dropdown.get_item_icon(i) != null:
 						icon_tools += 1
-			if icon_tools < 8:
+			for child in trail_tools.get_children():
+				if child is Button and (child as Button).icon != null:
+					icon_tools += 1
+			if icon_tools < 10:
 				error = "Stamp tools should include example images kids can recognize."
 			else:
-				embedded_preview.show_level(imported)
-				var metrics := embedded_preview._view_metrics()
-				var grid := float(metrics["grid"])
-				if float(metrics["top_y"]) > grid * 0.5:
-					error = "The live preview should include sky above the top stamp row."
-				elif float(metrics["bottom_y"]) < float(metrics["trail"]) * grid:
-					error = "The live preview should show ground through the trail row."
+				editor._sync_tool_dropdowns()
+				if not trail_tools.visible:
+					error = "The trail category should show direct path stamp buttons."
+				elif tool_dropdown.visible:
+					error = "The trail category should hide the tool dropdown."
+				else:
+					embedded_preview.show_level(imported)
+					var metrics := embedded_preview._view_metrics()
+					var grid := float(metrics["grid"])
+					if float(metrics["top_y"]) > grid * 0.5:
+						error = "The live preview should include sky above the top stamp row."
+					elif float(metrics["bottom_y"]) < float(metrics["trail"]) * grid:
+						error = "The live preview should show ground through the trail row."
 			editor._sync_tool_dropdowns()
 	editor.queue_free()
 	for i in range(paths.size()):

@@ -6,8 +6,8 @@ extends Control
 signal hover_column_changed(column: int)
 
 const GAME_SIZE := Vector2(1280, 720)
-const PREVIEW_SCALE := 0.75
-const PREVIEW_SIZE := Vector2(960, 540)
+const PREVIEW_SCALE := 0.65
+const PREVIEW_SIZE := Vector2(640, 360)
 const SKY_PADDING_CELLS := 0.75
 const GROUND_PADDING_CELLS := 0.65
 
@@ -25,7 +25,7 @@ var _last_built_hash := ""
 func _ready() -> void:
 	custom_minimum_size = PREVIEW_SIZE
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_build_viewport()
 	if not _data.is_empty():

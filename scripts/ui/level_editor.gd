@@ -8,7 +8,7 @@ const TOOL_CATEGORIES: Array = [
 		"label": "Trail",
 		"tools": [
 			["ground", "Dirt", "res://assets/world/trail_desert_tile.png"],
-			["canyon", "Canyon", "res://assets/world/canyon_rim_left.png"],
+			["canyon", "Canyon", "res://assets/ui/editor_canyon_stamp_icon.png"],
 			["platform", "Plank", "res://assets/world/trail_dirt_tile.png"],
 		],
 	},
@@ -67,6 +67,10 @@ var _selected_type: String = "ground"
 var _cells: Array[Button] = []
 var _category_dropdown: OptionButton
 var _tool_dropdown: OptionButton
+var _trail_tool_bar: HBoxContainer
+var _trail_tool_buttons: Dictionary = {}
+var _category_example: TextureRect
+var _tool_label: Label
 var _tool_icon: TextureRect
 var _syncing_tool_ui := false
 var _status: Label
@@ -84,11 +88,12 @@ var _grid_scroll: ScrollContainer
 var _editor_pane: VBoxContainer
 var _h_scroll: HScrollBar
 const _CELL_WIDTH := 42.0
-const _MIN_CELL_HEIGHT := 14.0
-const _COMFORT_CELL_HEIGHT := 28.0
-const _MAX_CELL_HEIGHT := 52.0
-const _MIN_GRID_HEIGHT := 140.0
-const _PREVIEW_MIN_SIZE := Vector2(640, 300)
+const _MIN_CELL_HEIGHT := 12.0
+const _COMFORT_CELL_HEIGHT := 22.0
+const _MAX_CELL_HEIGHT := 40.0
+const _MIN_GRID_HEIGHT := 96.0
+const _PREVIEW_MIN_SIZE := Vector2(320, 180)
+const _TRAIL_CATEGORY_ID := "trail"
 var _hover_column: int = -1
 var _syncing_scroll := false
 var _export_dialog: FileDialog
@@ -129,7 +134,7 @@ func _build_ui() -> void:
 	add_child(background)
 	var root := VBoxContainer.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 10)
-	root.add_theme_constant_override(&"separation", 6)
+	root.add_theme_constant_override(&"separation", 4)
 	add_child(root)
 
 	var heading := HBoxContainer.new()
@@ -140,60 +145,74 @@ func _build_ui() -> void:
 		if str(_data.get("kind", "")) == "override"
 		else tr("Add Campaign Level")
 	)
-	title.add_theme_font_size_override(&"font_size", 26)
+	title.add_theme_font_size_override(&"font_size", 18)
 	title.add_theme_color_override(&"font_color", Color(0.35, 0.16, 0.05))
-	title.custom_minimum_size.x = 300
+	title.custom_minimum_size.x = 220
 	heading.add_child(title)
 	_title_edit = LineEdit.new()
 	_title_edit.text = str(_data.get("title", "Family Trail"))
 	_title_edit.placeholder_text = tr("Trail name")
-	_title_edit.custom_minimum_size = Vector2(300, 40)
+	_title_edit.custom_minimum_size = Vector2(240, 30)
 	_title_edit.text_changed.connect(_on_title_changed)
 	heading.add_child(_title_edit)
 
 	var instructions := Label.new()
 	instructions.text = tr("1. Pick a stamp   2. Pick a square   3. Save or Play Test")
 	instructions.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	instructions.add_theme_font_size_override(&"font_size", 16)
+	instructions.add_theme_font_size_override(&"font_size", 13)
 	root.add_child(instructions)
 
 	var trail_help := Label.new()
 	trail_help.text = tr("Bottom row is the trail: Dirt or Canyon sets the ground and what sits below it.")
 	trail_help.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	trail_help.add_theme_font_size_override(&"font_size", 14)
+	trail_help.add_theme_font_size_override(&"font_size", 12)
 	trail_help.add_theme_color_override(&"font_color", Color(0.4, 0.2, 0.08))
 	root.add_child(trail_help)
 
 	var palette := HBoxContainer.new()
 	palette.name = "Palette"
 	palette.alignment = BoxContainer.ALIGNMENT_CENTER
-	palette.add_theme_constant_override(&"separation", 10)
+	palette.add_theme_constant_override(&"separation", 6)
 	root.add_child(palette)
 	var category_label := Label.new()
 	category_label.text = tr("Stamp category")
-	category_label.add_theme_font_size_override(&"font_size", 15)
+	category_label.add_theme_font_size_override(&"font_size", 13)
 	category_label.add_theme_color_override(&"font_color", Color(0.35, 0.16, 0.05))
 	palette.add_child(category_label)
+	_category_example = TextureRect.new()
+	_category_example.name = "CategoryExample"
+	_category_example.custom_minimum_size = Vector2(36, 36)
+	_category_example.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	_category_example.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	palette.add_child(_category_example)
 	_category_dropdown = OptionButton.new()
 	_category_dropdown.name = "StampCategory"
-	_category_dropdown.custom_minimum_size = Vector2(220, 42)
-	_category_dropdown.add_theme_font_size_override(&"font_size", 15)
+	_category_dropdown.custom_minimum_size = Vector2(180, 32)
+	_category_dropdown.add_theme_font_size_override(&"font_size", 13)
 	_category_dropdown.item_selected.connect(_on_category_selected)
 	palette.add_child(_category_dropdown)
 	var tool_label := Label.new()
+	tool_label.name = "StampToolLabel"
 	tool_label.text = tr("Stamp tool")
-	tool_label.add_theme_font_size_override(&"font_size", 15)
+	tool_label.add_theme_font_size_override(&"font_size", 13)
 	tool_label.add_theme_color_override(&"font_color", Color(0.35, 0.16, 0.05))
 	palette.add_child(tool_label)
+	_tool_label = tool_label
 	_tool_dropdown = OptionButton.new()
 	_tool_dropdown.name = "StampTool"
-	_tool_dropdown.custom_minimum_size = Vector2(260, 42)
-	_tool_dropdown.add_theme_font_size_override(&"font_size", 15)
+	_tool_dropdown.custom_minimum_size = Vector2(200, 32)
+	_tool_dropdown.add_theme_font_size_override(&"font_size", 13)
 	_tool_dropdown.item_selected.connect(_on_tool_selected)
 	palette.add_child(_tool_dropdown)
+	_trail_tool_bar = HBoxContainer.new()
+	_trail_tool_bar.name = "TrailPathTools"
+	_trail_tool_bar.add_theme_constant_override(&"separation", 6)
+	_trail_tool_bar.visible = false
+	palette.add_child(_trail_tool_bar)
+	_build_trail_tool_bar()
 	_tool_icon = TextureRect.new()
 	_tool_icon.name = "StampToolIcon"
-	_tool_icon.custom_minimum_size = Vector2(52, 52)
+	_tool_icon.custom_minimum_size = Vector2(36, 36)
 	_tool_icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
 	_tool_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	palette.add_child(_tool_icon)
@@ -204,8 +223,8 @@ func _build_ui() -> void:
 	_editor_pane = VBoxContainer.new()
 	_editor_pane.name = "EditorPane"
 	_editor_pane.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_editor_pane.size_flags_stretch_ratio = 1.35
-	_editor_pane.custom_minimum_size = Vector2(0, _MIN_GRID_HEIGHT + 26.0)
+	_editor_pane.size_flags_stretch_ratio = 0.85
+	_editor_pane.custom_minimum_size = Vector2(0, _MIN_GRID_HEIGHT + 20.0)
 	_editor_pane.add_theme_constant_override(&"separation", 4)
 	_editor_pane.resized.connect(_fit_grid_layout)
 	root.add_child(_editor_pane)
@@ -230,7 +249,7 @@ func _build_ui() -> void:
 	for y in range(height):
 		for x in range(width):
 			var cell := Button.new()
-			cell.custom_minimum_size = Vector2(_CELL_WIDTH, 28)
+			cell.custom_minimum_size = Vector2(_CELL_WIDTH, _COMFORT_CELL_HEIGHT)
 			cell.add_theme_font_size_override(&"font_size", 9)
 			var cell_x := x
 			var cell_y := y
@@ -241,7 +260,7 @@ func _build_ui() -> void:
 
 	_h_scroll = HScrollBar.new()
 	_h_scroll.name = "TrailScrollBar"
-	_h_scroll.custom_minimum_size = Vector2(0, 22)
+	_h_scroll.custom_minimum_size = Vector2(0, 16)
 	_h_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_h_scroll.value_changed.connect(_on_h_scroll_changed)
 	_editor_pane.add_child(_h_scroll)
@@ -251,7 +270,7 @@ func _build_ui() -> void:
 	_status = Label.new()
 	_status.text = tr("Stamp: Dirt — keep a dirt path under the cowboy and saloon.")
 	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_status.add_theme_font_size_override(&"font_size", 15)
+	_status.add_theme_font_size_override(&"font_size", 13)
 	root.add_child(_status)
 
 	var actions := HBoxContainer.new()
@@ -273,7 +292,7 @@ func _build_ui() -> void:
 	var preview_label := Label.new()
 	preview_label.text = tr("Live preview (3/4 size) — full height, follows stamp cursor")
 	preview_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	preview_label.add_theme_font_size_override(&"font_size", 15)
+	preview_label.add_theme_font_size_override(&"font_size", 13)
 	preview_label.add_theme_color_override(&"font_color", Color(0.35, 0.16, 0.05))
 	root.add_child(preview_label)
 
@@ -282,7 +301,7 @@ func _build_ui() -> void:
 	_preview.hover_column_changed.connect(_on_preview_hover_column)
 	root.add_child(_preview)
 	_preview.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_preview.size_flags_stretch_ratio = 0.75
+	_preview.size_flags_stretch_ratio = 1.45
 	_preview.custom_minimum_size = _PREVIEW_MIN_SIZE
 
 	_reset_dialog = ConfirmationDialog.new()
@@ -333,6 +352,63 @@ func _populate_category_dropdown() -> void:
 	for i in range(TOOL_CATEGORIES.size()):
 		var category := TOOL_CATEGORIES[i] as Dictionary
 		_category_dropdown.add_item(tr(str(category.get("label", ""))), i)
+		var icon := _category_icon(category)
+		if icon != null:
+			_category_dropdown.set_item_icon(i, icon)
+
+
+func _category_icon(category: Dictionary) -> Texture2D:
+	for tool in category.get("tools", []) as Array:
+		var texture_path := str((tool as Array)[2])
+		if texture_path.is_empty() or not ResourceLoader.exists(texture_path):
+			continue
+		return load(texture_path) as Texture2D
+	return null
+
+
+func _build_trail_tool_bar() -> void:
+	for child in _trail_tool_bar.get_children():
+		child.queue_free()
+	_trail_tool_buttons.clear()
+	for category in TOOL_CATEGORIES:
+		if str((category as Dictionary).get("id", "")) != _TRAIL_CATEGORY_ID:
+			continue
+		for tool in (category as Dictionary).get("tools", []) as Array:
+			var entry := tool as Array
+			var type_id := str(entry[0])
+			var label_key := str(entry[1])
+			var texture_path := str(entry[2])
+			var button := Button.new()
+			button.name = "TrailTool_%s" % type_id
+			button.tooltip_text = tr(label_key)
+			button.custom_minimum_size = Vector2(44, 36)
+			button.focus_mode = Control.FOCUS_NONE
+			if not texture_path.is_empty() and ResourceLoader.exists(texture_path):
+				button.icon = load(texture_path) as Texture2D
+				button.expand_icon = true
+				button.text = ""
+			else:
+				button.text = tr(label_key)
+			button.pressed.connect(func() -> void: _select_tool(type_id))
+			_trail_tool_bar.add_child(button)
+			_trail_tool_buttons[type_id] = button
+		break
+
+
+func _is_trail_category(category_index: int) -> bool:
+	if category_index < 0 or category_index >= TOOL_CATEGORIES.size():
+		return false
+	return str((TOOL_CATEGORIES[category_index] as Dictionary).get("id", "")) == _TRAIL_CATEGORY_ID
+
+
+func _update_tool_picker_visibility(category_index: int) -> void:
+	var trail := _is_trail_category(category_index)
+	_tool_dropdown.visible = not trail
+	if _trail_tool_bar != null:
+		_trail_tool_bar.visible = trail
+	var tool_label := _tool_label
+	if tool_label != null:
+		tool_label.text = tr("Path stamp") if trail else tr("Stamp tool")
 
 
 func _populate_tool_dropdown(category_index: int) -> void:
@@ -384,12 +460,30 @@ func _sync_tool_dropdowns() -> void:
 	_syncing_tool_ui = true
 	var category_index := _category_index_for_type(_selected_type)
 	_category_dropdown.select(category_index)
-	_populate_tool_dropdown(category_index)
-	var tool_index := _tool_index_for_type(category_index, _selected_type)
-	if tool_index >= 0 and tool_index < _tool_dropdown.item_count:
-		_tool_dropdown.select(tool_index)
+	_update_tool_picker_visibility(category_index)
+	_update_category_example(category_index)
+	if _is_trail_category(category_index):
+		for type_id in _trail_tool_buttons.keys():
+			var button := _trail_tool_buttons[type_id] as Button
+			var selected: bool = type_id == _selected_type
+			button.self_modulate = Color(1.15, 1.08, 0.82) if selected else Color.WHITE
+	else:
+		_populate_tool_dropdown(category_index)
+		var tool_index := _tool_index_for_type(category_index, _selected_type)
+		if tool_index >= 0 and tool_index < _tool_dropdown.item_count:
+			_tool_dropdown.select(tool_index)
 	_update_tool_icon()
 	_syncing_tool_ui = false
+
+
+func _update_category_example(category_index: int) -> void:
+	if _category_example == null:
+		return
+	if category_index < 0 or category_index >= TOOL_CATEGORIES.size():
+		_category_example.texture = null
+		return
+	var icon := _category_icon(TOOL_CATEGORIES[category_index] as Dictionary)
+	_category_example.texture = icon
 
 
 func _update_tool_icon() -> void:
@@ -413,6 +507,13 @@ func _select_tool(type_id: String) -> void:
 func _on_category_selected(index: int) -> void:
 	if _syncing_tool_ui:
 		return
+	_update_tool_picker_visibility(index)
+	_update_category_example(index)
+	if _is_trail_category(index):
+		var tools := (TOOL_CATEGORIES[index] as Dictionary).get("tools", []) as Array
+		if not tools.is_empty():
+			_select_tool(str((tools[0] as Array)[0]))
+		return
 	_populate_tool_dropdown(index)
 	if _tool_dropdown.item_count > 0:
 		_on_tool_selected(0)
@@ -435,7 +536,7 @@ func _fit_grid_layout() -> void:
 	var needed_at_min := float(height) * _MIN_CELL_HEIGHT + separation * float(height - 1)
 	_grid_scroll.custom_minimum_size.y = maxf(_MIN_GRID_HEIGHT, needed_at_min)
 	if _editor_pane != null:
-		_editor_pane.custom_minimum_size.y = _grid_scroll.custom_minimum_size.y + 26.0
+		_editor_pane.custom_minimum_size.y = _grid_scroll.custom_minimum_size.y + 20.0
 
 	var available := maxf(_grid_scroll.size.y, _grid_scroll.custom_minimum_size.y)
 	var cell_h := floorf((available - separation * float(height - 1)) / float(height))
@@ -457,8 +558,8 @@ func _add_action(
 	var button := Button.new()
 	button.name = node_name
 	button.text = text
-	button.custom_minimum_size = Vector2(180, 46)
-	button.add_theme_font_size_override(&"font_size", 16)
+	button.custom_minimum_size = Vector2(150, 36)
+	button.add_theme_font_size_override(&"font_size", 14)
 	button.add_theme_color_override(&"font_color", Color(0.35, 0.16, 0.05))
 	button.pressed.connect(action)
 	parent.add_child(button)

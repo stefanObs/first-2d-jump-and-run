@@ -32,6 +32,7 @@ static func build(level: LevelController, data: Dictionary, preview: bool = fals
 
 	_add_ground_columns(level, data, grid, trail)
 
+	var canyon_runs := _canyon_runs(data, trail)
 	var counters: Dictionary = {}
 	var has_goal := false
 	for value in data.get("objects", []):
@@ -39,7 +40,7 @@ static func build(level: LevelController, data: Dictionary, preview: bool = fals
 			continue
 		var object := value as Dictionary
 		var type_name := str(object.get("type", ""))
-		if type_name == "ground":
+		if type_name == "ground" or type_name in ["canyon", "pit"]:
 			continue
 		var index := int(counters.get(type_name, 0))
 		counters[type_name] = index + 1
@@ -54,9 +55,6 @@ static func build(level: LevelController, data: Dictionary, preview: bool = fals
 				_add_scene(level, STAR, "CustomStar%d" % index, position)
 			"cactus":
 				_add_scene(level, HAZARD, "Cactus%d" % index, position)
-			"canyon", "pit":
-				var canyon := _add_scene(level, HAZARD, "Canyon%d" % index, position + Vector2(0, 40))
-				canyon.scale = Vector2(1.8, 1.8)
 			"checkpoint":
 				_add_scene(level, CHECKPOINT, "Checkpoint" if index == 0 else "Checkpoint%d" % index, position)
 			"spring":
@@ -73,6 +71,13 @@ static func build(level: LevelController, data: Dictionary, preview: bool = fals
 				if not has_goal:
 					_add_scene(level, GOAL, "Goal", position)
 					has_goal = true
+
+	for run_index in range(canyon_runs.size()):
+		var run: Dictionary = canyon_runs[run_index]
+		var center_x := (float(run["start_x"]) + float(run["end_x"])) * 0.5 + 0.5
+		var position := Vector2(center_x * grid, float(trail) * grid + 40.0)
+		var canyon := _add_scene(level, HAZARD, "Canyon%d" % run_index, position)
+		canyon.scale = Vector2(1.8, 1.8)
 
 	if not has_goal:
 		_add_scene(level, GOAL, "Goal", Vector2((width - 2) * grid, float(trail) * grid))
@@ -104,6 +109,33 @@ static func _mode_for_type(type_name: String) -> ModeController.Mode:
 			return ModeController.Mode.BUBBLE_SHIELD
 		_:
 			return ModeController.Mode.WINGS
+
+
+## Merge horizontally adjacent canyon stamps into one wider gap run.
+static func _canyon_runs(data: Dictionary, trail: int) -> Array[Dictionary]:
+	var xs: Array[int] = []
+	for value in data.get("objects", []):
+		if not (value is Dictionary):
+			continue
+		var object := value as Dictionary
+		var type_name := str(object.get("type", ""))
+		if type_name not in ["canyon", "pit"]:
+			continue
+		if int(object.get("y", -1)) != trail:
+			continue
+		xs.append(int(object.get("x", 0)))
+	xs.sort()
+	var runs: Array[Dictionary] = []
+	var index := 0
+	while index < xs.size():
+		var start_x := xs[index]
+		var end_x := start_x
+		while index + 1 < xs.size() and xs[index + 1] == end_x + 1:
+			index += 1
+			end_x = xs[index]
+		runs.append({"start_x": start_x, "end_x": end_x})
+		index += 1
+	return runs
 
 
 ## Merge vertically stacked dirt cells into one tall bank so steps look handpainted.
