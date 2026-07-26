@@ -891,14 +891,12 @@ position = Vector2(5210, 270)
 position = Vector2(6350, 270)
 
 
-[node name="ShieldMid" parent="." instance=ExtResource("10_mode")]
+[node name="TreasureChest2" parent="." instance=ExtResource("19_chest")]
 position = Vector2(3600, 275)
-mode = 4
 
 
-[node name="ShieldQuarter" parent="." instance=ExtResource("10_mode")]
+[node name="TreasureChest1" parent="." instance=ExtResource("19_chest")]
 position = Vector2(1980, 275)
-mode = 4
 
 
 [node name="ShieldLate" parent="." instance=ExtResource("10_mode")]

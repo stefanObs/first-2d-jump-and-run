@@ -63,7 +63,9 @@ func _ready() -> void:
 	)
 	failures += await _run("Cowboy player has movement animations", _test_cowboy_animations)
 	failures += await _run("Lasso ties bandits and makes them pass-through", _test_lasso_ties_bandit)
-	failures += await _run("Treasure chest opens once and grants five badges", _test_treasure_chest)
+	failures += await _run("Treasure chest random loot and reveal", _test_treasure_chest)
+	failures += await _run("Treasure chest height ratio", _test_treasure_chest_height_ratio)
+	failures += await _run("Treasure chest campaign placement", _test_treasure_chest_campaign_placement)
 	failures += await _run("Treasure chests stand on walk surface", _test_treasure_chest_on_walk_surface)
 	failures += await _run("Lasso cast ties bandits via HurtArea", _test_lasso_cast_hits_hurt_area)
 	failures += await _run("Jumping on a bandit head ties him", _test_stomp_ties_bandit)
@@ -1674,10 +1676,14 @@ func _test_treasure_chest() -> Variant:
 		chest.queue_free()
 		return "Treasure chest root should be TreasureChest."
 	var art := chest.get_node_or_null("ChestArt")
+	var loot_reveal := chest.get_node_or_null("ChestArt/LootReveal")
 	var collision := chest.get_node_or_null("CollisionShape2D") as CollisionShape2D
 	if art == null:
 		chest.queue_free()
 		return "Treasure chest should include ChestArt for the opening animation."
+	if loot_reveal == null:
+		chest.queue_free()
+		return "Treasure chest should include ChestArt/LootReveal for loot pop-out."
 	if collision == null:
 		chest.queue_free()
 		return "Treasure chest should include a collision shape."
@@ -1699,9 +1705,11 @@ func _test_treasure_chest() -> Variant:
 	controller._wire_world_objects()
 
 	var badges_before := player.stars_collected
+	TreasureChest.test_loot_override = TreasureChestLoot.POOL.find(TreasureChestLoot.Type.WINGS)
 	chest.body_entered.emit(player)
 	await get_tree().process_frame
 	await get_tree().process_frame
+	TreasureChest.test_loot_override = -1
 	if not (chest as TreasureChest).is_opened():
 		controller.queue_free()
 		return "Touching a treasure chest should open it."
@@ -1711,15 +1719,18 @@ func _test_treasure_chest() -> Variant:
 	if (chest as TreasureChest).monitoring:
 		controller.queue_free()
 		return "Opened treasure chest should stop monitoring touches."
-	if player.stars_collected - badges_before != TreasureChest.BADGE_COUNT:
+	if player.get_modes().active_mode != ModeController.Mode.WINGS:
 		controller.queue_free()
-		return "Treasure chest should grant five badges."
+		return "Treasure chest should activate rolled loot on the player."
+	if player.stars_collected != badges_before:
+		controller.queue_free()
+		return "Wings loot should not grant badges."
 
 	chest.body_entered.emit(player)
 	await get_tree().process_frame
-	if player.stars_collected != badges_before + TreasureChest.BADGE_COUNT:
+	if player.stars_collected != badges_before:
 		controller.queue_free()
-		return "Treasure chest should be one-shot and not grant badges twice."
+		return "Treasure chest should be one-shot and not grant loot twice."
 
 	await get_tree().create_timer(0.5).timeout
 	var chest_art := art as TreasureChestArt
@@ -1727,48 +1738,89 @@ func _test_treasure_chest() -> Variant:
 		controller.queue_free()
 		return "Treasure chest opening animation should raise the lid."
 
+	for loot in TreasureChestLoot.POOL:
+		if TreasureChestLoot.texture_for(loot) == null:
+			controller.queue_free()
+			return "Missing reveal texture for loot %s." % TreasureChestLoot.loot_name(loot)
+
+	controller.queue_free()
+	return null
+
+
+func _test_treasure_chest_height_ratio() -> Variant:
+	var packed: PackedScene = load("res://scenes/world/treasure_chest.tscn")
+	if packed == null:
+		return "Missing treasure chest scene."
+	var chest := packed.instantiate() as TreasureChest
+	add_child(chest)
+	await get_tree().process_frame
+	var collision := chest.get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if collision == null or not (collision.shape is RectangleShape2D):
+		chest.queue_free()
+		return "Treasure chest should expose a rectangle collision shape."
+	var height := (collision.shape as RectangleShape2D).size.y
+	var expected := TreasureChest.TARGET_HEIGHT
+	if absf(height - expected) > 1.5:
+		chest.queue_free()
+		return "Chest collision height %.1f should be ~%.1f (2/3 player)." % [height, expected]
+	chest.queue_free()
+	return null
+
+
+func _test_treasure_chest_campaign_placement() -> Variant:
+	var mode_items := 0
+	var chests := 0
 	for level_path in [
-		"res://scenes/levels/level_05.tscn",
+		"res://scenes/levels/level_02.tscn",
+		"res://scenes/levels/level_06.tscn",
 		"res://scenes/levels/level_07.tscn",
 		"res://scenes/levels/level_08.tscn",
 		"res://scenes/levels/level_09.tscn",
+		"res://scenes/levels/level_10.tscn",
 	]:
 		var level: Variant = _instantiate_level(level_path)
 		if level is String:
-			controller.queue_free()
 			return level
-		if level.find_child("TreasureChest0", true, false) == null:
-			_free_level(level)
-			controller.queue_free()
-			return "Expected a treasure chest in %s." % level_path
+		for node in level.find_children("*", "ModeItem", true, false):
+			mode_items += 1
+		for node in level.find_children("*", "TreasureChest", true, false):
+			chests += 1
 		_free_level(level)
 
-	controller.queue_free()
+	var replaced := 16 - mode_items
+	if chests < 8:
+		return "Expected at least eight campaign treasure chests, found %d." % chests
+	if replaced < 5:
+		return "Expected about one third of mid-trail mode items replaced (%d of 16)." % replaced
 	return null
 
 
 func _test_treasure_chest_on_walk_surface() -> Variant:
 	for level_path in [
 		"res://scenes/levels/level_05.tscn",
+		"res://scenes/levels/level_06.tscn",
 		"res://scenes/levels/level_07.tscn",
 		"res://scenes/levels/level_08.tscn",
 		"res://scenes/levels/level_09.tscn",
+		"res://scenes/levels/level_10.tscn",
 	]:
 		var level: Variant = _instantiate_level(level_path)
 		if level is String:
 			return level
-		var chest := level.find_child("TreasureChest0", true, false) as TreasureChest
-		if chest == null:
+		var chest_nodes: Array[Node] = level.find_children("*", "TreasureChest", true, false)
+		if chest_nodes.is_empty():
 			_free_level(level)
 			return "Expected a treasure chest in %s." % level_path
-		var surface := WildWestTheme.walk_surface_at(level, chest.global_position.x)
-		var expected_y := float(surface["y"]) + WildWestTheme.CHEST_FOOT_SINK
-		if absf(chest.ground_contact_y() - expected_y) > 2.5:
-			_free_level(level)
-			return (
-				"%s chest should stand on the desert top (feet y=%.1f, expected %.1f)."
-				% [level_path.get_file(), chest.ground_contact_y(), expected_y]
-			)
+		for node in chest_nodes:
+			var chest := node as TreasureChest
+			var surface := WildWestTheme.walk_surface_at(level, chest.global_position.x)
+			var expected_y := float(surface["y"]) + WildWestTheme.CHEST_FOOT_SINK
+			if absf(chest.ground_contact_y() - expected_y) > 2.5:
+				_free_level(level)
+				return (
+					"%s chest should stand on the desert top (feet y=%.1f, expected %.1f)."
+					% [level_path.get_file(), chest.ground_contact_y(), expected_y]
+				)
 		_free_level(level)
 	return null
 

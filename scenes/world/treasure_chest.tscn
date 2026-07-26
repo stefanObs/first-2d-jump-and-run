@@ -1,7 +1,8 @@
-[gd_scene load_steps=4 format=3 uid="uid://ctreasurechest01"]
+[gd_scene load_steps=5 format=3 uid="uid://ctreasurechest01"]
 
 [ext_resource type="Script" path="res://scripts/world/treasure_chest.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/world/treasure_chest_art.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/world/treasure_chest_loot_reveal.gd" id="3"]
 
 [sub_resource type="RectangleShape2D" id="Shape"]
 size = Vector2(48, 36)
@@ -15,6 +16,9 @@ script = ExtResource("1")
 [node name="ChestArt" type="Node2D" parent="."]
 position = Vector2(0, -8)
 script = ExtResource("2")
+
+[node name="LootReveal" type="Node2D" parent="ChestArt"]
+script = ExtResource("3")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 position = Vector2(0, -10)

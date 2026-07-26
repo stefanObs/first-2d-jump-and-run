@@ -8,8 +8,8 @@ const TEX_LID := preload("res://assets/world/treasure_chest_lid.png")
 const TEX_INTERIOR := preload("res://assets/world/treasure_chest_interior.png")
 
 const LID_OPEN_ANGLE := -1.35
-const HINGE := Vector2(-36.0, -22.0)
-const LID_OFFSET := Vector2(36.0, -12.0)
+const HINGE := Vector2(-19.0, -12.0)
+const LID_OFFSET := Vector2(19.0, -6.0)
 
 var open_amount: float = 0.0
 var sparkle_phase: float = 0.0
@@ -25,7 +25,7 @@ func _ready() -> void:
 	_body = Sprite2D.new()
 	_body.name = "Body"
 	_body.texture = TEX_BODY
-	_body.position = Vector2(0.0, 4.0)
+	_body.position = Vector2(0.0, 2.0)
 	add_child(_body)
 
 	_interior = Sprite2D.new()
@@ -49,7 +49,7 @@ func _ready() -> void:
 	_glow = Sprite2D.new()
 	_glow.name = "ClosedGlow"
 	_glow.texture = TEX_INTERIOR
-	_glow.position = _body.position + Vector2(0.0, -10.0)
+	_glow.position = _body.position + Vector2(0.0, -6.0)
 	_glow.scale = Vector2(0.72, 0.55)
 	_glow.modulate = Color(1.0, 0.82, 0.18, 0.0)
 	add_child(_glow)

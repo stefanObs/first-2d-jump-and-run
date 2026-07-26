@@ -675,39 +675,33 @@ func _on_bounty_caught(opponent: Opponent, amount: int) -> void:
 		hud.show_toast(tr("Bounty caught! +%d badges!") % new_badges, 2.2)
 
 
-func _on_treasure_chest_opened(chest: TreasureChest) -> void:
+func _on_treasure_chest_opened(chest: TreasureChest, loot: TreasureChestLoot.Type) -> void:
 	if player == null or chest == null:
 		return
-	var new_badges := _register_chest_badges(String(chest.name))
-	if new_badges <= 0:
+	var chest_name := String(chest.name)
+	var open_key := TreasureChestLoot.open_storage_key(chest_name)
+	if open_key in _collected_badge_names:
 		return
-	player.collect_badges(new_badges)
-	if not is_custom_level and GameManager.is_advanced_mode():
-		GameManager.register_badges_collected(new_badges)
-	var reward_effect := BOUNTY_REWARD_EFFECT.new()
-	reward_effect.name = "ChestBadgeBurst"
-	add_child(reward_effect)
-	reward_effect.play(chest.global_position + Vector2(0.0, -24.0), player.global_position, new_badges)
+	_collected_badge_names.append(open_key)
+
+	if TreasureChestLoot.is_badge(loot):
+		var badge_key := TreasureChestLoot.badge_storage_key(chest_name)
+		if badge_key not in _collected_badge_names:
+			_collected_badge_names.append(badge_key)
+			player.collect_badges(1)
+			if not is_custom_level and GameManager.is_advanced_mode():
+				GameManager.register_badges_collected(1)
+	else:
+		player.activate_mode(TreasureChestLoot.to_mode(loot))
+
 	if hud != null:
-		hud.show_toast(tr("Treasure chest! +%d badges!") % new_badges, 2.4)
-
-
-func _register_chest_badges(chest_name: String) -> int:
-	var new_badges := 0
-	for index in range(TreasureChest.BADGE_COUNT):
-		var badge_name := "Chest_%s_%d" % [chest_name, index]
-		if badge_name not in _collected_badge_names:
-			_collected_badge_names.append(badge_name)
-			new_badges += 1
-	return new_badges
+		hud.show_toast(tr(TreasureChestLoot.toast_key(loot)), 2.4)
+		if not TreasureChestLoot.is_badge(loot):
+			hud.set_mode(ModeController.mode_name(TreasureChestLoot.to_mode(loot)), player.get_modes().remaining)
 
 
 func _chest_is_stored_open(chest: TreasureChest) -> bool:
-	var chest_name := String(chest.name)
-	for index in range(TreasureChest.BADGE_COUNT):
-		if ("Chest_%s_%d" % [chest_name, index]) in _stored_badge_names:
-			return true
-	return false
+	return TreasureChestLoot.open_storage_key(String(chest.name)) in _stored_badge_names
 
 
 func _count_restored_badges() -> int:

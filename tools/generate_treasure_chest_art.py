@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate hand-painted western treasure chest PNGs for Cowboy Trail."""
+"""Generate hand-painted western treasure chest PNGs sized to 2/3 player height."""
 
 from __future__ import annotations
 
@@ -10,6 +10,11 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFilter
 
 ROOT = Path(__file__).resolve().parents[1] / "assets" / "world"
+
+PLAYER_HEIGHT = 44.0
+CHEST_HEIGHT = PLAYER_HEIGHT * (2.0 / 3.0)
+BASE_CLOSED_HEIGHT = 56.0
+ART_SCALE = CHEST_HEIGHT / BASE_CLOSED_HEIGHT
 
 # Palette aligned with trail props (wood plank, camp flagpole, badges).
 INK = (56, 26, 10, 255)
@@ -22,6 +27,10 @@ BRASS_DARK = (118, 82, 28, 255)
 BRASS_LIGHT = (228, 196, 88, 255)
 GLOW = (255, 210, 72, 255)
 TREASURE = (255, 228, 96, 255)
+
+
+def _s(value: float) -> float:
+    return value * ART_SCALE
 
 
 def _noise_seed(seed: int) -> None:
@@ -59,11 +68,10 @@ def _draw_wood_planks(
             (px0 + (-0.3 if i % 2 else 0.6), y1 + (-0.4 if i % 2 else 0.6)),
         ]
         draw.polygon(pts, fill=WOOD)
-        # Grain strokes
-        for gy in range(int(y0 + 3), int(y1 - 2), 4):
+        for gy in range(int(y0 + 3), int(y1 - 2), max(2, int(4 * ART_SCALE))):
             gx = px0 + 2 + (gy % 5)
             draw.line([(gx, gy), (px1 - 2, gy + (1 if i % 2 else -1))], fill=WOOD_GRAIN, width=1)
-        draw.line(pts + [pts[0]], fill=INK, width=2)
+        draw.line(pts + [pts[0]], fill=INK, width=max(1, int(round(2 * ART_SCALE))))
 
 
 def _draw_brass_band(
@@ -73,20 +81,22 @@ def _draw_brass_band(
     y1: float,
     width: float = 7.0,
 ) -> None:
+    width *= ART_SCALE
     draw.rectangle((x - width * 0.5, y0, x + width * 0.5, y1), fill=BRASS_DARK)
     draw.rectangle((x - width * 0.35, y0 + 1, x + width * 0.35, y1 - 1), fill=BRASS)
     draw.line([(x - width * 0.25, y0 + 2), (x - width * 0.25, y1 - 2)], fill=BRASS_LIGHT, width=1)
-    # Rivets
     for ry in (y0 + 5, y0 + (y1 - y0) * 0.5, y1 - 5):
-        draw.ellipse((x - 2.2, ry - 2.2, x + 2.2, ry + 2.2), fill=BRASS_LIGHT)
+        r = 2.2 * ART_SCALE
+        draw.ellipse((x - r, ry - r, x + r, ry + r), fill=BRASS_LIGHT)
         draw.point((x - 0.8, ry - 0.8), fill=INK)
 
 
 def _draw_lock_plate(draw: ImageDraw.ImageDraw, cx: float, cy: float) -> None:
-    draw.rounded_rectangle((cx - 9, cy - 10, cx + 9, cy + 12), radius=3, fill=BRASS_DARK)
-    draw.rounded_rectangle((cx - 7, cy - 8, cx + 7, cy + 10), radius=2, fill=BRASS)
-    draw.arc((cx - 4, cy - 2, cx + 4, cy + 6), start=0, end=180, fill=INK, width=2)
-    draw.ellipse((cx - 1.5, cy + 5, cx + 1.5, cy + 8), fill=INK)
+    sx, sy = _s(9), _s(10)
+    draw.rounded_rectangle((cx - sx, cy - sy, cx + sx, cy + sy * 1.2), radius=max(1, int(_s(3))), fill=BRASS_DARK)
+    draw.rounded_rectangle((cx - sx * 0.78, cy - sy * 0.8, cx + sx * 0.78, cy + sy), radius=max(1, int(_s(2))), fill=BRASS)
+    draw.arc((cx - _s(4), cy - _s(2), cx + _s(4), cy + _s(6)), start=0, end=180, fill=INK, width=max(1, int(_s(2))))
+    draw.ellipse((cx - _s(1.5), cy + _s(5), cx + _s(1.5), cy + _s(8)), fill=INK)
 
 
 def _soft_glow_layer(size: tuple[int, int]) -> Image.Image:
@@ -94,40 +104,37 @@ def _soft_glow_layer(size: tuple[int, int]) -> Image.Image:
     draw = ImageDraw.Draw(img)
     cx, cy = size[0] * 0.5, size[1] * 0.35
     for radius, alpha in ((42, 28), (28, 48), (16, 72)):
+        rr = radius * ART_SCALE
         draw.ellipse(
-            (cx - radius, cy - radius * 0.6, cx + radius, cy + radius * 0.6),
+            (cx - rr, cy - rr * 0.6, cx + rr, cy + rr * 0.6),
             fill=(GLOW[0], GLOW[1], GLOW[2], alpha),
         )
-    return img.filter(ImageFilter.GaussianBlur(radius=3))
+    return img.filter(ImageFilter.GaussianBlur(radius=max(1, int(round(3 * ART_SCALE)))))
 
 
 def make_body() -> Image.Image:
     _noise_seed(42)
-    w, h = 80, 52
+    w, h = int(round(80 * ART_SCALE)), int(round(52 * ART_SCALE))
     img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
-    # Ground shadow
     shadow = [
-        (6, h - 6), (w - 6, h - 6), (w - 2, h - 2), (2, h - 2),
+        (_s(6), h - _s(6)), (w - _s(6), h - _s(6)), (w - _s(2), h - _s(2)), (_s(2), h - _s(2)),
     ]
     draw.polygon(shadow, fill=(0, 0, 0, 42))
 
-    body_box = (8.0, 18.0, w - 8.0, h - 8.0)
+    body_box = (_s(8.0), _s(18.0), w - _s(8.0), h - _s(8.0))
     _draw_wood_planks(draw, body_box, plank_count=5)
 
     x0, y0, x1, y1 = body_box
-    for bx in (x0 + 12, (x0 + x1) * 0.5, x1 - 12):
+    for bx in (x0 + _s(12), (x0 + x1) * 0.5, x1 - _s(12)):
         _draw_brass_band(draw, bx, y0 - 1, y1 + 1)
 
-    _draw_lock_plate(draw, (x0 + x1) * 0.5, y0 + 14)
+    _draw_lock_plate(draw, (x0 + x1) * 0.5, y0 + _s(14))
 
-    # Weathered edge chips
-    draw.line([(x0 + 2, y1 - 1), (x0 + 10, y1 + 1)], fill=WOOD_DARK, width=2)
+    draw.line([(x0 + 2, y1 - 1), (x0 + 10, y1 + 1)], fill=WOOD_DARK, width=max(1, int(_s(2))))
     draw.line([(x1 - 11, y1), (x1 - 3, y1 + 1)], fill=WOOD_LIGHT, width=1)
-
-    # Top rim where lid meets body
-    draw.line([(x0 + 1, y0), (x1 - 1, y0 - 1)], fill=INK, width=2)
+    draw.line([(x0 + 1, y0), (x1 - 1, y0 - 1)], fill=INK, width=max(1, int(_s(2))))
     draw.line([(x0 + 3, y0 + 2), (x1 - 4, y0 + 1)], fill=WOOD_LIGHT, width=1)
 
     return img
@@ -135,31 +142,28 @@ def make_body() -> Image.Image:
 
 def make_lid() -> Image.Image:
     _noise_seed(77)
-    w, h = 80, 36
+    w, h = int(round(80 * ART_SCALE)), int(round(36 * ART_SCALE))
     img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
-    # Curved lid silhouette; hinge at left edge center.
     lid_pts = [
-        (4, h - 6),
-        (w - 6, h - 5),
-        (w - 4, 10),
-        (22, 4),
-        (6, 8),
+        (_s(4), h - _s(6)),
+        (w - _s(6), h - _s(5)),
+        (w - _s(4), _s(10)),
+        (_s(22), _s(4)),
+        (_s(6), _s(8)),
     ]
     draw.polygon(lid_pts, fill=WOOD_DARK)
-    draw.line(lid_pts + [lid_pts[0]], fill=INK, width=2)
+    draw.line(lid_pts + [lid_pts[0]], fill=INK, width=max(1, int(_s(2))))
 
-    # Plank lines across lid
-    for i, y in enumerate(range(10, h - 6, 5)):
-        x_start = 8 + (i % 2)
-        x_end = w - 8 - (i % 3)
+    for i, y in enumerate(range(int(_s(10)), h - int(_s(6)), max(2, int(_s(5))))):
+        x_start = _s(8) + (i % 2)
+        x_end = w - _s(8) - (i % 3)
         draw.line([(x_start, y), (x_end, y + (1 if i % 2 else -1))], fill=WOOD_GRAIN, width=1)
 
-    draw.line([(10, 12), (w - 12, 11)], fill=WOOD_LIGHT, width=2)
+    draw.line([(_s(10), _s(12)), (w - _s(12), _s(11))], fill=WOOD_LIGHT, width=max(1, int(_s(2))))
 
-    # Brass lip along front edge
-    front = [(w - 6, h - 5), (w - 4, 10), (w - 8, 11), (w - 10, h - 6)]
+    front = [(w - _s(6), h - _s(5)), (w - _s(4), _s(10)), (w - _s(8), _s(11)), (w - _s(10), h - _s(6))]
     draw.polygon(front, fill=BRASS_DARK)
     draw.line(front + [front[0]], fill=INK, width=1)
 
@@ -167,14 +171,13 @@ def make_lid() -> Image.Image:
 
 
 def make_interior() -> Image.Image:
-    w, h = 80, 52
+    w, h = int(round(80 * ART_SCALE)), int(round(52 * ART_SCALE))
     img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
-    inner_box = (14.0, 22.0, w - 14.0, h - 12.0)
-    draw.rounded_rectangle(inner_box, radius=3, fill=(32, 16, 6, 220))
+    inner_box = (_s(14.0), _s(22.0), w - _s(14.0), h - _s(12.0))
+    draw.rounded_rectangle(inner_box, radius=max(1, int(_s(3))), fill=(32, 16, 6, 220))
 
-    # Gold coins / badge glint pile
     for i, (ox, oy, r) in enumerate(
         [
             (0, 0, 5),
@@ -184,10 +187,11 @@ def make_interior() -> Image.Image:
             (8, 10, 3),
         ]
     ):
-        cx = w * 0.5 + ox
-        cy = 30 + oy
-        draw.ellipse((cx - r, cy - r, cx + r, cy + r), fill=TREASURE)
-        draw.ellipse((cx - r * 0.4, cy - r * 0.5, cx, cy), fill=(255, 248, 200, 180))
+        cx = w * 0.5 + _s(ox)
+        cy = _s(30 + oy)
+        rr = _s(r)
+        draw.ellipse((cx - rr, cy - rr, cx + rr, cy + rr), fill=TREASURE)
+        draw.ellipse((cx - rr * 0.4, cy - rr * 0.5, cx, cy), fill=(255, 248, 200, 180))
 
     glow = _soft_glow_layer((w, h))
     img = Image.alpha_composite(img, glow)
@@ -199,16 +203,17 @@ def make_stamp() -> Image.Image:
     body = make_body()
     lid = make_lid()
     canvas = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
-    # Scale down composed chest
-    composed = Image.new("RGBA", (80, 56), (0, 0, 0, 0))
-    composed.alpha_composite(body, (0, 4))
+    composed = Image.new("RGBA", (body.width, body.height + lid.height // 2), (0, 0, 0, 0))
+    composed.alpha_composite(body, (0, int(_s(4))))
     composed.alpha_composite(lid, (0, 0))
-    composed = composed.resize((58, 40), Image.Resampling.LANCZOS)
-    canvas.alpha_composite(composed, (3, 18))
-    # Closed sparkle
+    target_w = int(round(42 * ART_SCALE / 0.524 * 0.72))
+    target_h = int(round(CHEST_HEIGHT * 0.95))
+    composed = composed.resize((max(28, target_w), max(20, target_h)), Image.Resampling.LANCZOS)
+    canvas.alpha_composite(composed, (max(0, (64 - composed.width) // 2), 64 - composed.height - 6))
     draw = ImageDraw.Draw(canvas)
-    draw.ellipse((44, 14, 52, 22), fill=(255, 230, 120, 180))
-    draw.ellipse((46, 16, 50, 20), fill=(255, 255, 240, 220))
+    sx = 64 - 14
+    draw.ellipse((sx, 12, sx + 8, 20), fill=(255, 230, 120, 180))
+    draw.ellipse((sx + 2, 14, sx + 6, 18), fill=(255, 255, 240, 220))
     return canvas
 
 
@@ -219,6 +224,7 @@ def write_png(img: Image.Image, name: str) -> None:
 
 
 def main() -> None:
+    print(f"chest art scale {ART_SCALE:.3f} (target height {CHEST_HEIGHT:.2f}px)")
     write_png(make_body(), "treasure_chest_body.png")
     write_png(make_lid(), "treasure_chest_lid.png")
     write_png(make_interior(), "treasure_chest_interior.png")

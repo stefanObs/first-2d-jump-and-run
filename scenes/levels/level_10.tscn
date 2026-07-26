@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=3 uid="uid://clevel10"]
+[gd_scene load_steps=25 format=3 uid="uid://clevel10"]
 
 [ext_resource type="Script" path="res://scripts/levels/level_10.gd" id="1_level"]
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2_player"]
@@ -19,6 +19,7 @@
 [ext_resource type="PackedScene" path="res://scenes/world/timed_door.tscn" id="17_door"]
 [ext_resource type="PackedScene" path="res://scenes/world/carrion.tscn" id="18_carrion"]
 [ext_resource type="PackedScene" path="res://scenes/world/rattlesnake.tscn" id="19_snake"]
+[ext_resource type="PackedScene" path="res://scenes/world/treasure_chest.tscn" id="20_chest"]
 
 [sub_resource type="RectangleShape2D" id="GroundSeg"]
 size = Vector2(420, 64)
@@ -1385,9 +1386,8 @@ position = Vector2(5210, 270)
 position = Vector2(6350, 270)
 
 
-[node name="Speed" parent="." instance=ExtResource("10_mode")]
+[node name="TreasureChest0" parent="." instance=ExtResource("20_chest")]
 position = Vector2(6000, 275)
-mode = 3
 
 
 [node name="Goal" parent="." instance=ExtResource("4_goal")]

@@ -879,9 +879,8 @@ scale = Vector2(3.0, 1.4)
 
 
 
-[node name="WingsMid" parent="." instance=ExtResource("10_mode")]
+[node name="TreasureChest1" parent="." instance=ExtResource("19_chest")]
 position = Vector2(5080, 190)
-mode = 1
 
 
 [node name="Carrion0" parent="." instance=ExtResource("18_carrion")]
