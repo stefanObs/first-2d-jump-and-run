@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate hand-painted western treasure chest PNGs at 0.75× player height."""
+"""Generate hand-painted western treasure chest PNGs at 0.95× player height."""
 
 from __future__ import annotations
 
@@ -12,25 +12,27 @@ from PIL import Image, ImageDraw, ImageFilter
 ROOT = Path(__file__).resolve().parents[1] / "assets" / "world"
 
 PLAYER_HEIGHT = 44.0
-HEIGHT_RATIO = 0.75
+HEIGHT_RATIO = 0.95
 CHEST_HEIGHT = PLAYER_HEIGHT * HEIGHT_RATIO
 BASE_CLOSED_HEIGHT = 56.0
 ART_SCALE = CHEST_HEIGHT / BASE_CLOSED_HEIGHT
 # Supersample for weathered wood/brass detail, then downscale to game pixel size.
 SUPER_SAMPLE = 2.0
 
-# Palette aligned with trail props (wood plank, camp flagpole, badges).
-INK = (56, 26, 10, 255)
-WOOD = (158, 96, 48, 255)
-WOOD_DARK = (108, 58, 26, 255)
-WOOD_LIGHT = (198, 138, 72, 255)
-WOOD_GRAIN = (88, 48, 20, 180)
-BRASS = (184, 142, 52, 255)
-BRASS_DARK = (118, 82, 28, 255)
-BRASS_LIGHT = (228, 196, 88, 255)
-GLOW = (255, 210, 72, 255)
-TREASURE = (255, 228, 96, 255)
-NAIL = (72, 38, 14, 220)
+# Palette tuned for mesa/desert contrast: darker wood, brighter brass, strong ink outlines.
+INK = (28, 12, 4, 255)
+WOOD = (108, 62, 28, 255)
+WOOD_DARK = (72, 38, 14, 255)
+WOOD_LIGHT = (138, 88, 44, 255)
+WOOD_GRAIN = (52, 28, 10, 200)
+BRASS = (228, 188, 58, 255)
+BRASS_DARK = (168, 118, 32, 255)
+BRASS_LIGHT = (255, 236, 120, 255)
+GLOW = (255, 220, 88, 255)
+TREASURE = (255, 236, 108, 255)
+NAIL = (48, 24, 8, 235)
+# Outline stroke multiplier vs base art scale (stronger silhouette on sand/mesa).
+OUTLINE_SCALE = 3.2
 
 
 def _s(value: float) -> float:
@@ -80,7 +82,7 @@ def _draw_wood_planks(
                 fill=WOOD_GRAIN,
                 width=max(1, int(round(1.5 * ART_SCALE * SUPER_SAMPLE))),
             )
-        draw.line(pts + [pts[0]], fill=INK, width=max(1, int(round(2.5 * ART_SCALE * SUPER_SAMPLE))))
+        draw.line(pts + [pts[0]], fill=INK, width=max(1, int(round(OUTLINE_SCALE * ART_SCALE * SUPER_SAMPLE))))
         for ny in range(int(y0 + 8), int(y1 - 6), max(6, int(14 * ART_SCALE * SUPER_SAMPLE))):
             nx = px0 + (3 if i % 2 else 5)
             r = max(1, int(round(1.8 * ART_SCALE * SUPER_SAMPLE)))
@@ -127,7 +129,7 @@ def _draw_lock_plate(draw: ImageDraw.ImageDraw, cx: float, cy: float) -> None:
         start=0,
         end=180,
         fill=INK,
-        width=max(1, int(_s(2.5))),
+        width=max(1, int(_s(OUTLINE_SCALE))),
     )
     draw.ellipse((cx - _s(1.8), cy + _s(5.5), cx + _s(1.8), cy + _s(8.5)), fill=INK)
 
@@ -170,7 +172,7 @@ def make_body() -> Image.Image:
 
     draw.line([(x0 + 2, y1 - 1), (x0 + 10, y1 + 1)], fill=WOOD_DARK, width=max(1, int(_s(2.5))))
     draw.line([(x1 - 11, y1), (x1 - 3, y1 + 1)], fill=WOOD_LIGHT, width=max(1, int(_s(1.5))))
-    draw.line([(x0 + 1, y0), (x1 - 1, y0 - 1)], fill=INK, width=max(1, int(_s(2.5))))
+    draw.line([(x0 + 1, y0), (x1 - 1, y0 - 1)], fill=INK, width=max(1, int(_s(OUTLINE_SCALE))))
     draw.line([(x0 + 3, y0 + 2), (x1 - 4, y0 + 1)], fill=WOOD_LIGHT, width=max(1, int(_s(1.5))))
 
     return _downscale(img, 80.0, 52.0)
@@ -190,7 +192,7 @@ def make_lid() -> Image.Image:
         (_s(6), _s(8)),
     ]
     draw.polygon(lid_pts, fill=WOOD_DARK)
-    draw.line(lid_pts + [lid_pts[0]], fill=INK, width=max(1, int(_s(2.5))))
+    draw.line(lid_pts + [lid_pts[0]], fill=INK, width=max(1, int(_s(OUTLINE_SCALE))))
 
     for i, y in enumerate(range(int(_s(10)), h - int(_s(6)), max(2, int(_s(5))))):
         x_start = _s(8) + (i % 2)
@@ -214,7 +216,7 @@ def make_lid() -> Image.Image:
         (w - _s(10), h - _s(6)),
     ]
     draw.polygon(front, fill=BRASS_DARK)
-    draw.line(front + [front[0]], fill=INK, width=max(1, int(_s(1.5))))
+    draw.line(front + [front[0]], fill=INK, width=max(1, int(_s(2.2))))
 
     return _downscale(img, 80.0, 36.0)
 

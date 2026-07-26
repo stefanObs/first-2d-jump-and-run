@@ -7,8 +7,8 @@ signal opened(chest: TreasureChest, loot: TreasureChestLoot.Type)
 
 ## Player collision body height from player.tscn (44 px).
 const PLAYER_HEIGHT := 44.0
-## Handcrafted prop scale — 75% of player collision height.
-const HEIGHT_RATIO := 0.75
+## Handcrafted prop scale — 95% of player collision height.
+const HEIGHT_RATIO := 0.95
 const TARGET_HEIGHT := PLAYER_HEIGHT * HEIGHT_RATIO
 ## Unscaled collision height from treasure_chest.tscn.
 const BASE_COLLISION_HEIGHT := 36.0
