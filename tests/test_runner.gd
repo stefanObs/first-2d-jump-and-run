@@ -142,6 +142,7 @@ func _ready() -> void:
 	failures += await _run("Workshop preview click places stamp", _test_workshop_preview_places_stamp)
 	failures += await _run("Airborne bandits fall to walkable ground", _test_airborne_bandit_falls)
 	failures += await _run("Campaign workshop edits and inserts levels", _test_campaign_workshop)
+	failures += await _run("Campaign workshop back navigation stays reachable", _test_workshop_back_navigation)
 	failures += await _run("Trail share pack export and import round-trip", _test_trail_share_pack)
 	failures += await _run("Trail editor single-level export and import", _test_trail_editor_single_share)
 	failures += await _run("Trail editor saves and resets explicit snapshots", _test_trail_editor_save_reset)
@@ -4435,6 +4436,72 @@ func _test_campaign_workshop() -> Variant:
 			if restore != null:
 				restore.store_buffer(backups[i])
 	return error
+
+
+func _test_workshop_back_navigation() -> Variant:
+	var hub_packed: PackedScene = load("res://scenes/ui/custom_level_hub.tscn")
+	var hub := hub_packed.instantiate() as Control
+	add_child(hub)
+	await get_tree().process_frame
+	var viewport := Vector2(1280.0, 720.0)
+	hub.size = viewport
+	await get_tree().process_frame
+
+	var scroll: ScrollContainer = null
+	for child in hub.get_children():
+		if child is ScrollContainer:
+			scroll = child
+			break
+		if child is VBoxContainer:
+			for grandchild in (child as VBoxContainer).get_children():
+				if grandchild is ScrollContainer:
+					scroll = grandchild
+					break
+
+	var back_top: Button = null
+	for node in hub.find_children("*", "Button", true, false):
+		var button := node as Button
+		if button.get_index() == 0 or button.name == "BackButtonTop":
+			back_top = button
+			break
+	if back_top == null:
+		for node in hub.find_children("*", "Button", true, false):
+			back_top = node as Button
+			break
+
+	if back_top == null:
+		hub.queue_free()
+		return "Campaign workshop should expose a back button."
+	if not back_top.pressed.is_connected(GameManager.return_to_save_select):
+		hub.queue_free()
+		return "Campaign workshop back button should return to save select."
+	if scroll != null and scroll.get_combined_minimum_size().y > viewport.y * 0.85:
+		hub.queue_free()
+		return "Campaign workshop list scroll should not push the back button off-screen."
+	var back_rect := back_top.get_global_rect()
+	if back_rect.position.y + back_rect.size.y > viewport.y + 1.0:
+		hub.queue_free()
+		return "Campaign workshop back button should stay visible on a 720p screen."
+
+	hub.queue_free()
+
+	GameManager.active_custom_slot = CustomLevelStore.override_slot_for(1)
+	var editor_packed: PackedScene = load("res://scenes/ui/level_editor.tscn")
+	var editor := editor_packed.instantiate() as Control
+	add_child(editor)
+	await get_tree().process_frame
+	editor.size = viewport
+	await get_tree().process_frame
+
+	var editor_back := editor.find_child("BackButtonTop", true, false) as Button
+	if editor_back == null:
+		editor.queue_free()
+		return "Trail editor should expose a top back button."
+	if not editor_back.pressed.is_connected(editor._return_to_hub):
+		editor.queue_free()
+		return "Trail editor back button should return to the campaign workshop."
+	editor.queue_free()
+	return null
 
 
 func _test_trail_share_pack() -> Variant:

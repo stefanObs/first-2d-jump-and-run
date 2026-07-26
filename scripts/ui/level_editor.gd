@@ -145,10 +145,31 @@ func _ready() -> void:
 	_sync_tool_dropdowns()
 
 
+func _unhandled_input(event: InputEvent) -> void:
+	if _blocking_dialog_open():
+		return
+	if event.is_action_pressed(&"back"):
+		_return_to_hub()
+		get_viewport().set_input_as_handled()
+
+
+func _blocking_dialog_open() -> bool:
+	return (
+		(_reset_dialog != null and _reset_dialog.visible)
+		or (_export_dialog != null and _export_dialog.visible)
+		or (_import_dialog != null and _import_dialog.visible)
+	)
+
+
+func _return_to_hub() -> void:
+	GameManager.open_custom_level_hub()
+
+
 func _build_ui() -> void:
 	var background := ColorRect.new()
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	background.color = Color(0.55, 0.8, 0.98)
+	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(background)
 	var root := VBoxContainer.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 10)
@@ -157,6 +178,12 @@ func _build_ui() -> void:
 
 	var heading := HBoxContainer.new()
 	root.add_child(heading)
+	_add_action(
+		heading,
+		tr("Back to Campaign Workshop"),
+		_return_to_hub,
+		"BackButtonTop"
+	)
 	var title := Label.new()
 	title.text = (
 		tr("Edit Campaign Level")
@@ -323,7 +350,7 @@ func _build_ui() -> void:
 	_add_action(
 		actions,
 		tr("Back to Campaign Workshop"),
-		GameManager.open_custom_level_hub,
+		_return_to_hub,
 		"BackButton"
 	)
 

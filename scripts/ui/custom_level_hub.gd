@@ -13,15 +13,37 @@ func _ready() -> void:
 	_build_ui()
 
 
+func _unhandled_input(event: InputEvent) -> void:
+	if _dialog_open():
+		return
+	if event.is_action_pressed(&"back"):
+		GameManager.return_to_save_select()
+		get_viewport().set_input_as_handled()
+
+
+func _dialog_open() -> bool:
+	return (
+		(_export_dialog != null and _export_dialog.visible)
+		or (_import_dialog != null and _import_dialog.visible)
+	)
+
+
 func _build_ui() -> void:
 	var background := ColorRect.new()
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	background.color = Color(0.98, 0.74, 0.45)
+	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(background)
 	var box := VBoxContainer.new()
 	box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 22)
 	box.add_theme_constant_override(&"separation", 10)
 	add_child(box)
+	box.add_child(_make_button(
+		tr("Back to Cowboy Trail"),
+		Vector2(0, 48),
+		18,
+		GameManager.return_to_save_select
+	))
 	var title := Label.new()
 	title.text = tr("Campaign Workshop")
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -35,6 +57,7 @@ func _build_ui() -> void:
 	box.add_child(help)
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.custom_minimum_size = Vector2(0, 160)
 	box.add_child(scroll)
 	var rows := VBoxContainer.new()
 	rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -72,12 +95,6 @@ func _build_ui() -> void:
 	_status_label.add_theme_font_size_override(&"font_size", 16)
 	_status_label.add_theme_color_override(&"font_color", Color(0.35, 0.16, 0.05))
 	box.add_child(_status_label)
-	box.add_child(_make_button(
-		tr("Back to Cowboy Trail"),
-		Vector2(0, 56),
-		20,
-		GameManager.return_to_save_select
-	))
 	_export_dialog = FileDialog.new()
 	_export_dialog.file_mode = FileDialog.FILE_MODE_SAVE_FILE
 	_export_dialog.access = FileDialog.ACCESS_FILESYSTEM
