@@ -36,6 +36,7 @@ var _mode_label: Label
 var _mode_board: Control
 ## Advanced-mode preference for empty slots (index → bool).
 var _empty_slot_advanced: Array[bool] = [false, false, false]
+var _syncing_mode_dropdown := false
 
 
 func _ready() -> void:
@@ -125,6 +126,7 @@ func _ready() -> void:
 			)
 	GameManager.saves_changed.connect(_refresh)
 	InputManager.device_changed.connect(func(_d: Variant) -> void: _refresh_prompts())
+	GameManager.settings_changed.connect(_refresh_mode_dropdown_labels)
 	_refresh()
 	_refresh_prompts()
 	_highlight()
@@ -168,8 +170,6 @@ func _localize_static_labels() -> void:
 		_delete_dialog.dialog_text = tr("Delete the selected save? This cannot be undone.")
 		_delete_dialog.ok_button_text = tr("Delete")
 		_delete_dialog.cancel_button_text = tr("Keep it")
-	if _mode_label != null:
-		_mode_label.text = tr("Trail mode")
 
 
 func _setup_mode_dropdown() -> void:
@@ -179,15 +179,29 @@ func _setup_mode_dropdown() -> void:
 	if _mode_board != null:
 		_mode_board.add_theme_stylebox_override(&"panel", _wood_style(WOOD, 10, 8))
 	if _mode_label != null:
+		_mode_label.text = tr("Trail mode")
 		_apply_cream_outline(_mode_label, Color(0.94, 0.84, 0.52, 1.0), Color(0.24, 0.09, 0.04, 0.78), 2)
 	if _mode_dropdown == null:
 		return
-	_mode_dropdown.clear()
-	_mode_dropdown.add_item(tr("Classic"))
-	_mode_dropdown.add_item(tr("Advanced Mode"))
+	_refresh_mode_dropdown_labels()
 	_style_mode_dropdown(_mode_dropdown)
-	_mode_dropdown.item_selected.connect(_on_mode_selected)
+	if not _mode_dropdown.item_selected.is_connected(_on_mode_selected):
+		_mode_dropdown.item_selected.connect(_on_mode_selected)
 	_sync_mode_dropdown_for_slot(_index)
+
+
+func _refresh_mode_dropdown_labels() -> void:
+	if _mode_label != null:
+		_mode_label.text = tr("Trail mode")
+	if _mode_dropdown == null:
+		return
+	var advanced := _mode_for_slot(_index)
+	_syncing_mode_dropdown = true
+	_mode_dropdown.clear()
+	_mode_dropdown.add_item(tr("Classic"), 0)
+	_mode_dropdown.add_item(tr("Advanced Mode"), 1)
+	_mode_dropdown.select(1 if advanced else 0)
+	_syncing_mode_dropdown = false
 
 
 func _style_mode_dropdown(dropdown: OptionButton) -> void:
@@ -212,6 +226,8 @@ func _style_mode_dropdown(dropdown: OptionButton) -> void:
 
 
 func _on_mode_selected(index: int) -> void:
+	if _syncing_mode_dropdown or index < 0:
+		return
 	if GameManager.is_slot_empty(_index):
 		_empty_slot_advanced[_index] = index == 1
 	_sync_mode_dropdown_for_slot(_index)
@@ -225,8 +241,10 @@ func _sync_mode_dropdown_for_slot(slot_index: int) -> void:
 		advanced = _empty_slot_advanced[slot_index]
 	else:
 		advanced = GameManager.slot_is_advanced(slot_index)
+	_syncing_mode_dropdown = true
 	_mode_dropdown.select(1 if advanced else 0)
 	_mode_dropdown.disabled = not GameManager.is_slot_empty(slot_index)
+	_syncing_mode_dropdown = false
 
 
 func _mode_for_slot(slot_index: int) -> bool:
@@ -640,6 +658,7 @@ func _request_delete() -> void:
 
 func _confirm_delete() -> void:
 	GameManager.erase_slot(_index)
+	_empty_slot_advanced[_index] = false
 	_refresh()
 	_refresh_prompts()
 

@@ -87,6 +87,8 @@ var _grid: GridContainer
 var _grid_scroll: ScrollContainer
 var _editor_pane: VBoxContainer
 var _h_scroll: HScrollBar
+var _length_minus: Button
+var _length_plus: Button
 const _CELL_WIDTH := 42.0
 const _MIN_CELL_HEIGHT := 12.0
 const _COMFORT_CELL_HEIGHT := 22.0
@@ -166,6 +168,24 @@ func _build_ui() -> void:
 	_title_edit.custom_minimum_size = Vector2(240, 30)
 	_title_edit.text_changed.connect(_on_title_changed)
 	heading.add_child(_title_edit)
+	var length_box := HBoxContainer.new()
+	length_box.add_theme_constant_override(&"separation", 4)
+	heading.add_child(length_box)
+	_length_minus = Button.new()
+	_length_minus.name = "LengthMinusButton"
+	_length_minus.text = tr("− Length")
+	_length_minus.custom_minimum_size = Vector2(92, 30)
+	_length_minus.add_theme_font_size_override(&"font_size", 12)
+	_length_minus.pressed.connect(func() -> void: _change_length(-CustomLevelStore.WIDTH_STEP))
+	length_box.add_child(_length_minus)
+	_length_plus = Button.new()
+	_length_plus.name = "LengthPlusButton"
+	_length_plus.text = tr("+ Length")
+	_length_plus.custom_minimum_size = Vector2(92, 30)
+	_length_plus.add_theme_font_size_override(&"font_size", 12)
+	_length_plus.pressed.connect(func() -> void: _change_length(CustomLevelStore.WIDTH_STEP))
+	length_box.add_child(_length_plus)
+	_update_length_buttons()
 
 	var instructions := Label.new()
 	instructions.text = tr("1. Pick a stamp   2. Pick a square   3. Save or Play Test")
@@ -251,11 +271,11 @@ func _build_ui() -> void:
 	_editor_pane.add_child(_grid_scroll)
 	_grid = GridContainer.new()
 	_grid.name = "StampGrid"
-	_grid.columns = int(_data.get("width", 24))
+	_grid.columns = int(_data.get("width", CustomLevelStore.DEFAULT_WIDTH))
 	_grid.add_theme_constant_override(&"h_separation", 2)
 	_grid.add_theme_constant_override(&"v_separation", 2)
 	_grid_scroll.add_child(_grid)
-	var width := int(_data.get("width", 24))
+	var width := int(_data.get("width", CustomLevelStore.DEFAULT_WIDTH))
 	var height := int(_data.get("height", 8))
 	for y in range(height):
 		for x in range(width):
@@ -609,6 +629,30 @@ func _trail_y() -> int:
 	return CustomLevelStore.trail_row(int(_data.get("height", 8)))
 
 
+func _change_length(delta_columns: int) -> void:
+	var width := int(_data.get("width", CustomLevelStore.DEFAULT_WIDTH))
+	var next_width := width + delta_columns
+	if next_width < CustomLevelStore.MIN_WIDTH or next_width > CustomLevelStore.MAX_WIDTH:
+		return
+	_data = CustomLevelStore.resize_width(_data, next_width, GameManager.active_custom_slot)
+	_rebuild_stamp_grid()
+	_refresh_grid()
+	_mark_dirty()
+	_update_length_buttons()
+	if _preview != null:
+		_preview.show_level(_data)
+	call_deferred("_sync_scroll_range")
+	_status.text = tr("Trail length: %d columns") % int(_data.get("width", CustomLevelStore.DEFAULT_WIDTH))
+
+
+func _update_length_buttons() -> void:
+	var width := int(_data.get("width", CustomLevelStore.DEFAULT_WIDTH))
+	if _length_minus != null:
+		_length_minus.disabled = width <= CustomLevelStore.MIN_WIDTH
+	if _length_plus != null:
+		_length_plus.disabled = width >= CustomLevelStore.MAX_WIDTH
+
+
 func _set_hover_column(column: int) -> void:
 	_hover_column = column
 	if _preview != null:
@@ -625,7 +669,7 @@ func _horizontal_scroll_max() -> float:
 		return 0.0
 	var content_w := _grid.size.x
 	if content_w <= 0.0:
-		var width := int(_data.get("width", 24))
+		var width := int(_data.get("width", CustomLevelStore.DEFAULT_WIDTH))
 		var h_sep := float(_grid.get_theme_constant(&"h_separation", "GridContainer"))
 		content_w = _CELL_WIDTH * float(width) + h_sep * float(maxi(width - 1, 0))
 	return maxf(content_w - _grid_scroll.size.x, 0.0)
@@ -781,7 +825,7 @@ func _has_type_at(objects: Array, x: int, y: int, type_name: String) -> bool:
 
 
 func _refresh_grid() -> void:
-	var width := int(_data.get("width", 24))
+	var width := int(_data.get("width", CustomLevelStore.DEFAULT_WIDTH))
 	var height := int(_data.get("height", 8))
 	var trail := _trail_y()
 	for y in range(height):
@@ -803,10 +847,11 @@ func _refresh_grid() -> void:
 		_preview.show_level(_data)
 		if _hover_column >= 0:
 			_preview.set_hover_column(_hover_column)
+	_update_length_buttons()
 
 
 func _refresh_grid_highlights() -> void:
-	var width := int(_data.get("width", 24))
+	var width := int(_data.get("width", CustomLevelStore.DEFAULT_WIDTH))
 	var height := int(_data.get("height", 8))
 	for y in range(height):
 		for x in range(width):
@@ -979,7 +1024,7 @@ func _on_import_selected(path: String) -> void:
 
 
 func _rebuild_stamp_grid_if_needed() -> void:
-	var width := int(_data.get("width", 24))
+	var width := int(_data.get("width", CustomLevelStore.DEFAULT_WIDTH))
 	var height := int(_data.get("height", 8))
 	if _cells.size() == width * height:
 		return
@@ -993,8 +1038,8 @@ func _rebuild_stamp_grid() -> void:
 		if is_instance_valid(cell):
 			cell.queue_free()
 	_cells.clear()
-	_grid.columns = int(_data.get("width", 24))
-	var width := int(_data.get("width", 24))
+	_grid.columns = int(_data.get("width", CustomLevelStore.DEFAULT_WIDTH))
+	var width := int(_data.get("width", CustomLevelStore.DEFAULT_WIDTH))
 	var height := int(_data.get("height", 8))
 	for y in range(height):
 		for x in range(width):

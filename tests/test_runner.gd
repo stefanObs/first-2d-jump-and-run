@@ -2920,7 +2920,7 @@ func _test_canyon_center_illustrated() -> Variant:
 		controller.queue_free()
 		return "Canyon mouth must not paint a sky-fill column over desert banks."
 	var trail := controller.get_node_or_null("TrailFloor") as Node2D
-	var abyss := trail.get_node_or_null("FloorAbyss") as ColorRect if trail != null else null
+	var abyss := trail.get_node_or_null("FloorAbyss") as Polygon2D if trail != null else null
 	if abyss == null:
 		controller.queue_free()
 		return "TrailFloor/FloorAbyss missing; canyon cover order cannot be verified."
@@ -2932,9 +2932,10 @@ func _test_canyon_center_illustrated() -> Variant:
 		return "CanyonMouth must be top_level above FloorAbyss (z > -2)."
 	# Abyss only under banks — must not span the canyon mouth as a dark/blue column.
 	var gap_mid := (canyon_art.gap_left + canyon_art.gap_right) * 0.5
-	for abyss_node in trail.find_children("FloorAbyss*", "ColorRect", false, false):
-		var strip := abyss_node as ColorRect
-		if strip.position.x < gap_mid and strip.position.x + strip.size.x > gap_mid:
+	for abyss_node in trail.find_children("FloorAbyss*", "Polygon2D", false, false):
+		var strip := abyss_node as Polygon2D
+		var strip_right := _abyss_right_edge(strip)
+		if strip.position.x < gap_mid and strip_right > gap_mid:
 			controller.queue_free()
 			return "FloorAbyss spans the canyon mouth; leave the gap open to Background sky."
 	# No mountain / depth / floor / sky-fill inside the canyon — open sky only.
@@ -3191,6 +3192,16 @@ func _test_trail_row_model() -> Variant:
 	if not has_slope_body:
 		level.free()
 		return "Desert height slopes need walkable collision."
+	var trail := level.get_node_or_null("TrailFloor") as Node2D
+	if trail != null:
+		for abyss_node in trail.find_children("FloorAbyss*", "ColorRect", false, false):
+			level.free()
+			return "FloorAbyss must use Polygon2D, not ColorRect (Controls draw over slopes)."
+		var abyss_poly := trail.get_node_or_null("FloorAbyss") as Polygon2D
+		var crust := level.find_child("FloorSlope0_0", true, false) as Sprite2D
+		if abyss_poly != null and crust != null and crust.z_index <= abyss_poly.z_index:
+			level.free()
+			return "Desert slope crust must draw above FloorAbyss earth fill."
 	# Curved dune collision (smoothstep) — more than a 4-point linear ramp.
 	var slope_body := level.find_child("FloorSlopeBody0", true, false) as StaticBody2D
 	if slope_body != null:
@@ -3326,7 +3337,7 @@ func _test_trail_row_model() -> Variant:
 		return level2
 	var level2_controller := level2 as LevelController
 	var level2_trail := level2_controller.get_node_or_null("TrailFloor") as Node2D
-	var level2_abyss := level2_trail.get_node_or_null("FloorAbyss") as ColorRect if level2_trail != null else null
+	var level2_abyss := level2_trail.get_node_or_null("FloorAbyss") as Polygon2D if level2_trail != null else null
 	if level2_abyss == null:
 		level2_controller.queue_free()
 		return "Level 2 is missing FloorAbyss."
@@ -3340,6 +3351,14 @@ func _test_trail_row_model() -> Variant:
 				"Level 2 FloorAbyss paints above desert top %.0f (dark line over sand)."
 				% float(strip["top"])
 			)
+	# FloorAbyss must stay a CanvasItem so slope crust z_index wins over earth fill.
+	for abyss_node in level2_trail.find_children("FloorAbyss*", "ColorRect", false, false):
+		level2_controller.queue_free()
+		return "FloorAbyss must use Polygon2D, not ColorRect (Controls draw over slopes)."
+	var slope_crust := level2_controller.find_child("FloorSlope0_0", true, false) as Sprite2D
+	if slope_crust != null and slope_crust.z_index <= level2_abyss.z_index:
+		level2_controller.queue_free()
+		return "Desert slope crust must draw above FloorAbyss earth fill."
 	# Canyon beside the raised plateau should match each bank lip height.
 	var pit6 := level2_controller.find_child("Pit6", true, false) as Hazard
 	if pit6 != null:
@@ -4432,6 +4451,13 @@ func _test_wings_carrion_variety() -> Variant:
 		if heights[heights.size() - 1] - heights[0] < 200.0:
 			return "Level %s carrions should vary in height, not form one line." % lv
 	return null
+
+
+func _abyss_right_edge(abyss: Polygon2D) -> float:
+	var max_x := 0.0
+	for point in abyss.polygon:
+		max_x = maxf(max_x, point.x)
+	return abyss.position.x + max_x
 
 
 func _instantiate_level(path: String) -> Variant:

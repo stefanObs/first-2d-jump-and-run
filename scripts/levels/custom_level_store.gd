@@ -22,6 +22,12 @@ const BUILTIN_NAMES: PackedStringArray = [
 	"Dusty Trail", "Badge Meadow", "Bronco Springs", "Canyon Ferry", "Outlaw Cave",
 	"Windy Mesa", "Sky Ranch", "Rail Yard", "Moonlight Gulch", "Rainbow Saloon",
 ]
+## Workshop defaults and resize limits — match typical built-in campaign width (goal ~column 177).
+const MIN_WIDTH := 12
+const MAX_WIDTH := 180
+const DEFAULT_WIDTH := 180
+const DEFAULT_HEIGHT := 8
+const WIDTH_STEP := 12
 
 
 static func trail_row(height: int) -> int:
@@ -29,15 +35,16 @@ static func trail_row(height: int) -> int:
 
 
 static func default_level(slot_index: int) -> Dictionary:
-	var height := 8
+	var height := DEFAULT_HEIGHT
+	var width := DEFAULT_WIDTH
 	var trail := trail_row(height)
 	var objects: Array[Dictionary] = []
-	for x in range(24):
+	for x in range(width):
 		objects.append({"type": "ground", "x": x, "y": trail})
 	objects.append({"type": "star", "x": 7, "y": trail - 2})
 	objects.append({"type": "cactus", "x": 11, "y": trail})
-	objects.append({"type": "checkpoint", "x": 15, "y": trail})
-	objects.append({"type": "goal", "x": 22, "y": trail})
+	objects.append({"type": "checkpoint", "x": width / 2, "y": trail})
+	objects.append({"type": "goal", "x": width - 3, "y": trail})
 	return {
 		"version": VERSION,
 		"slot": clampi(slot_index, 0, SLOT_COUNT - 1),
@@ -46,11 +53,40 @@ static func default_level(slot_index: int) -> Dictionary:
 		"source_level": 0,
 		"insert_position": 11,
 		"grid": 40,
-		"width": 24,
+		"width": width,
 		"height": height,
 		"spawn": [2, trail],
 		"objects": objects,
 	}
+
+
+static func resize_width(source: Dictionary, new_width: int, slot_index: int = -1) -> Dictionary:
+	var slot := slot_index if slot_index >= 0 else int(source.get("slot", 0))
+	var old_width := int(source.get("width", DEFAULT_WIDTH))
+	var clamped_width := clampi(new_width, MIN_WIDTH, MAX_WIDTH)
+	if clamped_width == old_width:
+		return sanitize(source, slot)
+	var trail := trail_row(int(source.get("height", DEFAULT_HEIGHT)))
+	var objects: Array[Dictionary] = []
+	for value in source.get("objects", []):
+		if not (value is Dictionary):
+			continue
+		var object := (value as Dictionary).duplicate(true)
+		if int(object.get("x", -1)) < clamped_width:
+			objects.append(object)
+	if clamped_width > old_width:
+		for x in range(old_width, clamped_width):
+			_append_unique(objects, {"type": "ground", "x": x, "y": trail})
+	var result := source.duplicate(true)
+	result["width"] = clamped_width
+	result["objects"] = objects
+	var spawn: Array = result.get("spawn", [2, trail])
+	if spawn is Array and spawn.size() >= 2:
+		result["spawn"] = [
+			clampi(int(spawn[0]), 0, clamped_width - 1),
+			clampi(int(spawn[1]), 0, trail),
+		]
+	return sanitize(result, slot)
 
 
 static func save(slot_index: int, data: Dictionary) -> bool:
@@ -400,7 +436,7 @@ static func import_builtin(level_number: int) -> Dictionary:
 	var level := packed.instantiate()
 	var grid := float(result["grid"])
 	var objects: Array[Dictionary] = []
-	var max_x := 24
+	var max_x := DEFAULT_WIDTH
 	var max_ground_y := 0
 	for node in level.find_children("*", "Node2D", true, false):
 		var world_pos := (node as Node2D).global_position
@@ -441,7 +477,7 @@ static func import_builtin(level_number: int) -> Dictionary:
 		for object in objects:
 			object["y"] = clampi(int(object.get("y", 0)) + shift, 0, trail)
 	result["height"] = height
-	result["width"] = clampi(max_x, 24, 180)
+	result["width"] = clampi(max_x, MIN_WIDTH, MAX_WIDTH)
 	# Walk-surface props often sit a few pixels above ground center; snap them to
 	# the trail row so workshop rebuilds do not float cacti above the dirt.
 	if not objects.is_empty():
@@ -501,7 +537,7 @@ static func sanitize(source: Dictionary, slot_index: int) -> Dictionary:
 	result["kind"] = str(source.get("kind", result["kind"]))
 	result["source_level"] = clampi(int(source.get("source_level", 0)), 0, BUILTIN_COUNT)
 	result["insert_position"] = clampi(int(source.get("insert_position", 11)), 1, BUILTIN_COUNT + 1)
-	result["width"] = clampi(int(source.get("width", result["width"])), 12, 180)
+	result["width"] = clampi(int(source.get("width", result["width"])), MIN_WIDTH, MAX_WIDTH)
 	result["height"] = clampi(int(source.get("height", result["height"])), 6, 14)
 	result["version"] = VERSION
 	result["start_mounted"] = bool(source.get("start_mounted", false)) or int(result["source_level"]) == 1

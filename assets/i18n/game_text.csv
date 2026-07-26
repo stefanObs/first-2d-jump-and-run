@@ -203,7 +203,9 @@ Edit,Edit,Bearbeiten
 Remove,Remove,Entfernen
 + Add a new level after Level 10,+ Add a new level after Level 10,+ Neues Level nach Level 10 hinzufügen
 Back to Cowboy Trail,Back to Cowboy Trail,Zurück zum Cowboy-Pfad
-Trail mode,Trail mode,Pfad-Modus
++ Length,+ Length,+ Länge
+− Length,− Length,− Länge
+Trail length: %d columns,Trail length: %d columns,Pfadlänge: %d Spalten
 Classic,Classic,Klassisch
 Advanced Mode,Advanced Mode,Fortgeschrittenen-Modus
 Lives: %s,Lives: %s,Leben: %s
