@@ -142,28 +142,52 @@ func _style_language_dropdown() -> void:
 func _style_option_dropdown(dropdown: OptionButton) -> void:
 	if dropdown == null:
 		return
-	dropdown.add_theme_color_override(&"font_color", TEXT_COLOR)
-	dropdown.add_theme_color_override(&"font_hover_color", Color(0.45, 0.2, 0.06, 1.0))
-	dropdown.add_theme_color_override(&"font_pressed_color", TEXT_COLOR)
+	var ink := TEXT_COLOR
+	var ink_hover := Color(0.45, 0.2, 0.06, 1.0)
+	var ink_disabled := Color(0.45, 0.35, 0.28, 1.0)
+	var panel_cream := Color(1.0, 0.93, 0.78, 1.0)
+	var panel_hover := Color(1.0, 0.86, 0.5, 1.0)
+	var border := Color(0.45, 0.24, 0.08, 1.0)
+	dropdown.add_theme_color_override(&"font_color", ink)
+	dropdown.add_theme_color_override(&"font_hover_color", ink_hover)
+	dropdown.add_theme_color_override(&"font_pressed_color", ink)
+	dropdown.add_theme_color_override(&"font_focus_color", ink)
+	dropdown.add_theme_color_override(&"font_disabled_color", ink_disabled)
 	dropdown.add_theme_font_size_override(&"font_size", 22)
 	var normal := StyleBoxFlat.new()
 	normal.bg_color = Color(0.95, 0.78, 0.42, 1)
 	normal.set_corner_radius_all(10)
 	normal.set_border_width_all(3)
-	normal.border_color = Color(0.45, 0.24, 0.08, 1)
+	normal.border_color = border
 	normal.content_margin_left = 12
 	normal.content_margin_right = 12
 	normal.content_margin_top = 7
 	normal.content_margin_bottom = 7
 	var hover := normal.duplicate() as StyleBoxFlat
-	hover.bg_color = Color(1.0, 0.86, 0.5, 1)
+	hover.bg_color = panel_hover
 	dropdown.add_theme_stylebox_override(&"normal", normal)
 	dropdown.add_theme_stylebox_override(&"hover", hover)
 	dropdown.add_theme_stylebox_override(&"pressed", hover)
 	dropdown.add_theme_stylebox_override(&"focus", hover)
 	var popup := dropdown.get_popup()
-	popup.add_theme_color_override(&"font_color", TEXT_COLOR)
 	popup.add_theme_font_size_override(&"font_size", 22)
+	popup.add_theme_color_override(&"font_color", ink)
+	popup.add_theme_color_override(&"font_hover_color", ink_hover)
+	popup.add_theme_color_override(&"font_disabled_color", ink_disabled)
+	var popup_panel := StyleBoxFlat.new()
+	popup_panel.bg_color = panel_cream
+	popup_panel.set_border_width_all(3)
+	popup_panel.border_color = border
+	popup_panel.set_corner_radius_all(10)
+	popup_panel.content_margin_left = 8
+	popup_panel.content_margin_top = 6
+	popup_panel.content_margin_right = 8
+	popup_panel.content_margin_bottom = 6
+	popup.add_theme_stylebox_override(&"panel", popup_panel)
+	var item_hover := StyleBoxFlat.new()
+	item_hover.bg_color = panel_hover
+	item_hover.set_corner_radius_all(6)
+	popup.add_theme_stylebox_override(&"hover", item_hover)
 
 
 func _style_slider(slider: HSlider) -> void:

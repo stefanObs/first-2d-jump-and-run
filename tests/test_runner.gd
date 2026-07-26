@@ -16,6 +16,7 @@ func _ready() -> void:
 	failures += await _run("Portable saves fall back when exe folder is read-only", _test_save_paths_writable_fallback)
 	failures += await _run("Save select scene loads", _test_save_select_scene)
 	failures += await _run("Save select offers Advanced Mode in Settings", _test_settings_trail_mode_dropdown)
+	failures += await _run("Settings dropdown popups stay readable", _test_settings_dropdown_popup_contrast)
 	failures += await _run("Settings trail mode selection applies to slots", _test_settings_trail_mode_selection)
 	failures += await _run("Settings trail mode persists through refresh", _test_settings_trail_mode_refresh)
 	failures += await _run("Advanced Mode lives and badge milestones", _test_advanced_mode_lives)
@@ -794,6 +795,48 @@ func _test_settings_trail_mode_dropdown() -> Variant:
 		error = "Classic mode label missing from settings trail mode dropdown."
 	elif dropdown.get_item_text(1) not in ["Advanced Mode", "Fortgeschrittenen-Modus"]:
 		error = "Advanced Mode label missing from settings trail mode dropdown."
+	scene.queue_free()
+	return error
+
+
+func _test_settings_dropdown_popup_contrast() -> Variant:
+	var packed: PackedScene = load("res://scenes/ui/save_select.tscn")
+	if packed == null:
+		return "Missing save select scene."
+	var scene := packed.instantiate()
+	add_child(scene)
+	await get_tree().process_frame
+	var dropdown_paths := [
+		"SettingsPanel/Margin/VBox/LanguageDropdown",
+		"SettingsPanel/Margin/VBox/CharacterDropdown",
+		"SettingsPanel/Margin/VBox/TrailModeDropdown",
+	]
+	var error: Variant = null
+	for path in dropdown_paths:
+		var dropdown := scene.get_node_or_null(path) as OptionButton
+		if dropdown == null:
+			error = "Missing settings dropdown: %s." % path
+			break
+		var popup := dropdown.get_popup()
+		var panel := popup.get_theme_stylebox("panel")
+		if panel == null or not panel is StyleBoxFlat:
+			error = "Settings dropdown popup needs a cream panel stylebox."
+			break
+		var bg := (panel as StyleBoxFlat).bg_color
+		if bg.r < 0.9 or bg.g < 0.85:
+			error = "Settings dropdown popup should use a light cream panel."
+			break
+		var ink := popup.get_theme_color("font_color")
+		if ink.r > 0.5 or ink.g > 0.3:
+			error = "Settings dropdown popup should use dark western ink text."
+			break
+		var hover_ink := popup.get_theme_color("font_hover_color")
+		if hover_ink.r > 0.55:
+			error = "Settings dropdown popup hover text should stay dark and readable."
+			break
+		if popup.get_theme_stylebox("hover") == null:
+			error = "Settings dropdown popup needs a hover stylebox for items."
+			break
 	scene.queue_free()
 	return error
 
