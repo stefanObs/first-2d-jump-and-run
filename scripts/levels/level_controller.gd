@@ -135,6 +135,7 @@ func setup_level() -> void:
 			hint.visible = false
 		_setup_camp_marks()
 		_sync_advanced_hud()
+		call_deferred("_sync_advanced_hud")
 		if not is_custom_level and GameManager.is_advanced_mode():
 			if not GameManager.lives_changed.is_connected(_on_lives_changed):
 				GameManager.lives_changed.connect(_on_lives_changed)

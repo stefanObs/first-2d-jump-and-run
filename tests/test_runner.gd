@@ -19,6 +19,7 @@ func _ready() -> void:
 	failures += await _run("Save select trail mode selection applies", _test_save_select_mode_selection)
 	failures += await _run("Save select trail mode survives refresh", _test_save_select_mode_refresh)
 	failures += await _run("Advanced Mode lives and badge milestones", _test_advanced_mode_lives)
+	failures += await _run("Advanced Mode lives hearts show in HUD", _test_advanced_mode_lives_hud)
 	failures += await _run("Advanced Mode respawn costs a life", _test_advanced_mode_respawn_cost)
 	failures += await _run("Advanced Mode game over scene exists", _test_advanced_mode_game_over_scene)
 	failures += await _run("Advanced Mode boss fights skip boss hearts", _test_advanced_boss_skips_hearts)
@@ -909,6 +910,38 @@ func _test_advanced_mode_lives() -> Variant:
 		return "Advanced life totals should persist in the save slot."
 	GameManager.erase_slot(0)
 	return null
+
+
+func _test_advanced_mode_lives_hud() -> Variant:
+	GameManager.erase_slot(0)
+	GameManager.prepare_slot_for_start(0, true)
+	GameManager.active_slot_index = 0
+	var packed: PackedScene = load(GameManager.LEVEL_SCENES[0])
+	if packed == null:
+		GameManager.erase_slot(0)
+		return "Missing first campaign level for lives HUD test."
+	var level := packed.instantiate()
+	add_child(level)
+	if level is LevelController:
+		(level as LevelController).setup_level()
+	await get_tree().process_frame
+	var hud := level.get_node_or_null("Hud") as Hud
+	var error: Variant = null
+	if hud == null:
+		error = "Campaign level should include a Hud node."
+	else:
+		var hearts := hud.get_node_or_null("LivesHeartsLabel") as Label
+		if hearts == null:
+			error = "Advanced Mode HUD should include LivesHeartsLabel."
+		elif not hearts.visible:
+			error = "Advanced Mode lives hearts should be visible during gameplay."
+		elif not hearts.text.contains("♥"):
+			error = "Advanced Mode lives hearts should show filled heart glyphs."
+		elif hearts.z_index < 10:
+			error = "Lives hearts should render above other HUD widgets."
+	level.queue_free()
+	GameManager.erase_slot(0)
+	return error
 
 
 func _test_advanced_mode_respawn_cost() -> Variant:

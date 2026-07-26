@@ -21,6 +21,7 @@ func _ready() -> void:
 	_stars_label = get_node_or_null("StarsLabel") as Label
 	_mode_label = get_node_or_null("ModeLabel") as Label
 	_prompt_label = get_node_or_null("PromptLabel") as Label
+	_ensure_lives_display()
 	_ensure_progress_widgets()
 	_ensure_power_bar()
 	set_stars(0)
@@ -60,6 +61,15 @@ func set_lives(count: int, show: bool) -> void:
 		if i < count - 1:
 			filled += " "
 	_lives_hearts_label.text = filled if filled != "" else "♡"
+	_bring_lives_to_front()
+
+
+func _bring_lives_to_front() -> void:
+	if _lives_hearts_label == null:
+		return
+	_lives_hearts_label.z_index = 30
+	_lives_hearts_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	move_child(_lives_hearts_label, get_child_count() - 1)
 
 
 func set_mode(mode_name: String, remaining: float) -> void:
@@ -137,14 +147,16 @@ func _ensure_power_bar() -> void:
 
 
 func _ensure_lives_display() -> void:
+	if _lives_hearts_label == null:
+		_lives_hearts_label = get_node_or_null("LivesHeartsLabel") as Label
 	if _lives_hearts_label != null:
 		return
 	_lives_hearts_label = Label.new()
 	_lives_hearts_label.name = "LivesHeartsLabel"
 	_lives_hearts_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_lives_hearts_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	_lives_hearts_label.offset_top = 16.0
-	_lives_hearts_label.offset_bottom = 64.0
+	_lives_hearts_label.offset_top = 12.0
+	_lives_hearts_label.offset_bottom = 56.0
 	_lives_hearts_label.add_theme_font_size_override(&"font_size", 36)
 	_lives_hearts_label.add_theme_color_override(&"font_color", Color(0.9, 0.2, 0.25, 1))
 	_lives_hearts_label.add_theme_color_override(&"font_outline_color", Color(0.2, 0.05, 0.05, 1))
@@ -159,6 +171,6 @@ func _ensure_progress_widgets() -> void:
 		return
 	_trail_bar = HandmadeProgress.new()
 	_trail_bar.name = "TrailProgress"
-	_trail_bar.position = Vector2(470, 10)
+	_trail_bar.position = Vector2(820, 10)
 	_trail_bar.size = Vector2(340, 64)
 	add_child(_trail_bar)
