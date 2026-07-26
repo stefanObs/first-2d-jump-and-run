@@ -522,6 +522,7 @@ static func _draw_bank_slope(
 	var y_end := float(span["y_end"])
 	var curved := bool(span.get("curved", true))
 
+	_paint_slope_underfill(parent, x_start, y_start, x_end, y_end, index, curved)
 	_paint_slope_fill(parent, dirt, x_start, y_start, x_end, y_end, index, curved)
 	_paint_slope_crust(parent, surface, x_start, y_start, x_end, y_end, index, curved)
 	_add_slope_collision(parent, x_start, y_start, x_end, y_end, index, curved)
@@ -671,6 +672,37 @@ static func _paint_slope_crust(
 		tile_i += 1
 		if tile_i > 50:
 			break
+
+
+static func _paint_slope_underfill(
+	parent: Node,
+	x_start: float,
+	y_start: float,
+	x_end: float,
+	y_end: float,
+	index: int,
+	curved: bool = true
+) -> void:
+	## Solid earth wedge under the dune face — flat FloorAbyss is clipped away here and
+	## tiled dirt alone leaves sky-blue gaps under the curved crust.
+	const SAMPLES := 16
+	const CRUST_PAD := 44.0
+	const DEPTH := 880.0
+	var bottom_y := maxf(y_start, y_end) + DEPTH
+	var poly: PackedVector2Array = []
+	for i in range(SAMPLES + 1):
+		var t := float(i) / float(SAMPLES)
+		var x := lerpf(x_start, x_end, t)
+		var y := _slope_y_at(x, x_start, y_start, x_end, y_end, curved) + CRUST_PAD
+		poly.append(Vector2(x, y))
+	poly.append(Vector2(x_end, bottom_y))
+	poly.append(Vector2(x_start, bottom_y))
+	var underfill := Polygon2D.new()
+	underfill.name = "FloorSlopeUnderfill%d" % index
+	underfill.color = Color(0.22, 0.10, 0.12, 1.0)
+	underfill.polygon = poly
+	underfill.z_index = 1
+	parent.add_child(underfill)
 
 
 static func _paint_slope_fill(

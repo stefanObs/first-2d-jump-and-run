@@ -17,6 +17,7 @@ func _ready() -> void:
 	failures += await _run("Save select scene loads", _test_save_select_scene)
 	failures += await _run("Save select offers Advanced Mode dropdown", _test_save_select_mode_dropdown)
 	failures += await _run("Save select trail mode selection applies", _test_save_select_mode_selection)
+	failures += await _run("Save select trail mode survives refresh", _test_save_select_mode_refresh)
 	failures += await _run("Advanced Mode lives and badge milestones", _test_advanced_mode_lives)
 	failures += await _run("Advanced Mode respawn costs a life", _test_advanced_mode_respawn_cost)
 	failures += await _run("Advanced Mode game over scene exists", _test_advanced_mode_game_over_scene)
@@ -89,6 +90,7 @@ func _ready() -> void:
 	failures += await _run("Cacti align to desert slopes", _test_cactus_aligns_to_desert_slope)
 	failures += await _run("Dune crest stays walkable without jumping", _test_slope_crest_walkable)
 	failures += await _run("Slope earth fill stays below crust line", _test_slope_dirt_below_crust)
+	failures += await _run("Slope underfill covers dune wedge", _test_slope_underfill_covers_wedge)
 	failures += await _run("Bandits play walk animation while moving", _test_bandit_walk_animation)
 	failures += await _run("Campaign hazards are no longer blocked by plank highways", _test_no_plank_highways)
 	failures += await _run(
@@ -831,6 +833,53 @@ func _test_save_select_mode_selection() -> Variant:
 		scene.queue_free()
 		GameManager.erase_slot(0)
 		return "Trail mode dropdown should include Advanced Mode."
+	scene.queue_free()
+	GameManager.erase_slot(0)
+	return null
+
+
+func _test_save_select_mode_refresh() -> Variant:
+	GameManager.erase_slot(0)
+	var slot := GameManager.get_slot(0)
+	slot["empty"] = false
+	slot["advanced_mode"] = false
+	slot["current_level"] = 1
+	GameManager.debug_set_slot(0, slot)
+	var packed: PackedScene = load("res://scenes/ui/save_select.tscn")
+	if packed == null:
+		GameManager.erase_slot(0)
+		return "Missing save select scene."
+	var scene := packed.instantiate()
+	add_child(scene)
+	await get_tree().process_frame
+	scene._index = 0
+	scene._sync_mode_dropdown_for_slot(0)
+	if not scene._mode_dropdown.disabled:
+		scene.queue_free()
+		GameManager.erase_slot(0)
+		return "Classic save should lock the trail mode dropdown."
+	GameManager.erase_slot(0)
+	scene._refresh()
+	if scene._mode_dropdown.disabled:
+		scene.queue_free()
+		GameManager.erase_slot(0)
+		return "Empty slot should re-enable trail mode dropdown after delete."
+	scene._empty_slot_advanced[0] = true
+	scene._sync_mode_dropdown_for_slot(0)
+	scene._refresh_mode_dropdown_labels()
+	if not scene._empty_slot_advanced[0]:
+		scene.queue_free()
+		GameManager.erase_slot(0)
+		return "Advanced Mode should survive trail mode dropdown refresh."
+	if scene._mode_dropdown.selected != 1:
+		scene.queue_free()
+		GameManager.erase_slot(0)
+		return "Advanced Mode should stay selected after dropdown refresh."
+	GameManager.prepare_slot_for_start(0, scene._mode_for_slot(0))
+	if not GameManager.slot_is_advanced(0):
+		scene.queue_free()
+		GameManager.erase_slot(0)
+		return "Advanced Mode should apply after refresh and prepare."
 	scene.queue_free()
 	GameManager.erase_slot(0)
 	return null
@@ -2381,6 +2430,55 @@ func _test_slope_dirt_below_crust() -> Variant:
 		if abyss_left < x_end - 1.0 and abyss_right > x_start + 1.0:
 			level.free()
 			return "FloorAbyss should stay clipped out of dune slope columns."
+	level.free()
+	return null
+
+
+func _test_slope_underfill_covers_wedge() -> Variant:
+	var slot := 0
+	var trail := CustomLevelStore.trail_row(8)
+	var data := CustomLevelStore.default_level(slot)
+	data["objects"] = [
+		{"type": "ground", "x": 3, "y": trail},
+		{"type": "ground", "x": 3, "y": trail - 1},
+		{"type": "ground", "x": 4, "y": trail},
+		{"type": "goal", "x": 5, "y": trail},
+	]
+	var level := LevelController.new()
+	CustomLevelBuilder.build(level, data)
+	WildWestTheme.apply_to_level(level)
+	var merged := WildWestTheme._merge_segments(WildWestTheme._collect_ground_segments(level))
+	if merged.size() < 2:
+		level.free()
+		return "Height-step workshop trail should build adjacent dirt banks."
+	var span := WildWestTheme._slope_span(merged[0], merged[1])
+	if span.is_empty():
+		level.free()
+		return "Expected a walkable dune between stacked dirt banks."
+	var x_start := float(span["x_start"])
+	var x_end := float(span["x_end"])
+	var y_start := float(span["y_start"])
+	var y_end := float(span["y_end"])
+	var curved := bool(span.get("curved", true))
+	var trail_floor := level.get_node_or_null("TrailFloor") as Node2D
+	if trail_floor == null:
+		level.free()
+		return "Theme should build TrailFloor for slope underfill checks."
+	var underfill := trail_floor.get_node_or_null("FloorSlopeUnderfill0") as Polygon2D
+	if underfill == null:
+		level.free()
+		return "Desert slopes need a solid FloorSlopeUnderfill wedge."
+	var poly := underfill.polygon
+	for sample_t in [0.2, 0.5, 0.8]:
+		var x := lerpf(x_start, x_end, sample_t)
+		var surface_y := WildWestTheme._slope_y_at(
+			x, x_start, y_start, x_end, y_end, curved
+		)
+		for depth in [48.0, 120.0, 220.0]:
+			var pt := Vector2(x, surface_y + depth)
+			if not Geometry2D.is_point_in_polygon(pt, poly):
+				level.free()
+				return "FloorSlopeUnderfill must cover earth under the dune face (no sky gaps)."
 	level.free()
 	return null
 
