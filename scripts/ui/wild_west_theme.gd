@@ -336,15 +336,15 @@ static func _make_contiguous_floors(level: Node) -> void:
 			dirt_left = maxf(dirt_left, left + CANYON_DIRT_INSET)
 		# Leave the dune column to slope art — flat bank fills must not spill over it.
 		if i + 1 < merged.size() and not _is_canyon_between(merged[i], merged[i + 1]):
-			var slope_right := _slope_x_bounds(merged[i], merged[i + 1])
-			if not slope_right.is_empty():
-				var x_start := float(slope_right["x_start"])
+			var slope_to_right := _slope_span(merged[i], merged[i + 1])
+			if not slope_to_right.is_empty():
+				var x_start := float(slope_to_right["x_start"])
 				surface_right = minf(surface_right, x_start)
 				dirt_right = minf(dirt_right, x_start)
 		if i > 0 and not _is_canyon_between(merged[i - 1], merged[i]):
-			var slope_left := _slope_x_bounds(merged[i - 1], merged[i])
-			if not slope_left.is_empty():
-				var x_end := float(slope_left["x_end"])
+			var slope_from_left := _slope_span(merged[i - 1], merged[i])
+			if not slope_from_left.is_empty():
+				var x_end := float(slope_from_left["x_end"])
 				surface_left = maxf(surface_left, x_end)
 				dirt_left = maxf(dirt_left, x_end)
 
@@ -382,6 +382,28 @@ static func _make_contiguous_floors(level: Node) -> void:
 static func _is_canyon_between(left_strip: Dictionary, right_strip: Dictionary) -> bool:
 	## Same threshold as canyon gap detection — canyon is the height transition.
 	return float(right_strip["left"]) - float(left_strip["right"]) > 8.0
+
+
+static func _paint_abyss_rect(
+	parent: Node,
+	left: float,
+	top: float,
+	width: float,
+	height: float,
+	node_name: String
+) -> void:
+	var abyss := Polygon2D.new()
+	abyss.name = node_name
+	abyss.color = Color(0.22, 0.10, 0.12, 1.0)
+	abyss.polygon = PackedVector2Array([
+		Vector2.ZERO,
+		Vector2(width, 0.0),
+		Vector2(width, height),
+		Vector2(0.0, height),
+	])
+	abyss.position = Vector2(left, top)
+	abyss.z_index = -2
+	parent.add_child(abyss)
 
 
 static func walk_surface_at(level: Node, world_x: float) -> Dictionary:
