@@ -14,6 +14,48 @@ def is_hair_pixel(r: int, g: int, b: int, a: int) -> bool:
     return a > 40 and 45 < r < 180 and g < 110 and b < 95 and r > g and r > b
 
 
+def is_skin_pixel(r: int, g: int, b: int, a: int) -> bool:
+    return a > 40 and r > 175 and g > 120 and b > 90
+
+
+def _row_hair_span(px, y: int, w: int) -> int:
+    xs = [x for x in range(w) if is_hair_pixel(*px[x, y][:4])]
+    if len(xs) < 2:
+        return 0
+    return max(xs) - min(xs)
+
+
+def is_hat_brim_pixel(px, x: int, y: int, w: int, h: int) -> bool:
+    if not is_hair_pixel(*px[x, y][:4]):
+        return False
+    if y >= 18:
+        return False
+    return _row_hair_span(px, y, w) > 20
+
+
+def is_head_hair_pixel(px, x: int, y: int, w: int, h: int) -> bool:
+    if not is_hair_pixel(*px[x, y][:4]):
+        return False
+    if is_hat_brim_pixel(px, x, y, w, h):
+        return False
+    if y >= 17:
+        return True
+    for dx, dy in [(-1, 0), (1, 0), (0, 1), (0, -1)]:
+        nx, ny = x + dx, y + dy
+        if 0 <= nx < w and 0 <= ny < h and is_skin_pixel(*px[nx, ny][:4]):
+            return True
+    return False
+
+
+def _can_paint_head_hair(px, x: int, y: int, w: int, h: int) -> bool:
+    if not (0 <= x < w and 0 <= y < h):
+        return False
+    r, g, b, a = px[x, y][:4]
+    if a < 40:
+        return True
+    return is_head_hair_pixel(px, x, y, w, h)
+
+
 def _avg(colors: list[tuple[int, int, int, int]]) -> tuple[int, int, int, int]:
     if not colors:
         return (126, 66, 13, 255)
@@ -66,24 +108,92 @@ def sample_bandana(img: Image.Image) -> tuple[int, int, int, int]:
 
 
 def find_braid_anchors(img: Image.Image) -> tuple[tuple[int, int], tuple[int, int]]:
+    """Temple/ear hairline under the hat — not the hat brim."""
     px = img.load()
     w, h = img.size
-    best_y = -1
-    left_x = 18
-    right_x = w - 19
-    for y in range(12, min(h, 19)):
-        xs: list[int] = []
+    center_x = w // 2
+    left_pts: list[tuple[int, int]] = []
+    right_pts: list[tuple[int, int]] = []
+    for y in range(17, min(h, 22)):
         for x in range(w):
-            if is_hair_pixel(*px[x, y][:4]):
-                xs.append(x)
-        if len(xs) >= 10:
-            best_y = y
-            left_x = min(xs)
-            right_x = max(xs)
-    if best_y < 0:
-        return (19, 15), (w - 20, 15)
-    anchor_y = min(h - 11, best_y + 2)
-    return (left_x + 1, anchor_y), (right_x - 1, anchor_y)
+            if not is_head_hair_pixel(px, x, y, w, h):
+                continue
+            if x <= center_x - 10:
+                left_pts.append((x, y))
+            elif x >= center_x + 8:
+                right_pts.append((x, y))
+    if not left_pts or not right_pts:
+        for y in range(16, min(h, 22)):
+            for x in range(w):
+                if not is_hair_pixel(*px[x, y][:4]):
+                    continue
+                if x <= center_x - 10:
+                    left_pts.append((x, y))
+                elif x >= center_x + 8:
+                    right_pts.append((x, y))
+    if not left_pts or not right_pts:
+        return (20, 18), (w - 21, 18)
+
+    def _pick_left(points: list[tuple[int, int]]) -> tuple[int, int]:
+        return max(points, key=lambda p: (-abs(p[1] - 18), p[0]))
+
+    def _pick_right(points: list[tuple[int, int]]) -> tuple[int, int]:
+        scored: list[tuple[bool, int, int, int, int]] = []
+        for x, y in points:
+            skin_near = any(
+                0 <= x + dx < w and 0 <= y + dy < h and is_skin_pixel(*px[x + dx, y + dy][:4])
+                for dx, dy in [(-1, 0), (1, 0), (0, 1), (0, -1)]
+            )
+            scored.append((skin_near, -abs(y - 18), -x, x, y))
+        best = max(scored)
+        return (best[3], best[4])
+
+    return _pick_left(left_pts), _pick_right(right_pts)
+
+
+def find_mounted_braid_anchors(
+    img: Image.Image,
+    *,
+    x0: int = 145,
+    x1: int = 210,
+    y0: int = 27,
+    y1: int = 33,
+) -> tuple[tuple[int, int], tuple[int, int], tuple[int, int], tuple[int, int], tuple[int, int], tuple[int, int]]:
+    """Return left/right braid paths (start, control, end) for mounted rider."""
+    px = img.load()
+    center_x = (x0 + x1) // 2
+    left_pts: list[tuple[int, int]] = []
+    right_pts: list[tuple[int, int]] = []
+    for y in range(y0, y1):
+        for x in range(x0, x1):
+            if not is_hair_pixel(*px[x, y][:4]):
+                continue
+            if x <= center_x - 14:
+                left_pts.append((x, y))
+            elif x >= center_x + 10:
+                right_pts.append((x, y))
+    if not left_pts or not right_pts:
+        fallback_y = 30
+        return (
+            (154, fallback_y),
+            (146, fallback_y + 20),
+            (140, fallback_y + 47),
+            (192, fallback_y),
+            (200, fallback_y + 20),
+            (206, fallback_y + 47),
+        )
+    left = max(left_pts, key=lambda p: (-abs(p[1] - 30), p[0]))
+    right = min(right_pts, key=lambda p: (-abs(p[1] - 30), p[0]))
+    lx, ly = left
+    rx, ry = right
+    return (
+        left,
+        (lx - 8, ly + 20),
+        (lx - 14, ly + 47),
+        right,
+        (rx + 8, ry + 20),
+        (rx + 14, ry + 47),
+    )
 
 
 def _bezier2(
@@ -102,19 +212,40 @@ def _bezier2(
     return points
 
 
-def _can_paint(px, x: int, y: int, w: int, h: int, allow_over: HairPredicate | None) -> bool:
+def _can_paint(
+    px,
+    x: int,
+    y: int,
+    w: int,
+    h: int,
+    allow_over: HairPredicate | None,
+    *,
+    head_only: bool = False,
+) -> bool:
     if not (0 <= x < w and 0 <= y < h):
         return False
     r, g, b, a = px[x, y][:4]
     if a < 40:
         return True
+    if head_only:
+        return is_head_hair_pixel(px, x, y, w, h)
     if is_hair_pixel(r, g, b, a):
         return True
     return allow_over is not None and allow_over(r, g, b, a)
 
 
-def _paint(px, x: int, y: int, w: int, h: int, color: tuple[int, int, int, int], allow_over: HairPredicate | None) -> None:
-    if _can_paint(px, x, y, w, h, allow_over):
+def _paint(
+    px,
+    x: int,
+    y: int,
+    w: int,
+    h: int,
+    color: tuple[int, int, int, int],
+    allow_over: HairPredicate | None,
+    *,
+    head_only: bool = False,
+) -> None:
+    if _can_paint(px, x, y, w, h, allow_over, head_only=head_only):
         px[x, y] = color
 
 
@@ -156,6 +287,7 @@ def draw_hanging_braid(
     *,
     scale: float = 1.0,
     allow_over: HairPredicate | None = None,
+    head_only: bool = False,
 ) -> None:
     px = img.load()
     w, h = img.size
@@ -170,7 +302,7 @@ def draw_hanging_braid(
                 if abs(dx) + abs(dy) > radius + 1:
                     continue
                 color = _braid_color(side, dx, dy, radius, base, dark, light, ink)
-                _paint(px, cx + dx, cy + dy, w, h, color, allow_over)
+                _paint(px, cx + dx, cy + dy, w, h, color, allow_over, head_only=head_only)
 
 
 def draw_ribbon_knot(
@@ -222,9 +354,9 @@ def braid_controls(
 ) -> tuple[tuple[tuple[int, int], tuple[int, int], tuple[int, int]], tuple[tuple[int, int], tuple[int, int], tuple[int, int]]]:
     lx, ly = left
     rx, ry = right
-    reach = max(1, int(round(3 * scale)))
-    drop_mid = max(2, int(round(5 * scale)))
-    drop_end = max(4, int(round(11 * scale)))
+    reach = max(1, int(round(2 * scale)))
+    drop_mid = max(2, int(round(6 * scale)))
+    drop_end = max(4, int(round(12 * scale)))
     sway = int(round(swing))
     left_path = (
         left,
@@ -248,19 +380,22 @@ def _blend_braid_roots(img: Image.Image, left: tuple[int, int], right: tuple[int
         offsets = [(-1, 0), (0, 0), (1, 0), (0, 1)] if side == "left" else [(1, 0), (0, 0), (-1, 0), (0, 1)]
         for i, (ox, oy) in enumerate(offsets):
             px_x, px_y = x + ox, y + oy
-            if 0 <= px_x < w and 0 <= px_y < h:
-                r, g, b, a = px[px_x, px_y][:4]
-                if a < 40 or is_hair_pixel(r, g, b, a):
-                    px[px_x, px_y] = ink if i == 0 else base if i == 1 else dark
+            if 0 <= px_x < w and 0 <= px_y < h and _can_paint_head_hair(px, px_x, px_y, w, h):
+                px[px_x, px_y] = ink if i == 0 else base if i == 1 else dark
 
 
 def draw_player_braids(img: Image.Image, swing: float = 0.0) -> None:
-    palette = sample_hair_palette(img, region=lambda x, y, _w, _h: y < 24)
+    px = img.load()
+    w, h = img.size
+    palette = sample_hair_palette(
+        img,
+        region=lambda x, y, _w, _h: 16 <= y < 24 and is_head_hair_pixel(px, x, y, _w, _h),
+    )
     ribbon = sample_bandana(img)
     left, right = find_braid_anchors(img)
     _blend_braid_roots(img, left, right, palette)
     left_path, right_path = braid_controls(left, right, swing, scale=1.0)
-    draw_hanging_braid(img, *left_path, "left", palette, scale=1.0)
-    draw_hanging_braid(img, *right_path, "right", palette, scale=1.0)
+    draw_hanging_braid(img, *left_path, "left", palette, scale=1.0, head_only=True)
+    draw_hanging_braid(img, *right_path, "right", palette, scale=1.0, head_only=True)
     draw_ribbon_knot(img, left, ribbon, "left", scale=1.0)
     draw_ribbon_knot(img, right, ribbon, "right", scale=1.0)

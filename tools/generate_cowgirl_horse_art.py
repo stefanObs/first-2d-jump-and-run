@@ -10,8 +10,8 @@ from PIL import Image
 from cowgirl_hair import (
     draw_hanging_braid,
     draw_ribbon_knot,
+    find_mounted_braid_anchors,
     is_hair_pixel,
-    sample_bandana,
     sample_hair_palette,
     shade,
 )
@@ -19,20 +19,11 @@ from cowgirl_hair import (
 ROOT = Path(__file__).resolve().parents[1]
 WORLD = ROOT / "assets" / "world"
 
-FRAME_EDITS = {
-    "cowboy_horse_ride_0.png": {
-        "left": ((154, 35), (146, 55), (140, 82)),
-        "right": ((192, 35), (200, 55), (206, 82)),
-    },
-    "cowboy_horse_ride_1.png": {
-        "left": ((152, 35), (144, 57), (138, 84)),
-        "right": ((190, 35), (198, 57), (204, 84)),
-    },
-    "cowboy_horse_jump.png": {
-        "left": ((150, 31), (142, 52), (136, 76)),
-        "right": ((188, 31), (196, 52), (202, 76)),
-    },
-}
+HORSE_FRAMES = [
+    "cowboy_horse_ride_0.png",
+    "cowboy_horse_ride_1.png",
+    "cowboy_horse_jump.png",
+]
 
 
 def _is_rider_pants(r: int, g: int, b: int, a: int) -> bool:
@@ -136,11 +127,11 @@ def transform_horse(src: Path, dst: Path) -> None:
     palette = sample_hair_palette(img, region=lambda x, y, _w, _h: 18 <= y <= 100 and 145 <= x <= 200)
     px = img.load()
     _trim_side_hair(px, img.width, img.height)
-    edits = FRAME_EDITS[src.name]
-    draw_hanging_braid(img, *edits["left"], "left", palette, scale=1.7)
-    draw_hanging_braid(img, *edits["right"], "right", palette, scale=1.7)
-    draw_ribbon_knot(img, edits["left"][0], ribbon, "left", scale=1.6)
-    draw_ribbon_knot(img, edits["right"][0], ribbon, "right", scale=1.6)
+    left_start, left_ctrl, left_end, right_start, right_ctrl, right_end = find_mounted_braid_anchors(img)
+    draw_hanging_braid(img, left_start, left_ctrl, left_end, "left", palette, scale=1.7, head_only=True)
+    draw_hanging_braid(img, right_start, right_ctrl, right_end, "right", palette, scale=1.7, head_only=True)
+    draw_ribbon_knot(img, left_start, ribbon, "left", scale=1.6)
+    draw_ribbon_knot(img, right_start, ribbon, "right", scale=1.6)
     _mounted_skirt_drape(img, denim, shade(denim, 0.78))
     _mounted_skirt(img, denim, shade(denim, 0.78))
     img.save(dst)
@@ -148,7 +139,7 @@ def transform_horse(src: Path, dst: Path) -> None:
 
 
 def main() -> None:
-    for cowboy_name in FRAME_EDITS:
+    for cowboy_name in HORSE_FRAMES:
         out_name = cowboy_name.replace("cowboy_", "cowgirl_")
         transform_horse(WORLD / cowboy_name, WORLD / out_name)
 
