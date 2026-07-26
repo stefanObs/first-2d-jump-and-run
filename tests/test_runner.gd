@@ -16,6 +16,7 @@ func _ready() -> void:
 	failures += await _run("Portable saves fall back when exe folder is read-only", _test_save_paths_writable_fallback)
 	failures += await _run("Save select scene loads", _test_save_select_scene)
 	failures += await _run("Save select offers Advanced Mode dropdown", _test_save_select_mode_dropdown)
+	failures += await _run("Save select trail mode selection applies", _test_save_select_mode_selection)
 	failures += await _run("Advanced Mode lives and badge milestones", _test_advanced_mode_lives)
 	failures += await _run("Advanced Mode respawn costs a life", _test_advanced_mode_respawn_cost)
 	failures += await _run("Advanced Mode game over scene exists", _test_advanced_mode_game_over_scene)
@@ -76,6 +77,7 @@ func _ready() -> void:
 	failures += await _run("Gameplay obstacles do not display floating text", _test_obstacle_labels_hidden)
 	failures += await _run("Untied bandits restore normal standing size", _test_untie_restores_stand_scale)
 	failures += await _run("Bandits stand on the desert surface", _test_bandits_stand_on_desert)
+	failures += await _run("Cacti align to desert slopes", _test_cactus_aligns_to_desert_slope)
 	failures += await _run("Bandits play walk animation while moving", _test_bandit_walk_animation)
 	failures += await _run("Campaign hazards are no longer blocked by plank highways", _test_no_plank_highways)
 	failures += await _run(
@@ -109,6 +111,8 @@ func _ready() -> void:
 	failures += await _run("Moonlight Gulch rafts require hop transfers for Magic Boots", _test_level_09_raft_hop_boots)
 	failures += await _run("Canyon rafts are one-way jump-through platforms", _test_one_way_moving_platforms)
 	failures += await _run("Custom level store and builder work", _test_custom_level_builder)
+	failures += await _run("Workshop default trail width matches built-ins", _test_workshop_default_width)
+	failures += await _run("Workshop trail length add and remove", _test_workshop_trail_length_resize)
 	failures += await _run("Trail workshop uses one trail row and stacked dirt", _test_trail_row_model)
 	failures += await _run("Campaign workshop edits and inserts levels", _test_campaign_workshop)
 	failures += await _run("Trail share pack export and import round-trip", _test_trail_share_pack)
@@ -758,6 +762,54 @@ func _test_save_select_mode_dropdown() -> Variant:
 		error = "Advanced Mode label missing from trail mode dropdown."
 	scene.queue_free()
 	return error
+
+
+func _test_save_select_mode_selection() -> Variant:
+	GameManager.erase_slot(0)
+	var packed: PackedScene = load("res://scenes/ui/save_select.tscn")
+	if packed == null:
+		GameManager.erase_slot(0)
+		return "Missing save select scene."
+	var scene := packed.instantiate()
+	add_child(scene)
+	await get_tree().process_frame
+	scene._index = 0
+	scene._empty_slot_advanced[0] = true
+	scene._sync_mode_dropdown_for_slot(0)
+	scene._on_mode_selected(1)
+	if not scene._empty_slot_advanced[0]:
+		scene.queue_free()
+		GameManager.erase_slot(0)
+		return "Advanced Mode should stick when chosen on an empty slot."
+	GameManager.prepare_slot_for_start(0, scene._mode_for_slot(0))
+	if not GameManager.slot_is_advanced(0):
+		scene.queue_free()
+		GameManager.erase_slot(0)
+		return "Advanced Mode should apply when starting an empty slot."
+	GameManager.prepare_slot_for_start(0, false)
+	GameManager.active_slot_index = 0
+	var slot := GameManager.get_slot(0)
+	slot["empty"] = false
+	slot["advanced_mode"] = false
+	slot["current_level"] = 1
+	GameManager.debug_set_slot(0, slot)
+	scene._sync_mode_dropdown_for_slot(0)
+	if scene._mode_dropdown.selected != 0:
+		scene.queue_free()
+		GameManager.erase_slot(0)
+		return "Filled Classic saves should show Classic in the trail mode dropdown."
+	scene._refresh_mode_dropdown_labels()
+	if scene._mode_dropdown.get_item_text(0) not in ["Classic", "Klassisch"]:
+		scene.queue_free()
+		GameManager.erase_slot(0)
+		return "Trail mode dropdown should include Classic as the default/normal choice."
+	if scene._mode_dropdown.get_item_text(1) not in ["Advanced Mode", "Fortgeschrittenen-Modus"]:
+		scene.queue_free()
+		GameManager.erase_slot(0)
+		return "Trail mode dropdown should include Advanced Mode."
+	scene.queue_free()
+	GameManager.erase_slot(0)
+	return null
 
 
 func _test_advanced_mode_lives() -> Variant:
@@ -1922,6 +1974,59 @@ func _test_bandits_stand_on_desert() -> Variant:
 	return null
 
 
+func _test_cactus_aligns_to_desert_slope() -> Variant:
+	var slot := 0
+	var trail := CustomLevelStore.trail_row(8)
+	var data := CustomLevelStore.default_level(slot)
+	data["objects"] = [
+		{"type": "ground", "x": 3, "y": trail},
+		{"type": "ground", "x": 3, "y": trail - 1},
+		{"type": "ground", "x": 4, "y": trail},
+		{"type": "cactus", "x": 3, "y": trail},
+		{"type": "goal", "x": 5, "y": trail},
+	]
+	var level := LevelController.new()
+	CustomLevelBuilder.build(level, data)
+	WildWestTheme.apply_to_level(level)
+	var merged := WildWestTheme._merge_segments(WildWestTheme._collect_ground_segments(level))
+	if merged.size() < 2:
+		level.free()
+		return "Height-step workshop trail should build adjacent dirt banks."
+	var span := WildWestTheme._slope_span(merged[0], merged[1])
+	if span.is_empty():
+		level.free()
+		return "Expected a walkable dune between stacked dirt banks."
+	var cactus := level.find_child("Cactus0", true, false) as Hazard
+	if cactus == null:
+		level.free()
+		return "Height-step workshop trail should spawn a cactus."
+	var sample_x := (float(span["x_start"]) + float(span["x_end"])) * 0.5
+	cactus.global_position.x = sample_x
+	var surface := WildWestTheme.walk_surface_at(level, sample_x)
+	cactus.align_to_walk_surface(
+		float(surface["y"]),
+		float(surface["angle"]),
+		WildWestTheme.CACTUS_DESERT_SINK,
+		WildWestTheme.CACTUS_TILT_BLEND,
+		WildWestTheme.CACTUS_MAX_TILT
+	)
+	var expected_y := float(surface["y"]) + WildWestTheme.CACTUS_DESERT_SINK
+	if absf(cactus.ground_contact_y() - expected_y) > 2.5:
+		level.free()
+		return (
+			"Cactus on a dune should follow the walk surface (feet y=%.1f, expected %.1f)."
+			% [cactus.ground_contact_y(), expected_y]
+		)
+	if absf(float(surface["angle"])) < 0.02:
+		level.free()
+		return "Mid-slope sample should expose a non-flat desert angle."
+	if absf(cactus.rotation) > WildWestTheme.CACTUS_MAX_TILT + 0.01:
+		level.free()
+		return "Cactus slope tilt should stay subtle for the hand-drawn look."
+	level.free()
+	return null
+
+
 func _test_bandit_walk_animation() -> Variant:
 	## Patrol movement must play the walk cycle; standing still uses idle.
 	var packed: PackedScene = load("res://scenes/world/opponent.tscn")
@@ -2964,6 +3069,52 @@ func _test_custom_level_builder() -> Variant:
 		dusty_level.free()
 		return "Imported Dusty Trail cactus placement: %s" % layout_errors[0]
 	dusty_level.free()
+	return null
+
+
+func _test_workshop_default_width() -> Variant:
+	var builtin := CustomLevelStore.import_builtin(1)
+	var draft := CustomLevelStore.default_level(CustomLevelStore.EXTRA_SLOT_START)
+	var extra := CustomLevelStore.new_extra_draft(5)
+	if int(builtin.get("width", 0)) != CustomLevelStore.DEFAULT_WIDTH:
+		return "Imported built-in trails should resolve to the workshop default width."
+	if int(draft.get("width", 0)) != int(builtin.get("width", 0)):
+		return "Default workshop trails should match built-in campaign width."
+	if extra.is_empty() or int(extra.get("width", 0)) != int(builtin.get("width", 0)):
+		return "New extra drafts should match built-in campaign width."
+	return null
+
+
+func _test_workshop_trail_length_resize() -> Variant:
+	var slot := CustomLevelStore.SLOT_COUNT - 4
+	var data := CustomLevelStore.default_level(slot)
+	var start_width := int(data.get("width", 0)) - CustomLevelStore.WIDTH_STEP
+	data = CustomLevelStore.resize_width(data, start_width, slot)
+	start_width = int(data.get("width", 0))
+	var widened := CustomLevelStore.resize_width(data, start_width + CustomLevelStore.WIDTH_STEP, slot)
+	if int(widened.get("width", 0)) != start_width + CustomLevelStore.WIDTH_STEP:
+		return "Adding length should extend the trail width."
+	var trail := CustomLevelStore.trail_row(int(widened.get("height", 8)))
+	var has_new_ground := false
+	for value in widened.get("objects", []):
+		var object := value as Dictionary
+		if str(object.get("type", "")) == "ground" and int(object.get("x", -1)) == start_width:
+			has_new_ground = true
+			if int(object.get("y", -1)) != trail:
+				return "New length columns should fill with trail-row dirt."
+	if not has_new_ground:
+		return "Adding length should stamp dirt on new columns."
+	var narrowed := CustomLevelStore.resize_width(widened, start_width, slot)
+	if int(narrowed.get("width", 0)) != start_width:
+		return "Removing length should shrink the trail width."
+	for value in narrowed.get("objects", []):
+		var object := value as Dictionary
+		if int(object.get("x", -1)) >= start_width:
+			return "Removing length should clear trailing columns."
+	if CustomLevelStore.resize_width(data, CustomLevelStore.MIN_WIDTH - 1, slot).get("width", 0) != CustomLevelStore.MIN_WIDTH:
+		return "Trail width should clamp to the documented minimum."
+	if CustomLevelStore.resize_width(data, CustomLevelStore.MAX_WIDTH + 1, slot).get("width", 0) != CustomLevelStore.MAX_WIDTH:
+		return "Trail width should clamp to the documented maximum."
 	return null
 
 

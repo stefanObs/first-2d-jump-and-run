@@ -17,6 +17,34 @@ func is_cactus() -> bool:
 	return not is_canyon()
 
 
+func ground_contact_y() -> float:
+	## World Y of the painted cactus base for desert-surface checks.
+	if is_canyon():
+		return global_position.y
+	var sprite := get_node_or_null("Sprite2D") as Sprite2D
+	if sprite == null or not sprite.visible or sprite.texture == null:
+		return global_position.y
+	var tex_h := float(sprite.texture.get_height())
+	var scale_y := absf(sprite.scale.y)
+	if sprite.centered:
+		return global_position.y + sprite.position.y + tex_h * 0.5 * scale_y
+	return global_position.y + sprite.position.y + tex_h * scale_y
+
+
+func align_to_walk_surface(
+	floor_y: float,
+	slope_angle: float = 0.0,
+	sink: float = 10.0,
+	tilt_blend: float = 0.35,
+	max_tilt: float = 0.22
+) -> void:
+	if is_canyon():
+		return
+	var foot_local := ground_contact_y() - global_position.y
+	global_position.y = floor_y + sink - foot_local
+	rotation = clampf(slope_angle * tilt_blend, -max_tilt, max_tilt)
+
+
 func _ready() -> void:
 	body_entered.connect(_on_body_entered)
 	_configure_visual()
