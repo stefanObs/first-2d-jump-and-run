@@ -2644,7 +2644,7 @@ func _test_slope_underfill_earth_color() -> Variant:
 	if underfill == null:
 		level.free()
 		return "Desert slopes need a solid FloorSlopeUnderfill wedge."
-	var expected := WildWestTheme.bank_earth_color()
+	var expected := Color(0.22, 0.10, 0.12, 1.0)
 	if underfill.color.is_equal_approx(expected):
 		level.free()
 		return null
