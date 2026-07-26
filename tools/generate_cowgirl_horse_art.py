@@ -5,7 +5,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PIL import Image, ImageDraw
+from PIL import Image
+
+from cowgirl_hair import (
+    draw_hanging_braid,
+    draw_ribbon_knot,
+    is_hair_pixel,
+    sample_bandana,
+    sample_hair_palette,
+    shade,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 WORLD = ROOT / "assets" / "world"
@@ -31,7 +40,7 @@ def _is_rider_pants(r: int, g: int, b: int, a: int) -> bool:
 
 
 def _is_hair(r: int, g: int, b: int, a: int) -> bool:
-    return a > 40 and 45 < r < 150 and 35 < g < 95 and 20 < b < 80 and r > g + 10 and r > b + 15
+    return is_hair_pixel(r, g, b, a)
 
 
 def _avg(colors: list[tuple[int, int, int, int]]) -> tuple[int, int, int, int]:
@@ -43,16 +52,7 @@ def _avg(colors: list[tuple[int, int, int, int]]) -> tuple[int, int, int, int]:
     return (sum(rs) // len(rs), sum(gs) // len(gs), sum(bs) // len(bs), 255)
 
 
-def _shade(color: tuple[int, int, int, int], amount: float) -> tuple[int, int, int, int]:
-    return (
-        max(0, min(255, int(color[0] * amount))),
-        max(0, min(255, int(color[1] * amount))),
-        max(0, min(255, int(color[2] * amount))),
-        color[3],
-    )
-
-
-def _sample_palette(img: Image.Image) -> tuple[tuple[int, int, int, int], tuple[int, int, int, int], tuple[int, int, int, int], tuple[int, int, int, int]]:
+def _sample_palette(img: Image.Image) -> tuple[tuple[int, int, int, int], tuple[int, int, int, int], tuple[int, int, int, int]]:
     px = img.load()
     hair: list[tuple[int, int, int, int]] = []
     red: list[tuple[int, int, int, int]] = []
@@ -69,7 +69,7 @@ def _sample_palette(img: Image.Image) -> tuple[tuple[int, int, int, int], tuple[
     hair_base = _avg(hair) if hair else (92, 52, 26, 255)
     denim = _avg(pants) if pants else (78, 118, 168, 255)
     ribbon = _avg(red) if red else (208, 48, 38, 255)
-    return hair_base, _shade(hair_base, 0.78), ribbon, denim
+    return hair_base, ribbon, denim
 
 
 def _trim_side_hair(px, w: int, h: int) -> None:
@@ -80,36 +80,6 @@ def _trim_side_hair(px, w: int, h: int) -> None:
                 continue
             if x < 156 or x > 190:
                 px[x, y] = (0, 0, 0, 0)
-
-
-def _curve_points(anchors: tuple[tuple[int, int], tuple[int, int], tuple[int, int]], steps: int = 16) -> list[tuple[int, int]]:
-    a, b, c = anchors
-    points: list[tuple[int, int]] = []
-    for i in range(steps + 1):
-        t = i / steps
-        u = 1 - t
-        x = int(u * u * a[0] + 2 * u * t * b[0] + t * t * c[0])
-        y = int(u * u * a[1] + 2 * u * t * b[1] + t * t * c[1])
-        points.append((x, y))
-    return points
-
-
-def _draw_pigtail(
-    draw: ImageDraw.ImageDraw,
-    anchors: tuple[tuple[int, int], tuple[int, int], tuple[int, int]],
-    hair_base: tuple[int, int, int, int],
-    hair_dark: tuple[int, int, int, int],
-) -> None:
-    points = _curve_points(anchors)
-    draw.line(points, fill=hair_dark[:3], width=8, joint="curve")
-    draw.line(points, fill=hair_base[:3], width=5, joint="curve")
-    draw.line(points, fill=_shade(hair_base, 1.08)[:3], width=2, joint="curve")
-
-
-def _draw_ribbon(draw: ImageDraw.ImageDraw, center: tuple[int, int], ribbon: tuple[int, int, int, int]) -> None:
-    x, y = center
-    draw.ellipse((x - 8, y - 5, x + 8, y + 5), fill=ribbon[:3])
-    draw.ellipse((x - 5, y - 3, x + 5, y + 3), fill=_shade(ribbon, 1.12)[:3])
 
 
 def _is_skin(r: int, g: int, b: int, a: int) -> bool:
@@ -162,17 +132,17 @@ def _mounted_skirt(img: Image.Image, denim: tuple[int, int, int, int], denim_dar
 
 def transform_horse(src: Path, dst: Path) -> None:
     img = Image.open(src).convert("RGBA")
-    hair_base, hair_dark, ribbon, denim = _sample_palette(img)
+    _, ribbon, denim = _sample_palette(img)
+    palette = sample_hair_palette(img, region=lambda x, y, _w, _h: 18 <= y <= 100 and 145 <= x <= 200)
     px = img.load()
     _trim_side_hair(px, img.width, img.height)
-    draw = ImageDraw.Draw(img)
     edits = FRAME_EDITS[src.name]
-    _draw_pigtail(draw, edits["left"], hair_base, hair_dark)
-    _draw_pigtail(draw, edits["right"], hair_base, hair_dark)
-    _draw_ribbon(draw, edits["left"][0], ribbon)
-    _draw_ribbon(draw, edits["right"][0], ribbon)
-    _mounted_skirt_drape(img, denim, _shade(denim, 0.78))
-    _mounted_skirt(img, denim, _shade(denim, 0.78))
+    draw_hanging_braid(img, *edits["left"], "left", palette, scale=1.7)
+    draw_hanging_braid(img, *edits["right"], "right", palette, scale=1.7)
+    draw_ribbon_knot(img, edits["left"][0], ribbon, "left", scale=1.6)
+    draw_ribbon_knot(img, edits["right"][0], ribbon, "right", scale=1.6)
+    _mounted_skirt_drape(img, denim, shade(denim, 0.78))
+    _mounted_skirt(img, denim, shade(denim, 0.78))
     img.save(dst)
     print(f"wrote {dst}")
 

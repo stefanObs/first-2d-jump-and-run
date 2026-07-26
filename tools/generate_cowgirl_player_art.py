@@ -7,6 +7,8 @@ from pathlib import Path
 
 from PIL import Image
 
+from cowgirl_hair import draw_player_braids
+
 ROOT = Path(__file__).resolve().parents[1] / "assets" / "player"
 COWBOY = ROOT
 COWGIRL = ROOT / "cowgirl"
@@ -25,10 +27,6 @@ PLAYER_FRAMES = [
 
 def _is_jeans(r: int, g: int, b: int, a: int) -> bool:
     return a > 40 and b > 70 and b > r + 8 and b > g + 5 and g > 45
-
-
-def _is_hair(r: int, g: int, b: int, a: int) -> bool:
-    return a > 40 and 45 < r < 180 and g < 110 and b < 95 and r > g and r > b
 
 
 def _avg(colors: list[tuple[int, int, int, int]]) -> tuple[int, int, int, int]:
@@ -60,31 +58,6 @@ def _cluster(values: list[int], gap: int = 4) -> list[list[int]]:
         else:
             groups.append([value])
     return groups
-
-
-def _sample_hair_palette(img: Image.Image) -> tuple[tuple[int, int, int, int], tuple[int, int, int, int], tuple[int, int, int, int]]:
-    px = img.load()
-    w, h = img.size
-    hair: list[tuple[int, int, int, int]] = []
-    for y in range(0, min(h, 16)):
-        for x in range(w):
-            r, g, b, a = px[x, y]
-            if _is_hair(r, g, b, a):
-                hair.append((r, g, b, a))
-    base = _avg(hair)
-    return base, _shade(base, 0.82), _shade(base, 1.12)
-
-
-def _sample_bandana(img: Image.Image) -> tuple[int, int, int, int]:
-    px = img.load()
-    w, h = img.size
-    reds: list[tuple[int, int, int, int]] = []
-    for y in range(12, min(h, 24)):
-        for x in range(w):
-            r, g, b, a = px[x, y]
-            if a > 40 and r > 150 and g < 90 and b < 90:
-                reds.append((r, g, b, a))
-    return _avg(reds) if reds else (208, 48, 38, 255)
 
 
 def _jeans_to_skirt(img: Image.Image, flare_strength: int = 6) -> None:
@@ -125,36 +98,6 @@ def _jeans_to_skirt(img: Image.Image, flare_strength: int = 6) -> None:
                 px[x, y] = fill
 
 
-def _draw_pigtails(img: Image.Image, swing: float = 0.0) -> None:
-    px = img.load()
-    w, h = img.size
-    base, dark, light = _sample_hair_palette(img)
-    ribbon = _sample_bandana(img)
-    left_x = 20
-    right_x = 44
-    start_y = 10
-    length = 14
-    for step in range(length):
-        y = start_y + step
-        drift = int(swing * step / max(1, length - 1))
-        lx = left_x + drift
-        rx = right_x + drift
-        width = 5 if step < length - 3 else 3 if step < length - 1 else 2
-        for i in range(width):
-            if 0 <= lx - i < w and 0 <= y < h:
-                color = [dark, dark, base, light, base][i]
-                if px[lx - i, y][3] < 40 or _is_hair(*px[lx - i, y][:4]):
-                    px[lx - i, y] = color
-            if 0 <= rx + i < w and 0 <= y < h:
-                color = [base, light, base, dark, dark][i]
-                if px[rx + i, y][3] < 40 or _is_hair(*px[rx + i, y][:4]):
-                    px[rx + i, y] = color
-    for bx, by in ((left_x, start_y), (right_x, start_y)):
-        if 0 <= bx < w and 0 <= by + 1 < h:
-            px[bx, by] = ribbon
-            px[bx, by + 1] = _shade(ribbon, 0.85)
-
-
 def _swing_for_frame(name: str) -> float:
     if "idle_1" in name:
         return 1.0
@@ -176,7 +119,7 @@ def _swing_for_frame(name: str) -> float:
 def transform_frame(cowboy_path: Path, out_path: Path) -> None:
     img = Image.open(cowboy_path).convert("RGBA")
     _jeans_to_skirt(img)
-    _draw_pigtails(img, _swing_for_frame(cowboy_path.name))
+    draw_player_braids(img, _swing_for_frame(cowboy_path.name))
     out_path.parent.mkdir(parents=True, exist_ok=True)
     img.save(out_path)
     print(f"wrote {out_path}")
