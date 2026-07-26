@@ -10,7 +10,6 @@ from PIL import Image
 from cowgirl_character import (
     add_eyelashes,
     add_pink_cuffs,
-    trim_boyish_sideburns,
 )
 from cowgirl_hair import draw_player_cowgirl_hair
 
@@ -51,7 +50,6 @@ def _swing_for_frame(name: str) -> float:
 def transform_frame(cowboy_path: Path, out_path: Path) -> None:
     img = Image.open(cowboy_path).convert("RGBA")
     add_pink_cuffs(img)
-    trim_boyish_sideburns(img)
     draw_player_cowgirl_hair(img, _swing_for_frame(cowboy_path.name))
     add_eyelashes(img)
     out_path.parent.mkdir(parents=True, exist_ok=True)

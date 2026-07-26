@@ -25,6 +25,116 @@ def is_skin_pixel(r: int, g: int, b: int, a: int) -> bool:
     return a > 40 and r > 175 and g > 120 and b > 90
 
 
+def _is_residual_cowboy_hair(r: int, g: int, b: int, a: int) -> bool:
+    """Dark or muddy browns the main hair detector misses (sideburn ink, desat clumps)."""
+    if a < 40:
+        return False
+    if is_hair_pixel(r, g, b, a):
+        return True
+    if 25 <= r <= 120 and g <= 85 and b <= 75 and r >= g and r >= b:
+        return True
+    if 50 <= r <= 180 and 50 <= g <= 120 and b <= 120 and r + g + b < 380:
+        if abs(r - g) < 25 and b < min(r, g) + 30:
+            return True
+    return False
+
+
+def _should_clear_player_cowboy_hair(px, x: int, y: int, w: int, h: int) -> bool:
+    r, g, b, a = px[x, y][:4]
+    if a < 40:
+        return False
+    if is_hat_brim_pixel(px, x, y, w, h):
+        return False
+    if is_skin_pixel(r, g, b, a):
+        return False
+    if y >= 17 and _is_residual_cowboy_hair(r, g, b, a):
+        return True
+    if is_head_hair_pixel(px, x, y, w, h):
+        return True
+    return False
+
+
+def clear_cowboy_head_hair(img: Image.Image) -> None:
+    """Erase every original cowboy head-hair pixel under the hat (keep hat brim)."""
+    px = img.load()
+    w, h = img.size
+    for y in range(h):
+        for x in range(w):
+            if _should_clear_player_cowboy_hair(px, x, y, w, h):
+                px[x, y] = (0, 0, 0, 0)
+
+
+def clear_mounted_cowboy_head_hair(
+    img: Image.Image,
+    *,
+    x0: int = 142,
+    x1: int = 206,
+    y0: int = 19,
+    y1: int = 36,
+) -> None:
+    """Erase rider head hair on mounted frames (temples, sideburns, under-brim clumps)."""
+    px = img.load()
+    w, h = img.size
+    for y in range(y0, min(y1, h)):
+        for x in range(max(0, x0), min(x1, w)):
+            r, g, b, a = px[x, y][:4]
+            if a < 40 or is_skin_pixel(r, g, b, a):
+                continue
+            if _is_residual_cowboy_hair(r, g, b, a):
+                px[x, y] = (0, 0, 0, 0)
+
+
+def touch_up_player_head_hair(img: Image.Image) -> None:
+    """Replace any leftover non-golden hair under the player hat."""
+    px = img.load()
+    w, h = img.size
+    base, dark, _light, _ink = cowgirl_hair_palette()
+    for y in range(17, min(h, 26)):
+        for x in range(w):
+            if is_hat_brim_pixel(px, x, y, w, h):
+                continue
+            r, g, b, a = px[x, y][:4]
+            if a < 40 or is_skin_pixel(r, g, b, a):
+                continue
+            if not _is_residual_cowboy_hair(r, g, b, a):
+                continue
+            if is_cowgirl_hair_color(r, g, b):
+                continue
+            px[x, y] = dark if x < w // 2 - 5 or x > w // 2 + 4 else base
+
+
+def is_cowgirl_hair_color(r: int, g: int, b: int) -> bool:
+    base, dark, light, ink = cowgirl_hair_palette()
+    rgb = (r, g, b)
+    if rgb in {base[:3], dark[:3], light[:3], ink[:3]}:
+        return True
+    return r > 130 and g > 75 and b < 85
+
+
+def touch_up_mounted_head_hair(
+    img: Image.Image,
+    *,
+    x0: int = 142,
+    x1: int = 206,
+    y0: int = 19,
+    y1: int = 36,
+) -> None:
+    """Replace any leftover non-golden hair tones under the mounted hat."""
+    px = img.load()
+    w, h = img.size
+    base, dark, light, ink = cowgirl_hair_palette()
+    for y in range(y0, min(y1, h)):
+        for x in range(max(0, x0), min(x1, w)):
+            r, g, b, a = px[x, y][:4]
+            if a < 40 or is_skin_pixel(r, g, b, a):
+                continue
+            if not _is_residual_cowboy_hair(r, g, b, a):
+                continue
+            if is_cowgirl_hair_color(r, g, b):
+                continue
+            px[x, y] = dark if x < (x0 + x1) // 2 - 4 or x > (x0 + x1) // 2 + 4 else base
+
+
 def _row_hair_span(px, y: int, w: int) -> int:
     xs = [x for x in range(w) if is_hair_pixel(*px[x, y][:4])]
     if len(xs) < 2:
@@ -342,17 +452,16 @@ def draw_bangs(img: Image.Image, palette: Palette) -> None:
     w, h = img.size
     base, dark, light, ink = palette
     cx = w // 2
-    for y in range(15, 18):
-        for x in range(cx - 8, cx + 9):
+    for y in range(15, 20):
+        for x in range(cx - 10, cx + 11):
             if not (0 <= x < w):
                 continue
-            if px[x, y][3] > 40 and not is_skin_pixel(*px[x, y][:4]) and not is_hair_pixel(*px[x, y][:4]):
+            r, g, b, a = px[x, y][:4]
+            if a > 40 and not is_skin_pixel(r, g, b, a) and not is_hat_brim_pixel(px, x, y, w, h):
                 continue
-            if px[x, y][3] < 40 or is_skin_pixel(*px[x, y][:4]) or is_head_hair_pixel(px, x, y, w, h):
-                t = abs(x - cx) / 8.0
-                color = ink if t > 0.85 else light if y == 15 else base if t < 0.35 else dark
-                if px[x, y][3] < 40 or is_skin_pixel(*px[x, y][:4]) or is_head_hair_pixel(px, x, y, w, h):
-                    px[x, y] = color
+            t = abs(x - cx) / 10.0
+            color = ink if t > 0.85 else light if y <= 16 else base if t < 0.35 else dark
+            px[x, y] = color
 
 
 def draw_temple_volume(img: Image.Image, left: tuple[int, int], right: tuple[int, int], palette: Palette) -> None:
@@ -362,13 +471,55 @@ def draw_temple_volume(img: Image.Image, left: tuple[int, int], right: tuple[int
     base, dark, light, _ink = palette
     for anchor, side in ((left, "left"), (right, "right")):
         x, y = anchor
-        offsets = [(-1, 0), (0, 0), (1, 0), (0, -1), (0, 1), (-1, 1), (1, 1)]
+        offsets = [
+            (-2, -1), (-1, -1), (0, -1), (1, -1), (2, -1),
+            (-2, 0), (-1, 0), (0, 0), (1, 0), (2, 0),
+            (-2, 1), (-1, 1), (0, 1), (1, 1), (2, 1),
+            (-1, 2), (0, 2), (1, 2),
+        ]
         if side == "right":
-            offsets = [(1, 0), (0, 0), (-1, 0), (0, -1), (0, 1), (1, 1), (-1, 1)]
+            offsets = [(ox, oy) for ox, oy in offsets]
         for i, (ox, oy) in enumerate(offsets):
             px_x, px_y = x + ox, y + oy
-            if 0 <= px_x < w and 0 <= px_y < h and _can_paint_head_hair(px, px_x, px_y, w, h):
-                px[px_x, px_y] = light if i < 2 else base if i < 4 else dark
+            if not (0 <= px_x < w and 0 <= px_y < h):
+                continue
+            r, g, b, a = px[px_x, px_y][:4]
+            if a > 40 and is_skin_pixel(r, g, b, a):
+                continue
+            if a > 40 and not is_hat_brim_pixel(px, px_x, px_y, w, h):
+                continue
+            px[px_x, px_y] = light if i < 4 else base if i < 10 else dark
+
+
+def draw_mounted_head_fill(
+    img: Image.Image,
+    left: tuple[int, int],
+    right: tuple[int, int],
+    palette: Palette,
+) -> None:
+    """Golden under-hat volume on mounted rider between pigtail roots."""
+    px = img.load()
+    w, h = img.size
+    base, dark, light, ink = palette
+    lx, ly = left
+    rx, ry = right
+    y0 = min(ly, ry) - 3
+    y1 = max(ly, ry) + 2
+    x0 = min(lx, rx) - 6
+    x1 = max(lx, rx) + 6
+    cx = (lx + rx) // 2
+    for y in range(y0, y1 + 1):
+        for x in range(x0, x1 + 1):
+            if not (0 <= x < w and 0 <= y < h):
+                continue
+            r, g, b, a = px[x, y][:4]
+            if a > 40 and is_skin_pixel(r, g, b, a):
+                continue
+            if a > 40 and not _is_residual_cowboy_hair(r, g, b, a) and not is_hair_pixel(r, g, b, a):
+                continue
+            t = abs(x - cx) / max(1, (x1 - x0) // 2)
+            color = ink if t > 0.9 else light if y <= y0 + 1 else base if t < 0.4 else dark
+            px[x, y] = color
 
 
 def draw_ribbon_knot(
@@ -438,6 +589,7 @@ def draw_player_cowgirl_hair(img: Image.Image, swing: float = 0.0) -> None:
     palette = cowgirl_hair_palette()
     ribbon = sample_bandana(img)
     left, right = find_braid_anchors(img)
+    clear_cowboy_head_hair(img)
     wave, phase = _wave_for_swing(swing)
     draw_bangs(img, palette)
     draw_temple_volume(img, left, right, palette)
@@ -450,6 +602,7 @@ def draw_player_cowgirl_hair(img: Image.Image, swing: float = 0.0) -> None:
     )
     draw_ribbon_knot(img, left, ribbon, "left", scale=1.0)
     draw_ribbon_knot(img, right, ribbon, "right", scale=1.0)
+    touch_up_player_head_hair(img)
 
 
 def _mounted_swing_for_frame(name: str) -> float:
@@ -467,6 +620,8 @@ def draw_mounted_cowgirl_hair(img: Image.Image, frame_name: str = "") -> None:
     wave, phase = _wave_for_swing(swing)
     wave = max(wave, 2.4)
     left_start, left_ctrl, left_end, right_start, right_ctrl, right_end = find_mounted_braid_anchors(img)
+    clear_mounted_cowboy_head_hair(img)
+    draw_mounted_head_fill(img, left_start, right_start, palette)
     sway = int(round(swing))
     left_ctrl = (left_ctrl[0] + sway, left_ctrl[1])
     left_end = (left_end[0] + sway * 2, left_end[1])
@@ -482,6 +637,7 @@ def draw_mounted_cowgirl_hair(img: Image.Image, frame_name: str = "") -> None:
     )
     draw_ribbon_knot(img, left_start, ribbon, "left", scale=1.55)
     draw_ribbon_knot(img, right_start, ribbon, "right", scale=1.55)
+    touch_up_mounted_head_hair(img)
 
 
 # Backward-compatible aliases

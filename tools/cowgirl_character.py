@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from PIL import Image
 
-from cowgirl_hair import is_hair_pixel, is_skin_pixel
+from cowgirl_hair import clear_cowboy_head_hair, is_hair_pixel, is_skin_pixel
 
 # Reference cue: rolled pink jacket cuffs — mapped to game's red family at gameplay scale.
 CUFF = (214, 92, 108, 255)
@@ -70,17 +70,8 @@ def add_eyelashes(img: Image.Image) -> None:
 
 
 def trim_boyish_sideburns(img: Image.Image) -> None:
-    """Remove short cowboy side hair so cowgirl pigtails replace it cleanly."""
-    px = img.load()
-    w, h = img.size
-    cx = w // 2
-    for y in range(17, 23):
-        for x in range(w):
-            if not is_hair_pixel(*px[x, y][:4]):
-                continue
-            if x <= cx - 11 or x >= cx + 9:
-                if not is_skin_pixel(*px[x, y][:4]):
-                    px[x, y] = (0, 0, 0, 0)
+    """Legacy hook — head hair is cleared in draw_player_cowgirl_hair."""
+    clear_cowboy_head_hair(img)
 
 
 def mounted_pink_cuffs(img: Image.Image) -> None:
@@ -92,10 +83,5 @@ def mounted_pink_cuffs(img: Image.Image) -> None:
 
 
 def trim_mounted_sideburns(px, w: int, h: int) -> None:
-    for y in range(24, 40):
-        for x in range(142, 218):
-            r, g, b, a = px[x, y]
-            if a < 40 or not is_hair_pixel(r, g, b, a):
-                continue
-            if x < 158 or x > 188:
-                px[x, y] = (0, 0, 0, 0)
+    """Legacy hook — rider head hair is cleared in draw_mounted_cowgirl_hair."""
+    del px, w, h
