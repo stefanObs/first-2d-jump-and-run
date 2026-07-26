@@ -148,7 +148,8 @@ func _begin_stun() -> void:
 	var token := _stun_token
 	# Step out of the wall first so the bull is not stuck inside it.
 	_pull_clear_of_walls()
-	_aim_at_player()
+	# Keep charge direction (facing the wall) until stun ends; _end_stun() turns toward the player.
+	_apply_facing()
 	if _ring != null:
 		_ring.set_lasso_active(true)
 	if _label != null:
