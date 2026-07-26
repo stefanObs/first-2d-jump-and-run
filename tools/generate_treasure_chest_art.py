@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate hand-painted western treasure chest PNGs at ~0.92× player height."""
+"""Generate hand-painted western treasure chest PNGs at 0.75× player height."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from PIL import Image, ImageDraw, ImageFilter
 ROOT = Path(__file__).resolve().parents[1] / "assets" / "world"
 
 PLAYER_HEIGHT = 44.0
-HEIGHT_RATIO = 0.92
+HEIGHT_RATIO = 0.75
 CHEST_HEIGHT = PLAYER_HEIGHT * HEIGHT_RATIO
 BASE_CLOSED_HEIGHT = 56.0
 ART_SCALE = CHEST_HEIGHT / BASE_CLOSED_HEIGHT
