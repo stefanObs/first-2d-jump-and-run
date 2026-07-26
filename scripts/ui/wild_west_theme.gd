@@ -24,6 +24,15 @@ static func sand_color() -> Color:
 	return Color(0.91, 0.67, 0.37, 1.0)
 
 
+## Warm bank earth — matches trail dirt tiles (no blue cast in underworld fill).
+static func bank_earth_color() -> Color:
+	return Color(0.28, 0.09, 0.025, 1.0)
+
+
+## Desert crust thickness on flat strips and dune faces.
+const DESERT_CRUST_DEPTH := 48.0
+
+
 static func apply_to_level(level: Node) -> void:
 	_dress_sky(level)
 	_dress_sun(level)
@@ -32,6 +41,7 @@ static func apply_to_level(level: Node) -> void:
 	_dress_platforms(level)
 	_disable_ground_fill_collision(level)
 	_make_contiguous_floors(level)
+	_ensure_player_draw_order(level)
 	_align_cacti(level)
 	_align_chests(level)
 	_align_pits(level)
@@ -382,7 +392,18 @@ static func _make_contiguous_floors(level: Node) -> void:
 			var y := top + surface_thickness - 2.0
 			var row := 0
 			while y < deep_bottom - 1.0:
-				_tile_strip_row(floor_root, dirt, dirt_left, dirt_right, y, dirt_h, 0, "FloorDirt%d_%d" % [i, row])
+				_tile_strip_row(
+					floor_root,
+					dirt,
+					dirt_left,
+					dirt_right,
+					y,
+					dirt_h,
+					-1,
+					"FloorDirt%d_%d" % [i, row],
+					bank_bounds,
+					i
+				)
 				y += dirt_h - 2.0
 				row += 1
 				if row > 40:
@@ -408,7 +429,7 @@ static func _paint_abyss_rect(
 ) -> void:
 	var abyss := Polygon2D.new()
 	abyss.name = node_name
-	abyss.color = Color(0.22, 0.10, 0.12, 1.0)
+	abyss.color = bank_earth_color()
 	abyss.polygon = PackedVector2Array([
 		Vector2.ZERO,
 		Vector2(width, 0.0),
@@ -539,14 +560,16 @@ static func _carve_ground_walls_for_slope(
 	x_end: float,
 	y_end: float
 ) -> void:
-	## Inset Ground collision on the slope-facing bank edges so the old cliff wall
-	## cannot block walking; FloorSlopeBody provides the walk surface instead.
+	## Remove Ground boxes from the dune bridge column so FloorSlopeBody is the only
+	## walk surface — leftover vertical cliff faces blocked continuous slope walking.
+	const BANK_EXTEND := 36.0
+	var bridge_left := minf(x_start, x_end) - BANK_EXTEND
+	var bridge_right := maxf(x_start, x_end) + BANK_EXTEND
 	var high_y := minf(y_start, y_end)
 	var low_y := maxf(y_start, y_end)
-	var rising_right := y_start > y_end
-	var slope_left := minf(x_start, x_end) - 8.0
-	var slope_right := maxf(x_start, x_end) + 8.0
 	for node in level.find_children("Ground*", "StaticBody2D", true, false):
+		if String(node.name).ends_with("Fill"):
+			continue
 		var body := node as StaticBody2D
 		if body == null:
 			continue
@@ -559,36 +582,23 @@ static func _carve_ground_walls_for_slope(
 		var left := center.x - half.x
 		var right := center.x + half.x
 		var top := center.y - half.y
-		# Only carve banks that touch this dune — not every same-height bank in the level.
-		if right < slope_left or left > slope_right:
+		if right < bridge_left or left > bridge_right:
 			continue
-		# Only carve banks that match this step's desert tops.
 		var on_high := absf(top - high_y) <= 18.0
 		var on_low := absf(top - low_y) <= 18.0
 		if not on_high and not on_low:
 			continue
+		if left >= bridge_left - 1.0 and right <= bridge_right + 1.0:
+			shape_node.disabled = true
+			continue
 		var new_left := left
 		var new_right := right
-		if on_high:
-			# Pull the high bank's cliff face back under the dune top.
-			if rising_right:
-				new_left = maxf(left, x_end - 6.0)
-			else:
-				new_right = minf(right, x_start + 6.0)
-		if on_low:
-			# Keep the low bank from sticking a lip into the dune start.
-			if rising_right:
-				new_right = minf(right, x_start + 6.0)
-				# Stacked dirt fill on the high bank can still block the crest lip.
-				if right > x_end - 4.0:
-					new_left = maxf(left, x_end - 6.0)
-			else:
-				new_left = maxf(left, x_end - 6.0)
-				if left < x_start + 4.0:
-					new_right = minf(right, x_start + 6.0)
+		if right > bridge_left and left < bridge_left:
+			new_right = minf(new_right, bridge_left)
+		if left < bridge_right and right > bridge_right:
+			new_left = maxf(new_left, bridge_right)
 		var new_w := new_right - new_left
 		if new_w < 24.0:
-			# Too narrow to walk — disable this cliff remnant.
 			shape_node.disabled = true
 			continue
 		if is_equal_approx(new_left, left) and is_equal_approx(new_right, right):
@@ -686,22 +696,21 @@ static func _paint_slope_underfill(
 	## Solid earth wedge under the dune face — flat FloorAbyss is clipped away here and
 	## tiled dirt alone leaves sky-blue gaps under the curved crust.
 	const SAMPLES := 16
-	const CRUST_PAD := 44.0
 	const DEPTH := 880.0
 	var bottom_y := maxf(y_start, y_end) + DEPTH
 	var poly: PackedVector2Array = []
 	for i in range(SAMPLES + 1):
 		var t := float(i) / float(SAMPLES)
 		var x := lerpf(x_start, x_end, t)
-		var y := _slope_y_at(x, x_start, y_start, x_end, y_end, curved) + CRUST_PAD
+		var y := _slope_y_at(x, x_start, y_start, x_end, y_end, curved) + DESERT_CRUST_DEPTH
 		poly.append(Vector2(x, y))
 	poly.append(Vector2(x_end, bottom_y))
 	poly.append(Vector2(x_start, bottom_y))
 	var underfill := Polygon2D.new()
 	underfill.name = "FloorSlopeUnderfill%d" % index
-	underfill.color = Color(0.22, 0.10, 0.12, 1.0)
+	underfill.color = bank_earth_color()
 	underfill.polygon = poly
-	underfill.z_index = 1
+	underfill.z_index = -2
 	parent.add_child(underfill)
 
 
@@ -733,7 +742,7 @@ static func _paint_slope_fill(
 				var surface_y: float = _slope_y_at(
 					x + tile_w * 0.5, x_start, y_start, x_end, y_end, curved
 				)
-				if y + row_h < surface_y + 8.0:
+				if y < surface_y + DESERT_CRUST_DEPTH:
 					x += tile_w * 0.85
 					continue
 				var use_w := minf(tile_w, x1 - x)
@@ -743,7 +752,7 @@ static func _paint_slope_fill(
 				sprite.centered = false
 				sprite.position = Vector2(x, y)
 				sprite.scale = Vector2(use_w / tex_size.x, scale_y)
-				sprite.z_index = 2
+				sprite.z_index = -1
 				sprite.modulate = Color(0.96, 0.9, 0.82, 1.0)
 				parent.add_child(sprite)
 				x += use_w * 0.85
@@ -877,6 +886,13 @@ static func _disable_ground_fill_collision(level: Node) -> void:
 		var shape_node := node.get_node_or_null("CollisionShape2D") as CollisionShape2D
 		if shape_node != null:
 			shape_node.disabled = true
+
+
+static func _ensure_player_draw_order(level: Node) -> void:
+	## TrailFloor earth tiles must not paint over the cowboy's boots on dunes.
+	var player := level.find_child("Player", true, false) as CanvasItem
+	if player != null:
+		player.z_index = 5
 
 
 static func _align_pits(level: Node) -> void:

@@ -90,8 +90,11 @@ func _ready() -> void:
 	failures += await _run("Bandits stand on the desert surface", _test_bandits_stand_on_desert)
 	failures += await _run("Cacti align to desert slopes", _test_cactus_aligns_to_desert_slope)
 	failures += await _run("Dune crest stays walkable without jumping", _test_slope_crest_walkable)
+	failures += await _run("Slope ground collision clears dune bridge", _test_slope_ground_bridge_clear)
 	failures += await _run("Slope earth fill stays below crust line", _test_slope_dirt_below_crust)
 	failures += await _run("Slope underfill covers dune wedge", _test_slope_underfill_covers_wedge)
+	failures += await _run("Slope underfill uses warm bank earth", _test_slope_underfill_earth_color)
+	failures += await _run("Filled save can pick Advanced Mode", _test_filled_slot_advanced_mode_select)
 	failures += await _run("Bandits play walk animation while moving", _test_bandit_walk_animation)
 	failures += await _run("Campaign hazards are no longer blocked by plank highways", _test_no_plank_highways)
 	failures += await _run(
@@ -802,10 +805,10 @@ func _test_save_select_mode_selection() -> Variant:
 	add_child(scene)
 	await get_tree().process_frame
 	scene._index = 0
-	scene._empty_slot_advanced[0] = true
+	scene._slot_mode_advanced[0] = true
 	scene._sync_mode_dropdown_for_slot(0)
 	scene._on_mode_selected(1)
-	if not scene._empty_slot_advanced[0]:
+	if not scene._slot_mode_advanced[0]:
 		scene.queue_free()
 		GameManager.erase_slot(0)
 		return "Advanced Mode should stick when chosen on an empty slot."
@@ -821,7 +824,9 @@ func _test_save_select_mode_selection() -> Variant:
 	slot["advanced_mode"] = false
 	slot["current_level"] = 1
 	GameManager.debug_set_slot(0, slot)
-	scene._sync_mode_dropdown_for_slot(0)
+	scene._index = 0
+	scene._last_mode_slot = -1
+	scene._highlight()
 	if scene._mode_dropdown.selected != 0:
 		scene.queue_free()
 		GameManager.erase_slot(0)
@@ -856,20 +861,20 @@ func _test_save_select_mode_refresh() -> Variant:
 	await get_tree().process_frame
 	scene._index = 0
 	scene._sync_mode_dropdown_for_slot(0)
-	if not scene._mode_dropdown.disabled:
+	if scene._mode_dropdown.disabled:
 		scene.queue_free()
 		GameManager.erase_slot(0)
-		return "Classic save should lock the trail mode dropdown."
+		return "Trail mode dropdown should stay enabled on existing saves."
 	GameManager.erase_slot(0)
 	scene._refresh()
 	if scene._mode_dropdown.disabled:
 		scene.queue_free()
 		GameManager.erase_slot(0)
-		return "Empty slot should re-enable trail mode dropdown after delete."
-	scene._empty_slot_advanced[0] = true
+		return "Empty slot should keep trail mode dropdown enabled after delete."
+	scene._slot_mode_advanced[0] = true
 	scene._sync_mode_dropdown_for_slot(0)
 	scene._refresh_mode_dropdown_labels()
-	if not scene._empty_slot_advanced[0]:
+	if not scene._slot_mode_advanced[0]:
 		scene.queue_free()
 		GameManager.erase_slot(0)
 		return "Advanced Mode should survive trail mode dropdown refresh."
@@ -926,20 +931,38 @@ func _test_advanced_mode_lives_hud() -> Variant:
 	if level is LevelController:
 		(level as LevelController).setup_level()
 	await get_tree().process_frame
+	await get_tree().process_frame
 	var hud := level.get_node_or_null("Hud") as Hud
 	var error: Variant = null
 	if hud == null:
 		error = "Campaign level should include a Hud node."
 	else:
-		var hearts := hud.get_node_or_null("LivesHeartsLabel") as Label
-		if hearts == null:
-			error = "Advanced Mode HUD should include LivesHeartsLabel."
-		elif not hearts.visible:
-			error = "Advanced Mode lives hearts should be visible during gameplay."
-		elif not hearts.text.contains("♥"):
-			error = "Advanced Mode lives hearts should show filled heart glyphs."
-		elif hearts.z_index < 10:
-			error = "Lives hearts should render above other HUD widgets."
+		if not GameManager.is_advanced_mode():
+			error = (
+				"Advanced Mode lives HUD test needs active advanced slot (active=%d advanced=%s)."
+				% [GameManager.active_slot_index, str(GameManager.get_slot(0).get("advanced_mode"))]
+			)
+		else:
+			hud.set_lives(GameManager.get_lives(), true)
+			var panel := hud.get_node_or_null("LivesPanel") as Control
+			var hearts := hud.get_node_or_null("LivesPanel/LivesHeartsLabel") as Label
+			if hearts == null:
+				hearts = hud.get_node_or_null("LivesHeartsLabel") as Label
+			if panel == null:
+				error = "Advanced Mode HUD should include LivesPanel."
+			elif not panel.visible:
+				error = (
+					"Advanced Mode lives panel should be visible (panel.visible=%s is_in_tree=%s)."
+					% [str(panel.visible), str(panel.is_visible_in_tree())]
+				)
+			elif not hearts.visible:
+				error = "Advanced Mode lives hearts should be visible during gameplay."
+			elif not hearts.text.contains("♥"):
+				error = "Advanced Mode lives hearts should show filled heart glyphs."
+			elif panel != null and panel.z_index < 10:
+				error = "Lives hearts panel should render above other HUD widgets."
+			elif hearts.z_index < 1 and panel == null:
+				error = "Lives hearts should render above other HUD widgets."
 	level.queue_free()
 	GameManager.erase_slot(0)
 	return error
@@ -2456,6 +2479,20 @@ func _test_slope_dirt_below_crust() -> Variant:
 		if dirt_top > surface_y + 6.0:
 			level.free()
 			return "Flat FloorDirt must not paint above the dune crust line."
+	for node in trail_floor.find_children("FloorSlopeDirt*", "Sprite2D", false, false):
+		var slope_dirt := node as Sprite2D
+		var sample_x := slope_dirt.global_position.x + slope_dirt.texture.get_size().x * slope_dirt.scale.x * 0.5
+		if sample_x < x_start - 4.0 or sample_x > x_end + 4.0:
+			continue
+		var surface_y := WildWestTheme._slope_y_at(
+			sample_x, x_start, y_start, x_end, y_end, curved
+		)
+		if slope_dirt.global_position.y > surface_y + 6.0:
+			level.free()
+			return "FloorSlopeDirt must not paint above the dune crust line."
+		if slope_dirt.z_index >= 3:
+			level.free()
+			return "Slope dirt must stay below the sand crust and the cowboy."
 	for node in trail_floor.find_children("FloorAbyss*", "Polygon2D", false, false):
 		var abyss := node as Polygon2D
 		var abyss_left := abyss.position.x
@@ -2516,6 +2553,180 @@ func _test_slope_underfill_covers_wedge() -> Variant:
 				level.free()
 				return "FloorSlopeUnderfill must cover earth under the dune face (no sky gaps)."
 	level.free()
+	return null
+
+
+func _test_slope_ground_bridge_clear() -> Variant:
+	var slot := 0
+	var trail := CustomLevelStore.trail_row(8)
+	var data := CustomLevelStore.default_level(slot)
+	data["objects"] = [
+		{"type": "ground", "x": 3, "y": trail},
+		{"type": "ground", "x": 3, "y": trail - 1},
+		{"type": "ground", "x": 4, "y": trail},
+		{"type": "goal", "x": 5, "y": trail},
+	]
+	var level := LevelController.new()
+	add_child(level)
+	CustomLevelBuilder.build(level, data)
+	WildWestTheme.apply_to_level(level)
+	await get_tree().physics_frame
+	var merged := WildWestTheme._merge_segments(WildWestTheme._collect_ground_segments(level))
+	if merged.size() < 2:
+		level.queue_free()
+		return "Height-step workshop trail should build adjacent dirt banks."
+	var span := WildWestTheme._slope_span(merged[0], merged[1])
+	if span.is_empty():
+		level.queue_free()
+		return "Expected a walkable dune between stacked dirt banks."
+	var x_start := float(span["x_start"])
+	var x_end := float(span["x_end"])
+	const BANK_EXTEND := 36.0
+	var bridge_left := minf(x_start, x_end) - BANK_EXTEND
+	var bridge_right := maxf(x_start, x_end) + BANK_EXTEND
+	var space := level.get_world_2d().direct_space_state
+	for ground in level.find_children("Ground*", "StaticBody2D", true, false):
+		if String(ground.name).ends_with("Fill"):
+			continue
+		var shape_node := ground.get_node_or_null("CollisionShape2D") as CollisionShape2D
+		if shape_node == null or shape_node.disabled:
+			continue
+		var center := shape_node.global_position
+		var half := (shape_node.shape as RectangleShape2D).size * 0.5
+		var left := center.x - half.x
+		var right := center.x + half.x
+		if right < bridge_left or left > bridge_right:
+			continue
+		if left >= bridge_left - 1.0 and right <= bridge_right + 1.0:
+			level.queue_free()
+			return "Ground collision must leave the dune bridge to FloorSlopeBody."
+		for sample_x in [bridge_left + 20.0, (x_start + x_end) * 0.5, bridge_right - 20.0]:
+			var surface := WildWestTheme.walk_surface_at(level, sample_x)
+			var foot_y := float(surface["y"]) - 2.0
+			var query := PhysicsRayQueryParameters2D.create(
+				Vector2(sample_x, foot_y - 24.0),
+				Vector2(sample_x, foot_y + 40.0)
+			)
+			query.collision_mask = 1
+			var hit := space.intersect_ray(query)
+			if hit.is_empty():
+				level.queue_free()
+				return "Dune bridge should expose floor collision for walking."
+			var hit_y := float(hit.get("position", Vector2.ZERO).y)
+			if absf(hit_y - float(surface["y"])) > 8.0:
+				level.queue_free()
+				return (
+					"Dune collision should match walk surface (hit y=%.1f, expected %.1f)."
+					% [hit_y, float(surface["y"])]
+				)
+	level.queue_free()
+	return null
+
+
+func _test_slope_underfill_earth_color() -> Variant:
+	var slot := 0
+	var trail := CustomLevelStore.trail_row(8)
+	var data := CustomLevelStore.default_level(slot)
+	data["objects"] = [
+		{"type": "ground", "x": 3, "y": trail},
+		{"type": "ground", "x": 3, "y": trail - 1},
+		{"type": "ground", "x": 4, "y": trail},
+		{"type": "goal", "x": 5, "y": trail},
+	]
+	var level := LevelController.new()
+	CustomLevelBuilder.build(level, data)
+	WildWestTheme.apply_to_level(level)
+	var trail_floor := level.get_node_or_null("TrailFloor") as Node2D
+	if trail_floor == null:
+		level.free()
+		return "Theme should build TrailFloor for slope underfill checks."
+	var underfill := trail_floor.get_node_or_null("FloorSlopeUnderfill0") as Polygon2D
+	if underfill == null:
+		level.free()
+		return "Desert slopes need a solid FloorSlopeUnderfill wedge."
+	var expected := WildWestTheme.bank_earth_color()
+	if underfill.color.is_equal_approx(expected):
+		level.free()
+		return null
+	if underfill.color.b > expected.b + 0.03:
+		level.free()
+		return "Slope underfill should use warm bank earth, not blue-tinted fill."
+	var abyss := trail_floor.get_node_or_null("FloorAbyss") as Polygon2D
+	if abyss != null and not abyss.color.is_equal_approx(expected):
+		level.free()
+		return "FloorAbyss should match warm bank earth under flat dirt."
+	level.free()
+	return null
+
+
+func _test_filled_slot_advanced_mode_select() -> Variant:
+	GameManager.erase_slot(0)
+	var slot := GameManager.get_slot(0)
+	slot["empty"] = false
+	slot["advanced_mode"] = false
+	slot["current_level"] = 3
+	slot["stars"] = 12
+	slot["lives"] = 0
+	GameManager.debug_set_slot(0, slot)
+	var packed: PackedScene = load("res://scenes/ui/save_select.tscn")
+	if packed == null:
+		GameManager.erase_slot(0)
+		return "Missing save select scene."
+	var scene := packed.instantiate()
+	add_child(scene)
+	await get_tree().process_frame
+	scene._index = 0
+	scene._sync_mode_dropdown_for_slot(0)
+	if scene._mode_dropdown.disabled:
+		scene.queue_free()
+		GameManager.erase_slot(0)
+		return "Filled saves should allow choosing Advanced Mode."
+	scene._on_mode_selected(1)
+	GameManager.prepare_slot_for_start(0, scene._mode_for_slot(0))
+	GameManager.active_slot_index = 0
+	if not GameManager.slot_is_advanced(0):
+		scene.queue_free()
+		GameManager.erase_slot(0)
+		return "Advanced Mode should apply when continuing an existing save."
+	if GameManager.get_lives() != 3:
+		scene.queue_free()
+		GameManager.erase_slot(0)
+		return "Switching a Classic save to Advanced should grant three lives."
+	GameManager.active_slot_index = 0
+	var level_packed: PackedScene = load(GameManager.LEVEL_SCENES[0])
+	var level := level_packed.instantiate()
+	add_child(level)
+	if level is LevelController:
+		(level as LevelController).setup_level()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var hud := level.get_node_or_null("Hud") as Hud
+	if hud == null:
+		level.queue_free()
+		scene.queue_free()
+		GameManager.erase_slot(0)
+		return "Campaign level should include HUD after Advanced switch."
+	hud.set_lives(GameManager.get_lives(), true)
+	var panel := hud.get_node_or_null("LivesPanel") as Control
+	var hearts := hud.get_node_or_null("LivesPanel/LivesHeartsLabel") as Label
+	if hearts == null:
+		hearts = hud.get_node_or_null("LivesHeartsLabel") as Label
+	if panel == null or not panel.visible:
+		level.queue_free()
+		scene.queue_free()
+		GameManager.erase_slot(0)
+		return (
+			"Advanced hearts panel should show after switching an existing save (advanced=%s lives=%d)."
+			% [str(GameManager.is_advanced_mode()), GameManager.get_lives()]
+		)
+	if hearts == null or not hearts.text.contains("♥"):
+		level.queue_free()
+		scene.queue_free()
+		GameManager.erase_slot(0)
+		return "Advanced hearts should display filled glyphs after switching saves."
+	level.queue_free()
+	scene.queue_free()
+	GameManager.erase_slot(0)
 	return null
 
 

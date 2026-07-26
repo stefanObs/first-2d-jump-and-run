@@ -34,9 +34,10 @@ var _sheet_pan_last: Vector2 = Vector2.ZERO
 var _mode_dropdown: OptionButton
 var _mode_label: Label
 var _mode_board: Control
-## Advanced-mode preference for empty slots (index → bool).
-var _empty_slot_advanced: Array[bool] = [false, false, false]
+## Per-slot trail mode choice on save select (empty or existing saves).
+var _slot_mode_advanced: Array[bool] = [false, false, false]
 var _syncing_mode_dropdown := false
+var _last_mode_slot := -1
 
 
 func _ready() -> void:
@@ -196,13 +197,12 @@ func _refresh_mode_dropdown_labels() -> void:
 	if _mode_dropdown == null:
 		return
 	var advanced := _mode_for_slot(_index)
-	var enabled := GameManager.is_slot_empty(_index)
 	_with_mode_dropdown_sync(func() -> void:
 		_mode_dropdown.clear()
 		_mode_dropdown.add_item(tr("Classic"), 0)
 		_mode_dropdown.add_item(tr("Advanced Mode"), 1)
 		_mode_dropdown.select(1 if advanced else 0)
-		_mode_dropdown.disabled = not enabled
+		_mode_dropdown.disabled = false
 	)
 
 
@@ -230,25 +230,17 @@ func _style_mode_dropdown(dropdown: OptionButton) -> void:
 func _on_mode_selected(index: int) -> void:
 	if _syncing_mode_dropdown or index < 0 or _mode_dropdown == null:
 		return
-	if not GameManager.is_slot_empty(_index):
-		_sync_mode_dropdown_for_slot(_index)
-		return
-	_empty_slot_advanced[_index] = index == 1
+	_slot_mode_advanced[_index] = index == 1
 
 
 func _sync_mode_dropdown_for_slot(slot_index: int) -> void:
 	if _mode_dropdown == null:
 		return
-	var advanced := false
-	if GameManager.is_slot_empty(slot_index):
-		advanced = _empty_slot_advanced[slot_index]
-	else:
-		advanced = GameManager.slot_is_advanced(slot_index)
-	var enabled := GameManager.is_slot_empty(slot_index)
+	var advanced := _slot_mode_advanced[slot_index]
 	_with_mode_dropdown_sync(func() -> void:
 		if _mode_dropdown.item_count >= 2:
 			_mode_dropdown.select(1 if advanced else 0)
-		_mode_dropdown.disabled = not enabled
+		_mode_dropdown.disabled = false
 	)
 
 
@@ -266,9 +258,7 @@ func _with_mode_dropdown_sync(action: Callable) -> void:
 
 
 func _mode_for_slot(slot_index: int) -> bool:
-	if GameManager.is_slot_empty(slot_index):
-		return _empty_slot_advanced[slot_index]
-	return GameManager.slot_is_advanced(slot_index)
+	return _slot_mode_advanced[slot_index]
 
 
 func _setup_element_reference() -> void:
@@ -676,7 +666,7 @@ func _request_delete() -> void:
 
 func _confirm_delete() -> void:
 	GameManager.erase_slot(_index)
-	_empty_slot_advanced[_index] = false
+	_slot_mode_advanced[_index] = false
 	_refresh()
 	_refresh_prompts()
 	_sync_mode_dropdown_for_slot(_index)
@@ -712,4 +702,10 @@ func _refresh_prompts() -> void:
 func _highlight() -> void:
 	for i in range(_cards.size()):
 		_cards[i].modulate = Color(1, 1, 0.55, 1) if i == _index else Color(1, 1, 1, 1)
+	if _index != _last_mode_slot:
+		if GameManager.is_slot_empty(_index):
+			_slot_mode_advanced[_index] = false
+		else:
+			_slot_mode_advanced[_index] = GameManager.slot_is_advanced(_index)
+		_last_mode_slot = _index
 	_sync_mode_dropdown_for_slot(_index)

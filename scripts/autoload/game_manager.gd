@@ -68,13 +68,17 @@ func prepare_slot_for_start(slot_index: int, advanced_mode: bool) -> void:
 	_validate_slot(slot_index)
 	_ensure_data()
 	var slot: Dictionary = get_slot(slot_index)
+	var was_advanced := bool(slot.get("advanced_mode", false))
+	slot["advanced_mode"] = advanced_mode
 	if bool(slot.get("empty", true)):
-		slot["advanced_mode"] = advanced_mode
 		slot["lives"] = ADVANCED_START_LIVES if advanced_mode else 0
 		slot["lifetime_badges"] = 0
 		slot["badge_life_tier"] = 0
-	elif advanced_mode and int(slot.get("lives", 0)) <= 0:
-		slot["lives"] = ADVANCED_START_LIVES
+	elif advanced_mode:
+		if not was_advanced or int(slot.get("lives", 0)) <= 0:
+			slot["lives"] = ADVANCED_START_LIVES
+	else:
+		slot["lives"] = 0
 	(_data["slots"] as Array)[slot_index] = slot
 
 
@@ -126,6 +130,8 @@ func start_or_continue_slot(slot_index: int) -> void:
 	elif is_advanced_mode() and int(slot.get("lives", 0)) <= 0:
 		slot["lives"] = ADVANCED_START_LIVES
 		(_data["slots"] as Array)[slot_index] = slot
+		save_to_disk()
+	else:
 		save_to_disk()
 	active_slot_changed.emit(slot_index)
 	if is_advanced_mode():

@@ -4,6 +4,7 @@ extends CanvasLayer
 var _level_label: Label
 var _stars_label: Label
 var _lives_hearts_label: Label
+var _lives_panel: PanelContainer
 var _mode_label: Label
 var _prompt_label: Label
 var _trail_bar: HandmadeProgress
@@ -50,9 +51,14 @@ func set_stars(count: int) -> void:
 
 func set_lives(count: int, show: bool) -> void:
 	_ensure_lives_display()
+	if _lives_panel != null:
+		_lives_panel.show() if show else _lives_panel.hide()
 	if _lives_hearts_label == null:
 		return
-	_lives_hearts_label.visible = show
+	if show:
+		_lives_hearts_label.show()
+	else:
+		_lives_hearts_label.hide()
 	if not show:
 		return
 	var filled := ""
@@ -61,15 +67,19 @@ func set_lives(count: int, show: bool) -> void:
 		if i < count - 1:
 			filled += " "
 	_lives_hearts_label.text = filled if filled != "" else "♡"
+	_lives_hearts_label.modulate = Color(1, 1, 1, 1)
 	_bring_lives_to_front()
 
 
 func _bring_lives_to_front() -> void:
+	if _lives_panel != null:
+		_lives_panel.z_index = 40
+		_lives_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		move_child(_lives_panel, get_child_count() - 1)
 	if _lives_hearts_label == null:
 		return
-	_lives_hearts_label.z_index = 30
+	_lives_hearts_label.z_index = 1
 	_lives_hearts_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	move_child(_lives_hearts_label, get_child_count() - 1)
 
 
 func set_mode(mode_name: String, remaining: float) -> void:
@@ -147,22 +157,34 @@ func _ensure_power_bar() -> void:
 
 
 func _ensure_lives_display() -> void:
+	if _lives_panel == null:
+		_lives_panel = get_node_or_null("LivesPanel") as PanelContainer
+	if _lives_hearts_label == null and _lives_panel != null:
+		_lives_hearts_label = _lives_panel.get_node_or_null("LivesHeartsLabel") as Label
 	if _lives_hearts_label == null:
 		_lives_hearts_label = get_node_or_null("LivesHeartsLabel") as Label
-	if _lives_hearts_label != null:
+	if _lives_panel == null:
 		return
-	_lives_hearts_label = Label.new()
-	_lives_hearts_label.name = "LivesHeartsLabel"
-	_lives_hearts_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_lives_hearts_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	_lives_hearts_label.offset_top = 12.0
-	_lives_hearts_label.offset_bottom = 56.0
-	_lives_hearts_label.add_theme_font_size_override(&"font_size", 36)
-	_lives_hearts_label.add_theme_color_override(&"font_color", Color(0.9, 0.2, 0.25, 1))
-	_lives_hearts_label.add_theme_color_override(&"font_outline_color", Color(0.2, 0.05, 0.05, 1))
-	_lives_hearts_label.add_theme_constant_override(&"outline_size", 6)
-	_lives_hearts_label.visible = false
-	add_child(_lives_hearts_label)
+	if _lives_panel.get_theme_stylebox(&"panel") == null:
+		var panel_style := StyleBoxFlat.new()
+		panel_style.bg_color = Color(0.42, 0.18, 0.08, 0.92)
+		panel_style.set_corner_radius_all(10)
+		panel_style.set_border_width_all(3)
+		panel_style.border_color = Color(0.92, 0.72, 0.28, 1.0)
+		panel_style.content_margin_left = 14
+		panel_style.content_margin_right = 14
+		panel_style.content_margin_top = 4
+		panel_style.content_margin_bottom = 4
+		_lives_panel.add_theme_stylebox_override(&"panel", panel_style)
+	if _lives_hearts_label == null:
+		_lives_hearts_label = Label.new()
+		_lives_hearts_label.name = "LivesHeartsLabel"
+		_lives_hearts_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_lives_hearts_label.add_theme_font_size_override(&"font_size", 34)
+		_lives_hearts_label.add_theme_color_override(&"font_color", Color(1.0, 0.28, 0.32, 1))
+		_lives_hearts_label.add_theme_color_override(&"font_outline_color", Color(0.12, 0.02, 0.02, 1))
+		_lives_hearts_label.add_theme_constant_override(&"outline_size", 8)
+		_lives_panel.add_child(_lives_hearts_label)
 
 
 func _ensure_progress_widgets() -> void:

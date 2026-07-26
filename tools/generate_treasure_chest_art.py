@@ -19,15 +19,15 @@ ART_SCALE = CHEST_HEIGHT / BASE_CLOSED_HEIGHT
 # Supersample for weathered wood/brass detail, then downscale to game pixel size.
 SUPER_SAMPLE = 2.0
 
-# Palette aligned with trail props (wood plank, camp flagpole, badges).
-INK = (56, 26, 10, 255)
-WOOD = (158, 96, 48, 255)
-WOOD_DARK = (108, 58, 26, 255)
-WOOD_LIGHT = (198, 138, 72, 255)
-WOOD_GRAIN = (88, 48, 20, 180)
-BRASS = (184, 142, 52, 255)
-BRASS_DARK = (118, 82, 28, 255)
-BRASS_LIGHT = (228, 196, 88, 255)
+# High-contrast western palette — darker wood + bright brass so the chest reads on sand.
+INK = (32, 14, 4, 255)
+WOOD = (118, 62, 22, 255)
+WOOD_DARK = (68, 34, 10, 255)
+WOOD_LIGHT = (162, 102, 48, 255)
+WOOD_GRAIN = (52, 26, 8, 200)
+BRASS = (228, 178, 38, 255)
+BRASS_DARK = (148, 98, 18, 255)
+BRASS_LIGHT = (255, 228, 88, 255)
 GLOW = (255, 210, 72, 255)
 TREASURE = (255, 228, 96, 255)
 NAIL = (72, 38, 14, 220)
@@ -80,7 +80,7 @@ def _draw_wood_planks(
                 fill=WOOD_GRAIN,
                 width=max(1, int(round(1.5 * ART_SCALE * SUPER_SAMPLE))),
             )
-        draw.line(pts + [pts[0]], fill=INK, width=max(1, int(round(2.5 * ART_SCALE * SUPER_SAMPLE))))
+        draw.line(pts + [pts[0]], fill=INK, width=max(1, int(round(3.2 * ART_SCALE * SUPER_SAMPLE))))
         for ny in range(int(y0 + 8), int(y1 - 6), max(6, int(14 * ART_SCALE * SUPER_SAMPLE))):
             nx = px0 + (3 if i % 2 else 5)
             r = max(1, int(round(1.8 * ART_SCALE * SUPER_SAMPLE)))
@@ -190,7 +190,7 @@ def make_lid() -> Image.Image:
         (_s(6), _s(8)),
     ]
     draw.polygon(lid_pts, fill=WOOD_DARK)
-    draw.line(lid_pts + [lid_pts[0]], fill=INK, width=max(1, int(_s(2.5))))
+    draw.line(lid_pts + [lid_pts[0]], fill=INK, width=max(1, int(_s(3.2))))
 
     for i, y in enumerate(range(int(_s(10)), h - int(_s(6)), max(2, int(_s(5))))):
         x_start = _s(8) + (i % 2)
