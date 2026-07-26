@@ -811,7 +811,7 @@ position = Vector2(840, 150)
 
 
 [node name="Spring1" parent="." instance=ExtResource("11_spring")]
-position = Vector2(1760, 320)
+position = Vector2(1500, 320)
 bounce_velocity = -820.0
 
 
@@ -838,7 +838,7 @@ position = Vector2(1940, 150)
 
 
 [node name="Spring2" parent="." instance=ExtResource("11_spring")]
-position = Vector2(3320, 320)
+position = Vector2(3000, 320)
 bounce_velocity = -820.0
 
 
@@ -919,7 +919,7 @@ position = Vector2(5740, 150)
 
 
 [node name="Spring5" parent="." instance=ExtResource("11_spring")]
-position = Vector2(6720, 320)
+position = Vector2(5850, 320)
 bounce_velocity = -820.0
 
 
@@ -946,7 +946,7 @@ position = Vector2(6880, 150)
 
 
 [node name="BootsHopLedge" type="StaticBody2D" parent="."]
-position = Vector2(2260, 245)
+position = Vector2(2260, 232)
 [node name="Visual" type="ColorRect" parent="BootsHopLedge"]
 offset_left = -80.0
 offset_top = -16.0

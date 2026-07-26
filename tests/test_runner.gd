@@ -109,6 +109,10 @@ func _ready() -> void:
 		_test_movers_use_plank_or_cloud
 	)
 	failures += await _run("Moonlight Gulch rafts require hop transfers for Magic Boots", _test_level_09_raft_hop_boots)
+	failures += await _run(
+		"Moonlight Gulch springs and planks clear the gulch floor",
+		_test_level_09_gulch_clearance
+	)
 	failures += await _run("Canyon rafts are one-way jump-through platforms", _test_one_way_moving_platforms)
 	failures += await _run("Custom level store and builder work", _test_custom_level_builder)
 	failures += await _run("Workshop default trail width matches built-ins", _test_workshop_default_width)
@@ -2252,6 +2256,60 @@ func _test_level_09_raft_hop_boots() -> Variant:
 	return null
 
 
+func _test_level_09_gulch_clearance() -> Variant:
+	var packed: PackedScene = load("res://scenes/levels/level_09.tscn")
+	if packed == null:
+		return "Missing Level 09 scene."
+	var level: Node = packed.instantiate()
+	add_child(level)
+	if level is LevelController:
+		(level as LevelController).setup_level()
+	await get_tree().process_frame
+
+	var floor_top := 320.0
+	var min_clear := LevelLayoutRules.PLAYER_BODY_HEIGHT + LevelLayoutRules.WALK_CLEAR_PX
+	var plank_bottom_max := floor_top - min_clear
+
+	for node in level.find_children("*", "StaticBody2D", true, false):
+		var name_text := String(node.name)
+		if not name_text.contains("Ledge"):
+			continue
+		var surface := LevelLayoutRules._surface_for(node as Node2D)
+		if surface.is_empty():
+			continue
+		var shape := (node as Node2D).get_node_or_null("CollisionShape2D") as CollisionShape2D
+		var height := 32.0
+		if shape != null and shape.shape is RectangleShape2D:
+			height = (shape.shape as RectangleShape2D).size.y
+		var center_x := (float(surface["left"]) + float(surface["right"])) * 0.5
+		var plank_bottom := float(surface["top"]) + height
+		if center_x < 1800.0 or center_x > 7200.0:
+			continue
+		if plank_bottom > plank_bottom_max + 0.5:
+			level.queue_free()
+			return (
+				"%s blocks the gulch floor (bottom %.0f, need <= %.0f)."
+				% [name_text, plank_bottom, plank_bottom_max]
+			)
+
+	for node in level.find_children("*", "Area2D", true, false):
+		if not (node is SpringPad):
+			continue
+		var spring := node as Node2D
+		var surface := WildWestTheme.walk_surface_at(level, spring.global_position.x)
+		var walk_y := float(surface["y"])
+		var angle := absf(float(surface["angle"]))
+		if absf(spring.global_position.y - walk_y) > 10.0 or angle > 0.08:
+			level.queue_free()
+			return (
+				"%s must sit on flat desert at x=%.0f (spring y=%.0f, walk y=%.0f, angle=%.2f)."
+				% [spring.name, spring.global_position.x, spring.global_position.y, walk_y, angle]
+			)
+
+	level.queue_free()
+	return null
+
+
 func _test_level_04_paired_moving_clouds() -> Variant:
 	var packed: PackedScene = load("res://scenes/levels/level_04.tscn")
 	var level: Node = packed.instantiate()
@@ -3192,12 +3250,12 @@ func _test_trail_row_model() -> Variant:
 	if not has_slope_body:
 		level.free()
 		return "Desert height slopes need walkable collision."
-	var trail := level.get_node_or_null("TrailFloor") as Node2D
-	if trail != null:
-		for abyss_node in trail.find_children("FloorAbyss*", "ColorRect", false, false):
+	var trail_floor := level.get_node_or_null("TrailFloor") as Node2D
+	if trail_floor != null:
+		for abyss_node in trail_floor.find_children("FloorAbyss*", "ColorRect", false, false):
 			level.free()
 			return "FloorAbyss must use Polygon2D, not ColorRect (Controls draw over slopes)."
-		var abyss_poly := trail.get_node_or_null("FloorAbyss") as Polygon2D
+		var abyss_poly := trail_floor.get_node_or_null("FloorAbyss") as Polygon2D
 		var crust := level.find_child("FloorSlope0_0", true, false) as Sprite2D
 		if abyss_poly != null and crust != null and crust.z_index <= abyss_poly.z_index:
 			level.free()
