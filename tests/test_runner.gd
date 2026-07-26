@@ -1811,7 +1811,9 @@ func _test_treasure_chest_height_ratio() -> Variant:
 	var expected := TreasureChest.TARGET_HEIGHT
 	if absf(height - expected) > 1.5:
 		chest.queue_free()
-		return "Chest collision height %.1f should be ~%.1f (2/3 player)." % [height, expected]
+		return "Chest collision height %.1f should be ~%.1f (%.0f%% of player)." % [
+			height, expected, TreasureChest.HEIGHT_RATIO * 100.0
+		]
 	chest.queue_free()
 	return null
 
