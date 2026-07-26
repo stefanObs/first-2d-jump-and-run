@@ -29,8 +29,13 @@ func _ready() -> void:
 	if player != null:
 		WildWestTheme.configure_player_camera(self, player)
 		player.set_input_enabled(false)
-	_build_hearts_ui()
-	_refresh_hearts()
+	if not GameManager.is_advanced_mode():
+		_build_hearts_ui()
+		_refresh_hearts()
+	elif hud != null:
+		hud.set_lives(GameManager.get_lives(), true)
+		if not GameManager.lives_changed.is_connected(_on_campaign_lives_changed):
+			GameManager.lives_changed.connect(_on_campaign_lives_changed)
 	if hud != null:
 		hud.show_toast(boss_title, 2.4)
 	_run_countdown()
@@ -154,6 +159,9 @@ func fail_soft() -> void:
 
 
 func lose_heart(drop_position: Vector2) -> void:
+	if GameManager.is_advanced_mode():
+		await _lose_campaign_life(drop_position)
+		return
 	if _won or player == null or not combat_ready or _recovering:
 		return
 	if _hit_cooldown > 0.0:
@@ -184,3 +192,32 @@ func _on_heart_recovered() -> void:
 
 func restart_boss() -> void:
 	get_tree().reload_current_scene()
+
+
+func _on_campaign_lives_changed(lives: int) -> void:
+	if hud != null:
+		hud.set_lives(lives, true)
+
+
+func _lose_campaign_life(drop_position: Vector2) -> void:
+	if _won or player == null or not combat_ready or _recovering:
+		return
+	if _hit_cooldown > 0.0:
+		return
+	_hit_cooldown = 1.2
+	if not GameManager.lose_life():
+		combat_ready = false
+		if player != null:
+			player.set_input_enabled(false)
+		report_progress(tr("Out of lives!"))
+		await get_tree().create_timer(0.9).timeout
+		GameManager.save_to_disk()
+		GameManager.trigger_game_over()
+		return
+	if hud != null:
+		hud.set_lives(GameManager.get_lives(), true)
+	report_progress(tr("%d lives left!") % GameManager.get_lives())
+	_recovering = true
+	await player.play_boss_heart_recovery(drop_position, 1.15)
+	_on_heart_recovered()
+	_recovering = false

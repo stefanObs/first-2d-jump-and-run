@@ -4,6 +4,8 @@ extends Node
 
 const SAVE_VERSION := 4
 const SLOT_COUNT := 3
+const ADVANCED_START_LIVES := 3
+const BADGES_PER_LIFE := 30
 const CUSTOM_LEVEL_STORE := preload("res://scripts/levels/custom_level_store.gd")
 const SavePaths := preload("res://scripts/autoload/save_paths.gd")
 
@@ -14,6 +16,7 @@ const LEVEL_NAMES: PackedStringArray = CUSTOM_LEVEL_STORE.BUILTIN_NAMES
 signal saves_changed
 signal settings_changed
 signal active_slot_changed(slot_index: int)
+signal lives_changed(lives: int)
 
 var active_slot_index: int = -1
 var active_custom_slot: int = 0
@@ -44,6 +47,70 @@ func is_slot_empty(slot_index: int) -> bool:
 	return bool(get_slot(slot_index).get("empty", true))
 
 
+func slot_is_advanced(slot_index: int) -> bool:
+	_validate_slot(slot_index)
+	return bool(get_slot(slot_index).get("advanced_mode", false))
+
+
+func is_advanced_mode() -> bool:
+	if active_slot_index < 0:
+		return false
+	return slot_is_advanced(active_slot_index)
+
+
+func get_lives() -> int:
+	if not is_advanced_mode() or active_slot_index < 0:
+		return 0
+	return int(get_slot(active_slot_index).get("lives", ADVANCED_START_LIVES))
+
+
+func prepare_slot_for_start(slot_index: int, advanced_mode: bool) -> void:
+	_validate_slot(slot_index)
+	_ensure_data()
+	var slot: Dictionary = get_slot(slot_index)
+	if bool(slot.get("empty", true)):
+		slot["advanced_mode"] = advanced_mode
+		slot["lives"] = ADVANCED_START_LIVES if advanced_mode else 0
+		slot["lifetime_badges"] = 0
+		slot["badge_life_tier"] = 0
+	elif advanced_mode and int(slot.get("lives", 0)) <= 0:
+		slot["lives"] = ADVANCED_START_LIVES
+	(_data["slots"] as Array)[slot_index] = slot
+
+
+func lose_life() -> bool:
+	## Advanced Mode only. Returns false when no lives remain.
+	if not is_advanced_mode() or active_slot_index < 0:
+		return true
+	var slot: Dictionary = get_slot(active_slot_index)
+	var lives := maxi(int(slot.get("lives", ADVANCED_START_LIVES)) - 1, 0)
+	slot["lives"] = lives
+	(_data["slots"] as Array)[active_slot_index] = slot
+	save_to_disk()
+	lives_changed.emit(lives)
+	return lives > 0
+
+
+func register_badges_collected(count: int) -> void:
+	if not is_advanced_mode() or active_slot_index < 0 or count <= 0:
+		return
+	var slot: Dictionary = get_slot(active_slot_index)
+	var total := int(slot.get("lifetime_badges", 0)) + count
+	slot["lifetime_badges"] = total
+	var tier := total / BADGES_PER_LIFE
+	var awarded := int(slot.get("badge_life_tier", 0))
+	if tier > awarded:
+		slot["lives"] = int(slot.get("lives", ADVANCED_START_LIVES)) + (tier - awarded)
+		slot["badge_life_tier"] = tier
+		lives_changed.emit(int(slot["lives"]))
+	(_data["slots"] as Array)[active_slot_index] = slot
+	save_to_disk()
+
+
+func trigger_game_over() -> void:
+	get_tree().change_scene_to_file("res://scenes/ui/game_over.tscn")
+
+
 func start_or_continue_slot(slot_index: int) -> void:
 	_validate_slot(slot_index)
 	_ensure_data()
@@ -56,7 +123,13 @@ func start_or_continue_slot(slot_index: int) -> void:
 		slot["play_time_sec"] = 0.0
 		(_data["slots"] as Array)[slot_index] = slot
 		save_to_disk()
+	elif is_advanced_mode() and int(slot.get("lives", 0)) <= 0:
+		slot["lives"] = ADVANCED_START_LIVES
+		(_data["slots"] as Array)[slot_index] = slot
+		save_to_disk()
 	active_slot_changed.emit(slot_index)
+	if is_advanced_mode():
+		lives_changed.emit(get_lives())
 	var resume: Variant = slot.get("resume", {})
 	if resume is Dictionary and not (resume as Dictionary).is_empty():
 		load_level(int((resume as Dictionary).get("level_number", slot.get("current_level", 1))))
@@ -454,6 +527,10 @@ func _empty_slot() -> Dictionary:
 		"play_time_sec": 0.0,
 		"completed": false,
 		"resume": {},
+		"advanced_mode": false,
+		"lives": 0,
+		"lifetime_badges": 0,
+		"badge_life_tier": 0,
 	}
 
 

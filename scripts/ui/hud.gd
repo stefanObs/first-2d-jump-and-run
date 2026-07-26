@@ -3,6 +3,7 @@ extends CanvasLayer
 
 var _level_label: Label
 var _stars_label: Label
+var _lives_label: Label
 var _mode_label: Label
 var _prompt_label: Label
 var _trail_bar: HandmadeProgress
@@ -18,11 +19,13 @@ func _ready() -> void:
 	layer = 50
 	_level_label = get_node_or_null("LevelLabel") as Label
 	_stars_label = get_node_or_null("StarsLabel") as Label
+	_lives_label = get_node_or_null("LivesLabel") as Label
 	_mode_label = get_node_or_null("ModeLabel") as Label
 	_prompt_label = get_node_or_null("PromptLabel") as Label
 	_ensure_progress_widgets()
 	_ensure_power_bar()
 	set_stars(0)
+	set_lives(0, false)
 	set_mode("None", 0.0)
 	set_trail_progress(0.0)
 
@@ -43,6 +46,20 @@ func set_level_title(title: String) -> void:
 func set_stars(count: int) -> void:
 	if _stars_label != null:
 		_stars_label.text = tr("Badges: %d") % count
+
+
+func set_lives(count: int, show: bool) -> void:
+	if _lives_label == null:
+		return
+	_lives_label.visible = show
+	if not show:
+		return
+	var filled := ""
+	for i in range(maxi(count, 0)):
+		filled += "♥"
+		if i < count - 1:
+			filled += " "
+	_lives_label.text = tr("Lives: %s") % filled if filled != "" else tr("Lives: 0")
 
 
 func set_mode(mode_name: String, remaining: float) -> void:

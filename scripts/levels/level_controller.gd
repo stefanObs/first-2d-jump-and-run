@@ -39,7 +39,9 @@ var _restoring_run_state: bool = false
 var _loaded_run_state: bool = false
 var _next_level_tap_time_msec: int = -1000
 var _next_boss_tap_time_msec: int = -1000
+var _is_game_over: bool = false
 var _is_recovering: bool = false
+var _last_displayed_lives: int = -1
 ## When true, _ready does not call setup_level (editor live preview).
 var skip_auto_setup: bool = false
 
@@ -132,6 +134,10 @@ func setup_level() -> void:
 		if hint != null:
 			hint.visible = false
 		_setup_camp_marks()
+		_sync_advanced_hud()
+		if not is_custom_level and GameManager.is_advanced_mode():
+			if not GameManager.lives_changed.is_connected(_on_lives_changed):
+				GameManager.lives_changed.connect(_on_lives_changed)
 		InputManager.device_changed.connect(_on_device_changed)
 	if not is_custom_level and GameManager.consume_horse_arrival():
 		_play_horse_arrival()
@@ -274,8 +280,12 @@ func _handle_next_boss_tap() -> void:
 
 
 func respawn_player() -> void:
-	if player == null or _is_completing:
+	if player == null or _is_completing or _is_game_over:
 		return
+	if not is_custom_level and GameManager.is_advanced_mode():
+		if not GameManager.lose_life():
+			_trigger_game_over()
+			return
 	AudioManager.play_sfx(&"hurt")
 	_clear_hostile_projectiles()
 	var destination := get_active_respawn_position()
@@ -288,7 +298,38 @@ func respawn_player() -> void:
 			(node as ModeItem).restore_if_needed()
 	if hud != null:
 		hud.show_toast("Oops! Back to camp!", 2.0)
+		_sync_advanced_hud()
 	player_respawned.emit(destination)
+
+
+func _sync_advanced_hud() -> void:
+	if hud == null or is_custom_level:
+		return
+	var advanced := GameManager.is_advanced_mode()
+	var lives := GameManager.get_lives()
+	hud.set_lives(lives, advanced)
+	_last_displayed_lives = lives
+
+
+func _on_lives_changed(lives: int) -> void:
+	if hud != null:
+		hud.set_lives(lives, GameManager.is_advanced_mode())
+		if _last_displayed_lives >= 0 and lives > _last_displayed_lives:
+			hud.show_toast(tr("Extra life! +1 life"), 2.0)
+		_last_displayed_lives = lives
+
+
+func _trigger_game_over() -> void:
+	if _is_game_over:
+		return
+	_is_game_over = true
+	_is_completing = true
+	if player != null:
+		player.set_input_enabled(false)
+	set_paused(false)
+	GameManager.add_play_time(_play_time)
+	GameManager.save_to_disk()
+	GameManager.trigger_game_over()
 
 
 func _clear_hostile_projectiles() -> void:
@@ -474,6 +515,8 @@ func _on_star_collected(total: int) -> void:
 		hud.set_stars(total)
 		if total > 0 and total % 5 == 0:
 			hud.show_toast(tr("Nice! %d badges!") % total, 1.8)
+	if not is_custom_level and GameManager.is_advanced_mode():
+		GameManager.register_badges_collected(1)
 
 
 func _on_badge_taken(badge_name: String) -> void:
@@ -608,6 +651,8 @@ func _on_bounty_caught(opponent: Opponent, amount: int) -> void:
 	if new_badges <= 0:
 		return
 	player.collect_badges(new_badges)
+	if not is_custom_level and GameManager.is_advanced_mode():
+		GameManager.register_badges_collected(new_badges)
 	var reward_effect := BOUNTY_REWARD_EFFECT.new()
 	reward_effect.name = "BountyRewardEffect"
 	add_child(reward_effect)

@@ -88,6 +88,12 @@ func ensure_gameplay_music() -> void:
 		play_trail_music()
 
 
+func stop_music() -> void:
+	if _music_player != null:
+		_music_player.stop()
+	_mode = &"none"
+
+
 func play_sfx(effect: StringName) -> void:
 	if _sfx_players.is_empty():
 		return

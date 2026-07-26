@@ -1,8 +1,8 @@
 # Cowboy Trail
 
-Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, no lives/game-over, nonviolent lasso. **German is the default language**; English is fully supported.
+Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, nonviolent lasso. **Classic mode** has no lives or game over; **Advanced Mode** (chosen on the save-select screen before starting a slot) adds a three-life limit, badge milestones, and a game-over return to the start screen. **German is the default language**; English is fully supported.
 
-**Content version:** `1.3.67` (see `content_version.txt`). Launchers reimport when this stamp changes.
+**Content version:** `1.3.77` (see `content_version.txt`). Launchers reimport when this stamp changes.
 
 This README is the **binding source of truth** for gameplay, level design, art, i18n, and audio. Agents and contributors must follow it (see [Agent / contributor rules](#agent--contributor-rules)).
 
@@ -41,7 +41,7 @@ godot --headless --path . res://tests/test_moving_platform_obstruction.tscn
 9. Moonlight Gulch — Speed Stars + earlier tricks  
 10. Rainbow Saloon — finale using all skills  
 
-**Bosses** (after clearing the listed level; same tools as the trail; 5 hearts; nonviolent win):
+**Bosses** (after clearing the listed level; same tools as the trail; classic mode uses **5 hearts** per fight; Advanced Mode uses campaign lives instead; nonviolent win):
 
 | After | Boss | Win condition |
 |-------|------|----------------|
@@ -63,7 +63,7 @@ After Kingpin: horizon victory ride, fade, dedication **VOM PAPI FÜR FINN**, th
 - **Horse (Level 1):** `start_mounted` — faster run (~1.45×), jumps ~20% farther. Midnight Coach chase is mounted at that pace.
 - **Lasso:** Alt / F / L (Xbox X) — ties bandits (pass-through, seated rope pose). Head stomp also ties + small bounce. Side contact hurts.
 - **Modes** (one at a time; badge pickup adds ~5s): Wings / Magic Boots / Speed Star **30s**; Bubble Shield **7.5s** (blocks bandits, bounces cacti; **does not** save canyon falls).
-- **Camps:** checkpoints; respawn there after canyon/cactus hurt; no life limit. Camps store badges/mode state appropriately.
+- **Camps:** checkpoints; respawn there after canyon/cactus hurt. Classic mode has no life limit; **Advanced Mode** costs one life per respawn (three lives at start; every **30 badges** collected across the save grants +1 life; at zero lives a western game-over plays and returns to save select). Camps store badges/mode state appropriately.
 - **Canyons vs cactus:** canyon fall → spin recovery → camp. Cactus/bandit/carrion/snake hurt → camp (Bubble can block some damage). Call gaps **canyons**, never “pits”, in user-facing text.
 - **Stars:** optional; goals are saloon doorways (flying over counts). Level clear → horse ride-in/mount/ride-out → next level: ride in, dismount, and **leave the horse at the level start**. Handmade desert skyline behind transitions.
 

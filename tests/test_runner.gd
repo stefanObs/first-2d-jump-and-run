@@ -15,6 +15,11 @@ func _ready() -> void:
 	failures += await _run("GameManager save slots persist", _test_save_slots)
 	failures += await _run("Portable saves fall back when exe folder is read-only", _test_save_paths_writable_fallback)
 	failures += await _run("Save select scene loads", _test_save_select_scene)
+	failures += await _run("Save select offers Advanced Mode dropdown", _test_save_select_mode_dropdown)
+	failures += await _run("Advanced Mode lives and badge milestones", _test_advanced_mode_lives)
+	failures += await _run("Advanced Mode respawn costs a life", _test_advanced_mode_respawn_cost)
+	failures += await _run("Advanced Mode game over scene exists", _test_advanced_mode_game_over_scene)
+	failures += await _run("Advanced Mode boss fights skip boss hearts", _test_advanced_boss_skips_hearts)
 	failures += await _run(
 		"Element reference link visible iff debug mode is on",
 		_test_element_reference_link
@@ -729,6 +734,107 @@ func _test_save_select_scene() -> Variant:
 			if settings_panel.visible:
 				error = "Closing settings should hide the settings panel again."
 	scene.queue_free()
+	GameManager.erase_slot(0)
+	return error
+
+
+func _test_save_select_mode_dropdown() -> Variant:
+	var packed: PackedScene = load("res://scenes/ui/save_select.tscn")
+	if packed == null:
+		return "Missing save select scene."
+	var scene := packed.instantiate()
+	add_child(scene)
+	await get_tree().process_frame
+	var dropdown := scene.get_node_or_null("ModeBoard/ModeRow/ModeDropdown") as OptionButton
+	var label := scene.get_node_or_null("ModeBoard/ModeRow/ModeLabel") as Label
+	var error: Variant = null
+	if dropdown == null or label == null:
+		error = "Save select needs a trail mode label and dropdown."
+	elif dropdown.item_count < 2:
+		error = "Trail mode dropdown needs Classic and Advanced choices."
+	elif dropdown.get_item_text(0) not in ["Classic", "Klassisch"]:
+		error = "Classic mode label missing from trail mode dropdown."
+	elif dropdown.get_item_text(1) not in ["Advanced Mode", "Fortgeschrittenen-Modus"]:
+		error = "Advanced Mode label missing from trail mode dropdown."
+	scene.queue_free()
+	return error
+
+
+func _test_advanced_mode_lives() -> Variant:
+	GameManager.erase_slot(0)
+	GameManager.prepare_slot_for_start(0, true)
+	GameManager.active_slot_index = 0
+	if GameManager.get_lives() != 3:
+		return "Advanced Mode should start with three lives."
+	if not GameManager.is_advanced_mode():
+		return "Prepared slot should be in Advanced Mode."
+	GameManager.register_badges_collected(29)
+	if GameManager.get_lives() != 3:
+		return "Twenty-nine badges should not grant a life yet."
+	GameManager.register_badges_collected(1)
+	if GameManager.get_lives() != 4:
+		return "Thirty total badges should grant one extra life."
+	GameManager.register_badges_collected(30)
+	if GameManager.get_lives() != 5:
+		return "Sixty total badges should grant another extra life."
+	GameManager.save_to_disk()
+	GameManager.load_from_disk()
+	GameManager.active_slot_index = 0
+	if GameManager.get_lives() != 5:
+		return "Advanced life totals should persist in the save slot."
+	GameManager.erase_slot(0)
+	return null
+
+
+func _test_advanced_mode_respawn_cost() -> Variant:
+	GameManager.erase_slot(0)
+	GameManager.prepare_slot_for_start(0, true)
+	GameManager.active_slot_index = 0
+	if not GameManager.lose_life():
+		return "Two lives should remain after the first loss."
+	if GameManager.get_lives() != 2:
+		return "Respawn should decrement lives to two."
+	GameManager.lose_life()
+	if GameManager.get_lives() != 1:
+		return "One life should remain after two respawns."
+	if GameManager.lose_life():
+		return "Zero lives should trigger game over instead of continuing."
+	if GameManager.get_lives() != 0:
+		return "Final respawn should leave zero lives."
+	GameManager.erase_slot(0)
+	return null
+
+
+func _test_advanced_mode_game_over_scene() -> Variant:
+	if load("res://scenes/ui/game_over.tscn") == null:
+		return "Missing game over scene."
+	var scene := (load("res://scenes/ui/game_over.tscn") as PackedScene).instantiate()
+	add_child(scene)
+	await get_tree().process_frame
+	if scene.get_script() == null:
+		scene.queue_free()
+		return "Game over scene needs its controller script."
+	scene.queue_free()
+	return null
+
+
+func _test_advanced_boss_skips_hearts() -> Variant:
+	GameManager.erase_slot(0)
+	GameManager.prepare_slot_for_start(0, true)
+	GameManager.active_slot_index = 0
+	var packed: PackedScene = load("res://scenes/bosses/boss_stampede_bull.tscn")
+	if packed == null:
+		GameManager.erase_slot(0)
+		return "Missing stampede bull boss scene."
+	var arena := packed.instantiate()
+	add_child(arena)
+	await get_tree().process_frame
+	var error: Variant = null
+	if arena.get_node_or_null("HeartsLayer") != null:
+		error = "Advanced Mode boss fights should not show separate boss hearts."
+	elif int(arena.get("_hearts")) != 5:
+		error = "Boss heart counter should remain unused in Advanced Mode."
+	arena.queue_free()
 	GameManager.erase_slot(0)
 	return error
 

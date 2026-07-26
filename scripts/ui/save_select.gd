@@ -31,6 +31,11 @@ var _sheet_zoom: float = 1.0
 var _sheet_base_size: Vector2 = Vector2.ZERO
 var _sheet_panning: bool = false
 var _sheet_pan_last: Vector2 = Vector2.ZERO
+var _mode_dropdown: OptionButton
+var _mode_label: Label
+var _mode_board: Control
+## Advanced-mode preference for empty slots (index → bool).
+var _empty_slot_advanced: Array[bool] = [false, false, false]
 
 
 func _ready() -> void:
@@ -43,6 +48,7 @@ func _ready() -> void:
 	_element_ref_overlay = get_node_or_null("ElementReferenceOverlay") as Control
 	_localize_static_labels()
 	_style_screen()
+	_setup_mode_dropdown()
 	_setup_element_reference()
 	if _delete_dialog != null:
 		_delete_dialog.confirmed.connect(_confirm_delete)
@@ -162,6 +168,71 @@ func _localize_static_labels() -> void:
 		_delete_dialog.dialog_text = tr("Delete the selected save? This cannot be undone.")
 		_delete_dialog.ok_button_text = tr("Delete")
 		_delete_dialog.cancel_button_text = tr("Keep it")
+	if _mode_label != null:
+		_mode_label.text = tr("Trail mode")
+
+
+func _setup_mode_dropdown() -> void:
+	_mode_board = get_node_or_null("ModeBoard") as Control
+	_mode_label = get_node_or_null("ModeBoard/ModeRow/ModeLabel") as Label
+	_mode_dropdown = get_node_or_null("ModeBoard/ModeRow/ModeDropdown") as OptionButton
+	if _mode_board != null:
+		_mode_board.add_theme_stylebox_override(&"panel", _wood_style(WOOD, 10, 8))
+	if _mode_label != null:
+		_apply_cream_outline(_mode_label, Color(0.94, 0.84, 0.52, 1.0), Color(0.24, 0.09, 0.04, 0.78), 2)
+	if _mode_dropdown == null:
+		return
+	_mode_dropdown.clear()
+	_mode_dropdown.add_item(tr("Classic"))
+	_mode_dropdown.add_item(tr("Advanced Mode"))
+	_style_mode_dropdown(_mode_dropdown)
+	_mode_dropdown.item_selected.connect(_on_mode_selected)
+	_sync_mode_dropdown_for_slot(_index)
+
+
+func _style_mode_dropdown(dropdown: OptionButton) -> void:
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = Color(0.86, 0.58, 0.30, 1.0)
+	normal.set_corner_radius_all(10)
+	normal.set_border_width_all(3)
+	normal.border_color = Color(0.58, 0.18, 0.10, 1.0)
+	normal.content_margin_left = 12
+	normal.content_margin_right = 12
+	normal.content_margin_top = 6
+	normal.content_margin_bottom = 6
+	var hover := normal.duplicate() as StyleBoxFlat
+	hover.bg_color = Color(0.95, 0.72, 0.38, 1.0)
+	dropdown.add_theme_stylebox_override(&"normal", normal)
+	dropdown.add_theme_stylebox_override(&"hover", hover)
+	dropdown.add_theme_stylebox_override(&"pressed", hover)
+	dropdown.add_theme_stylebox_override(&"focus", hover)
+	dropdown.add_theme_color_override(&"font_color", Color(0.28, 0.12, 0.04, 1))
+	dropdown.add_theme_color_override(&"font_hover_color", Color(0.45, 0.2, 0.06, 1))
+	dropdown.add_theme_font_size_override(&"font_size", 20)
+
+
+func _on_mode_selected(index: int) -> void:
+	if GameManager.is_slot_empty(_index):
+		_empty_slot_advanced[_index] = index == 1
+	_sync_mode_dropdown_for_slot(_index)
+
+
+func _sync_mode_dropdown_for_slot(slot_index: int) -> void:
+	if _mode_dropdown == null:
+		return
+	var advanced := false
+	if GameManager.is_slot_empty(slot_index):
+		advanced = _empty_slot_advanced[slot_index]
+	else:
+		advanced = GameManager.slot_is_advanced(slot_index)
+	_mode_dropdown.select(1 if advanced else 0)
+	_mode_dropdown.disabled = not GameManager.is_slot_empty(slot_index)
+
+
+func _mode_for_slot(slot_index: int) -> bool:
+	if GameManager.is_slot_empty(slot_index):
+		return _empty_slot_advanced[slot_index]
+	return GameManager.slot_is_advanced(slot_index)
 
 
 func _setup_element_reference() -> void:
@@ -552,6 +623,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _select_slot(slot_index: int) -> void:
 	AudioManager.ensure_gameplay_music()
+	GameManager.prepare_slot_for_start(slot_index, _mode_for_slot(slot_index))
 	GameManager.start_or_continue_slot(slot_index)
 
 
@@ -601,3 +673,4 @@ func _refresh_prompts() -> void:
 func _highlight() -> void:
 	for i in range(_cards.size()):
 		_cards[i].modulate = Color(1, 1, 0.55, 1) if i == _index else Color(1, 1, 1, 1)
+	_sync_mode_dropdown_for_slot(_index)
