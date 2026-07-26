@@ -24,6 +24,8 @@ var active_slot_index: int = -1
 var active_custom_slot: int = 0
 var custom_level_draft: Dictionary = {}
 var custom_return_to_editor: bool = true
+## Campaign Workshop: stamp grid collapsed for the current game session.
+var workshop_grid_collapsed: bool = false
 var active_campaign_position: int = 1
 var active_campaign_source_level: int = 1
 var campaign_custom_active: bool = false

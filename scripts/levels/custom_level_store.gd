@@ -65,11 +65,73 @@ static func stamp_footprint(type_name: String) -> Vector2:
 static func stamp_world_size(type_name: String) -> Vector2:
 	match type_name:
 		"platform":
-			return Vector2(GRID_SIZE * 2.0, GRID_SIZE)
+			return Vector2(GRID_SIZE * 2.0, 24.0)
 		"pit":
 			return PIT_PIXEL_SIZE
 		_:
 			return Vector2(GRID_SIZE, GRID_SIZE)
+
+
+static func stamp_hover_cells(
+	type_name: String, hover_col: int, hover_row: int, trail: int, width: int
+) -> Array[Vector2i]:
+	var cells: Array[Vector2i] = []
+	if type_name in ["erase", "ground", "canyon"] or hover_col < 0 or hover_row < 0:
+		return cells
+	if type_name == "pit":
+		if hover_row != trail:
+			return cells
+		var span := pit_column_span({"type": "pit", "x": hover_col, "y": trail})
+		for col in range(span.x, span.y + 1):
+			cells.append(Vector2i(col, trail))
+		return cells
+	var place_row := placement_row(type_name, hover_row, trail)
+	var footprint := stamp_footprint(type_name)
+	var start_col := hover_col
+	if footprint.x > 1.0:
+		start_col -= int(floor((footprint.x - 1.0) * 0.5))
+	start_col = clampi(start_col, 0, width - int(footprint.x))
+	for dx in range(int(footprint.x)):
+		for dy in range(int(footprint.y)):
+			cells.append(Vector2i(start_col + dx, place_row + dy))
+	return cells
+
+
+static func stamp_world_rect(
+	type_name: String, hover_col: int, hover_row: int, trail: int, width: int, grid: float = GRID_SIZE
+) -> Rect2:
+	if type_name in ["erase", "ground", "canyon"] or hover_col < 0 or hover_row < 0:
+		return Rect2()
+	if type_name == "pit":
+		if hover_row != trail:
+			return Rect2()
+		var center := pit_world_position({"type": "pit", "x": hover_col, "y": trail}, grid, trail)
+		var size := PIT_PIXEL_SIZE
+		return Rect2(center - size * 0.5, size)
+	var cells := stamp_hover_cells(type_name, hover_col, hover_row, trail, width)
+	if cells.is_empty():
+		return Rect2()
+	var min_col := cells[0].x
+	var max_col := cells[0].x
+	var min_row := cells[0].y
+	var max_row := cells[0].y
+	for cell in cells:
+		min_col = mini(min_col, cell.x)
+		max_col = maxi(max_col, cell.x)
+		min_row = mini(min_row, cell.y)
+		max_row = maxi(max_row, cell.y)
+	var world_size := stamp_world_size(type_name)
+	var world_left := float(min_col) * grid
+	var world_top := float(min_row) * grid
+	if type_name == "platform":
+		world_left = float(cells[0].x) * grid
+		return Rect2(world_left, world_top, world_size.x, world_size.y)
+	return Rect2(
+		world_left,
+		world_top,
+		float(max_col - min_col + 1) * grid,
+		float(max_row - min_row + 1) * grid
+	)
 
 
 static func pit_world_position(object: Dictionary, grid: float, trail: int) -> Vector2:

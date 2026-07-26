@@ -341,38 +341,49 @@ func _placement_row(click_row: int) -> int:
 
 
 func _ghost_rect_screen() -> Rect2:
-	if _hover_column < 0 or _hover_row < 0 or _selected_type in ["erase", "ground", "canyon"]:
+	return _world_rect_to_screen(_ghost_world_rect())
+
+
+func _ghost_cell_rects_screen() -> Array[Rect2]:
+	var rects: Array[Rect2] = []
+	var metrics := _view_metrics()
+	var grid: float = metrics["grid"]
+	var trail: int = metrics["trail"]
+	var width: int = metrics["width"]
+	for cell in CustomLevelStore.stamp_hover_cells(
+		_selected_type, _hover_column, _hover_row, trail, width
+	):
+		rects.append(
+			_world_rect_to_screen(Rect2(float(cell.x) * grid, float(cell.y) * grid, grid, grid))
+		)
+	return rects
+
+
+func _ghost_world_rect() -> Rect2:
+	if _hover_column < 0 or _hover_row < 0 or _data.is_empty():
+		return Rect2()
+	var metrics := _view_metrics()
+	return CustomLevelStore.stamp_world_rect(
+		_selected_type,
+		_hover_column,
+		_hover_row,
+		metrics["trail"],
+		metrics["width"],
+		metrics["grid"]
+	)
+
+
+func _world_rect_to_screen(world_rect: Rect2) -> Rect2:
+	if world_rect.size.x <= 0.0 or world_rect.size.y <= 0.0:
 		return Rect2()
 	var display := _preview_display_rect()
 	if display.size.x <= 1.0 or _camera == null:
 		return Rect2()
 	var metrics := _view_metrics()
-	var grid: float = metrics["grid"]
 	var zoom: float = metrics["zoom"]
-	var trail: int = metrics["trail"]
-	var world_size := CustomLevelStore.stamp_world_size(_selected_type)
-	var world_left := 0.0
-	var world_top := 0.0
-	if _selected_type == "pit":
-		if _hover_row != trail:
-			return Rect2()
-		var center_x := (float(_hover_column) + 0.5) * grid
-		world_left = center_x - world_size.x * 0.5
-		world_top = float(trail) * grid
-	else:
-		var footprint := CustomLevelStore.stamp_footprint(_selected_type)
-		var place_row := _placement_row(_hover_row)
-		var start_x := float(_hover_column)
-		if footprint.x > 1.0:
-			start_x -= floor((footprint.x - 1.0) * 0.5)
-		start_x = clampf(start_x, 0.0, float(metrics["width"]) - footprint.x)
-		world_left = start_x * grid
-		world_top = float(place_row) * grid
-		world_size = Vector2(footprint.x * grid, footprint.y * grid)
 	var center := display.position + display.size * 0.5
-	var top_left := center + (Vector2(world_left, world_top) - _camera.position) * zoom
-	var size := world_size * zoom
-	return Rect2(top_left, size)
+	var top_left := center + (world_rect.position - _camera.position) * zoom
+	return Rect2(top_left, world_rect.size * zoom)
 
 
 func _update_ghost_overlay() -> void:
@@ -386,11 +397,11 @@ func _update_ghost_overlay() -> void:
 	var fill := ColorRect.new()
 	fill.position = rect.position
 	fill.size = rect.size
-	fill.color = Color(1.0, 0.92, 0.45, 0.22)
+	fill.color = Color(1.0, 0.92, 0.45, 0.18)
 	fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_ghost_overlay.add_child(fill)
-	var outline := _make_outline(rect, Color(1.0, 0.82, 0.12, 0.92), 2.0)
-	_ghost_overlay.add_child(outline)
+	for cell_rect in _ghost_cell_rects_screen():
+		_ghost_overlay.add_child(_make_outline(cell_rect, Color(1.0, 0.82, 0.12, 0.95), 2.0))
 	var icon_path := _icon_path_for_type(_selected_type)
 	if not icon_path.is_empty() and ResourceLoader.exists(icon_path):
 		var icon := TextureRect.new()
@@ -398,8 +409,7 @@ func _update_ghost_overlay() -> void:
 		icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		icon.modulate = Color(1, 1, 1, 0.55)
-		var icon_side := minf(minf(rect.size.x, rect.size.y) * 0.85, 48.0)
-		var icon_size := rect.size * 0.92 if _selected_type == "pit" else Vector2(icon_side, icon_side)
+		var icon_size := rect.size * 0.92
 		icon.custom_minimum_size = icon_size
 		icon.size = icon_size
 		icon.position = rect.position + (rect.size - icon_size) * 0.5

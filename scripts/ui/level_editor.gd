@@ -90,6 +90,8 @@ var _dirty := false
 var _grid: GridContainer
 var _grid_scroll: ScrollContainer
 var _editor_pane: VBoxContainer
+var _grid_header: HBoxContainer
+var _grid_collapse_toggle: Button
 var _h_scroll: HScrollBar
 var _length_minus: Button
 var _length_plus: Button
@@ -98,7 +100,10 @@ const _MIN_CELL_HEIGHT := 12.0
 const _COMFORT_CELL_HEIGHT := 22.0
 const _MAX_CELL_HEIGHT := 40.0
 const _MIN_GRID_HEIGHT := 96.0
+const _COLLAPSED_GRID_HEADER_HEIGHT := 28.0
 const _PREVIEW_MIN_SIZE := Vector2(320, 180)
+const _PREVIEW_EXPANDED_STRETCH := 1.45
+const _PREVIEW_COLLAPSED_STRETCH := 2.35
 const _TRAIL_CATEGORY_ID := "trail"
 var _hover_column: int = -1
 var _hover_row: int = -1
@@ -294,6 +299,24 @@ func _build_ui() -> void:
 	_editor_pane.resized.connect(_fit_grid_layout)
 	root.add_child(_editor_pane)
 
+	_grid_header = HBoxContainer.new()
+	_grid_header.name = "GridHeader"
+	_grid_header.add_theme_constant_override(&"separation", 8)
+	_editor_pane.add_child(_grid_header)
+	var grid_label := Label.new()
+	grid_label.name = "GridSectionLabel"
+	grid_label.text = tr("Stamp grid")
+	grid_label.add_theme_font_size_override(&"font_size", 12)
+	grid_label.add_theme_color_override(&"font_color", Color(0.35, 0.16, 0.05))
+	_grid_header.add_child(grid_label)
+	_grid_collapse_toggle = Button.new()
+	_grid_collapse_toggle.name = "GridCollapseToggle"
+	_grid_collapse_toggle.focus_mode = Control.FOCUS_NONE
+	_grid_collapse_toggle.custom_minimum_size = Vector2(148, 24)
+	_grid_collapse_toggle.add_theme_font_size_override(&"font_size", 11)
+	_grid_collapse_toggle.pressed.connect(_toggle_grid_collapsed)
+	_grid_header.add_child(_grid_collapse_toggle)
+
 	_grid_scroll = ScrollContainer.new()
 	_grid_scroll.name = "GridScroll"
 	_grid_scroll.custom_minimum_size = Vector2(0, _MIN_GRID_HEIGHT)
@@ -368,8 +391,10 @@ func _build_ui() -> void:
 	_preview.stamp_requested.connect(_on_preview_stamp)
 	root.add_child(_preview)
 	_preview.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_preview.size_flags_stretch_ratio = 1.45
+	_preview.size_flags_stretch_ratio = _PREVIEW_EXPANDED_STRETCH
 	_preview.custom_minimum_size = _PREVIEW_MIN_SIZE
+
+	_apply_grid_collapsed_state()
 
 	_reset_dialog = ConfirmationDialog.new()
 	_reset_dialog.name = "ResetConfirmation"
@@ -625,8 +650,40 @@ func _on_tool_selected(index: int) -> void:
 	_select_tool(type_id)
 
 
+func _toggle_grid_collapsed() -> void:
+	GameManager.workshop_grid_collapsed = not GameManager.workshop_grid_collapsed
+	_apply_grid_collapsed_state()
+
+
+func _apply_grid_collapsed_state() -> void:
+	var collapsed: bool = GameManager.workshop_grid_collapsed
+	if _grid_collapse_toggle != null:
+		_grid_collapse_toggle.text = (
+			tr("Show stamp grid") if collapsed else tr("Hide stamp grid")
+		)
+	if _grid_scroll != null:
+		_grid_scroll.visible = not collapsed
+	if _h_scroll != null:
+		_h_scroll.visible = not collapsed
+	if _preview != null:
+		_preview.size_flags_stretch_ratio = (
+			_PREVIEW_COLLAPSED_STRETCH if collapsed else _PREVIEW_EXPANDED_STRETCH
+		)
+	if collapsed:
+		if _grid_scroll != null:
+			_grid_scroll.custom_minimum_size.y = 0.0
+		if _editor_pane != null:
+			_editor_pane.custom_minimum_size.y = _COLLAPSED_GRID_HEADER_HEIGHT
+	else:
+		_fit_grid_layout()
+
+
 func _fit_grid_layout() -> void:
 	if _grid_scroll == null or _cells.is_empty() or _grid == null:
+		return
+	if GameManager.workshop_grid_collapsed:
+		if _editor_pane != null:
+			_editor_pane.custom_minimum_size.y = _COLLAPSED_GRID_HEADER_HEIGHT
 		return
 	var height := maxi(int(_data.get("height", 8)), 1)
 	var separation := float(_grid.get_theme_constant(&"v_separation", "GridContainer"))
@@ -944,11 +1001,14 @@ func _refresh_grid_highlights() -> void:
 	var width := int(_data.get("width", CustomLevelStore.DEFAULT_WIDTH))
 	var height := int(_data.get("height", 8))
 	var trail := _trail_y()
-	var ghost_col := -1
-	var ghost_row := -1
+	var ghost_cells: Array[Vector2i] = []
 	if _hover_column >= 0 and _hover_row >= 0 and _selected_type not in ["erase", "ground", "canyon"]:
-		ghost_col = _hover_column
-		ghost_row = CustomLevelStore.placement_row(_selected_type, _hover_row, trail)
+		ghost_cells = CustomLevelStore.stamp_hover_cells(
+			_selected_type, _hover_column, _hover_row, trail, width
+		)
+	var ghost_lookup := {}
+	for cell in ghost_cells:
+		ghost_lookup["%d,%d" % [cell.x, cell.y]] = true
 	for y in range(height):
 		for x in range(width):
 			var cell := _cells[y * width + x]
@@ -960,7 +1020,7 @@ func _refresh_grid_highlights() -> void:
 				cell.self_modulate = Color(1.15, 1.1, 0.85)
 			else:
 				cell.self_modulate = Color.WHITE
-			if x == ghost_col and y == ghost_row:
+			if ghost_lookup.has("%d,%d" % [x, y]):
 				cell.self_modulate = Color(1.25, 1.18, 0.65)
 				var ghost_label := _short_label(_selected_type)
 				if not ghost_label.is_empty():

@@ -189,6 +189,10 @@ Carrion Bird,Carrion Bird,Aasgeier
 Saloon,Saloon,Saloon
 Erase,Erase,Radierer
 Live preview (3/4 size) — full height, follows stamp cursor,Live preview (3/4 size) — full height, follows stamp cursor,Live-Vorschau (3/4 Größe) — volle Höhe folgt dem Stempel-Cursor
+Live preview — full height, edge scroll to pan,Live preview — full height, edge scroll to pan,Live-Vorschau — volle Höhe, Rand scrollt zum Schwenken
+Stamp grid,Stamp grid,Stempelraster
+Hide stamp grid,Hide stamp grid,Stempelraster ausblenden
+Show stamp grid,Show stamp grid,Stempelraster einblenden
 Stamp: Dirt — keep a dirt path under the cowboy and saloon.,Stamp: Dirt — keep a dirt path under the cowboy and saloon.,Stempel: Erde — halte einen Erdpfad unter Cowboy und Saloon.
 "Add Dirt and a Saloon before play-testing.","Add Dirt and a Saloon before play-testing.","Füge Erde und einen Saloon hinzu, bevor du testest."
 "Edit a copy of any campaign level, or insert a new trail before any level.","Edit a copy of any campaign level, or insert a new trail before any level.","Bearbeite eine Kopie eines Kampagnen-Levels oder füge einen neuen Pfad vor einem Level ein."
