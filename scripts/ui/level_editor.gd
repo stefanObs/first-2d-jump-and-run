@@ -975,7 +975,7 @@ func _type_color(type_name: String) -> Color:
 		"rattlesnake": Color(0.55, 0.4, 0.15), "carrion": Color(0.45, 0.35, 0.55),
 		"wings": Color(0.75, 0.85, 1.0), "boots": Color(0.7, 0.45, 0.9),
 		"speed": Color(1.0, 0.75, 0.2), "shield": Color(0.45, 0.75, 1.0),
-		"goal": Color(0.85, 0.3, 0.2),
+		"goal": Color(0.85, 0.3, 0.2), "chest": Color(0.72, 0.52, 0.18),
 	}
 	return colors.get(type_name, Color.WHITE)
 

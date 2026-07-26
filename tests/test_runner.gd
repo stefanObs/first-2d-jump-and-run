@@ -3932,11 +3932,11 @@ func _test_workshop_stamp_catalog() -> Variant:
 		for tool in (category as Dictionary).get("tools", []) as Array:
 			palette_types.append(str((tool as Array)[0]))
 	editor.queue_free()
-	for type_name in ["bounty_bandit", "carrion", "pit"]:
+	for type_name in ["bounty_bandit", "carrion", "pit", "chest"]:
 		if type_name not in palette_types:
 			return "Workshop palette missing %s stamp." % type_name
 	var trail := CustomLevelStore.trail_row(8)
-	for type_name in ["bounty_bandit", "carrion"]:
+	for type_name in ["bounty_bandit", "carrion", "chest"]:
 		if not CustomLevelStore._valid_object({"type": type_name, "x": 1, "y": trail - 1}, trail):
 			return "%s should be accepted by CustomLevelStore." % type_name
 	var data := CustomLevelStore.default_level(0)
@@ -3944,6 +3944,7 @@ func _test_workshop_stamp_catalog() -> Variant:
 		{"type": "ground", "x": 2, "y": trail},
 		{"type": "bounty_bandit", "x": 2, "y": trail - 1},
 		{"type": "carrion", "x": 6, "y": trail - 3},
+		{"type": "chest", "x": 10, "y": trail - 1},
 	]
 	var level := LevelController.new()
 	CustomLevelBuilder.build(level, data)
@@ -3954,6 +3955,16 @@ func _test_workshop_stamp_catalog() -> Variant:
 	if level.find_child("Carrion0", true, false) == null:
 		level.free()
 		return "Builder should spawn carrion birds from the carrion stamp."
+	var chest := level.find_child("CustomChest0", true, false) as TreasureChest
+	if chest == null:
+		level.free()
+		return "Builder should spawn a treasure chest from the chest stamp."
+	var expected_floor := float(trail) * 40.0
+	if absf(chest.global_position.y - expected_floor) > 2.5:
+		level.free()
+		return "Workshop chest should stand on the trail surface (y=%.1f, expected %.1f)." % [
+			chest.global_position.y, expected_floor
+		]
 	level.free()
 	return null
 
