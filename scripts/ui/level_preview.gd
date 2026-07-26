@@ -1,7 +1,7 @@
 class_name LevelPreview
 extends Control
 
-## Live gameplay preview centered on the editor cursor column.
+## Live gameplay preview with an independent horizontal view; hover shows a cursor band only.
 
 signal hover_column_changed(column: int)
 signal hover_cell_changed(column: int, row: int)
@@ -17,6 +17,7 @@ const GAMEPLAY_CAMERA_ZOOM := 0.84
 var _data: Dictionary = {}
 var _hover_column: int = -1
 var _hover_row: int = -1
+var _view_center_x: float = -1.0
 var _selected_type: String = "ground"
 var _frame: PanelContainer
 var _container: SubViewportContainer
@@ -70,10 +71,35 @@ func set_hover_cell(column: int, row: int) -> void:
 		return
 	_hover_column = next_col
 	_hover_row = next_row
-	_update_camera()
+	_update_cursor_marker()
 	_update_ghost_overlay()
 	hover_column_changed.emit(_hover_column)
 	hover_cell_changed.emit(_hover_column, _hover_row)
+
+
+func set_view_center_column(column: int) -> void:
+	if _data.is_empty():
+		return
+	var metrics := _view_metrics()
+	var width: int = metrics["width"]
+	var grid: float = metrics["grid"]
+	var clamped := clampi(column, 0, width - 1)
+	_view_center_x = (float(clamped) + 0.5) * grid
+	_update_camera()
+
+
+func pan_view_screen(delta_screen_px: float) -> void:
+	if _camera == null or _data.is_empty() or absf(delta_screen_px) <= 0.01:
+		return
+	var metrics := _view_metrics()
+	var grid: float = metrics["grid"]
+	var width: int = metrics["width"]
+	var zoom: float = metrics["zoom"]
+	_ensure_view_center()
+	var min_x := grid * 0.5
+	var max_x := (float(width) - 0.5) * grid
+	_view_center_x = clampf(_view_center_x + delta_screen_px / zoom, min_x, max_x)
+	_update_camera()
 
 
 func get_hover_column() -> int:
@@ -142,6 +168,7 @@ func _rebuild_world() -> void:
 		_update_ghost_overlay()
 		return
 	_last_built_hash = digest
+	_view_center_x = -1.0
 	for child in _viewport.get_children():
 		child.queue_free()
 	_world = null
@@ -196,8 +223,30 @@ func _rebuild_world() -> void:
 	_update_ghost_overlay()
 
 
+func _ensure_view_center() -> void:
+	if _view_center_x >= 0.0 or _data.is_empty():
+		return
+	var metrics := _view_metrics()
+	var width: int = metrics["width"]
+	var trail: int = metrics["trail"]
+	var grid: float = metrics["grid"]
+	var spawn_col := int((_data.get("spawn", [2, trail]) as Array)[0])
+	spawn_col = clampi(spawn_col, 0, width - 1)
+	_view_center_x = (float(spawn_col) + 0.5) * grid
+
+
 func _update_camera() -> void:
 	if _camera == null or not is_instance_valid(_camera) or _data.is_empty():
+		return
+	_ensure_view_center()
+	var metrics := _view_metrics()
+	_camera.zoom = Vector2(metrics["zoom"], metrics["zoom"])
+	_camera.position = Vector2(_view_center_x, metrics["center_y"])
+	_update_cursor_marker()
+
+
+func _update_cursor_marker() -> void:
+	if _cursor_marker == null or not is_instance_valid(_cursor_marker) or _data.is_empty():
 		return
 	var metrics := _view_metrics()
 	var grid: float = metrics["grid"]
@@ -206,16 +255,13 @@ func _update_camera() -> void:
 	var focus_x := _hover_column if _hover_column >= 0 else int((_data.get("spawn", [2, trail]) as Array)[0])
 	focus_x = clampi(focus_x, 0, width - 1)
 	var world_x := (float(focus_x) + 0.5) * grid
-	_camera.zoom = Vector2(metrics["zoom"], metrics["zoom"])
-	_camera.position = Vector2(world_x, metrics["center_y"])
-	if _cursor_marker != null and is_instance_valid(_cursor_marker):
-		_cursor_marker.position = Vector2(world_x, float(trail) * grid)
-		var marker := _cursor_marker.get_node_or_null("CursorBand") as ColorRect
-		if marker != null:
-			var top_y: float = metrics["top_y"]
-			var bottom_y: float = metrics["bottom_y"]
-			marker.position = Vector2(-4.0, top_y - float(trail) * grid)
-			marker.size = Vector2(8.0, bottom_y - top_y)
+	_cursor_marker.position = Vector2(world_x, float(trail) * grid)
+	var marker := _cursor_marker.get_node_or_null("CursorBand") as ColorRect
+	if marker != null:
+		var top_y: float = metrics["top_y"]
+		var bottom_y: float = metrics["bottom_y"]
+		marker.position = Vector2(-4.0, top_y - float(trail) * grid)
+		marker.size = Vector2(8.0, bottom_y - top_y)
 
 
 func _frame_insets() -> Vector2:

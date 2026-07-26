@@ -328,7 +328,7 @@ func _build_ui() -> void:
 	)
 
 	var preview_label := Label.new()
-	preview_label.text = tr("Live preview — full height, follows stamp cursor")
+	preview_label.text = tr("Live preview — full height, edge scroll to pan")
 	preview_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	preview_label.add_theme_font_size_override(&"font_size", 13)
 	preview_label.add_theme_color_override(&"font_color", Color(0.35, 0.16, 0.05))
@@ -730,21 +730,37 @@ func _on_h_scroll_changed(value: float) -> void:
 	_apply_horizontal_scroll(value)
 
 
+func _edge_scroll_delta(local_x: float, pane_width: float, delta: float) -> float:
+	if local_x < _EDGE_SCROLL_ZONE:
+		var t := 1.0 - local_x / _EDGE_SCROLL_ZONE
+		return -_EDGE_SCROLL_SPEED * t * delta
+	if local_x > pane_width - _EDGE_SCROLL_ZONE:
+		var dist := local_x - (pane_width - _EDGE_SCROLL_ZONE)
+		return _EDGE_SCROLL_SPEED * (dist / _EDGE_SCROLL_ZONE) * delta
+	return 0.0
+
+
 func _process(delta: float) -> void:
-	if _grid_scroll == null or not _grid_scroll.get_global_rect().has_point(get_global_mouse_position()):
-		return
-	var max_scroll := _horizontal_scroll_max()
-	if max_scroll <= 0.0:
-		return
-	var local := _grid_scroll.get_local_mouse_position()
 	var delta_x := 0.0
-	if local.x < _EDGE_SCROLL_ZONE:
-		var t := 1.0 - local.x / _EDGE_SCROLL_ZONE
-		delta_x = -_EDGE_SCROLL_SPEED * t * delta
-	elif local.x > _grid_scroll.size.x - _EDGE_SCROLL_ZONE:
-		var dist := local.x - (_grid_scroll.size.x - _EDGE_SCROLL_ZONE)
-		delta_x = _EDGE_SCROLL_SPEED * (dist / _EDGE_SCROLL_ZONE) * delta
-	if absf(delta_x) > 0.01:
+	if _grid_scroll != null and _grid_scroll.get_global_rect().has_point(get_global_mouse_position()):
+		delta_x = _edge_scroll_delta(_grid_scroll.get_local_mouse_position().x, _grid_scroll.size.x, delta)
+		if absf(delta_x) > 0.01:
+			_apply_horizontal_scroll(_grid_scroll.scroll_horizontal + delta_x)
+		return
+	if _preview == null:
+		return
+	var display := _preview._preview_display_rect()
+	if display.size.x <= 1.0:
+		return
+	var local := _preview.get_local_mouse_position()
+	if not display.has_point(local):
+		return
+	delta_x = _edge_scroll_delta(local.x - display.position.x, display.size.x, delta)
+	if absf(delta_x) <= 0.01:
+		return
+	_preview.pan_view_screen(delta_x)
+	var max_scroll := _horizontal_scroll_max()
+	if max_scroll > 0.0:
 		_apply_horizontal_scroll(_grid_scroll.scroll_horizontal + delta_x)
 
 

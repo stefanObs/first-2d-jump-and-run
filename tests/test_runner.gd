@@ -4048,6 +4048,7 @@ func _test_workshop_preview_stamp() -> Variant:
 	var requested: Array = []
 	preview.stamp_requested.connect(func(column: int, row: int) -> void: requested.append([column, row]))
 	preview.set_hover_cell(8, trail)
+	preview.set_view_center_column(8)
 	preview.size = Vector2(420, 320)
 	await get_tree().process_frame
 	var display := preview._preview_display_rect()
@@ -4072,7 +4073,7 @@ func _test_workshop_preview_stamp() -> Variant:
 		return "Preview should draw a stamp footprint ghost while hovering."
 	if not display.encloses(ghost):
 		preview.queue_free()
-		return "Preview hover ghost should track the camera-centered stamp footprint."
+		return "Preview hover ghost should track the hovered stamp footprint."
 	preview.queue_free()
 	return null
 
@@ -4086,6 +4087,7 @@ func _test_workshop_preview_ghost() -> Variant:
 	preview.set_selected_type("spring")
 	await get_tree().process_frame
 	preview.set_hover_cell(12, trail)
+	preview.set_view_center_column(12)
 	preview.size = Vector2(420, 320)
 	await get_tree().process_frame
 	var display := preview._preview_display_rect()
