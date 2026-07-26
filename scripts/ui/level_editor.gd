@@ -944,7 +944,7 @@ func _short_label(type_name: String) -> String:
 		"spring": "BOING", "bandit": "BANDIT", "bounty_bandit": "BOUNTY",
 		"rattlesnake": "SNAKE", "carrion": "BIRD",
 		"wings": "WINGS", "boots": "BOOTS", "speed": "FAST", "shield": "BUBBLE",
-		"goal": "END",
+		"goal": "END", "chest": "CHEST",
 	}
 	return str(labels.get(type_name, ""))
 

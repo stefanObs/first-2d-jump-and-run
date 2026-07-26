@@ -97,12 +97,14 @@ func _build_viewport() -> void:
 	style.content_margin_right = FRAME_CONTENT_MARGIN
 	style.content_margin_bottom = FRAME_CONTENT_MARGIN
 	_frame.add_theme_stylebox_override(&"panel", style)
+	_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_frame)
 
 	_container = SubViewportContainer.new()
 	_container.name = "LivePreviewContainer"
 	_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_container.stretch = false
+	_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_frame.add_child(_container)
 
 	_viewport = SubViewport.new()
@@ -322,7 +324,7 @@ func _ghost_rect_screen() -> Rect2:
 		world_top = float(place_row) * grid
 		world_size = Vector2(footprint.x * grid, footprint.y * grid)
 	var center := display.position + display.size * 0.5
-	var top_left := center + (_camera.position + Vector2(world_left, world_top) - _camera.position) * zoom
+	var top_left := center + (Vector2(world_left, world_top) - _camera.position) * zoom
 	var size := world_size * zoom
 	return Rect2(top_left, size)
 
@@ -398,6 +400,7 @@ func _icon_path_for_type(type_name: String) -> String:
 		"speed": "res://assets/world/modes/speed_badge.png",
 		"shield": "res://assets/world/modes/bubble_shield.png",
 		"goal": "res://assets/world/goal_saloon.png",
+		"chest": "res://assets/world/treasure_chest_stamp.png",
 	}
 	return str(icons.get(type_name, ""))
 

@@ -6,6 +6,8 @@ extends Area2D
 signal opened(chest: TreasureChest)
 
 const BADGE_COUNT := 5
+## CollisionShape2D bottom sits this many px below the root (feet on trail).
+const FOOT_OFFSET := 8.0
 
 var _opened: bool = false
 var _art: TreasureChestArt
@@ -20,6 +22,21 @@ func _ready() -> void:
 
 func is_opened() -> bool:
 	return _opened
+
+
+func ground_contact_y() -> float:
+	return global_position.y + FOOT_OFFSET
+
+
+func align_to_walk_surface(
+	floor_y: float,
+	slope_angle: float = 0.0,
+	sink: float = 0.0,
+	tilt_blend: float = 0.2,
+	max_tilt: float = 0.12
+) -> void:
+	global_position.y = floor_y + sink - FOOT_OFFSET
+	rotation = clampf(slope_angle * tilt_blend, -max_tilt, max_tilt)
 
 
 func _on_body_entered(body: Node2D) -> void:

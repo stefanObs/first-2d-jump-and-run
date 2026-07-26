@@ -64,6 +64,7 @@ func _ready() -> void:
 	failures += await _run("Cowboy player has movement animations", _test_cowboy_animations)
 	failures += await _run("Lasso ties bandits and makes them pass-through", _test_lasso_ties_bandit)
 	failures += await _run("Treasure chest opens once and grants five badges", _test_treasure_chest)
+	failures += await _run("Treasure chests stand on walk surface", _test_treasure_chest_on_walk_surface)
 	failures += await _run("Lasso cast ties bandits via HurtArea", _test_lasso_cast_hits_hurt_area)
 	failures += await _run("Jumping on a bandit head ties him", _test_stomp_ties_bandit)
 	failures += await _run("Side contact with a bandit sends the cowboy to camp", _test_side_contact_hurts)
@@ -84,6 +85,8 @@ func _ready() -> void:
 	failures += await _run("Untied bandits restore normal standing size", _test_untie_restores_stand_scale)
 	failures += await _run("Bandits stand on the desert surface", _test_bandits_stand_on_desert)
 	failures += await _run("Cacti align to desert slopes", _test_cactus_aligns_to_desert_slope)
+	failures += await _run("Dune crest stays walkable without jumping", _test_slope_crest_walkable)
+	failures += await _run("Slope earth fill stays below crust line", _test_slope_dirt_below_crust)
 	failures += await _run("Bandits play walk animation while moving", _test_bandit_walk_animation)
 	failures += await _run("Campaign hazards are no longer blocked by plank highways", _test_no_plank_highways)
 	failures += await _run(
@@ -130,6 +133,8 @@ func _ready() -> void:
 	failures += await _run("Workshop pits require trail dirt", _test_pit_dirt_placement)
 	failures += await _run("Pit falls match canyon respawn rules", _test_pit_canyon_parity)
 	failures += await _run("Workshop preview click requests stamp placement", _test_workshop_preview_stamp)
+	failures += await _run("Workshop preview hover ghost tracks cursor", _test_workshop_preview_ghost)
+	failures += await _run("Workshop preview click places stamp", _test_workshop_preview_places_stamp)
 	failures += await _run("Airborne bandits fall to walkable ground", _test_airborne_bandit_falls)
 	failures += await _run("Campaign workshop edits and inserts levels", _test_campaign_workshop)
 	failures += await _run("Trail share pack export and import round-trip", _test_trail_share_pack)
@@ -1742,6 +1747,32 @@ func _test_treasure_chest() -> Variant:
 	return null
 
 
+func _test_treasure_chest_on_walk_surface() -> Variant:
+	for level_path in [
+		"res://scenes/levels/level_05.tscn",
+		"res://scenes/levels/level_07.tscn",
+		"res://scenes/levels/level_08.tscn",
+		"res://scenes/levels/level_09.tscn",
+	]:
+		var level: Variant = _instantiate_level(level_path)
+		if level is String:
+			return level
+		var chest := level.find_child("TreasureChest0", true, false) as TreasureChest
+		if chest == null:
+			_free_level(level)
+			return "Expected a treasure chest in %s." % level_path
+		var surface := WildWestTheme.walk_surface_at(level, chest.global_position.x)
+		var expected_y := float(surface["y"]) + WildWestTheme.CHEST_FOOT_SINK
+		if absf(chest.ground_contact_y() - expected_y) > 2.5:
+			_free_level(level)
+			return (
+				"%s chest should stand on the desert top (feet y=%.1f, expected %.1f)."
+				% [level_path.get_file(), chest.ground_contact_y(), expected_y]
+			)
+		_free_level(level)
+	return null
+
+
 func _test_lasso_cast_hits_hurt_area() -> Variant:
 	var packed: PackedScene = load("res://scenes/world/opponent.tscn")
 	var bandit := packed.instantiate() as Opponent
@@ -2165,6 +2196,139 @@ func _test_cactus_aligns_to_desert_slope() -> Variant:
 	if absf(cactus.rotation) > WildWestTheme.CACTUS_MAX_TILT + 0.01:
 		level.free()
 		return "Cactus slope tilt should stay subtle for the hand-drawn look."
+	level.free()
+	return null
+
+
+func _test_slope_crest_walkable() -> Variant:
+	var slot := 0
+	var trail := CustomLevelStore.trail_row(8)
+	var data := CustomLevelStore.default_level(slot)
+	data["objects"] = [
+		{"type": "ground", "x": 3, "y": trail},
+		{"type": "ground", "x": 3, "y": trail - 1},
+		{"type": "ground", "x": 4, "y": trail},
+		{"type": "goal", "x": 5, "y": trail},
+	]
+	var level := LevelController.new()
+	add_child(level)
+	CustomLevelBuilder.build(level, data)
+	WildWestTheme.apply_to_level(level)
+	var merged := WildWestTheme._merge_segments(WildWestTheme._collect_ground_segments(level))
+	if merged.size() < 2:
+		level.queue_free()
+		return "Height-step workshop trail should build adjacent dirt banks."
+	var span := WildWestTheme._slope_span(merged[0], merged[1])
+	if span.is_empty():
+		level.queue_free()
+		return "Expected a walkable dune between stacked dirt banks."
+	var crest_x := float(span["x_end"])
+	var expected_y := float(span["y_end"])
+	var slope_body := level.find_child("FloorSlopeBody0", true, false) as StaticBody2D
+	if slope_body == null:
+		level.queue_free()
+		return "Desert height slopes need walkable collision."
+	var col := slope_body.get_node_or_null("CollisionPolygon2D") as CollisionPolygon2D
+	if col == null or col.polygon.is_empty():
+		level.queue_free()
+		return "Desert slopes should use a curved collision polygon."
+	var half := int(col.polygon.size() * 0.5)
+	var crest_hit_y := expected_y
+	var best_dx := INF
+	for idx in range(half):
+		var pt := col.polygon[idx]
+		var dx := absf(pt.x - crest_x)
+		if dx < best_dx:
+			best_dx = dx
+			crest_hit_y = pt.y
+	if best_dx > 36.0:
+		level.queue_free()
+		return "Slope crest should expose walkable collision."
+	if absf(crest_hit_y - expected_y) > 4.0:
+		level.queue_free()
+		return (
+			"Slope crest collision should match walk surface (hit y=%.1f, expected %.1f)."
+			% [crest_hit_y, expected_y]
+		)
+	var player := level.get_node_or_null("Player") as Player
+	if player == null:
+		level.queue_free()
+		return "Slope crest walk test needs the player."
+	var start_x := float(span["x_start"]) + 24.0
+	var start_surface := WildWestTheme.walk_surface_at(level, start_x)
+	player.global_position = Vector2(start_x, float(start_surface["y"]) - 28.0)
+	player.velocity = Vector2.ZERO
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	for _step in range(180):
+		player.velocity = Vector2(140.0, player.velocity.y)
+		await get_tree().physics_frame
+		if player.global_position.x >= float(span["x_end"]) + 20.0:
+			break
+	if player.global_position.x < float(span["x_end"]) + 8.0:
+		level.queue_free()
+		return "Cowboy should walk over the dune crest onto the upper bank."
+	if not player.is_on_floor():
+		level.queue_free()
+		return "Cowboy should stay on the floor while crossing the dune crest."
+	level.queue_free()
+	return null
+
+
+func _test_slope_dirt_below_crust() -> Variant:
+	var slot := 0
+	var trail := CustomLevelStore.trail_row(8)
+	var data := CustomLevelStore.default_level(slot)
+	data["objects"] = [
+		{"type": "ground", "x": 3, "y": trail},
+		{"type": "ground", "x": 3, "y": trail - 1},
+		{"type": "ground", "x": 4, "y": trail},
+		{"type": "goal", "x": 5, "y": trail},
+	]
+	var level := LevelController.new()
+	CustomLevelBuilder.build(level, data)
+	WildWestTheme.apply_to_level(level)
+	var merged := WildWestTheme._merge_segments(WildWestTheme._collect_ground_segments(level))
+	if merged.size() < 2:
+		level.free()
+		return "Height-step workshop trail should build adjacent dirt banks."
+	var span := WildWestTheme._slope_span(merged[0], merged[1])
+	if span.is_empty():
+		level.free()
+		return "Expected a walkable dune between stacked dirt banks."
+	var x_start := float(span["x_start"])
+	var x_end := float(span["x_end"])
+	var y_start := float(span["y_start"])
+	var y_end := float(span["y_end"])
+	var curved := bool(span.get("curved", true))
+	var trail_floor := level.get_node_or_null("TrailFloor") as Node2D
+	if trail_floor == null:
+		level.free()
+		return "Theme should build TrailFloor for slope dirt checks."
+	for node in trail_floor.find_children("FloorDirt*", "Sprite2D", false, false):
+		var sprite := node as Sprite2D
+		var sample_x := sprite.global_position.x + sprite.texture.get_size().x * sprite.scale.x * 0.5
+		if sample_x < x_start - 4.0 or sample_x > x_end + 4.0:
+			continue
+		var surface_y := WildWestTheme._slope_y_at(
+			sample_x, x_start, y_start, x_end, y_end, curved
+		)
+		var dirt_top := sprite.global_position.y
+		if dirt_top + 4.0 < surface_y:
+			continue
+		if dirt_top > surface_y + 6.0:
+			level.free()
+			return "Flat FloorDirt must not paint above the dune crust line."
+	for node in trail_floor.find_children("FloorAbyss*", "Polygon2D", false, false):
+		var abyss := node as Polygon2D
+		var abyss_left := abyss.position.x
+		var abyss_right := abyss.position.x
+		for point in abyss.polygon:
+			abyss_left = minf(abyss_left, abyss.position.x + point.x)
+			abyss_right = maxf(abyss_right, abyss.position.x + point.x)
+		if abyss_left < x_end - 1.0 and abyss_right > x_start + 1.0:
+			level.free()
+			return "FloorAbyss should stay clipped out of dune slope columns."
 	level.free()
 	return null
 
@@ -3754,7 +3918,68 @@ func _test_workshop_preview_stamp() -> Variant:
 	if ghost.size.x <= 1.0:
 		preview.queue_free()
 		return "Preview should draw a stamp footprint ghost while hovering."
+	if not display.encloses(ghost):
+		preview.queue_free()
+		return "Preview hover ghost should track the camera-centered stamp footprint."
 	preview.queue_free()
+	return null
+
+
+func _test_workshop_preview_ghost() -> Variant:
+	var preview := LevelPreview.new()
+	add_child(preview)
+	var trail := CustomLevelStore.trail_row(8)
+	var data := CustomLevelStore.default_level(0)
+	preview.show_level(data)
+	preview.set_selected_type("spring")
+	await get_tree().process_frame
+	preview.set_hover_cell(12, trail)
+	preview.size = Vector2(420, 320)
+	await get_tree().process_frame
+	var display := preview._preview_display_rect()
+	var ghost := preview._ghost_rect_screen()
+	if ghost.size.x <= 1.0:
+		preview.queue_free()
+		return "Hovering a dirt row should show a spring ghost in the preview."
+	if not display.encloses(ghost):
+		preview.queue_free()
+		return "Spring ghost should render inside the live preview pane."
+	preview.queue_free()
+	return null
+
+
+func _test_workshop_preview_places_stamp() -> Variant:
+	var editor := load("res://scenes/ui/level_editor.tscn")
+	if editor == null:
+		return "Missing level editor scene."
+	var node := (editor as PackedScene).instantiate()
+	if not (node is Control):
+		node.queue_free()
+		return "Level editor root should be a Control."
+	add_child(node)
+	for _wait in range(20):
+		await get_tree().process_frame
+		if node.get("_preview") != null:
+			break
+	if node.get("_preview") == null:
+		node.queue_free()
+		return "Level editor preview should finish building."
+	var trail: int = node._trail_y()
+	var stamp_column := 50
+	node._selected_type = "cactus"
+	node._on_preview_stamp(stamp_column, trail)
+	await get_tree().process_frame
+	var stored_y := -1
+	for value in node._data.get("objects", []):
+		var object := value as Dictionary
+		if str(object.get("type", "")) == "cactus" and int(object.get("x", -1)) == stamp_column:
+			stored_y = int(object.get("y", -1))
+			break
+	node.queue_free()
+	if stored_y < 0:
+		return "Preview stamp request should append a cactus to the trail data."
+	if stored_y != trail - 1:
+		return "Preview-placed ground props should store one row above dirt (got y=%d)." % stored_y
 	return null
 
 

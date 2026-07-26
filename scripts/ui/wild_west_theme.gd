@@ -11,6 +11,9 @@ const CANYON_BACKDROP_PAD := 40.0
 const CACTUS_DESERT_SINK := 10.0
 const CACTUS_MAX_TILT := 0.22
 const CACTUS_TILT_BLEND := 0.35
+const CHEST_FOOT_SINK := 0.0
+const CHEST_MAX_TILT := 0.12
+const CHEST_TILT_BLEND := 0.2
 
 
 static func desert_sky_color() -> Color:
@@ -27,8 +30,10 @@ static func apply_to_level(level: Node) -> void:
 	_hide_fences(level)
 	_make_endless_hills(level)
 	_dress_platforms(level)
+	_disable_ground_fill_collision(level)
 	_make_contiguous_floors(level)
 	_align_cacti(level)
+	_align_chests(level)
 	_align_pits(level)
 
 
@@ -264,6 +269,9 @@ static func _make_contiguous_floors(level: Node) -> void:
 	if segments.is_empty():
 		return
 	var merged := _merge_segments(segments)
+	var bank_bounds: Array[Dictionary] = []
+	for strip in merged:
+		bank_bounds.append(strip.duplicate())
 
 	var floor_root := Node2D.new()
 	floor_root.name = "TrailFloor"
@@ -293,19 +301,7 @@ static func _make_contiguous_floors(level: Node) -> void:
 
 	# Deep underworld fill only under dirt banks — never across canyon mouths —
 	# so the real Background sky shows through the gap (no blue fill column).
-	# Use Polygon2D (CanvasItem), not ColorRect: embedded Controls always draw
-	# on top of Sprite2D siblings and would cover desert slope crust.
-	for i in range(merged.size()):
-		var abyss_strip: Dictionary = merged[i]
-		var abyss_name := "FloorAbyss%d" % i if i > 0 else "FloorAbyss"
-		_paint_abyss_rect(
-			floor_root,
-			float(abyss_strip["left"]),
-			float(abyss_strip["top"]),
-			float(abyss_strip["right"]) - float(abyss_strip["left"]),
-			900.0,
-			abyss_name
-		)
+	# Painted per strip below with the same slope/canyon insets as FloorDirt.
 
 	# Lip inset: sand stops just shy of the thin ridge face; dirt runs almost to
 	# the lip so the bank behind the transparent rim reads as normal TrailFloor earth.
@@ -327,26 +323,44 @@ static func _make_contiguous_floors(level: Node) -> void:
 		var surface_right := right
 		var dirt_left := left
 		var dirt_right := right
+		var abyss_left := left
+		var abyss_right := right
 		# Only inset at true canyon lips — continuous height steps stay flush.
 		if i + 1 < merged.size() and _is_canyon_between(merged[i], merged[i + 1]):
 			surface_right = minf(surface_right, right - CANYON_SURFACE_INSET)
 			dirt_right = minf(dirt_right, right - CANYON_DIRT_INSET)
+			abyss_right = minf(abyss_right, right - CANYON_DIRT_INSET)
 		if i > 0 and _is_canyon_between(merged[i - 1], merged[i]):
 			surface_left = maxf(surface_left, left + CANYON_SURFACE_INSET)
 			dirt_left = maxf(dirt_left, left + CANYON_DIRT_INSET)
+			abyss_left = maxf(abyss_left, left + CANYON_DIRT_INSET)
 		# Leave the dune column to slope art — flat bank fills must not spill over it.
 		if i + 1 < merged.size() and not _is_canyon_between(merged[i], merged[i + 1]):
-			var slope_to_right := _slope_span(merged[i], merged[i + 1])
+			var slope_to_right := _slope_span(bank_bounds[i], bank_bounds[i + 1])
 			if not slope_to_right.is_empty():
 				var x_start := float(slope_to_right["x_start"])
 				surface_right = minf(surface_right, x_start)
 				dirt_right = minf(dirt_right, x_start)
+				abyss_right = minf(abyss_right, x_start)
 		if i > 0 and not _is_canyon_between(merged[i - 1], merged[i]):
-			var slope_from_left := _slope_span(merged[i - 1], merged[i])
+			var slope_from_left := _slope_span(bank_bounds[i - 1], bank_bounds[i])
 			if not slope_from_left.is_empty():
 				var x_end := float(slope_from_left["x_end"])
 				surface_left = maxf(surface_left, x_end)
 				dirt_left = maxf(dirt_left, x_end)
+				abyss_left = maxf(abyss_left, x_end)
+
+		# Underworld fill — same horizontal clip as dirt so earth never spills over dunes.
+		if abyss_right > abyss_left + 1.0:
+			var abyss_name := "FloorAbyss%d" % i if i > 0 else "FloorAbyss"
+			_paint_abyss_rect(
+				floor_root,
+				abyss_left,
+				top,
+				abyss_right - abyss_left,
+				900.0,
+				abyss_name
+			)
 
 		# Surface row only — never overhang into canyon gaps.
 		if surface != null and surface_right > surface_left + 1.0:
@@ -376,7 +390,7 @@ static func _make_contiguous_floors(level: Node) -> void:
 
 		# Soft desert slopes only for continuous height steps (no canyon between).
 		if i + 1 < merged.size() and not _is_canyon_between(merged[i], merged[i + 1]):
-			_draw_bank_slope(floor_root, surface, dirt, merged[i], merged[i + 1], i)
+			_draw_bank_slope(floor_root, surface, dirt, bank_bounds[i], bank_bounds[i + 1], i)
 
 
 static func _is_canyon_between(left_strip: Dictionary, right_strip: Dictionary) -> bool:
@@ -564,8 +578,13 @@ static func _carve_ground_walls_for_slope(
 			# Keep the low bank from sticking a lip into the dune start.
 			if rising_right:
 				new_right = minf(right, x_start + 6.0)
+				# Stacked dirt fill on the high bank can still block the crest lip.
+				if right > x_end - 4.0:
+					new_left = maxf(left, x_end - 6.0)
 			else:
 				new_left = maxf(left, x_end - 6.0)
+				if left < x_start + 4.0:
+					new_right = minf(right, x_start + 6.0)
 		var new_w := new_right - new_left
 		if new_w < 24.0:
 			# Too narrow to walk — disable this cliff remnant.
@@ -575,8 +594,8 @@ static func _carve_ground_walls_for_slope(
 			continue
 		rect.size = Vector2(new_w, rect.size.y)
 		shape_node.shape = rect
-		var delta_x := ((new_left + new_right) * 0.5) - center.x
-		shape_node.position.x += delta_x
+		var new_center := Vector2((new_left + new_right) * 0.5, center.y)
+		shape_node.global_position = new_center
 
 
 static func _slope_ease(t: float) -> float:
@@ -730,6 +749,12 @@ static func _add_slope_collision(
 		var y := _slope_y_at(x, x_start, y_start, x_end, y_end, curved)
 		top_pts.append(Vector2(x, y))
 		bottom_pts.append(Vector2(x, y + thick))
+	# Continue the walk surface onto both flat bank lips so the crest/base seams stay walkable.
+	const BANK_EXTEND := 36.0
+	top_pts.insert(0, Vector2(x_start - BANK_EXTEND, y_start))
+	bottom_pts.insert(0, Vector2(x_start - BANK_EXTEND, y_start + thick))
+	top_pts.append(Vector2(x_end + BANK_EXTEND, y_end))
+	bottom_pts.append(Vector2(x_end + BANK_EXTEND, y_end + thick))
 	# Walkable curved top, then reverse along the underside.
 	var poly: PackedVector2Array = []
 	for p in top_pts:
@@ -793,6 +818,33 @@ static func _align_cacti(level: Node) -> void:
 			CACTUS_TILT_BLEND,
 			CACTUS_MAX_TILT
 		)
+
+
+static func _align_chests(level: Node) -> void:
+	for node in level.find_children("*", "TreasureChest", true, false):
+		var chest := node as TreasureChest
+		if chest == null:
+			continue
+		var surface := walk_surface_at(level, chest.global_position.x)
+		chest.align_to_walk_surface(
+			float(surface["y"]),
+			float(surface["angle"]),
+			CHEST_FOOT_SINK,
+			CHEST_TILT_BLEND,
+			CHEST_MAX_TILT
+		)
+
+
+static func _disable_ground_fill_collision(level: Node) -> void:
+	## Stacked dirt fill bodies are visual only — their boxes blocked dune crests.
+	for node in level.find_children("*", "StaticBody2D", true, false):
+		if not String(node.name).contains("Fill"):
+			continue
+		if not String(node.name).begins_with("Ground"):
+			continue
+		var shape_node := node.get_node_or_null("CollisionShape2D") as CollisionShape2D
+		if shape_node != null:
+			shape_node.disabled = true
 
 
 static func _align_pits(level: Node) -> void:
