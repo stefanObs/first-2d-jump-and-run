@@ -7,12 +7,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from cowgirl_character import (
-    mounted_pink_cuffs,
-    mounted_skirt,
-    sample_skirt_denim,
-    trim_mounted_sideburns,
-)
+from cowgirl_character import mounted_pink_cuffs, trim_mounted_sideburns
 from cowgirl_hair import draw_mounted_cowgirl_hair
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -27,12 +22,10 @@ HORSE_FRAMES = [
 
 def transform_horse(src: Path, dst: Path) -> None:
     img = Image.open(src).convert("RGBA")
-    denim, denim_dark = sample_skirt_denim(img)
     px = img.load()
     trim_mounted_sideburns(px, img.width, img.height)
-    draw_mounted_cowgirl_hair(img)
+    draw_mounted_cowgirl_hair(img, src.name)
     mounted_pink_cuffs(img)
-    mounted_skirt(img, denim, denim_dark)
     img.save(dst)
     print(f"wrote {dst}")
 

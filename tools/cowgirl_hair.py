@@ -306,27 +306,34 @@ def draw_wavy_pigtail(
     scale: float = 1.0,
     head_only: bool = False,
     wave: float = 1.4,
+    phase: float = 0.0,
 ) -> None:
-    """Thick wavy pigtail — reference long hair under hat."""
+    """Thick wavy pigtail with a secondary strand for fuller flow."""
     px = img.load()
     w, h = img.size
     base, dark, light, ink = palette
-    points = _bezier2(start, control, end, max(14, int(16 * scale)))
+    steps = max(16, int(18 * scale))
+    points = _bezier2(start, control, end, steps)
     total = max(1, len(points) - 1)
-    for i, (cx, cy) in enumerate(points):
-        t = i / total
-        radius = _blob_radius(t, scale)
-        # Sinusoidal wave perpendicular to fall direction.
-        wave_dx = int(round(math.sin(t * math.pi * 2.4 + (0.5 if side == "right" else 0.0)) * wave * scale))
-        wave_dy = int(round(math.cos(t * math.pi * 1.6) * 0.4 * scale))
-        cx += wave_dx if side == "left" else -wave_dx
-        cy += wave_dy
-        for dy in range(-radius, radius + 1):
-            for dx in range(-radius, radius + 1):
-                if abs(dx) + abs(dy) > radius + 1:
-                    continue
-                color = _strand_color(side, dx, dy, radius, base, dark, light, ink)
-                _paint(px, cx + dx, cy + dy, w, h, color, None, head_only=head_only)
+    strand_offsets = (0, 1 if side == "left" else -1)
+    for strand_shift in strand_offsets:
+        for i, (cx, cy) in enumerate(points):
+            t = i / total
+            radius = _blob_radius(t, scale * (0.92 if strand_shift else 1.0))
+            wave_dx = int(
+                round(math.sin(t * math.pi * 3.2 + phase + (0.6 if side == "right" else 0.0)) * wave * scale)
+            )
+            wave_dy = int(round(math.cos(t * math.pi * 2.0 + phase * 0.5) * 0.55 * wave * scale))
+            sx = cx + (wave_dx if side == "left" else -wave_dx) + strand_shift
+            sy = cy + wave_dy
+            for dy in range(-radius, radius + 1):
+                for dx in range(-radius, radius + 1):
+                    if abs(dx) + abs(dy) > radius + 1:
+                        continue
+                    color = _strand_color(side, dx, dy, radius, base, dark, light, ink)
+                    if strand_shift and abs(dx) + abs(dy) > radius:
+                        color = light if color == base else color
+                    _paint(px, sx + dx, sy + dy, w, h, color, None, head_only=head_only)
 
 
 def draw_bangs(img: Image.Image, palette: Palette) -> None:
@@ -404,41 +411,75 @@ def pigtail_controls(
     lx, ly = left
     rx, ry = right
     reach = max(1, int(round(2 * scale)))
-    drop_mid = max(3, int(round(8 * scale)))
-    drop_end = max(6, int(round(18 * scale)))
+    drop_mid = max(4, int(round(9 * scale)))
+    drop_end = max(8, int(round(22 * scale)))
     sway = int(round(swing))
+    lift = int(round(abs(swing) * 0.4))
     left_path = (
         left,
-        (lx - reach + sway, ly + drop_mid),
-        (lx - 2 + sway, ly + drop_end),
+        (lx - reach + sway, ly + drop_mid - lift),
+        (lx - 3 + sway * 2, ly + drop_end),
     )
     right_path = (
         right,
-        (rx + reach + sway, ry + drop_mid),
-        (rx + 2 + sway, ry + drop_end),
+        (rx + reach + sway, ry + drop_mid - lift),
+        (rx + 3 + sway * 2, ry + drop_end),
     )
     return left_path, right_path
+
+
+def _wave_for_swing(swing: float) -> tuple[float, float]:
+    magnitude = min(3.0, 1.6 + abs(swing) * 0.35)
+    phase = swing * 0.45
+    return magnitude, phase
 
 
 def draw_player_cowgirl_hair(img: Image.Image, swing: float = 0.0) -> None:
     palette = cowgirl_hair_palette()
     ribbon = sample_bandana(img)
     left, right = find_braid_anchors(img)
+    wave, phase = _wave_for_swing(swing)
     draw_bangs(img, palette)
     draw_temple_volume(img, left, right, palette)
     left_path, right_path = pigtail_controls(left, right, swing, scale=1.0)
-    draw_wavy_pigtail(img, *left_path, "left", palette, scale=1.05, head_only=True, wave=1.2)
-    draw_wavy_pigtail(img, *right_path, "right", palette, scale=1.05, head_only=True, wave=1.2)
+    draw_wavy_pigtail(
+        img, *left_path, "left", palette, scale=1.1, head_only=True, wave=wave, phase=phase,
+    )
+    draw_wavy_pigtail(
+        img, *right_path, "right", palette, scale=1.1, head_only=True, wave=wave, phase=-phase,
+    )
     draw_ribbon_knot(img, left, ribbon, "left", scale=1.0)
     draw_ribbon_knot(img, right, ribbon, "right", scale=1.0)
 
 
-def draw_mounted_cowgirl_hair(img: Image.Image) -> None:
+def _mounted_swing_for_frame(name: str) -> float:
+    if "jump" in name:
+        return -2.5
+    if "ride_1" in name:
+        return 1.2
+    return 0.0
+
+
+def draw_mounted_cowgirl_hair(img: Image.Image, frame_name: str = "") -> None:
     palette = cowgirl_hair_palette()
     ribbon = sample_bandana(img)
+    swing = _mounted_swing_for_frame(frame_name)
+    wave, phase = _wave_for_swing(swing)
+    wave = max(wave, 2.4)
     left_start, left_ctrl, left_end, right_start, right_ctrl, right_end = find_mounted_braid_anchors(img)
-    draw_wavy_pigtail(img, left_start, left_ctrl, left_end, "left", palette, scale=1.75, head_only=True, wave=2.0)
-    draw_wavy_pigtail(img, right_start, right_ctrl, right_end, "right", palette, scale=1.75, head_only=True, wave=2.0)
+    sway = int(round(swing))
+    left_ctrl = (left_ctrl[0] + sway, left_ctrl[1])
+    left_end = (left_end[0] + sway * 2, left_end[1])
+    right_ctrl = (right_ctrl[0] + sway, right_ctrl[1])
+    right_end = (right_end[0] + sway * 2, right_end[1])
+    draw_wavy_pigtail(
+        img, left_start, left_ctrl, left_end, "left", palette,
+        scale=1.85, head_only=True, wave=wave, phase=phase,
+    )
+    draw_wavy_pigtail(
+        img, right_start, right_ctrl, right_end, "right", palette,
+        scale=1.85, head_only=True, wave=wave, phase=-phase,
+    )
     draw_ribbon_knot(img, left_start, ribbon, "left", scale=1.55)
     draw_ribbon_knot(img, right_start, ribbon, "right", scale=1.55)
 
