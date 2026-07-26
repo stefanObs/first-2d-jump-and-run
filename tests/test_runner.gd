@@ -63,6 +63,7 @@ func _ready() -> void:
 	)
 	failures += await _run("Cowboy player has movement animations", _test_cowboy_animations)
 	failures += await _run("Lasso ties bandits and makes them pass-through", _test_lasso_ties_bandit)
+	failures += await _run("Treasure chest opens once and grants five badges", _test_treasure_chest)
 	failures += await _run("Lasso cast ties bandits via HurtArea", _test_lasso_cast_hits_hurt_area)
 	failures += await _run("Jumping on a bandit head ties him", _test_stomp_ties_bandit)
 	failures += await _run("Side contact with a bandit sends the cowboy to camp", _test_side_contact_hurts)
@@ -1653,6 +1654,88 @@ func _test_lasso_ties_bandit() -> Variant:
 		node.queue_free()
 		return "A red-scarf bounty bandit should award two badges."
 	node.queue_free()
+	return null
+
+
+func _test_treasure_chest() -> Variant:
+	var packed: PackedScene = load("res://scenes/world/treasure_chest.tscn")
+	if packed == null:
+		return "Missing treasure chest scene."
+	var chest := packed.instantiate()
+	if not (chest is TreasureChest):
+		chest.queue_free()
+		return "Treasure chest root should be TreasureChest."
+	var art := chest.get_node_or_null("ChestArt")
+	var collision := chest.get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if art == null:
+		chest.queue_free()
+		return "Treasure chest should include ChestArt for the opening animation."
+	if collision == null:
+		chest.queue_free()
+		return "Treasure chest should include a collision shape."
+
+	var player_packed: PackedScene = load("res://scenes/player/player.tscn")
+	if player_packed == null:
+		chest.queue_free()
+		return "Missing player scene."
+	var player := player_packed.instantiate() as Player
+
+	var controller := LevelController.new()
+	controller.level_number = 5
+	controller.is_custom_level = true
+	add_child(controller)
+	controller.add_child(player)
+	controller.add_child(chest)
+	controller.player = player
+	chest.name = "TestChest0"
+	controller._wire_world_objects()
+
+	var badges_before := player.stars_collected
+	chest.body_entered.emit(player)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if not (chest as TreasureChest).is_opened():
+		controller.queue_free()
+		return "Touching a treasure chest should open it."
+	if not collision.disabled:
+		controller.queue_free()
+		return "Opened treasure chest should disable collision."
+	if (chest as TreasureChest).monitoring:
+		controller.queue_free()
+		return "Opened treasure chest should stop monitoring touches."
+	if player.stars_collected - badges_before != TreasureChest.BADGE_COUNT:
+		controller.queue_free()
+		return "Treasure chest should grant five badges."
+
+	chest.body_entered.emit(player)
+	await get_tree().process_frame
+	if player.stars_collected != badges_before + TreasureChest.BADGE_COUNT:
+		controller.queue_free()
+		return "Treasure chest should be one-shot and not grant badges twice."
+
+	await get_tree().create_timer(0.5).timeout
+	var chest_art := art as TreasureChestArt
+	if chest_art == null or chest_art.open_amount < 0.9:
+		controller.queue_free()
+		return "Treasure chest opening animation should raise the lid."
+
+	for level_path in [
+		"res://scenes/levels/level_05.tscn",
+		"res://scenes/levels/level_07.tscn",
+		"res://scenes/levels/level_08.tscn",
+		"res://scenes/levels/level_09.tscn",
+	]:
+		var level: Variant = _instantiate_level(level_path)
+		if level is String:
+			controller.queue_free()
+			return level
+		if level.find_child("TreasureChest0", true, false) == null:
+			_free_level(level)
+			controller.queue_free()
+			return "Expected a treasure chest in %s." % level_path
+		_free_level(level)
+
+	controller.queue_free()
 	return null
 
 
