@@ -209,6 +209,7 @@ func _is_scripted_gameplay(node: Node) -> bool:
 		or node is Carrion
 		or node is Hazard
 		or node is Star
+		or node is TreasureChest
 		or node is ModeItem
 		or node is Checkpoint
 		or node is Goal

@@ -354,16 +354,21 @@ func _reset_unstored_badges() -> void:
 	if player == null:
 		return
 	for node in find_children("*", "Area2D", true, false):
-		if not (node is Star):
-			continue
-		var star := node as Star
-		var badge_name := String(star.name)
-		if badge_name in _stored_badge_names:
-			star.restore_as_collected()
-		else:
-			star.restore_for_respawn()
+		if node is Star:
+			var star := node as Star
+			var badge_name := String(star.name)
+			if badge_name in _stored_badge_names:
+				star.restore_as_collected()
+			else:
+				star.restore_for_respawn()
+		elif node is TreasureChest:
+			var chest := node as TreasureChest
+			if _chest_is_stored_open(chest):
+				chest.restore_as_opened()
+			else:
+				chest.restore_for_respawn()
 	_collected_badge_names = _stored_badge_names.duplicate()
-	player.stars_collected = _stored_badge_names.size()
+	player.stars_collected = _count_restored_badges()
 	if hud != null:
 		hud.set_stars(player.stars_collected)
 
@@ -436,6 +441,10 @@ func _wire_world_objects() -> void:
 			var star := node as Star
 			var badge_name := String(star.name)
 			star.collected.connect(_on_badge_taken.bind(badge_name))
+		elif node is TreasureChest:
+			var chest := node as TreasureChest
+			if not chest.opened.is_connected(_on_treasure_chest_opened):
+				chest.opened.connect(_on_treasure_chest_opened)
 		elif node is ModeItem:
 			var item := node as ModeItem
 			if not item.collected.is_connected(_on_mode_item_collected):
@@ -572,6 +581,11 @@ func _restore_run_state() -> void:
 			var badge := find_child(badge_name, true, false) as Star
 			if badge != null:
 				badge.restore_as_collected()
+	for node in find_children("*", "Area2D", true, false):
+		if node is TreasureChest:
+			var chest := node as TreasureChest
+			if _chest_is_stored_open(chest):
+				chest.restore_as_opened()
 	var saved_opponents: Variant = state.get("tied_opponents", [])
 	if saved_opponents is Array:
 		for value in saved_opponents:
@@ -589,7 +603,7 @@ func _restore_run_state() -> void:
 	_stored_mode_remaining = maxf(float(state.get("mode_remaining", 0.0)), 0.0)
 	if _stored_mode != ModeController.Mode.NONE:
 		player.restore_mode(_stored_mode, _stored_mode_remaining, 20.0)
-	player.stars_collected = maxi(int(state.get("stars_found", 0)), _stored_badge_names.size())
+	player.stars_collected = maxi(int(state.get("stars_found", 0)), _count_restored_badges())
 	var checkpoint_name := str(state.get("checkpoint_name", ""))
 	if not checkpoint_name.is_empty():
 		var checkpoint := find_child(checkpoint_name, true, false) as Checkpoint
@@ -659,6 +673,45 @@ func _on_bounty_caught(opponent: Opponent, amount: int) -> void:
 	reward_effect.play(opponent.global_position, player.global_position, new_badges)
 	if hud != null:
 		hud.show_toast(tr("Bounty caught! +%d badges!") % new_badges, 2.2)
+
+
+func _on_treasure_chest_opened(chest: TreasureChest) -> void:
+	if player == null or chest == null:
+		return
+	var new_badges := _register_chest_badges(String(chest.name))
+	if new_badges <= 0:
+		return
+	player.collect_badges(new_badges)
+	if not is_custom_level and GameManager.is_advanced_mode():
+		GameManager.register_badges_collected(new_badges)
+	var reward_effect := BOUNTY_REWARD_EFFECT.new()
+	reward_effect.name = "ChestBadgeBurst"
+	add_child(reward_effect)
+	reward_effect.play(chest.global_position + Vector2(0.0, -24.0), player.global_position, new_badges)
+	if hud != null:
+		hud.show_toast(tr("Treasure chest! +%d badges!") % new_badges, 2.4)
+
+
+func _register_chest_badges(chest_name: String) -> int:
+	var new_badges := 0
+	for index in range(TreasureChest.BADGE_COUNT):
+		var badge_name := "Chest_%s_%d" % [chest_name, index]
+		if badge_name not in _collected_badge_names:
+			_collected_badge_names.append(badge_name)
+			new_badges += 1
+	return new_badges
+
+
+func _chest_is_stored_open(chest: TreasureChest) -> bool:
+	var chest_name := String(chest.name)
+	for index in range(TreasureChest.BADGE_COUNT):
+		if ("Chest_%s_%d" % [chest_name, index]) in _stored_badge_names:
+			return true
+	return false
+
+
+func _count_restored_badges() -> int:
+	return _collected_badge_names.size()
 
 
 func _on_celebration_finished() -> void:

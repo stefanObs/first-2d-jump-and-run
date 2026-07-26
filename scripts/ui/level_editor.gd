@@ -17,6 +17,7 @@ const TOOL_CATEGORIES: Array = [
 		"label": "Pickups",
 		"tools": [
 			["star", "Badge", "res://assets/world/star_badge.png"],
+			["chest", "Treasure Chest", "res://assets/world/treasure_chest_stamp.png"],
 			["checkpoint", "Camp", "res://assets/world/checkpoint_active.png"],
 		],
 	},
@@ -33,7 +34,9 @@ const TOOL_CATEGORIES: Array = [
 		"label": "Enemies",
 		"tools": [
 			["bandit", "Bandit", "res://assets/world/bandit.png"],
+			["bounty_bandit", "Bounty Bandit", "res://assets/world/bandit_red.png"],
 			["rattlesnake", "Rattlesnake", "res://assets/world/rattlesnake_idle.png"],
+			["carrion", "Carrion Bird", "res://assets/world/carrion_bird.png"],
 		],
 	},
 	{
@@ -97,6 +100,7 @@ const _MIN_GRID_HEIGHT := 96.0
 const _PREVIEW_MIN_SIZE := Vector2(320, 180)
 const _TRAIL_CATEGORY_ID := "trail"
 var _hover_column: int = -1
+var _hover_row: int = -1
 var _syncing_scroll := false
 var _export_dialog: FileDialog
 var _import_dialog: FileDialog
@@ -194,7 +198,9 @@ func _build_ui() -> void:
 	root.add_child(instructions)
 
 	var trail_help := Label.new()
-	trail_help.text = tr("Bottom row is the trail: Dirt or Canyon sets the ground and what sits below it.")
+	trail_help.text = tr(
+		"Bottom row is dirt/canyon. Ground props stamp one row above dirt so they stand on the trail."
+	)
 	trail_help.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	trail_help.add_theme_font_size_override(&"font_size", 12)
 	trail_help.add_theme_color_override(&"font_color", Color(0.4, 0.2, 0.08))
@@ -285,7 +291,7 @@ func _build_ui() -> void:
 			var cell_x := x
 			var cell_y := y
 			cell.pressed.connect(func() -> void: _place(cell_x, cell_y))
-			cell.mouse_entered.connect(func() -> void: _set_hover_column(cell_x))
+			cell.mouse_entered.connect(func() -> void: _set_hover_cell(cell_x, cell_y))
 			_grid.add_child(cell)
 			_cells.append(cell)
 
@@ -330,6 +336,8 @@ func _build_ui() -> void:
 	_preview = LevelPreview.new()
 	_preview.name = "LevelPreview"
 	_preview.hover_column_changed.connect(_on_preview_hover_column)
+	_preview.hover_cell_changed.connect(_on_preview_hover_cell)
+	_preview.stamp_requested.connect(_on_preview_stamp)
 	root.add_child(_preview)
 	_preview.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_preview.size_flags_stretch_ratio = 1.45
@@ -560,6 +568,8 @@ func _select_tool(type_id: String) -> void:
 	_selected_type = type_id
 	var entry := _tool_entry(type_id)
 	_status.text = "%s: %s" % [tr("Stamp"), tr(str(entry[1]))]
+	if _preview != null:
+		_preview.set_selected_type(type_id)
 	_sync_tool_dropdowns()
 
 
@@ -653,15 +663,31 @@ func _update_length_buttons() -> void:
 		_length_plus.disabled = width >= CustomLevelStore.MAX_WIDTH
 
 
-func _set_hover_column(column: int) -> void:
+func _set_hover_cell(column: int, row: int) -> void:
 	_hover_column = column
+	_hover_row = row
 	if _preview != null:
-		_preview.set_hover_column(column)
+		_preview.set_hover_cell(column, row)
+	_refresh_grid_highlights()
+
+
+func _set_hover_column(column: int) -> void:
+	_set_hover_cell(column, _hover_row if _hover_row >= 0 else _trail_y())
 
 
 func _on_preview_hover_column(column: int) -> void:
 	_hover_column = column
 	_refresh_grid_highlights()
+
+
+func _on_preview_hover_cell(column: int, row: int) -> void:
+	_hover_column = column
+	_hover_row = row
+	_refresh_grid_highlights()
+
+
+func _on_preview_stamp(column: int, row: int) -> void:
+	_place(column, row)
 
 
 func _horizontal_scroll_max() -> float:
@@ -741,8 +767,9 @@ func _place(x: int, y: int) -> void:
 	var objects := _objects()
 	var before := objects.duplicate(true)
 	var trail := _trail_y()
+	var place_y := CustomLevelStore.placement_row(_selected_type, y, trail)
 	if _selected_type == "erase":
-		_erase_at(objects, x, y)
+		_erase_at(objects, x, place_y)
 	elif _selected_type == "canyon" or _selected_type == "pit":
 		_erase_at(objects, x, trail, true)
 		objects.append({"type": "canyon", "x": x, "y": trail})
@@ -763,18 +790,18 @@ func _place(x: int, y: int) -> void:
 				):
 					objects.remove_at(i)
 	else:
-		_remove_foreground_at(objects, x, y)
+		_remove_foreground_at(objects, x, place_y)
 		if _selected_type == "goal":
 			for i in range(objects.size() - 1, -1, -1):
 				if str(objects[i].get("type", "")) == "goal":
 					objects.remove_at(i)
-		objects.append({"type": _selected_type, "x": x, "y": y})
+		objects.append({"type": _selected_type, "x": x, "y": place_y})
 	if objects == before:
 		return
 	_data["objects"] = objects
 	_mark_dirty()
 	_refresh_grid()
-	_set_hover_column(x)
+	_set_hover_cell(x, y)
 
 
 func _objects() -> Array:
@@ -845,21 +872,37 @@ func _refresh_grid() -> void:
 	call_deferred("_fit_grid_layout")
 	if _preview != null:
 		_preview.show_level(_data)
+		_preview.set_selected_type(_selected_type)
 		if _hover_column >= 0:
-			_preview.set_hover_column(_hover_column)
+			_preview.set_hover_cell(_hover_column, _hover_row if _hover_row >= 0 else _trail_y())
 	_update_length_buttons()
 
 
 func _refresh_grid_highlights() -> void:
 	var width := int(_data.get("width", CustomLevelStore.DEFAULT_WIDTH))
 	var height := int(_data.get("height", 8))
+	var trail := _trail_y()
+	var ghost_col := -1
+	var ghost_row := -1
+	if _hover_column >= 0 and _hover_row >= 0 and _selected_type not in ["erase", "ground", "canyon", "pit"]:
+		ghost_col = _hover_column
+		ghost_row = CustomLevelStore.placement_row(_selected_type, _hover_row, trail)
 	for y in range(height):
 		for x in range(width):
 			var cell := _cells[y * width + x]
+			var type_name := _display_type_at(x, y)
+			cell.text = _short_label(type_name)
+			if y == trail and type_name.is_empty():
+				cell.text = "···"
 			if x == _hover_column:
 				cell.self_modulate = Color(1.15, 1.1, 0.85)
 			else:
 				cell.self_modulate = Color.WHITE
+			if x == ghost_col and y == ghost_row:
+				cell.self_modulate = Color(1.25, 1.18, 0.65)
+				var ghost_label := _short_label(_selected_type)
+				if not ghost_label.is_empty():
+					cell.text = ghost_label
 
 
 func _display_type_at(x: int, y: int) -> String:
@@ -879,7 +922,8 @@ func _short_label(type_name: String) -> String:
 	var labels := {
 		"ground": "DIRT", "platform": "WOOD", "star": "STAR",
 		"cactus": "OUCH", "canyon": "CANYON", "pit": "CANYON", "checkpoint": "CAMP",
-		"spring": "BOING", "bandit": "BANDIT", "rattlesnake": "SNAKE",
+		"spring": "BOING", "bandit": "BANDIT", "bounty_bandit": "BOUNTY",
+		"rattlesnake": "SNAKE", "carrion": "BIRD",
 		"wings": "WINGS", "boots": "BOOTS", "speed": "FAST", "shield": "BUBBLE",
 		"goal": "END",
 	}
@@ -892,7 +936,8 @@ func _type_color(type_name: String) -> Color:
 		"platform": Color(0.62, 0.4, 0.22), "star": Color(1, 0.85, 0.2),
 		"cactus": Color(0.35, 0.75, 0.3), "canyon": Color(0.55, 0.28, 0.14), "pit": Color(0.55, 0.28, 0.14),
 		"checkpoint": Color(0.95, 0.45, 0.2), "spring": Color(0.3, 0.9, 0.45),
-		"bandit": Color(0.32, 0.18, 0.08), "rattlesnake": Color(0.55, 0.4, 0.15),
+		"bandit": Color(0.32, 0.18, 0.08), "bounty_bandit": Color(0.75, 0.12, 0.08),
+		"rattlesnake": Color(0.55, 0.4, 0.15), "carrion": Color(0.45, 0.35, 0.55),
 		"wings": Color(0.75, 0.85, 1.0), "boots": Color(0.7, 0.45, 0.9),
 		"speed": Color(1.0, 0.75, 0.2), "shield": Color(0.45, 0.75, 1.0),
 		"goal": Color(0.85, 0.3, 0.2),
@@ -1049,7 +1094,7 @@ func _rebuild_stamp_grid() -> void:
 			var cell_x := x
 			var cell_y := y
 			cell.pressed.connect(func() -> void: _place(cell_x, cell_y))
-			cell.mouse_entered.connect(func() -> void: _set_hover_column(cell_x))
+			cell.mouse_entered.connect(func() -> void: _set_hover_cell(cell_x, cell_y))
 			_grid.add_child(cell)
 			_cells.append(cell)
 	call_deferred("_fit_grid_layout")

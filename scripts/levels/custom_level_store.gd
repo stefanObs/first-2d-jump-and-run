@@ -34,6 +34,42 @@ static func trail_row(height: int) -> int:
 	return maxi(height - 1, 0)
 
 
+const GROUND_STANDING_TYPES: PackedStringArray = [
+	"cactus", "checkpoint", "spring", "bandit", "bounty_bandit",
+	"rattlesnake", "goal", "chest", "wings", "boots", "speed", "shield",
+]
+
+
+static func is_ground_standing(type_name: String) -> bool:
+	return type_name in GROUND_STANDING_TYPES
+
+
+static func placement_row(type_name: String, click_y: int, trail: int) -> int:
+	if is_ground_standing(type_name) and click_y >= trail - 1:
+		return maxi(trail - 1, 0)
+	return clampi(click_y, 0, trail)
+
+
+static func stamp_footprint(type_name: String) -> Vector2:
+	match type_name:
+		"platform":
+			return Vector2(2.0, 1.0)
+		_:
+			return Vector2(1.0, 1.0)
+
+
+static func object_world_position(object: Dictionary, grid: float, trail: int) -> Vector2:
+	var type_name := str(object.get("type", ""))
+	var cell_x := float(object.get("x", 0))
+	var cell_y := float(object.get("y", 0))
+	var world_x := (cell_x + 0.5) * grid
+	if is_ground_standing(type_name):
+		return Vector2(world_x, (cell_y + 1.0) * grid)
+	if type_name == "carrion":
+		return Vector2(world_x, (cell_y + 0.5) * grid)
+	return Vector2(world_x, cell_y * grid)
+
+
 static func default_level(slot_index: int) -> Dictionary:
 	var height := DEFAULT_HEIGHT
 	var width := DEFAULT_WIDTH
@@ -42,9 +78,9 @@ static func default_level(slot_index: int) -> Dictionary:
 	for x in range(width):
 		objects.append({"type": "ground", "x": x, "y": trail})
 	objects.append({"type": "star", "x": 7, "y": trail - 2})
-	objects.append({"type": "cactus", "x": 11, "y": trail})
-	objects.append({"type": "checkpoint", "x": width / 2, "y": trail})
-	objects.append({"type": "goal", "x": width - 3, "y": trail})
+	objects.append({"type": "cactus", "x": 11, "y": trail - 1})
+	objects.append({"type": "checkpoint", "x": width / 2, "y": trail - 1})
+	objects.append({"type": "goal", "x": width - 3, "y": trail - 1})
 	return {
 		"version": VERSION,
 		"slot": clampi(slot_index, 0, SLOT_COUNT - 1),
@@ -404,8 +440,8 @@ static func migrate_v3_to_v4(source: Dictionary) -> Dictionary:
 				elif y == old_near:
 					object["y"] = maxi(trail - 1, 0)
 				else:
-					# Surface-row props share the trail cell with dirt/canyon.
-					object["y"] = trail
+					# Ground props stand one cell above dirt on the trail row.
+					object["y"] = maxi(trail - 1, 0)
 			else:
 				# Shift sky/platform rows down by the two removed rows.
 				object["y"] = clampi(y, 0, trail)
@@ -478,15 +514,14 @@ static func import_builtin(level_number: int) -> Dictionary:
 			object["y"] = clampi(int(object.get("y", 0)) + shift, 0, trail)
 	result["height"] = height
 	result["width"] = clampi(max_x, MIN_WIDTH, MAX_WIDTH)
-	# Walk-surface props often sit a few pixels above ground center; snap them to
-	# the trail row so workshop rebuilds do not float cacti above the dirt.
+	# Walk-surface props stand one stamp row above dirt; snap near-trail imports there.
 	if not objects.is_empty():
 		for object in objects:
 			var type_name := str(object.get("type", ""))
-			if type_name not in ["cactus", "checkpoint", "spring", "bandit", "goal"]:
+			if not is_ground_standing(type_name):
 				continue
 			if int(object.get("y", 0)) >= trail - 1:
-				object["y"] = trail
+				object["y"] = maxi(trail - 1, 0)
 		result["objects"] = objects
 	if number == 1:
 		result["start_mounted"] = true
@@ -505,6 +540,8 @@ static func import_builtin(level_number: int) -> Dictionary:
 static func _import_type_for(node: Node) -> String:
 	if node is Star:
 		return "star"
+	if node is TreasureChest:
+		return "chest"
 	if node is Checkpoint:
 		return "checkpoint"
 	if node is SpringPad:
@@ -512,7 +549,11 @@ static func _import_type_for(node: Node) -> String:
 	if node is Goal:
 		return "goal"
 	if node is Opponent:
-		return "bandit"
+		return "bounty_bandit" if (node as Opponent).bounty_bandit else "bandit"
+	if node is Carrion:
+		return "carrion"
+	if node is Rattlesnake:
+		return "rattlesnake"
 	if node is Hazard:
 		var body := node as Node2D
 		return "canyon" if maxf(absf(body.scale.x), absf(body.scale.y)) > 1.35 else "cactus"
@@ -551,6 +592,9 @@ static func sanitize(source: Dictionary, slot_index: int) -> Dictionary:
 				object["y"] = clampi(int(object.get("y", 0)), 0, trail)
 				if str(object.get("type", "")) == "pit":
 					object["type"] = "canyon"
+				var type_name := str(object.get("type", ""))
+				if is_ground_standing(type_name) and int(object.get("y", 0)) == trail:
+					object["y"] = maxi(trail - 1, 0)
 				objects.append(object)
 				if objects.size() >= 900:
 					break
@@ -563,9 +607,9 @@ static func sanitize(source: Dictionary, slot_index: int) -> Dictionary:
 
 static func _valid_object(object: Dictionary, trail: int) -> bool:
 	var valid_types := [
-		"ground", "platform", "star", "cactus", "canyon", "pit",
-		"checkpoint", "spring", "goal", "bandit", "rattlesnake",
-		"wings", "boots", "speed", "shield",
+		"ground", "platform", "star", "chest", "cactus", "canyon", "pit",
+		"checkpoint", "spring", "goal", "bandit", "bounty_bandit",
+		"rattlesnake", "carrion", "wings", "boots", "speed", "shield",
 	]
 	var type_name := str(object.get("type", ""))
 	if type_name not in valid_types:

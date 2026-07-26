@@ -66,6 +66,11 @@ func _ready() -> void:
 	failures += await _run("Lasso cast ties bandits via HurtArea", _test_lasso_cast_hits_hurt_area)
 	failures += await _run("Jumping on a bandit head ties him", _test_stomp_ties_bandit)
 	failures += await _run("Side contact with a bandit sends the cowboy to camp", _test_side_contact_hurts)
+	failures += await _run("Upward contact with a bandit sends the cowboy to camp", _test_upward_contact_hurts)
+	failures += await _run(
+		"Standing above a bandit without falling sends the cowboy to camp",
+		_test_standing_above_hurts
+	)
 	failures += await _run("Bandits turn around at plank edges", _test_bandit_respects_plank_edges)
 	failures += await _run("Controller bindings match every gamepad device", _test_controller_all_devices)
 	failures += await _run("Flying levels guard the very top of the screen", _test_flying_levels_top_guarded)
@@ -118,6 +123,10 @@ func _ready() -> void:
 	failures += await _run("Workshop default trail width matches built-ins", _test_workshop_default_width)
 	failures += await _run("Workshop trail length add and remove", _test_workshop_trail_length_resize)
 	failures += await _run("Trail workshop uses one trail row and stacked dirt", _test_trail_row_model)
+	failures += await _run("Workshop ground props stamp one row above dirt", _test_workshop_ground_prop_offset)
+	failures += await _run("Workshop stamp catalog includes bounty and carrion", _test_workshop_stamp_catalog)
+	failures += await _run("Workshop preview click requests stamp placement", _test_workshop_preview_stamp)
+	failures += await _run("Airborne bandits fall to walkable ground", _test_airborne_bandit_falls)
 	failures += await _run("Campaign workshop edits and inserts levels", _test_campaign_workshop)
 	failures += await _run("Trail share pack export and import round-trip", _test_trail_share_pack)
 	failures += await _run("Trail editor single-level export and import", _test_trail_editor_single_share)
@@ -1674,14 +1683,13 @@ func _test_stomp_ties_bandit() -> Variant:
 	var player := Player.new()
 	player.position = Vector2(200, 360)
 	add_child(player)
-	# Landing on the bandit zeroes fall speed — stomps must still count by height.
-	player.velocity = Vector2.ZERO
+	player.velocity = Vector2(0.0, 180.0)
 	var hurt := [false]
 	bandit.hurt_player.connect(func(_p: Player) -> void: hurt[0] = true)
 	bandit._on_body_entered(player)
 	var error: Variant = null
 	if not bandit.is_tied():
-		error = "Jumping onto a bandit's head should tie him even after landing."
+		error = "Jumping onto a bandit's head while falling should tie him."
 	elif hurt[0]:
 		error = "A head stomp should not hurt the cowboy."
 	elif player.velocity.y >= 0.0:
@@ -1708,6 +1716,50 @@ func _test_side_contact_hurts() -> Variant:
 		error = "Walking into a bandit's side must not tie him."
 	elif not hurt[0]:
 		error = "Any non-stomp contact should send the cowboy back to camp."
+	player.queue_free()
+	bandit.queue_free()
+	return error
+
+
+func _test_upward_contact_hurts() -> Variant:
+	var packed: PackedScene = load("res://scenes/world/opponent.tscn")
+	var bandit := packed.instantiate() as Opponent
+	bandit.position = Vector2(200, 400)
+	add_child(bandit)
+	var player := Player.new()
+	player.position = Vector2(200, 360)
+	player.velocity = Vector2(0.0, -120.0)
+	add_child(player)
+	var hurt := [false]
+	bandit.hurt_player.connect(func(_p: Player) -> void: hurt[0] = true)
+	bandit._on_body_entered(player)
+	var error: Variant = null
+	if bandit.is_tied():
+		error = "Hitting a bandit while moving upward must not tie him."
+	elif not hurt[0]:
+		error = "Upward contact should send the cowboy back to camp."
+	player.queue_free()
+	bandit.queue_free()
+	return error
+
+
+func _test_standing_above_hurts() -> Variant:
+	var packed: PackedScene = load("res://scenes/world/opponent.tscn")
+	var bandit := packed.instantiate() as Opponent
+	bandit.position = Vector2(200, 400)
+	add_child(bandit)
+	var player := Player.new()
+	player.position = Vector2(200, 360)
+	player.velocity = Vector2.ZERO
+	add_child(player)
+	var hurt := [false]
+	bandit.hurt_player.connect(func(_p: Player) -> void: hurt[0] = true)
+	bandit._on_body_entered(player)
+	var error: Variant = null
+	if bandit.is_tied():
+		error = "Standing above a bandit without falling must not tie him."
+	elif not hurt[0]:
+		error = "Standing overlap without a downward stomp should send the cowboy back to camp."
 	player.queue_free()
 	bandit.queue_free()
 	return error
@@ -3431,6 +3483,152 @@ func _test_trail_row_model() -> Variant:
 		level2_controller.queue_free()
 		return "Desert slopes must not use flat Polygon2D fills."
 	level2_controller.queue_free()
+	return null
+
+
+func _test_workshop_ground_prop_offset() -> Variant:
+	var trail := CustomLevelStore.trail_row(8)
+	var data := CustomLevelStore.default_level(0)
+	data["objects"] = [
+		{"type": "ground", "x": 4, "y": trail},
+		{"type": "bandit", "x": 4, "y": trail},
+	]
+	var cleaned := CustomLevelStore.sanitize(data, 0)
+	var stored_y := -1
+	for value in cleaned.get("objects", []):
+		var object := value as Dictionary
+		if str(object.get("type", "")) == "bandit" and int(object.get("x", -1)) == 4:
+			stored_y = int(object.get("y", -1))
+	if stored_y != trail - 1:
+		return "Ground props clicked on dirt should store one row above the trail (got y=%d)." % stored_y
+	var level := LevelController.new()
+	CustomLevelBuilder.build(level, cleaned)
+	var bandit := level.find_child("Opponent0", true, false) as Opponent
+	if bandit == null:
+		level.free()
+		return "Workshop builder should spawn the bandit."
+	var expected_floor := float(trail) * 40.0
+	if absf(bandit.global_position.y - expected_floor) > 2.5:
+		level.free()
+		return "Bandit feet should sit on the trail surface (y=%.1f, expected %.1f)." % [
+			bandit.global_position.y, expected_floor
+		]
+	level.free()
+	return null
+
+
+func _test_workshop_stamp_catalog() -> Variant:
+	GameManager.active_custom_slot = CustomLevelStore.EXTRA_SLOT_START
+	var editor_packed: PackedScene = load("res://scenes/ui/level_editor.tscn")
+	if editor_packed == null:
+		return "Missing level editor scene."
+	var editor := editor_packed.instantiate()
+	add_child(editor)
+	await get_tree().process_frame
+	var palette_types: PackedStringArray = []
+	for category in editor.TOOL_CATEGORIES:
+		for tool in (category as Dictionary).get("tools", []) as Array:
+			palette_types.append(str((tool as Array)[0]))
+	editor.queue_free()
+	for type_name in ["bounty_bandit", "carrion"]:
+		if type_name not in palette_types:
+			return "Workshop palette missing %s stamp." % type_name
+	var trail := CustomLevelStore.trail_row(8)
+	for type_name in ["bounty_bandit", "carrion"]:
+		if not CustomLevelStore._valid_object({"type": type_name, "x": 1, "y": trail - 1}, trail):
+			return "%s should be accepted by CustomLevelStore." % type_name
+	var data := CustomLevelStore.default_level(0)
+	data["objects"] = [
+		{"type": "ground", "x": 2, "y": trail},
+		{"type": "bounty_bandit", "x": 2, "y": trail - 1},
+		{"type": "carrion", "x": 6, "y": trail - 3},
+	]
+	var level := LevelController.new()
+	CustomLevelBuilder.build(level, data)
+	var bounty := level.find_child("Opponent0", true, false) as Opponent
+	if bounty == null or not bounty.bounty_bandit:
+		level.free()
+		return "Builder should spawn a bounty bandit from the bounty stamp."
+	if level.find_child("Carrion0", true, false) == null:
+		level.free()
+		return "Builder should spawn carrion birds from the carrion stamp."
+	level.free()
+	return null
+
+
+func _test_workshop_preview_stamp() -> Variant:
+	var preview := LevelPreview.new()
+	add_child(preview)
+	var trail := CustomLevelStore.trail_row(8)
+	var data := CustomLevelStore.default_level(0)
+	preview.show_level(data)
+	preview.set_selected_type("cactus")
+	await get_tree().process_frame
+	var requested: Array = []
+	preview.stamp_requested.connect(func(column: int, row: int) -> void: requested.append([column, row]))
+	preview.set_hover_cell(8, trail)
+	preview.size = Vector2(420, 320)
+	await get_tree().process_frame
+	var display := preview._preview_display_rect()
+	if display.size.x <= 1.0:
+		preview.queue_free()
+		return "Preview display rect should be usable for click mapping."
+	var local := display.position + Vector2(display.size.x * 0.5, display.size.y * 0.6)
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	click.position = local
+	preview._gui_input(click)
+	if requested.is_empty():
+		preview.queue_free()
+		return "Preview click should request stamp placement."
+	if int((requested[0] as Array)[0]) != 8:
+		preview.queue_free()
+		return "Preview click should map to the hovered column."
+	var ghost := preview._ghost_rect_screen()
+	if ghost.size.x <= 1.0:
+		preview.queue_free()
+		return "Preview should draw a stamp footprint ghost while hovering."
+	preview.queue_free()
+	return null
+
+
+func _test_airborne_bandit_falls() -> Variant:
+	var floor := StaticBody2D.new()
+	floor.name = "TestFloor"
+	floor.collision_layer = 1
+	floor.collision_mask = 0
+	var shape := CollisionShape2D.new()
+	var rect := RectangleShape2D.new()
+	rect.size = Vector2(400, 40)
+	shape.shape = rect
+	shape.position = Vector2(0, 20)
+	floor.add_child(shape)
+	floor.position = Vector2(200, 300)
+	add_child(floor)
+	var packed: PackedScene = load("res://scenes/world/opponent.tscn")
+	if packed == null:
+		floor.queue_free()
+		return "Missing opponent scene."
+	var bandit := packed.instantiate() as Opponent
+	bandit.global_position = Vector2(200, 120)
+	add_child(bandit)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	for _i in range(120):
+		await get_tree().physics_frame
+		if not bandit._falling:
+			break
+	if bandit._falling:
+		bandit.queue_free()
+		floor.queue_free()
+		return "Airborne bandit should finish falling onto walkable ground."
+	if absf(bandit.global_position.y - 300.0) > 6.0:
+		bandit.queue_free()
+		floor.queue_free()
+		return "Bandit should land on the floor surface (y=%.1f)." % bandit.global_position.y
+	bandit.queue_free()
+	floor.queue_free()
 	return null
 
 

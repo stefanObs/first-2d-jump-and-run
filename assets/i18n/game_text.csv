@@ -88,6 +88,7 @@ Nice! %d badges!,Nice! %d badges!,Klasse! %d Abzeichen!
 Game saved at camp!,Game saved at camp!,Spiel am Lager gespeichert!
 Bounce! Bubble safe!,Bounce! Bubble safe!,Hüpf! Die Blase schützt dich!
 Bounty caught! +%d badges!,Bounty caught! +%d badges!,Gesuchten gefangen! +%d Abzeichen!
+Treasure chest! +%d badges!,Treasure chest! +%d badges!,Schatztruhe! +%d Abzeichen!
 Nice ride! Keep going!,Nice ride! Keep going!,Guter Ritt! Weiter so!
 Halfway to the saloon!,Halfway to the saloon!,Halbzeit bis zum Saloon!
 "Almost there, cowboy!","Almost there, cowboy!","Fast geschafft, Cowboy!"
@@ -156,7 +157,7 @@ New trail reset to its starting layout.,New trail reset to its starting layout.,
 Edit Campaign Level,Edit Campaign Level,Kampagnen-Level bearbeiten
 Add Campaign Level,Add Campaign Level,Kampagnen-Level hinzufügen
 "1. Pick a stamp   2. Pick a square   3. Save or Play Test","1. Pick a stamp   2. Pick a square   3. Save or Play Test","1. Stempel wählen   2. Feld wählen   3. Speichern oder Test spielen"
-Bottom row is the trail: Dirt or Canyon sets the ground and what sits below it.,Bottom row is the trail: Dirt or Canyon sets the ground and what sits below it.,Die unterste Zeile ist der Pfad: Erde oder Canyon legt den Boden und das darunter fest.
+Bottom row is dirt/canyon. Ground props stamp one row above dirt so they stand on the trail.,Bottom row is dirt/canyon. Ground props stamp one row above dirt so they stand on the trail.,Die unterste Zeile ist Erde/Canyon. Boden-Stempel kommen eine Zeile über die Erde damit sie auf dem Pfad stehen.
 Stamp,Stamp,Stempel
 Stamp category,Stamp category,Stempel-Kategorie
 Stamp tool,Stamp tool,Stempel-Werkzeug
@@ -176,7 +177,9 @@ Canyon,Canyon,Canyon
 Camp,Camp,Lager
 Spring,Spring,Feder
 Bandit,Bandit,Bandit
+Bounty Bandit,Bounty Bandit,Gesuchter Bandit
 Rattlesnake,Rattlesnake,Klapperschlange
+Carrion Bird,Carrion Bird,Aasgeier
 Saloon,Saloon,Saloon
 Erase,Erase,Radierer
 Live preview (3/4 size) — full height, follows stamp cursor,Live preview (3/4 size) — full height, follows stamp cursor,Live-Vorschau (3/4 Größe) — volle Höhe folgt dem Stempel-Cursor

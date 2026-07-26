@@ -11,6 +11,7 @@ signal bounty_caught(opponent: Opponent, amount: int)
 const STAND_SCALE := 1.15
 const TIED_SCALE := 0.7
 const STOMP_BOUNCE := -420.0
+const STOMP_MIN_FALL_SPEED := 80.0
 ## Sprite offset so feet sit on local y=0 (desert surface when root is on the trail floor).
 ## Offset is scaled with the sprite (Godot CanvasItem), so use -half_height, not -half_height*scale.
 const STAND_FOOT_OFFSET := Vector2(0, -40)
@@ -431,11 +432,12 @@ func _find_nearby_player(radius: float) -> Player:
 
 
 func _is_head_stomp(player: Player) -> bool:
-	# Cowboy feet are at global_position; bandit feet are too.
-	# Landing on the bandit's solid body zeroes velocity.y before HurtArea fires,
-	# so stomps are judged by being above his chest — not by fall speed alone.
+	# Stomp = contact from above while falling downward (jump onto the bandit).
+	# Side bumps, upward hits, and standing overlap without fall speed hurt instead.
 	var chest_y := global_position.y - 24.0
 	if player.global_position.y > chest_y:
+		return false
+	if player.velocity.y < STOMP_MIN_FALL_SPEED:
 		return false
 	return true
 

@@ -2,7 +2,7 @@
 
 Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, nonviolent lasso. **Classic mode** has no lives or game over; **Advanced Mode** (chosen on the save-select screen before starting a slot) adds a three-life limit, badge milestones, and a game-over return to the start screen. **German is the default language**; English is fully supported.
 
-**Content version:** `1.3.77` (see `content_version.txt`). Launchers reimport when this stamp changes.
+**Content version:** `1.3.85` (see `content_version.txt`). Launchers reimport when this stamp changes.
 
 This README is the **binding source of truth** for gameplay, level design, art, i18n, and audio. Agents and contributors must follow it (see [Agent / contributor rules](#agent--contributor-rules)).
 
@@ -53,7 +53,7 @@ After Kingpin: horizon victory ride, fade, dedication **VOM PAPI FÜR FINN**, th
 
 **Saves:** three slots; auto-save; local `savegames/` (gitignored). `SAVE_VERSION` 4 — older formats discarded. Delete via card context / Space / Xbox Y + confirm.
 
-**Campaign Workshop / trail editor:** Upper half edits the trail with a **category picker** (each category shows an example thumbnail) plus stamp tools — the **Trail / path** category uses direct **Dirt / Canyon / Plank** icon buttons (canyon icon: both ridges with sky-blue gap), while other categories use a compact tool dropdown. **+ Length / − Length** adjust the trail in **12-column steps** (defaults match built-in campaign width: **180 columns**; min 12, max 180). A stamp grid shows the **full level height** plus a horizontal slide bar to reach the end; sideways grid scroll is **edge auto-scroll or the slide bar only** (no wheel/trackpad pan). Lower half gives priority to a **live gameplay preview** (same build/theme as play) framed to the **full vertical extent**, centered on the stamp cursor; chrome and grid heights stay compact so the preview stays visible on 720p. Explicit **Save Trail** and **Reset Changes**. The grid keeps a minimum edit height and scrolls vertically when the window is short so stamps stay tappable. Adjacent **canyon stamps merge into one wider gap** at build time. **Export Trails / Import Trails** in the workshop (or **Export Trail / Import Trail** in the editor) share custom levels as one portable `.cowboytrail` JSON pack — the editor reads/writes a single trail into the current session without auto-saving until you press Save. Translation editor (debug-only, F1 on save select) edits DE/EN CSV export into `savegames/`.
+**Campaign Workshop / trail editor:** Upper half edits the trail with a **category picker** (each category shows an example thumbnail) plus stamp tools — the **Trail / path** category uses direct **Dirt / Canyon / Plank** icon buttons (canyon icon: both ridges with sky-blue gap), while other categories use a compact tool dropdown. **+ Length / − Length** adjust the trail in **12-column steps** (defaults match built-in campaign width: **180 columns**; min 12, max 180). A stamp grid shows the **full level height** plus a horizontal slide bar to reach the end; sideways grid scroll is **edge auto-scroll or the slide bar only** (no wheel/trackpad pan). **Ground-standing props** (cactus, camps, springs, bandits, snakes, power-ups, saloon) stamp **one row above dirt** so they stand on the trail surface; hovering shows a ghost of where the stamp will land, and the live preview draws a footprint outline at the correct size. **Bounty Bandit** and **Carrion Bird** stamps join the enemy palette. Clicking the **live preview** places the selected stamp at the matching column/row (same as the grid). Lower half gives priority to a **live gameplay preview** (same build/theme as play) framed to the **full vertical extent**, centered on the stamp cursor; chrome and grid heights stay compact so the preview stays visible on 720p. Explicit **Save Trail** and **Reset Changes**. The grid keeps a minimum edit height and scrolls vertically when the window is short so stamps stay tappable. Adjacent **canyon stamps merge into one wider gap** at build time. **Export Trails / Import Trails** in the workshop (or **Export Trail / Import Trail** in the editor) share custom levels as one portable `.cowboytrail` JSON pack — the editor reads/writes a single trail into the current session without auto-saving until you press Save. Translation editor (debug-only, F1 on save select) edits DE/EN CSV export into `savegames/`.
 
 ---
 
@@ -61,9 +61,10 @@ After Kingpin: horizon victory ride, fade, dedication **VOM PAPI FÜR FINN**, th
 
 - **Move:** arrows or A/D; **jump:** Space (coyote ~0.16s, buffer ~0.15s, variable height). Xbox: stick/D-pad, A jump, X lasso, B back, Menu pause.
 - **Horse (Level 1):** `start_mounted` — faster run (~1.45×), jumps ~20% farther. Midnight Coach chase is mounted at that pace.
-- **Lasso:** Alt / F / L (Xbox X) — ties bandits (pass-through, seated rope pose). Head stomp also ties + small bounce. Side contact hurts.
+- **Lasso:** Alt / F / L (Xbox X) — ties bandits (pass-through, seated rope pose). A downward jump stomp from above also ties + small bounce; side/upward/standing contact hurts. Bandits placed in mid-air (workshop or level layout) **fall to the walkable surface below** before patrolling.
 - **Modes** (one at a time; badge pickup adds ~5s): Wings / Magic Boots / Speed Star **30s**; Bubble Shield **7.5s** (blocks bandits, bounces cacti; **does not** save canyon falls).
 - **Camps:** checkpoints; respawn there after canyon/cactus hurt. Classic mode has no life limit; **Advanced Mode** costs one life per respawn (three lives at start; every **30 badges** collected across the save grants +1 life; at zero lives a western game-over plays and returns to save select). Camps store badges/mode state appropriately.
+- **Treasure chests:** optional mid/late-trail rewards — touch to open once; five sheriff badges burst out (same total / Advanced Mode lifetime count as badge pickups); chest stays open and cannot be re-triggered.
 - **Canyons vs cactus:** canyon fall → spin recovery → camp. Cactus/bandit/carrion/snake hurt → camp (Bubble can block some damage). Call gaps **canyons**, never “pits”, in user-facing text.
 - **Stars:** optional; goals are saloon doorways (flying over counts). Level clear → horse ride-in/mount/ride-out → next level: ride in, dismount, and **leave the horse at the level start**. Handmade desert skyline behind transitions.
 
@@ -78,7 +79,7 @@ Agents **must** honor these when editing levels or trail systems:
 ### Naming & hazards
 
 - User-facing and UI copy: **canyon**, not pit (legacy node names like `PitMouth` may remain internally).
-- Bandits: head stomp / lasso tie; side contact hurts; **turn at plank edges** (do not walk off).
+- Bandits: downward jump stomp from above / lasso tie; any other contact hurts; **turn at plank edges** (do not walk off).
 - **No cactus inside canyon mouths** or on hand-painted rim bands (keep clear of the rim body past the gap).
 - **No rattlesnake directly in front of** (approaching) a canyon mouth.
 - **No timed doors** (`TimedDoor`) over ground canyon gaps or on rim bands (tall gates must not sit above canyon mouths).

@@ -7,10 +7,12 @@ const PLAYER := preload("res://scenes/player/player.tscn")
 const CHECKPOINT := preload("res://scenes/world/checkpoint.tscn")
 const GOAL := preload("res://scenes/world/goal.tscn")
 const HAZARD := preload("res://scenes/world/hazard.tscn")
+const CHEST := preload("res://scenes/world/treasure_chest.tscn")
 const STAR := preload("res://scenes/world/star.tscn")
 const SPRING := preload("res://scenes/world/spring_pad.tscn")
 const BANDIT := preload("res://scenes/world/opponent.tscn")
 const RATTLESNAKE := preload("res://scenes/world/rattlesnake.tscn")
+const CARRION := preload("res://scenes/world/carrion.tscn")
 const MODE_ITEM := preload("res://scenes/world/mode_item.tscn")
 const HUD := preload("res://scenes/ui/hud.tscn")
 const PAUSE := preload("res://scenes/ui/pause_menu.tscn")
@@ -44,15 +46,14 @@ static func build(level: LevelController, data: Dictionary, preview: bool = fals
 			continue
 		var index := int(counters.get(type_name, 0))
 		counters[type_name] = index + 1
-		var position := Vector2(
-			(float(object.get("x", 0)) + 0.5) * grid,
-			float(object.get("y", 0)) * grid
-		)
+		var position := CustomLevelStore.object_world_position(object, grid, trail)
 		match type_name:
 			"platform":
 				_add_block(level, "Platform%d" % index, position, Vector2(grid * 2.0, 24), Color(0.55, 0.32, 0.14))
 			"star":
 				_add_scene(level, STAR, "CustomStar%d" % index, position)
+			"chest":
+				_add_scene(level, CHEST, "CustomChest%d" % index, position)
 			"cactus":
 				_add_scene(level, HAZARD, "Cactus%d" % index, position)
 			"checkpoint":
@@ -61,8 +62,14 @@ static func build(level: LevelController, data: Dictionary, preview: bool = fals
 				_add_scene(level, SPRING, "Spring%d" % index, position)
 			"bandit":
 				_add_scene(level, BANDIT, "Opponent%d" % index, position)
+			"bounty_bandit":
+				var bounty := _add_scene(level, BANDIT, "Opponent%d" % index, position) as Opponent
+				if bounty != null:
+					bounty.bounty_bandit = true
 			"rattlesnake":
 				_add_scene(level, RATTLESNAKE, "Rattlesnake%d" % index, position)
+			"carrion":
+				_add_scene(level, CARRION, "Carrion%d" % index, position)
 			"wings", "boots", "speed", "shield":
 				var mode_item := _add_scene(level, MODE_ITEM, "ModeItem%d" % index, position) as ModeItem
 				if mode_item != null:
@@ -80,7 +87,12 @@ static func build(level: LevelController, data: Dictionary, preview: bool = fals
 		canyon.scale = Vector2(1.8, 1.8)
 
 	if not has_goal:
-		_add_scene(level, GOAL, "Goal", Vector2((width - 2) * grid, float(trail) * grid))
+		_add_scene(
+			level,
+			GOAL,
+			"Goal",
+			Vector2((width - 2) * grid, float(trail) * grid)
+		)
 	var player := PLAYER.instantiate() as Player
 	player.name = "Player"
 	# Dusty Trail (campaign source 1) teaches mounted riding — keep that when
