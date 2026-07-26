@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Transform handcrafted cowboy mounted horse sprites into cowgirl versions."""
+"""Build mounted cowgirl horse sprites via conservative in-place rider edits."""
 
 from __future__ import annotations
 
@@ -7,107 +7,180 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
-from generate_cowgirl_player_art import _draw_pigtails, _is_hair, _is_jeans, _jeans_to_skirt, _shade, _avg, _cluster
-
 ROOT = Path(__file__).resolve().parents[1]
 WORLD = ROOT / "assets" / "world"
 
-PAIRS = [
-    ("cowboy_horse_ride_0.png", "cowgirl_horse_ride_0.png"),
-    ("cowboy_horse_ride_1.png", "cowgirl_horse_ride_1.png"),
-    ("cowboy_horse_jump.png", "cowgirl_horse_jump.png"),
-]
+FRAME_EDITS = {
+    "cowboy_horse_ride_0.png": {
+        "left": ((154, 35), (146, 55), (140, 82)),
+        "right": ((192, 35), (200, 55), (206, 82)),
+    },
+    "cowboy_horse_ride_1.png": {
+        "left": ((152, 35), (144, 57), (138, 84)),
+        "right": ((190, 35), (198, 57), (204, 84)),
+    },
+    "cowboy_horse_jump.png": {
+        "left": ((150, 31), (142, 52), (136, 76)),
+        "right": ((188, 31), (196, 52), (202, 76)),
+    },
+}
 
 
-def _rider_jeans_to_skirt(img: Image.Image) -> None:
-    """Skirt conversion tuned for the mounted rider's compact leg area."""
+def _is_rider_pants(r: int, g: int, b: int, a: int) -> bool:
+    return a > 40 and b > 85 and b > r and g > 65
+
+
+def _is_hair(r: int, g: int, b: int, a: int) -> bool:
+    return a > 40 and 45 < r < 150 and 35 < g < 95 and 20 < b < 80 and r > g + 10 and r > b + 15
+
+
+def _avg(colors: list[tuple[int, int, int, int]]) -> tuple[int, int, int, int]:
+    if not colors:
+        return (98, 58, 28, 255)
+    rs = [c[0] for c in colors]
+    gs = [c[1] for c in colors]
+    bs = [c[2] for c in colors]
+    return (sum(rs) // len(rs), sum(gs) // len(gs), sum(bs) // len(bs), 255)
+
+
+def _shade(color: tuple[int, int, int, int], amount: float) -> tuple[int, int, int, int]:
+    return (
+        max(0, min(255, int(color[0] * amount))),
+        max(0, min(255, int(color[1] * amount))),
+        max(0, min(255, int(color[2] * amount))),
+        color[3],
+    )
+
+
+def _sample_palette(img: Image.Image) -> tuple[tuple[int, int, int, int], tuple[int, int, int, int], tuple[int, int, int, int], tuple[int, int, int, int]]:
     px = img.load()
-    w, h = img.size
-    rows: dict[int, list[int]] = {}
-    jeans_colors: list[tuple[int, int, int, int]] = []
-    for y in range(h):
-        for x in range(w):
-            r, g, b, a = px[x, y]
-            if _is_jeans(r, g, b, a):
-                rows.setdefault(y, []).append(x)
-                jeans_colors.append((r, g, b, a))
-    if not rows:
-        return
-
-    denim = _avg(jeans_colors)
-    denim_dark = _shade(denim, 0.78)
-    denim_light = _shade(denim, 1.08)
-    y_min = min(rows)
-    y_max = max(rows)
-    for y in range(y_min, y_max + 1):
-        xs = rows.get(y, [])
-        if len(xs) < 2:
-            continue
-        clusters = _cluster(xs)
-        left = clusters[0][0]
-        right = clusters[-1][-1]
-        flare = int((y - y_min) / max(1, y_max - y_min) * 3)
-        skirt_left = max(0, left - flare // 2)
-        skirt_right = min(w - 1, right + 1 + flare)
-        for x in range(skirt_left, skirt_right + 1):
-            r, g, b, a = px[x, y]
-            if a < 20 or _is_jeans(r, g, b, a):
-                t = (x - skirt_left) / max(1, skirt_right - skirt_left)
-                fill = denim_dark if t < 0.25 or t > 0.75 else denim if t < 0.45 or t > 0.55 else denim_light
-                px[x, y] = fill
-
-
-def _mounted_pigtails(img: Image.Image, swing: float = 0.0) -> None:
-    px = img.load()
-    w, h = img.size
-    hair_colors: list[tuple[int, int, int, int]] = []
-    crown_x: list[int] = []
-    crown_y = 0
-    for y in range(0, min(h, 120)):
-        for x in range(w):
+    hair: list[tuple[int, int, int, int]] = []
+    red: list[tuple[int, int, int, int]] = []
+    pants: list[tuple[int, int, int, int]] = []
+    for y in range(18, 100):
+        for x in range(145, 200):
             r, g, b, a = px[x, y]
             if _is_hair(r, g, b, a):
-                hair_colors.append((r, g, b, a))
-                crown_x.append(x)
-                crown_y = max(crown_y, y)
-    if not crown_x:
-        _draw_pigtails(img, swing)
-        return
-
-    hair = _avg(hair_colors)
-    hair_dark = _shade(hair, 0.82)
-    ink = (32, 14, 4, 255)
-    cx = sum(crown_x) // len(crown_x)
-    cy = max(18, crown_y - 4)
-    draw = ImageDraw.Draw(img)
-    left = [(cx - 24, cy), (cx - 30 - swing, cy + 10), (cx - 28 - swing, cy + 20), (cx - 24, cy + 14)]
-    right = [(cx + 24, cy), (cx + 30 + swing, cy + 10), (cx + 28 + swing, cy + 20), (cx + 24, cy + 14)]
-    for braid in (left, right):
-        draw.line(braid, fill=hair_dark, width=6)
-        draw.line(braid, fill=hair, width=3)
-        draw.ellipse((braid[-1][0] - 3, braid[-1][1] - 3, braid[-1][0] + 3, braid[-1][1] + 3), fill=hair)
-    draw.line((cx - 26, cy + 2, cx - 20, cy + 5), fill=ink, width=2)
-    draw.line((cx + 26, cy + 2, cx + 20, cy + 5), fill=ink, width=2)
+                hair.append((r, g, b, a))
+            elif _is_rider_pants(r, g, b, a):
+                pants.append((r, g, b, a))
+            elif a > 40 and r > 150 and g < 90 and b < 90:
+                red.append((r, g, b, a))
+    hair_base = _avg(hair) if hair else (92, 52, 26, 255)
+    denim = _avg(pants) if pants else (78, 118, 168, 255)
+    ribbon = _avg(red) if red else (208, 48, 38, 255)
+    return hair_base, _shade(hair_base, 0.78), ribbon, denim
 
 
-def transform_horse(cowboy_name: str, out_name: str, swing: float = 0.0) -> None:
-    src = WORLD / cowboy_name
-    out = WORLD / out_name
+def _trim_side_hair(px, w: int, h: int) -> None:
+    for y in range(24, 38):
+        for x in range(145, 220):
+            r, g, b, a = px[x, y]
+            if a < 40 or not _is_hair(r, g, b, a):
+                continue
+            if x < 156 or x > 190:
+                px[x, y] = (0, 0, 0, 0)
+
+
+def _curve_points(anchors: tuple[tuple[int, int], tuple[int, int], tuple[int, int]], steps: int = 16) -> list[tuple[int, int]]:
+    a, b, c = anchors
+    points: list[tuple[int, int]] = []
+    for i in range(steps + 1):
+        t = i / steps
+        u = 1 - t
+        x = int(u * u * a[0] + 2 * u * t * b[0] + t * t * c[0])
+        y = int(u * u * a[1] + 2 * u * t * b[1] + t * t * c[1])
+        points.append((x, y))
+    return points
+
+
+def _draw_pigtail(
+    draw: ImageDraw.ImageDraw,
+    anchors: tuple[tuple[int, int], tuple[int, int], tuple[int, int]],
+    hair_base: tuple[int, int, int, int],
+    hair_dark: tuple[int, int, int, int],
+) -> None:
+    points = _curve_points(anchors)
+    draw.line(points, fill=hair_dark[:3], width=8, joint="curve")
+    draw.line(points, fill=hair_base[:3], width=5, joint="curve")
+    draw.line(points, fill=_shade(hair_base, 1.08)[:3], width=2, joint="curve")
+
+
+def _draw_ribbon(draw: ImageDraw.ImageDraw, center: tuple[int, int], ribbon: tuple[int, int, int, int]) -> None:
+    x, y = center
+    draw.ellipse((x - 8, y - 5, x + 8, y + 5), fill=ribbon[:3])
+    draw.ellipse((x - 5, y - 3, x + 5, y + 3), fill=_shade(ribbon, 1.12)[:3])
+
+
+def _is_skin(r: int, g: int, b: int, a: int) -> bool:
+    return a > 40 and r > 175 and g > 120 and b > 90
+
+
+def _mounted_skirt_drape(img: Image.Image, denim: tuple[int, int, int, int], denim_dark: tuple[int, int, int, int]) -> None:
+    px = img.load()
+    w, h = img.size
+    for y in range(78, 88):
+        progress = (y - 78) / 10.0
+        panels = (
+            range(int(136 - progress * 6), int(152 - progress * 2)),
+            range(int(194 + progress * 2), int(210 + progress * 6)),
+        )
+        for x_range in panels:
+            for x in x_range:
+                if not (0 <= x < w and 0 <= y < h):
+                    continue
+                r, g, b, a = px[x, y]
+                if a < 40 or not _is_skin(r, g, b, a):
+                    continue
+                px[x, y] = denim_dark if x < 150 else denim
+
+
+def _mounted_skirt(img: Image.Image, denim: tuple[int, int, int, int], denim_dark: tuple[int, int, int, int]) -> None:
+    px = img.load()
+    w, h = img.size
+    for y in range(84, 100):
+        row: list[int] = []
+        for x in range(130, 210):
+            r, g, b, a = px[x, y]
+            if _is_rider_pants(r, g, b, a):
+                row.append(x)
+        if len(row) < 3:
+            continue
+        left = min(row)
+        right = max(row)
+        flare = int((y - 84) / 16 * 20)
+        skirt_left = max(124, left - 8 - flare // 2)
+        skirt_right = min(w - 1, right + 8 + flare // 2)
+        for x in range(skirt_left, skirt_right + 1):
+            r, g, b, a = px[x, y]
+            if a < 40:
+                continue
+            if _is_rider_pants(r, g, b, a):
+                t = (x - skirt_left) / max(1, skirt_right - skirt_left)
+                px[x, y] = denim_dark if t < 0.18 or t > 0.82 else denim
+
+
+def transform_horse(src: Path, dst: Path) -> None:
     img = Image.open(src).convert("RGBA")
-    _rider_jeans_to_skirt(img)
-    _mounted_pigtails(img, swing)
-    img.save(out)
-    print(f"wrote {out}")
+    hair_base, hair_dark, ribbon, denim = _sample_palette(img)
+    px = img.load()
+    _trim_side_hair(px, img.width, img.height)
+    draw = ImageDraw.Draw(img)
+    edits = FRAME_EDITS[src.name]
+    _draw_pigtail(draw, edits["left"], hair_base, hair_dark)
+    _draw_pigtail(draw, edits["right"], hair_base, hair_dark)
+    _draw_ribbon(draw, edits["left"][0], ribbon)
+    _draw_ribbon(draw, edits["right"][0], ribbon)
+    _mounted_skirt_drape(img, denim, _shade(denim, 0.78))
+    _mounted_skirt(img, denim, _shade(denim, 0.78))
+    img.save(dst)
+    print(f"wrote {dst}")
 
 
 def main() -> None:
-    swings = {
-        "cowboy_horse_ride_0.png": 0.0,
-        "cowboy_horse_ride_1.png": 1.5,
-        "cowboy_horse_jump.png": -2.0,
-    }
-    for cowboy_name, out_name in PAIRS:
-        transform_horse(cowboy_name, out_name, swings.get(cowboy_name, 0.0))
+    for cowboy_name in FRAME_EDITS:
+        out_name = cowboy_name.replace("cowboy_", "cowgirl_")
+        transform_horse(WORLD / cowboy_name, WORLD / out_name)
 
 
 if __name__ == "__main__":
