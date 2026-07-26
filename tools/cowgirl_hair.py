@@ -1,7 +1,8 @@
-"""Shared pixel-braid hair drawing for cowgirl player and horse sprites."""
+"""Shared cowgirl hair drawing — wavy pigtails from head under hat."""
 
 from __future__ import annotations
 
+import math
 from typing import Callable
 
 from PIL import Image
@@ -9,9 +10,15 @@ from PIL import Image
 HairPredicate = Callable[[int, int, int, int], bool]
 Palette = tuple[tuple[int, int, int, int], tuple[int, int, int, int], tuple[int, int, int, int], tuple[int, int, int, int]]
 
+# Golden-brown family inspired by reference blonde, mapped to cowboy ink/shade technique.
+HAIR_BASE = (168, 112, 36, 255)
+HAIR_DARK = (118, 68, 18, 255)
+HAIR_LIGHT = (214, 158, 62, 255)
+HAIR_INK = (42, 24, 8, 255)
+
 
 def is_hair_pixel(r: int, g: int, b: int, a: int) -> bool:
-    return a > 40 and 45 < r < 180 and g < 110 and b < 95 and r > g and r > b
+    return a > 40 and 45 < r < 220 and g < 130 and b < 110 and r > g and r > b
 
 
 def is_skin_pixel(r: int, g: int, b: int, a: int) -> bool:
@@ -58,7 +65,7 @@ def _can_paint_head_hair(px, x: int, y: int, w: int, h: int) -> bool:
 
 def _avg(colors: list[tuple[int, int, int, int]]) -> tuple[int, int, int, int]:
     if not colors:
-        return (126, 66, 13, 255)
+        return HAIR_BASE
     rs = [c[0] for c in colors]
     gs = [c[1] for c in colors]
     bs = [c[2] for c in colors]
@@ -72,6 +79,14 @@ def shade(color: tuple[int, int, int, int], amount: float) -> tuple[int, int, in
         max(0, min(255, int(color[2] * amount))),
         color[3],
     )
+
+
+def cowgirl_hair_palette() -> Palette:
+    base = HAIR_BASE
+    dark = HAIR_DARK
+    light = HAIR_LIGHT
+    ink = HAIR_INK
+    return base, dark, light, ink
 
 
 def sample_hair_palette(
@@ -88,10 +103,19 @@ def sample_hair_palette(
             r, g, b, a = px[x, y]
             if is_hair_pixel(r, g, b, a):
                 hair.append((r, g, b, a))
+    if not hair:
+        return cowgirl_hair_palette()
     base = _avg(hair)
-    dark = shade(base, 0.78)
-    light = shade(base, 1.12)
-    ink = (max(0, base[0] // 3), max(0, base[1] // 3), max(0, min(24, base[2] // 4)), 255)
+    # Blend sampled cowboy browns toward golden cowgirl tone.
+    base = (
+        (base[0] + HAIR_BASE[0]) // 2,
+        (base[1] + HAIR_BASE[1]) // 2,
+        (base[2] + HAIR_BASE[2]) // 2,
+        255,
+    )
+    dark = shade(base, 0.72)
+    light = shade(base, 1.14)
+    ink = (max(0, base[0] // 4), max(0, base[1] // 4), max(0, min(28, base[2] // 5)), 255)
     return base, dark, light, ink
 
 
@@ -134,21 +158,16 @@ def find_braid_anchors(img: Image.Image) -> tuple[tuple[int, int], tuple[int, in
     if not left_pts or not right_pts:
         return (20, 18), (w - 21, 18)
 
-    def _pick_left(points: list[tuple[int, int]]) -> tuple[int, int]:
-        return max(points, key=lambda p: (-abs(p[1] - 18), p[0]))
-
-    def _pick_right(points: list[tuple[int, int]]) -> tuple[int, int]:
-        scored: list[tuple[bool, int, int, int, int]] = []
-        for x, y in points:
-            skin_near = any(
-                0 <= x + dx < w and 0 <= y + dy < h and is_skin_pixel(*px[x + dx, y + dy][:4])
-                for dx, dy in [(-1, 0), (1, 0), (0, 1), (0, -1)]
-            )
-            scored.append((skin_near, -abs(y - 18), -x, x, y))
-        best = max(scored)
-        return (best[3], best[4])
-
-    return _pick_left(left_pts), _pick_right(right_pts)
+    left = max(left_pts, key=lambda p: (-abs(p[1] - 18), p[0]))
+    scored: list[tuple[bool, int, int, int, int]] = []
+    for x, y in right_pts:
+        skin_near = any(
+            0 <= x + dx < w and 0 <= y + dy < h and is_skin_pixel(*px[x + dx, y + dy][:4])
+            for dx, dy in [(-1, 0), (1, 0), (0, 1), (0, -1)]
+        )
+        scored.append((skin_near, -abs(y - 18), -x, x, y))
+    right = (max(scored)[3], max(scored)[4])
+    return left, right
 
 
 def find_mounted_braid_anchors(
@@ -159,7 +178,6 @@ def find_mounted_braid_anchors(
     y0: int = 27,
     y1: int = 33,
 ) -> tuple[tuple[int, int], tuple[int, int], tuple[int, int], tuple[int, int], tuple[int, int], tuple[int, int]]:
-    """Return left/right braid paths (start, control, end) for mounted rider."""
     px = img.load()
     center_x = (x0 + x1) // 2
     left_pts: list[tuple[int, int]] = []
@@ -173,14 +191,14 @@ def find_mounted_braid_anchors(
             elif x >= center_x + 10:
                 right_pts.append((x, y))
     if not left_pts or not right_pts:
-        fallback_y = 30
+        y = 30
         return (
-            (154, fallback_y),
-            (146, fallback_y + 20),
-            (140, fallback_y + 47),
-            (192, fallback_y),
-            (200, fallback_y + 20),
-            (206, fallback_y + 47),
+            (154, y),
+            (144, y + 22),
+            (132, y + 58),
+            (192, y),
+            (202, y + 22),
+            (214, y + 58),
         )
     left = max(left_pts, key=lambda p: (-abs(p[1] - 30), p[0]))
     right = min(right_pts, key=lambda p: (-abs(p[1] - 30), p[0]))
@@ -188,11 +206,11 @@ def find_mounted_braid_anchors(
     rx, ry = right
     return (
         left,
-        (lx - 8, ly + 20),
-        (lx - 14, ly + 47),
+        (lx - 10, ly + 22),
+        (lx - 16, ly + 58),
         right,
-        (rx + 8, ry + 20),
-        (rx + 14, ry + 47),
+        (rx + 10, ry + 22),
+        (rx + 16, ry + 58),
     )
 
 
@@ -250,16 +268,16 @@ def _paint(
 
 
 def _blob_radius(t: float, scale: float) -> int:
-    if t < 0.2:
-        return max(1, int(round(2.2 * scale)))
-    if t < 0.58:
-        return max(1, int(round(1.7 * scale)))
-    if t < 0.85:
-        return max(1, int(round(1.2 * scale)))
-    return 1
+    if t < 0.15:
+        return max(2, int(round(2.6 * scale)))
+    if t < 0.55:
+        return max(2, int(round(2.1 * scale)))
+    if t < 0.82:
+        return max(1, int(round(1.6 * scale)))
+    return max(1, int(round(1.1 * scale)))
 
 
-def _braid_color(side: str, dx: int, dy: int, radius: int, base, dark, light, ink) -> tuple[int, int, int, int]:
+def _strand_color(side: str, dx: int, dy: int, radius: int, base, dark, light, ink) -> tuple[int, int, int, int]:
     if side == "left":
         if dx <= -radius:
             return ink
@@ -277,7 +295,7 @@ def _braid_color(side: str, dx: int, dy: int, radius: int, base, dark, light, in
     return dark
 
 
-def draw_hanging_braid(
+def draw_wavy_pigtail(
     img: Image.Image,
     start: tuple[int, int],
     control: tuple[int, int],
@@ -286,23 +304,64 @@ def draw_hanging_braid(
     palette: Palette,
     *,
     scale: float = 1.0,
-    allow_over: HairPredicate | None = None,
     head_only: bool = False,
+    wave: float = 1.4,
 ) -> None:
+    """Thick wavy pigtail — reference long hair under hat."""
     px = img.load()
     w, h = img.size
     base, dark, light, ink = palette
-    points = _bezier2(start, control, end, max(10, int(12 * scale)))
+    points = _bezier2(start, control, end, max(14, int(16 * scale)))
     total = max(1, len(points) - 1)
     for i, (cx, cy) in enumerate(points):
         t = i / total
         radius = _blob_radius(t, scale)
+        # Sinusoidal wave perpendicular to fall direction.
+        wave_dx = int(round(math.sin(t * math.pi * 2.4 + (0.5 if side == "right" else 0.0)) * wave * scale))
+        wave_dy = int(round(math.cos(t * math.pi * 1.6) * 0.4 * scale))
+        cx += wave_dx if side == "left" else -wave_dx
+        cy += wave_dy
         for dy in range(-radius, radius + 1):
             for dx in range(-radius, radius + 1):
                 if abs(dx) + abs(dy) > radius + 1:
                     continue
-                color = _braid_color(side, dx, dy, radius, base, dark, light, ink)
-                _paint(px, cx + dx, cy + dy, w, h, color, allow_over, head_only=head_only)
+                color = _strand_color(side, dx, dy, radius, base, dark, light, ink)
+                _paint(px, cx + dx, cy + dy, w, h, color, None, head_only=head_only)
+
+
+def draw_bangs(img: Image.Image, palette: Palette) -> None:
+    """Forehead fringe visible under hat brim (reference cue)."""
+    px = img.load()
+    w, h = img.size
+    base, dark, light, ink = palette
+    cx = w // 2
+    for y in range(15, 18):
+        for x in range(cx - 8, cx + 9):
+            if not (0 <= x < w):
+                continue
+            if px[x, y][3] > 40 and not is_skin_pixel(*px[x, y][:4]) and not is_hair_pixel(*px[x, y][:4]):
+                continue
+            if px[x, y][3] < 40 or is_skin_pixel(*px[x, y][:4]) or is_head_hair_pixel(px, x, y, w, h):
+                t = abs(x - cx) / 8.0
+                color = ink if t > 0.85 else light if y == 15 else base if t < 0.35 else dark
+                if px[x, y][3] < 40 or is_skin_pixel(*px[x, y][:4]) or is_head_hair_pixel(px, x, y, w, h):
+                    px[x, y] = color
+
+
+def draw_temple_volume(img: Image.Image, left: tuple[int, int], right: tuple[int, int], palette: Palette) -> None:
+    """Side hair puff under hat before pigtail drop."""
+    px = img.load()
+    w, h = img.size
+    base, dark, light, _ink = palette
+    for anchor, side in ((left, "left"), (right, "right")):
+        x, y = anchor
+        offsets = [(-1, 0), (0, 0), (1, 0), (0, -1), (0, 1), (-1, 1), (1, 1)]
+        if side == "right":
+            offsets = [(1, 0), (0, 0), (-1, 0), (0, -1), (0, 1), (1, 1), (-1, 1)]
+        for i, (ox, oy) in enumerate(offsets):
+            px_x, px_y = x + ox, y + oy
+            if 0 <= px_x < w and 0 <= px_y < h and _can_paint_head_hair(px, px_x, px_y, w, h):
+                px[px_x, px_y] = light if i < 2 else base if i < 4 else dark
 
 
 def draw_ribbon_knot(
@@ -320,19 +379,9 @@ def draw_ribbon_knot(
     light = shade(ribbon, 1.08)
     offsets: list[tuple[int, int, tuple[int, int, int, int]]]
     if side == "left":
-        offsets = [
-            (0, 0, ribbon),
-            (-1, 0, dark),
-            (0, 1, dark),
-            (-1, 1, light),
-        ]
+        offsets = [(0, 0, ribbon), (-1, 0, dark), (0, 1, dark), (-1, 1, light), (-2, 0, dark)]
     else:
-        offsets = [
-            (0, 0, ribbon),
-            (1, 0, dark),
-            (0, 1, dark),
-            (1, 1, light),
-        ]
+        offsets = [(0, 0, ribbon), (1, 0, dark), (0, 1, dark), (1, 1, light), (2, 0, dark)]
     reach = max(1, int(round(scale)))
     for ox, oy, color in offsets:
         for sx in range(reach):
@@ -345,7 +394,7 @@ def draw_ribbon_knot(
                         px[px_x, px_y] = color
 
 
-def braid_controls(
+def pigtail_controls(
     left: tuple[int, int],
     right: tuple[int, int],
     swing: float,
@@ -355,47 +404,46 @@ def braid_controls(
     lx, ly = left
     rx, ry = right
     reach = max(1, int(round(2 * scale)))
-    drop_mid = max(2, int(round(6 * scale)))
-    drop_end = max(4, int(round(12 * scale)))
+    drop_mid = max(3, int(round(8 * scale)))
+    drop_end = max(6, int(round(18 * scale)))
     sway = int(round(swing))
     left_path = (
         left,
         (lx - reach + sway, ly + drop_mid),
-        (lx - 1 + sway, ly + drop_end),
+        (lx - 2 + sway, ly + drop_end),
     )
     right_path = (
         right,
         (rx + reach + sway, ry + drop_mid),
-        (rx + 1 + sway, ry + drop_end),
+        (rx + 2 + sway, ry + drop_end),
     )
     return left_path, right_path
 
 
-def _blend_braid_roots(img: Image.Image, left: tuple[int, int], right: tuple[int, int], palette: Palette) -> None:
-    px = img.load()
-    w, h = img.size
-    base, dark, _light, ink = palette
-    for anchor, side in ((left, "left"), (right, "right")):
-        x, y = anchor
-        offsets = [(-1, 0), (0, 0), (1, 0), (0, 1)] if side == "left" else [(1, 0), (0, 0), (-1, 0), (0, 1)]
-        for i, (ox, oy) in enumerate(offsets):
-            px_x, px_y = x + ox, y + oy
-            if 0 <= px_x < w and 0 <= px_y < h and _can_paint_head_hair(px, px_x, px_y, w, h):
-                px[px_x, px_y] = ink if i == 0 else base if i == 1 else dark
-
-
-def draw_player_braids(img: Image.Image, swing: float = 0.0) -> None:
-    px = img.load()
-    w, h = img.size
-    palette = sample_hair_palette(
-        img,
-        region=lambda x, y, _w, _h: 16 <= y < 24 and is_head_hair_pixel(px, x, y, _w, _h),
-    )
+def draw_player_cowgirl_hair(img: Image.Image, swing: float = 0.0) -> None:
+    palette = cowgirl_hair_palette()
     ribbon = sample_bandana(img)
     left, right = find_braid_anchors(img)
-    _blend_braid_roots(img, left, right, palette)
-    left_path, right_path = braid_controls(left, right, swing, scale=1.0)
-    draw_hanging_braid(img, *left_path, "left", palette, scale=1.0, head_only=True)
-    draw_hanging_braid(img, *right_path, "right", palette, scale=1.0, head_only=True)
+    draw_bangs(img, palette)
+    draw_temple_volume(img, left, right, palette)
+    left_path, right_path = pigtail_controls(left, right, swing, scale=1.0)
+    draw_wavy_pigtail(img, *left_path, "left", palette, scale=1.05, head_only=True, wave=1.2)
+    draw_wavy_pigtail(img, *right_path, "right", palette, scale=1.05, head_only=True, wave=1.2)
     draw_ribbon_knot(img, left, ribbon, "left", scale=1.0)
     draw_ribbon_knot(img, right, ribbon, "right", scale=1.0)
+
+
+def draw_mounted_cowgirl_hair(img: Image.Image) -> None:
+    palette = cowgirl_hair_palette()
+    ribbon = sample_bandana(img)
+    left_start, left_ctrl, left_end, right_start, right_ctrl, right_end = find_mounted_braid_anchors(img)
+    draw_wavy_pigtail(img, left_start, left_ctrl, left_end, "left", palette, scale=1.75, head_only=True, wave=2.0)
+    draw_wavy_pigtail(img, right_start, right_ctrl, right_end, "right", palette, scale=1.75, head_only=True, wave=2.0)
+    draw_ribbon_knot(img, left_start, ribbon, "left", scale=1.55)
+    draw_ribbon_knot(img, right_start, ribbon, "right", scale=1.55)
+
+
+# Backward-compatible aliases
+draw_hanging_braid = draw_wavy_pigtail
+braid_controls = pigtail_controls
+draw_player_braids = draw_player_cowgirl_hair
