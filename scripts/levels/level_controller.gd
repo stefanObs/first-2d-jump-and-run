@@ -626,7 +626,7 @@ func _on_hazard_hurt(hurt_player: Player, hazard: Hazard) -> void:
 		if hud != null:
 			hud.show_toast("Bounce! Bubble safe!", 1.4)
 		return
-	if hazard.is_canyon():
+	if hazard.is_fatal_fall():
 		_play_canyon_fall_and_respawn()
 		return
 	if hurt_player.is_invulnerable():

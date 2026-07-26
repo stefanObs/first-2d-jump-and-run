@@ -26,6 +26,7 @@ const TOOL_CATEGORIES: Array = [
 		"label": "Hazards",
 		"tools": [
 			["cactus", "Cactus", "res://assets/world/cactus.png"],
+			["pit", "Pit", "res://assets/world/pit.png"],
 			["spring", "Spring", "res://assets/world/spring.png"],
 		],
 	},
@@ -770,9 +771,14 @@ func _place(x: int, y: int) -> void:
 	var place_y := CustomLevelStore.placement_row(_selected_type, y, trail)
 	if _selected_type == "erase":
 		_erase_at(objects, x, place_y)
-	elif _selected_type == "canyon" or _selected_type == "pit":
+	elif _selected_type == "canyon":
 		_erase_at(objects, x, trail, true)
 		objects.append({"type": "canyon", "x": x, "y": trail})
+	elif _selected_type == "pit":
+		if y != trail or not CustomLevelStore.pit_fits_on_dirt(objects, x, trail):
+			return
+		_remove_pit_footprint(objects, x, trail)
+		objects.append({"type": "pit", "x": x, "y": trail})
 	elif _selected_type == "ground":
 		var target_y := y if y <= trail else trail
 		if not _has_type_at(objects, x, target_y, "ground"):
@@ -839,6 +845,19 @@ func _remove_foreground_at(objects: Array, x: int, y: int) -> void:
 			objects.remove_at(i)
 
 
+func _remove_pit_footprint(objects: Array, center_x: int, trail: int) -> void:
+	var probe := {"type": "pit", "x": center_x, "y": trail}
+	var span := CustomLevelStore.pit_column_span(probe)
+	for i in range(objects.size() - 1, -1, -1):
+		var object := objects[i] as Dictionary
+		var ox := int(object.get("x", -1))
+		if ox < span.x or ox > span.y:
+			continue
+		var type_name := str(object.get("type", ""))
+		if type_name in ["ground", "pit", "canyon"]:
+			objects.remove_at(i)
+
+
 func _has_type_at(objects: Array, x: int, y: int, type_name: String) -> bool:
 	for value in objects:
 		var object := value as Dictionary
@@ -884,7 +903,7 @@ func _refresh_grid_highlights() -> void:
 	var trail := _trail_y()
 	var ghost_col := -1
 	var ghost_row := -1
-	if _hover_column >= 0 and _hover_row >= 0 and _selected_type not in ["erase", "ground", "canyon", "pit"]:
+	if _hover_column >= 0 and _hover_row >= 0 and _selected_type not in ["erase", "ground", "canyon"]:
 		ghost_col = _hover_column
 		ghost_row = CustomLevelStore.placement_row(_selected_type, _hover_row, trail)
 	for y in range(height):
@@ -921,7 +940,7 @@ func _display_type_at(x: int, y: int) -> String:
 func _short_label(type_name: String) -> String:
 	var labels := {
 		"ground": "DIRT", "platform": "WOOD", "star": "STAR",
-		"cactus": "OUCH", "canyon": "CANYON", "pit": "CANYON", "checkpoint": "CAMP",
+		"cactus": "OUCH", "canyon": "CANYON", "pit": "PIT", "checkpoint": "CAMP",
 		"spring": "BOING", "bandit": "BANDIT", "bounty_bandit": "BOUNTY",
 		"rattlesnake": "SNAKE", "carrion": "BIRD",
 		"wings": "WINGS", "boots": "BOOTS", "speed": "FAST", "shield": "BUBBLE",

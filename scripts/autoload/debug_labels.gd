@@ -115,8 +115,12 @@ func _discover(node: Node) -> void:
 
 
 func _display_name_for(target: Node2D) -> String:
-	if target is Hazard and (target as Hazard).is_canyon():
-		return "Canyon"
+	if target is Hazard:
+		var hazard := target as Hazard
+		if hazard.is_pit():
+			return "Pit"
+		if hazard.is_canyon():
+			return "Canyon"
 	if target is ScalableCanyonArt:
 		return "Canyon"
 	var node_name := String(target.name)

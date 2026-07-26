@@ -1,25 +1,37 @@
 class_name Hazard
 extends Area2D
 
-## Harmful cactus or canyon gap. Canyons always return the player to a camp.
+## Harmful cactus, fixed-size pit, or canyon gap. Pits and canyons return the player to a camp.
 ## A Bubble Shield bounces the player off cacti instead of respawning.
 
 signal hurt(player: Player)
 
 const CANYON_ART := preload("res://scripts/world/scalable_canyon_art.gd")
+const PIT_TEXTURE := preload("res://assets/world/pit.png")
+const PIT_PIXEL_SIZE := Vector2(128.0, 64.0)
+
+
+func is_pit() -> bool:
+	return has_meta("fixed_pit") and bool(get_meta("fixed_pit"))
 
 
 func is_canyon() -> bool:
+	if is_pit():
+		return false
 	return maxf(absf(scale.x), absf(scale.y)) > 1.35
 
 
 func is_cactus() -> bool:
-	return not is_canyon()
+	return not is_canyon() and not is_pit()
+
+
+func is_fatal_fall() -> bool:
+	return is_canyon() or is_pit()
 
 
 func ground_contact_y() -> float:
 	## World Y of the painted cactus base for desert-surface checks.
-	if is_canyon():
+	if is_canyon() or is_pit():
 		return global_position.y
 	var sprite := get_node_or_null("Sprite2D") as Sprite2D
 	if sprite == null or not sprite.visible or sprite.texture == null:
@@ -38,7 +50,7 @@ func align_to_walk_surface(
 	tilt_blend: float = 0.35,
 	max_tilt: float = 0.22
 ) -> void:
-	if is_canyon():
+	if is_canyon() or is_pit():
 		return
 	var foot_local := ground_contact_y() - global_position.y
 	global_position.y = floor_y + sink - foot_local
@@ -51,6 +63,9 @@ func _ready() -> void:
 
 
 func _configure_visual() -> void:
+	if is_pit():
+		_configure_fixed_pit()
+		return
 	var sprite := get_node_or_null("Sprite2D") as CanvasItem
 	var pit := get_node_or_null("PitVisual") as CanvasItem
 	var rim := get_node_or_null("PitRim") as CanvasItem
@@ -74,6 +89,39 @@ func _configure_visual() -> void:
 	if wide:
 		# Temporary until WildWestTheme supplies the real floor gap.
 		align_canyon_to_gap(global_position.y - 80.0, global_position.x - 80.0, global_position.x + 80.0)
+
+
+func _configure_fixed_pit() -> void:
+	scale = Vector2.ONE
+	var sprite := get_node_or_null("Sprite2D") as Sprite2D
+	if sprite != null:
+		sprite.visible = false
+		sprite.texture = null
+		sprite.modulate = Color(1, 1, 1, 0)
+	var pit := get_node_or_null("PitVisual") as Sprite2D
+	if pit != null:
+		pit.visible = true
+		pit.texture = PIT_TEXTURE
+		pit.scale = Vector2.ONE
+		pit.centered = false
+		pit.position = Vector2(-PIT_PIXEL_SIZE.x * 0.5, 0.0)
+		pit.modulate = Color.WHITE
+	var rim := get_node_or_null("PitRim") as CanvasItem
+	if rim != null:
+		rim.visible = false
+	var label := get_node_or_null("PitLabel") as Label
+	if label != null:
+		label.visible = false
+	for node_name in ["CanyonMouth", "PitMouth"]:
+		var canyon_art := get_node_or_null(node_name)
+		if canyon_art != null:
+			canyon_art.queue_free()
+	var shape := get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if shape != null:
+		var rect := RectangleShape2D.new()
+		rect.size = Vector2(72.0, 48.0)
+		shape.shape = rect
+		shape.position = Vector2(0.0, 24.0)
 
 
 func _strip_cactus_visuals() -> void:
@@ -139,8 +187,8 @@ func align_canyon_to_gap(
 func _on_body_entered(body: Node2D) -> void:
 	if body is Player:
 		var player := body as Player
-		if is_canyon():
-			# Bubble Shield does not save a canyon fall — only skip if already falling.
+		if is_fatal_fall():
+			# Bubble Shield does not save a canyon/pit fall — only skip if already falling.
 			if player.is_canyon_falling():
 				return
 			hurt.emit(player)

@@ -28,6 +28,8 @@ const MAX_WIDTH := 180
 const DEFAULT_WIDTH := 180
 const DEFAULT_HEIGHT := 8
 const WIDTH_STEP := 12
+const PIT_PIXEL_SIZE := Vector2(128.0, 64.0)
+const GRID_SIZE := 40.0
 
 
 static func trail_row(height: int) -> int:
@@ -54,8 +56,70 @@ static func stamp_footprint(type_name: String) -> Vector2:
 	match type_name:
 		"platform":
 			return Vector2(2.0, 1.0)
+		"pit":
+			return Vector2(PIT_PIXEL_SIZE.x / GRID_SIZE, 1.0)
 		_:
 			return Vector2(1.0, 1.0)
+
+
+static func stamp_world_size(type_name: String) -> Vector2:
+	match type_name:
+		"platform":
+			return Vector2(GRID_SIZE * 2.0, GRID_SIZE)
+		"pit":
+			return PIT_PIXEL_SIZE
+		_:
+			return Vector2(GRID_SIZE, GRID_SIZE)
+
+
+static func pit_world_position(object: Dictionary, grid: float, trail: int) -> Vector2:
+	var cell_x := float(object.get("x", 0))
+	var center_x := (cell_x + 0.5) * grid
+	var surface_y := float(trail) * grid
+	return Vector2(center_x, surface_y)
+
+
+static func pit_column_span(object: Dictionary, grid: float = GRID_SIZE) -> Vector2i:
+	var center_x := (float(object.get("x", 0)) + 0.5) * grid
+	var left := center_x - PIT_PIXEL_SIZE.x * 0.5
+	var right := center_x + PIT_PIXEL_SIZE.x * 0.5
+	return Vector2i(int(floor(left / grid)), int(floor((right - 0.001) / grid)))
+
+
+static func pit_fits_on_dirt(objects: Array, center_x: int, trail: int) -> bool:
+	var probe := {"type": "pit", "x": center_x, "y": trail}
+	var span := pit_column_span(probe)
+	for col in range(span.x, span.y + 1):
+		if not _has_ground_at(objects, col, trail):
+			return false
+	return true
+
+
+static func _has_ground_at(objects: Array, x: int, y: int) -> bool:
+	for value in objects:
+		if not (value is Dictionary):
+			continue
+		var object := value as Dictionary
+		if int(object.get("x", -1)) == x and int(object.get("y", -1)) == y:
+			if str(object.get("type", "")) == "ground":
+				return true
+	return false
+
+
+static func pit_blocked_columns(data: Dictionary, trail: int) -> Dictionary:
+	var blocked := {}
+	for value in data.get("objects", []):
+		if not (value is Dictionary):
+			continue
+		var object := value as Dictionary
+		if str(object.get("type", "")) != "pit":
+			continue
+		if int(object.get("y", -1)) != trail:
+			continue
+		var span := pit_column_span(object)
+		for col in range(span.x, span.y + 1):
+			blocked[col] = true
+	return blocked
 
 
 static func object_world_position(object: Dictionary, grid: float, trail: int) -> Vector2:
@@ -79,6 +143,7 @@ static func default_level(slot_index: int) -> Dictionary:
 		objects.append({"type": "ground", "x": x, "y": trail})
 	objects.append({"type": "star", "x": 7, "y": trail - 2})
 	objects.append({"type": "cactus", "x": 11, "y": trail - 1})
+	objects.append({"type": "pit", "x": 18, "y": trail})
 	objects.append({"type": "checkpoint", "x": width / 2, "y": trail - 1})
 	objects.append({"type": "goal", "x": width - 3, "y": trail - 1})
 	return {
@@ -556,6 +621,8 @@ static func _import_type_for(node: Node) -> String:
 		return "rattlesnake"
 	if node is Hazard:
 		var body := node as Node2D
+		if node.has_meta("fixed_pit") and bool(node.get_meta("fixed_pit")):
+			return "pit"
 		return "canyon" if maxf(absf(body.scale.x), absf(body.scale.y)) > 1.35 else "cactus"
 	return ""
 
@@ -590,8 +657,6 @@ static func sanitize(source: Dictionary, slot_index: int) -> Dictionary:
 			if value is Dictionary and _valid_object(value as Dictionary, trail):
 				var object := (value as Dictionary).duplicate(true)
 				object["y"] = clampi(int(object.get("y", 0)), 0, trail)
-				if str(object.get("type", "")) == "pit":
-					object["type"] = "canyon"
 				var type_name := str(object.get("type", ""))
 				if is_ground_standing(type_name) and int(object.get("y", 0)) == trail:
 					object["y"] = maxi(trail - 1, 0)

@@ -2,7 +2,7 @@
 
 Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, nonviolent lasso. **Classic mode** has no lives or game over; **Advanced Mode** (chosen on the save-select screen before starting a slot) adds a three-life limit, badge milestones, and a game-over return to the start screen. **German is the default language**; English is fully supported.
 
-**Content version:** `1.3.86` (see `content_version.txt`). Launchers reimport when this stamp changes.
+**Content version:** `1.3.87` (see `content_version.txt`). Launchers reimport when this stamp changes.
 
 This README is the **binding source of truth** for gameplay, level design, art, i18n, and audio. Agents and contributors must follow it (see [Agent / contributor rules](#agent--contributor-rules)).
 
@@ -65,7 +65,7 @@ After Kingpin: horizon victory ride, fade, dedication **VOM PAPI FÜR FINN**, th
 - **Modes** (one at a time; badge pickup adds ~5s): Wings / Magic Boots / Speed Star **30s**; Bubble Shield **7.5s** (blocks bandits, bounces cacti; **does not** save canyon falls).
 - **Camps:** checkpoints; respawn there after canyon/cactus hurt. Classic mode has no life limit; **Advanced Mode** costs one life per respawn (three lives at start; every **30 badges** collected across the save grants +1 life; at zero lives a western game-over plays and returns to save select). Camps store badges/mode state appropriately.
 - **Treasure chests:** optional mid/late-trail rewards — touch to open once; five sheriff badges burst out (same total / Advanced Mode lifetime count as badge pickups); chest stays open and cannot be re-triggered.
-- **Canyons vs cactus:** canyon fall → spin recovery → camp. Cactus/bandit/carrion/snake hurt → camp (Bubble can block some damage). Call gaps **canyons**, never “pits”, in user-facing text.
+- **Canyons vs cactus vs pits:** **Canyons** are wide trail gaps (merged stamps, hand-painted rims, sky mouth). **Pits** are fixed **128×64 px** holes (`assets/world/pit.png`, no scaling) stamped only on trail **dirt** cells. Falling into a pit or canyon → spin recovery → camp. Cactus/bandit/carrion/snake hurt → camp (Bubble can block some damage). User-facing copy: call wide gaps **canyons**; call fixed holes **pits** (never use “pit” for a canyon).
 - **Stars:** optional; goals are saloon doorways (flying over counts). Level clear → horse ride-in/mount/ride-out → next level: ride in, dismount, and **leave the horse at the level start**. Handmade desert skyline behind transitions.
 
 Debug: F1 object names (+ Element Names sheet and Translation Editor on the start screen while debug is on); numpad `+`×2 next level; `-`×2 boss jump/cycle.
@@ -78,7 +78,8 @@ Agents **must** honor these when editing levels or trail systems:
 
 ### Naming & hazards
 
-- User-facing and UI copy: **canyon**, not pit (legacy node names like `PitMouth` may remain internally).
+- User-facing copy: wide trail gaps = **canyon**; fixed 128×64 dirt holes = **pit** (legacy node names like `Pit3` on scaled canyon hazards may remain internally).
+- **Pits:** workshop **Hazards** stamp; exact `pit.png` size; dirt-only placement; same fall/respawn/life rules as canyons (Bubble Shield does not save pit falls).
 - Bandits: downward jump stomp from above / lasso tie; any other contact hurts; **turn at plank edges** (do not walk off).
 - **No cactus inside canyon mouths** or on hand-painted rim bands (keep clear of the rim body past the gap).
 - **No rattlesnake directly in front of** (approaching) a canyon mouth.
@@ -142,8 +143,8 @@ Safe stars, forward-only solvability, reachable platforms/stars, visible themed 
 
 **MUST follow** before changing gameplay, levels, art, i18n, or audio:
 
-1. Read this README; treat it as binding. Do not reintroduce “pits”, English-as-default, featureless black canyons, ferry-raft Level 4 look, or uncapped runaway wind.
-2. Call gaps **canyons** in player-facing strings.
+1. Read this README; treat it as binding. Do not use English-as-default, featureless black canyons, ferry-raft Level 4 look, or uncapped runaway wind.
+2. Call wide gaps **canyons** and fixed dirt holes **pits** in player-facing strings.
 3. Canyon rims outside desert banks; full-height ridge cliffs; open sky in the mouth (no Mesa/backdrop in the gap); never cover floor with rims; never featureless black.
 4. Every canyon crossable with normal (or L1 mounted) jump hops / movers; no impossible gaps.
 5. Movers: one-way; reverse before floor/obstructions; paired opposite-phase when handoffs are intended; L4 = clouds + planks, not ferry-step. Conveyors must not push into open canyons (pair with a timed door on solid ground).

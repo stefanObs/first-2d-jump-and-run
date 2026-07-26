@@ -126,6 +126,9 @@ func _ready() -> void:
 	failures += await _run("Trail workshop uses one trail row and stacked dirt", _test_trail_row_model)
 	failures += await _run("Workshop ground props stamp one row above dirt", _test_workshop_ground_prop_offset)
 	failures += await _run("Workshop stamp catalog includes bounty and carrion", _test_workshop_stamp_catalog)
+	failures += await _run("Fixed pits use pit.png at native size", _test_fixed_pit_art)
+	failures += await _run("Workshop pits require trail dirt", _test_pit_dirt_placement)
+	failures += await _run("Pit falls match canyon respawn rules", _test_pit_canyon_parity)
 	failures += await _run("Workshop preview click requests stamp placement", _test_workshop_preview_stamp)
 	failures += await _run("Airborne bandits fall to walkable ground", _test_airborne_bandit_falls)
 	failures += await _run("Campaign workshop edits and inserts levels", _test_campaign_workshop)
@@ -3613,7 +3616,7 @@ func _test_workshop_stamp_catalog() -> Variant:
 		for tool in (category as Dictionary).get("tools", []) as Array:
 			palette_types.append(str((tool as Array)[0]))
 	editor.queue_free()
-	for type_name in ["bounty_bandit", "carrion"]:
+	for type_name in ["bounty_bandit", "carrion", "pit"]:
 		if type_name not in palette_types:
 			return "Workshop palette missing %s stamp." % type_name
 	var trail := CustomLevelStore.trail_row(8)
@@ -3636,6 +3639,85 @@ func _test_workshop_stamp_catalog() -> Variant:
 		level.free()
 		return "Builder should spawn carrion birds from the carrion stamp."
 	level.free()
+	return null
+
+
+func _test_fixed_pit_art() -> Variant:
+	var slot := CustomLevelStore.EXTRA_SLOT_START + 1
+	var data := CustomLevelStore.default_level(slot)
+	var trail := CustomLevelStore.trail_row(int(data.get("height", 8)))
+	data["objects"].append({"type": "pit", "x": 20, "y": trail})
+	var level := LevelController.new()
+	add_child(level)
+	CustomLevelBuilder.build(level, data)
+	await get_tree().process_frame
+	var pit: Hazard = null
+	for node in level.find_children("*", "Area2D", true, false):
+		if node is Hazard and (node as Hazard).is_pit():
+			pit = node as Hazard
+			break
+	if pit == null:
+		level.free()
+		return "Builder should spawn a fixed pit hazard."
+	var pit_sprite := pit.get_node_or_null("PitVisual") as Sprite2D
+	if pit_sprite == null or not pit_sprite.visible:
+		level.free()
+		return "Fixed pit should show PitVisual."
+	if pit_sprite.texture != preload("res://assets/world/pit.png"):
+		level.free()
+		return "Fixed pit should use pit.png."
+	if pit_sprite.scale != Vector2.ONE:
+		level.free()
+		return "Fixed pit must stay at native 1:1 scale (got %s)." % str(pit_sprite.scale)
+	var tex_size := Vector2(float(pit_sprite.texture.get_width()), float(pit_sprite.texture.get_height()))
+	if tex_size != Hazard.PIT_PIXEL_SIZE:
+		level.free()
+		return "pit.png should be %s pixels (got %s)." % [str(Hazard.PIT_PIXEL_SIZE), str(tex_size)]
+	level.free()
+	return null
+
+
+func _test_pit_dirt_placement() -> Variant:
+	var data := CustomLevelStore.default_level(CustomLevelStore.EXTRA_SLOT_START + 2)
+	var trail := CustomLevelStore.trail_row(int(data.get("height", 8)))
+	var objects: Array = data.get("objects", [])
+	for i in range(objects.size() - 1, -1, -1):
+		var object := objects[i] as Dictionary
+		if int(object.get("x", -1)) == 20 and str(object.get("type", "")) == "ground":
+			objects.remove_at(i)
+	if CustomLevelStore.pit_fits_on_dirt(objects, 20, trail):
+		return "Pit placement should require dirt under the full footprint."
+	for col in [19, 20, 21, 22]:
+		objects.append({"type": "ground", "x": col, "y": trail})
+	if not CustomLevelStore.pit_fits_on_dirt(objects, 20, trail):
+		return "Pit should fit when trail dirt spans its footprint."
+	return null
+
+
+func _test_pit_canyon_parity() -> Variant:
+	var player := Player.new()
+	add_child(player)
+	player.activate_mode(ModeController.Mode.BUBBLE_SHIELD)
+	var pit := Hazard.new()
+	pit.set_meta("fixed_pit", true)
+	add_child(pit)
+	pit._configure_visual()
+	if not pit.is_fatal_fall():
+		pit.queue_free()
+		player.queue_free()
+		return "Fixed pit should count as a fatal fall hazard."
+	if pit.is_canyon():
+		pit.queue_free()
+		player.queue_free()
+		return "Fixed pit must not register as a scaled canyon."
+	var emitted := {"hit": false}
+	pit.hurt.connect(func(_p: Player) -> void: emitted["hit"] = true)
+	pit._on_body_entered(player)
+	var hit: bool = emitted["hit"]
+	player.queue_free()
+	pit.queue_free()
+	if not hit:
+		return "Pit fall should hurt even with Bubble Shield (same as canyon)."
 	return null
 
 

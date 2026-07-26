@@ -293,7 +293,7 @@ func _placement_row(click_row: int) -> int:
 
 
 func _ghost_rect_screen() -> Rect2:
-	if _hover_column < 0 or _hover_row < 0 or _selected_type in ["erase", "ground", "canyon", "pit"]:
+	if _hover_column < 0 or _hover_row < 0 or _selected_type in ["erase", "ground", "canyon"]:
 		return Rect2()
 	var display := _preview_display_rect()
 	if display.size.x <= 1.0 or _camera == null:
@@ -301,15 +301,26 @@ func _ghost_rect_screen() -> Rect2:
 	var metrics := _view_metrics()
 	var grid: float = metrics["grid"]
 	var zoom: float = metrics["zoom"]
-	var footprint := CustomLevelStore.stamp_footprint(_selected_type)
-	var place_row := _placement_row(_hover_row)
-	var start_x := float(_hover_column)
-	if footprint.x > 1.0:
-		start_x -= floor((footprint.x - 1.0) * 0.5)
-	start_x = clampf(start_x, 0.0, float(metrics["width"]) - footprint.x)
-	var world_left := start_x * grid
-	var world_top := float(place_row) * grid
-	var world_size := Vector2(footprint.x * grid, footprint.y * grid)
+	var trail: int = metrics["trail"]
+	var world_size := CustomLevelStore.stamp_world_size(_selected_type)
+	var world_left := 0.0
+	var world_top := 0.0
+	if _selected_type == "pit":
+		if _hover_row != trail:
+			return Rect2()
+		var center_x := (float(_hover_column) + 0.5) * grid
+		world_left = center_x - world_size.x * 0.5
+		world_top = float(trail) * grid
+	else:
+		var footprint := CustomLevelStore.stamp_footprint(_selected_type)
+		var place_row := _placement_row(_hover_row)
+		var start_x := float(_hover_column)
+		if footprint.x > 1.0:
+			start_x -= floor((footprint.x - 1.0) * 0.5)
+		start_x = clampf(start_x, 0.0, float(metrics["width"]) - footprint.x)
+		world_left = start_x * grid
+		world_top = float(place_row) * grid
+		world_size = Vector2(footprint.x * grid, footprint.y * grid)
 	var center := display.position + display.size * 0.5
 	var top_left := center + (_camera.position + Vector2(world_left, world_top) - _camera.position) * zoom
 	var size := world_size * zoom
@@ -340,7 +351,7 @@ func _update_ghost_overlay() -> void:
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		icon.modulate = Color(1, 1, 1, 0.55)
 		var icon_side := minf(minf(rect.size.x, rect.size.y) * 0.85, 48.0)
-		var icon_size := Vector2(icon_side, icon_side)
+		var icon_size := rect.size * 0.92 if _selected_type == "pit" else Vector2(icon_side, icon_side)
 		icon.custom_minimum_size = icon_size
 		icon.size = icon_size
 		icon.position = rect.position + (rect.size - icon_size) * 0.5
@@ -376,6 +387,7 @@ func _icon_path_for_type(type_name: String) -> String:
 		"star": "res://assets/world/star_badge.png",
 		"checkpoint": "res://assets/world/checkpoint_active.png",
 		"cactus": "res://assets/world/cactus.png",
+		"pit": "res://assets/world/pit.png",
 		"spring": "res://assets/world/spring.png",
 		"bandit": "res://assets/world/bandit.png",
 		"bounty_bandit": "res://assets/world/bandit_red.png",
