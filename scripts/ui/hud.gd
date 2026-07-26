@@ -3,7 +3,7 @@ extends CanvasLayer
 
 var _level_label: Label
 var _stars_label: Label
-var _lives_label: Label
+var _lives_hearts_label: Label
 var _mode_label: Label
 var _prompt_label: Label
 var _trail_bar: HandmadeProgress
@@ -19,7 +19,6 @@ func _ready() -> void:
 	layer = 50
 	_level_label = get_node_or_null("LevelLabel") as Label
 	_stars_label = get_node_or_null("StarsLabel") as Label
-	_lives_label = get_node_or_null("LivesLabel") as Label
 	_mode_label = get_node_or_null("ModeLabel") as Label
 	_prompt_label = get_node_or_null("PromptLabel") as Label
 	_ensure_progress_widgets()
@@ -49,9 +48,10 @@ func set_stars(count: int) -> void:
 
 
 func set_lives(count: int, show: bool) -> void:
-	if _lives_label == null:
+	_ensure_lives_display()
+	if _lives_hearts_label == null:
 		return
-	_lives_label.visible = show
+	_lives_hearts_label.visible = show
 	if not show:
 		return
 	var filled := ""
@@ -59,7 +59,7 @@ func set_lives(count: int, show: bool) -> void:
 		filled += "♥"
 		if i < count - 1:
 			filled += " "
-	_lives_label.text = tr("Lives: %s") % filled if filled != "" else tr("Lives: 0")
+	_lives_hearts_label.text = filled if filled != "" else "♡"
 
 
 func set_mode(mode_name: String, remaining: float) -> void:
@@ -134,6 +134,23 @@ func _ensure_power_bar() -> void:
 	_power_fill.color = Color(0.35, 0.75, 1.0, 1.0)
 	_power_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_power_fill)
+
+
+func _ensure_lives_display() -> void:
+	if _lives_hearts_label != null:
+		return
+	_lives_hearts_label = Label.new()
+	_lives_hearts_label.name = "LivesHeartsLabel"
+	_lives_hearts_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_lives_hearts_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_lives_hearts_label.offset_top = 16.0
+	_lives_hearts_label.offset_bottom = 64.0
+	_lives_hearts_label.add_theme_font_size_override(&"font_size", 36)
+	_lives_hearts_label.add_theme_color_override(&"font_color", Color(0.9, 0.2, 0.25, 1))
+	_lives_hearts_label.add_theme_color_override(&"font_outline_color", Color(0.2, 0.05, 0.05, 1))
+	_lives_hearts_label.add_theme_constant_override(&"outline_size", 6)
+	_lives_hearts_label.visible = false
+	add_child(_lives_hearts_label)
 
 
 func _ensure_progress_widgets() -> void:
