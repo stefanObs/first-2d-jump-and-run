@@ -12,6 +12,8 @@ var _sfx: HSlider
 var _vibration: CheckButton
 var _fullscreen: CheckButton
 var _language: OptionButton
+var _character: OptionButton
+var _trail_mode: OptionButton
 var _index: int = 0
 var _controls: Array[Control] = []
 
@@ -23,6 +25,8 @@ func _ready() -> void:
 	_vibration = get_node_or_null("Margin/VBox/VibrationToggle") as CheckButton
 	_fullscreen = get_node_or_null("Margin/VBox/FullscreenToggle") as CheckButton
 	_language = get_node_or_null("Margin/VBox/LanguageDropdown") as OptionButton
+	_character = get_node_or_null("Margin/VBox/CharacterDropdown") as OptionButton
+	_trail_mode = get_node_or_null("Margin/VBox/TrailModeDropdown") as OptionButton
 	var back := get_node_or_null("Margin/VBox/BackButton") as Button
 	# Fallback for older scene layouts without the Margin wrapper.
 	if _music == null:
@@ -35,9 +39,13 @@ func _ready() -> void:
 		_fullscreen = get_node_or_null("VBox/FullscreenToggle") as CheckButton
 	if _language == null:
 		_language = get_node_or_null("VBox/LanguageDropdown") as OptionButton
+	if _character == null:
+		_character = get_node_or_null("VBox/CharacterDropdown") as OptionButton
+	if _trail_mode == null:
+		_trail_mode = get_node_or_null("VBox/TrailModeDropdown") as OptionButton
 	if back == null:
 		back = get_node_or_null("VBox/BackButton") as Button
-	_controls = [_music, _sfx, _vibration, _fullscreen, _language, back]
+	_controls = [_music, _sfx, _vibration, _fullscreen, _language, _character, _trail_mode, back]
 	_controls = _controls.filter(func(c: Control) -> bool: return c != null)
 	_style_readable()
 	_load_values()
@@ -51,6 +59,10 @@ func _ready() -> void:
 		_fullscreen.toggled.connect(func(v: bool) -> void: GameManager.set_setting("fullscreen", v))
 	if _language:
 		_language.item_selected.connect(_select_language)
+	if _character:
+		_character.item_selected.connect(_select_character)
+	if _trail_mode:
+		_trail_mode.item_selected.connect(_select_trail_mode)
 	if back:
 		back.pressed.connect(func() -> void: closed.emit())
 	GameManager.settings_changed.connect(_load_values)
@@ -73,10 +85,14 @@ func _style_readable() -> void:
 		"Margin/VBox/MusicLabel",
 		"Margin/VBox/SfxLabel",
 		"Margin/VBox/LanguageLabel",
+		"Margin/VBox/CharacterLabel",
+		"Margin/VBox/TrailModeLabel",
 		"VBox/Title",
 		"VBox/MusicLabel",
 		"VBox/SfxLabel",
 		"VBox/LanguageLabel",
+		"VBox/CharacterLabel",
+		"VBox/TrailModeLabel",
 	]:
 		var label := get_node_or_null(path) as Label
 		if label != null:
@@ -115,15 +131,21 @@ func _style_readable() -> void:
 	_style_slider(_music)
 	_style_slider(_sfx)
 	_style_language_dropdown()
+	_style_option_dropdown(_character)
+	_style_option_dropdown(_trail_mode)
 
 
 func _style_language_dropdown() -> void:
-	if _language == null:
+	_style_option_dropdown(_language)
+
+
+func _style_option_dropdown(dropdown: OptionButton) -> void:
+	if dropdown == null:
 		return
-	_language.add_theme_color_override(&"font_color", TEXT_COLOR)
-	_language.add_theme_color_override(&"font_hover_color", Color(0.45, 0.2, 0.06, 1.0))
-	_language.add_theme_color_override(&"font_pressed_color", TEXT_COLOR)
-	_language.add_theme_font_size_override(&"font_size", 22)
+	dropdown.add_theme_color_override(&"font_color", TEXT_COLOR)
+	dropdown.add_theme_color_override(&"font_hover_color", Color(0.45, 0.2, 0.06, 1.0))
+	dropdown.add_theme_color_override(&"font_pressed_color", TEXT_COLOR)
+	dropdown.add_theme_font_size_override(&"font_size", 22)
 	var normal := StyleBoxFlat.new()
 	normal.bg_color = Color(0.95, 0.78, 0.42, 1)
 	normal.set_corner_radius_all(10)
@@ -135,11 +157,11 @@ func _style_language_dropdown() -> void:
 	normal.content_margin_bottom = 7
 	var hover := normal.duplicate() as StyleBoxFlat
 	hover.bg_color = Color(1.0, 0.86, 0.5, 1)
-	_language.add_theme_stylebox_override(&"normal", normal)
-	_language.add_theme_stylebox_override(&"hover", hover)
-	_language.add_theme_stylebox_override(&"pressed", hover)
-	_language.add_theme_stylebox_override(&"focus", hover)
-	var popup := _language.get_popup()
+	dropdown.add_theme_stylebox_override(&"normal", normal)
+	dropdown.add_theme_stylebox_override(&"hover", hover)
+	dropdown.add_theme_stylebox_override(&"pressed", hover)
+	dropdown.add_theme_stylebox_override(&"focus", hover)
+	var popup := dropdown.get_popup()
 	popup.add_theme_color_override(&"font_color", TEXT_COLOR)
 	popup.add_theme_font_size_override(&"font_size", 22)
 
@@ -215,6 +237,20 @@ func _load_values() -> void:
 	if _language:
 		var current := String(settings.get("language", "de"))
 		_language.select(1 if current.begins_with("de") else 0)
+	if _character:
+		var is_cowgirl := GameManager.get_player_character() == GameManager.PLAYER_COWGIRL
+		if _character.item_count < 2:
+			_character.clear()
+			_character.add_item(tr("Cowboy"), 0)
+			_character.add_item(tr("Cowgirl"), 1)
+		_character.select(1 if is_cowgirl else 0)
+	if _trail_mode:
+		var advanced := bool(settings.get("advanced_mode", false))
+		if _trail_mode.item_count < 2:
+			_trail_mode.clear()
+			_trail_mode.add_item(tr("Classic"), 0)
+			_trail_mode.add_item(tr("Advanced Mode"), 1)
+		_trail_mode.select(1 if advanced else 0)
 
 
 func _select_language(item_index: int) -> void:
@@ -222,6 +258,19 @@ func _select_language(item_index: int) -> void:
 		return
 	var locale := "de" if item_index == 1 else "en"
 	GameManager.set_setting("language", locale)
+
+
+func _select_character(item_index: int) -> void:
+	if _character == null or item_index < 0:
+		return
+	var character := GameManager.PLAYER_COWGIRL if item_index == 1 else GameManager.PLAYER_COWBOY
+	GameManager.set_setting("player_character", character)
+
+
+func _select_trail_mode(item_index: int) -> void:
+	if _trail_mode == null or item_index < 0:
+		return
+	GameManager.set_setting("advanced_mode", item_index == 1)
 
 
 func _activate() -> void:

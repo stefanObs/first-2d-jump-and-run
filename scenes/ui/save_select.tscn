@@ -462,9 +462,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -260.0
-offset_top = -320.0
+offset_top = -380.0
 offset_right = 260.0
-offset_bottom = 320.0
+offset_bottom = 380.0
 script = ExtResource("3")
 
 [node name="Margin" type="MarginContainer" parent="SettingsPanel"]
@@ -540,6 +540,42 @@ selected = 1
 popup/item_0/text = "English"
 popup/item_0/id = 0
 popup/item_1/text = "Deutsch"
+popup/item_1/id = 1
+
+[node name="CharacterLabel" type="Label" parent="SettingsPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.28, 0.12, 0.04, 1)
+theme_override_font_sizes/font_size = 22
+text = "Character"
+
+[node name="CharacterDropdown" type="OptionButton" parent="SettingsPanel/Margin/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 44)
+theme_override_colors/font_color = Color(0.28, 0.12, 0.04, 1)
+theme_override_font_sizes/font_size = 22
+item_count = 2
+selected = 0
+popup/item_0/text = "Cowboy"
+popup/item_0/id = 0
+popup/item_1/text = "Cowgirl"
+popup/item_1/id = 1
+
+[node name="TrailModeLabel" type="Label" parent="SettingsPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.28, 0.12, 0.04, 1)
+theme_override_font_sizes/font_size = 22
+text = "Trail mode"
+
+[node name="TrailModeDropdown" type="OptionButton" parent="SettingsPanel/Margin/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 44)
+theme_override_colors/font_color = Color(0.28, 0.12, 0.04, 1)
+theme_override_font_sizes/font_size = 22
+item_count = 2
+selected = 0
+popup/item_0/text = "Classic"
+popup/item_0/id = 0
+popup/item_1/text = "Advanced Mode"
 popup/item_1/id = 1
 
 [node name="BackButton" type="Button" parent="SettingsPanel/Margin/VBox"]

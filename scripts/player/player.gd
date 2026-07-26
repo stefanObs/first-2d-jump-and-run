@@ -29,9 +29,6 @@ const HORSE_SPEED_MULTIPLIER := 1.45
 const HORSE_JUMP_DISTANCE_MULTIPLIER := 1.2
 const HORSE_VISUAL_SCALE := 0.48
 const WING_BASE_SCALE := 1.05
-const HORSE_RIDE_0 := preload("res://assets/world/cowboy_horse_ride_0.png")
-const HORSE_RIDE_1 := preload("res://assets/world/cowboy_horse_ride_1.png")
-const HORSE_JUMP := preload("res://assets/world/cowboy_horse_jump.png")
 
 var input_enabled: bool = true
 var stars_collected: int = 0
@@ -57,6 +54,7 @@ var _mounted_sprite: Sprite2D
 var _body_shape: CollisionShape2D
 var _normal_shape: Shape2D
 var _normal_shape_position: Vector2
+var _player_character: String = GameManager.PLAYER_COWBOY
 
 
 func _ready() -> void:
@@ -77,6 +75,8 @@ func _ready() -> void:
 	if _sprite != null:
 		_sprite.play(&"idle")
 	landed.connect(_on_landed)
+	if not GameManager.settings_changed.is_connected(_on_player_settings_changed):
+		GameManager.settings_changed.connect(_on_player_settings_changed)
 
 
 func _physics_process(delta: float) -> void:
@@ -370,12 +370,24 @@ func _on_mode_changed(mode: ModeController.Mode, remaining: float) -> void:
 	_refresh_mode_sprites()
 
 
+func _on_player_settings_changed() -> void:
+	var want_boots := _modes != null and _modes.active_mode == ModeController.Mode.MAGIC_BOOTS
+	_setup_sprite_frames(want_boots)
+	_refresh_mounted_horse_textures()
+
+
+func _player_asset_folder() -> String:
+	return GameManager.get_player_asset_folder()
+
+
 func _setup_sprite_frames(use_magic_boots: bool) -> void:
 	if _sprite == null:
 		return
+	var folder := _player_asset_folder()
+	_player_character = GameManager.get_player_character()
 	var frames := SpriteFrames.new()
 	var suffix := "_boots" if use_magic_boots else ""
-	_add_anim(frames, &"idle", ["idle_0%s.png" % suffix, "idle_1%s.png" % suffix], 4.0)
+	_add_anim(frames, &"idle", ["idle_0%s.png" % suffix, "idle_1%s.png" % suffix], 4.0, true, folder)
 	_add_anim(
 		frames,
 		&"run",
@@ -385,10 +397,12 @@ func _setup_sprite_frames(use_magic_boots: bool) -> void:
 			"run_2%s.png" % suffix,
 			"run_3%s.png" % suffix,
 		],
-		10.0
+		10.0,
+		true,
+		folder
 	)
-	_add_anim(frames, &"jump", ["jump%s.png" % suffix], 5.0, false)
-	_add_anim(frames, &"celebrate", ["celebrate%s.png" % suffix], 5.0)
+	_add_anim(frames, &"jump", ["jump%s.png" % suffix], 5.0, false, folder)
+	_add_anim(frames, &"celebrate", ["celebrate%s.png" % suffix], 5.0, true, folder)
 	var previous := _sprite.animation
 	_sprite.sprite_frames = frames
 	_sprite.centered = true
@@ -414,15 +428,25 @@ func _add_anim(
 	anim_name: StringName,
 	files: Array,
 	fps: float,
-	loop: bool = true
+	loop: bool = true,
+	folder: String = "res://assets/player/"
 ) -> void:
 	frames.add_animation(anim_name)
 	frames.set_animation_speed(anim_name, fps)
 	frames.set_animation_loop(anim_name, loop)
 	for file_name in files:
-		var texture: Texture2D = load("res://assets/player/%s" % file_name)
+		var texture: Texture2D = load("%s%s" % [folder, file_name])
 		if texture != null:
 			frames.add_frame(anim_name, texture)
+
+
+func _refresh_mounted_horse_textures() -> void:
+	if _mounted_sprite == null:
+		return
+	if _mounted and not is_on_floor():
+		_mounted_sprite.texture = GameManager.get_mounted_horse_texture("jump")
+	elif _mounted:
+		_mounted_sprite.texture = GameManager.get_mounted_horse_texture("ride_0")
 
 
 func _ensure_mounted_sprite() -> void:
@@ -431,7 +455,7 @@ func _ensure_mounted_sprite() -> void:
 		return
 	_mounted_sprite = Sprite2D.new()
 	_mounted_sprite.name = "MountedHorse"
-	_mounted_sprite.texture = HORSE_RIDE_0
+	_mounted_sprite.texture = GameManager.get_mounted_horse_texture("ride_0")
 	_mounted_sprite.position = Vector2(0.0, -64.0)
 	_mounted_sprite.scale = Vector2.ONE * HORSE_VISUAL_SCALE
 	_mounted_sprite.z_index = 1
@@ -457,12 +481,16 @@ func _update_animation(on_floor: bool) -> void:
 		_mounted_sprite.visible = true
 		_mounted_sprite.flip_h = _facing < 0.0
 		if not on_floor:
-			_mounted_sprite.texture = HORSE_JUMP
+			_mounted_sprite.texture = GameManager.get_mounted_horse_texture("jump")
 		elif absf(velocity.x) > 20.0:
 			var gallop_frame := int(Time.get_ticks_msec() / 140) % 2
-			_mounted_sprite.texture = HORSE_RIDE_0 if gallop_frame == 0 else HORSE_RIDE_1
+			_mounted_sprite.texture = (
+				GameManager.get_mounted_horse_texture("ride_0")
+				if gallop_frame == 0
+				else GameManager.get_mounted_horse_texture("ride_1")
+			)
 		else:
-			_mounted_sprite.texture = HORSE_RIDE_0
+			_mounted_sprite.texture = GameManager.get_mounted_horse_texture("ride_0")
 		return
 	_sprite.visible = true
 

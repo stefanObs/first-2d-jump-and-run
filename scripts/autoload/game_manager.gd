@@ -6,6 +6,8 @@ const SAVE_VERSION := 4
 const SLOT_COUNT := 3
 const ADVANCED_START_LIVES := 3
 const BADGES_PER_LIFE := 30
+const PLAYER_COWBOY := "cowboy"
+const PLAYER_COWGIRL := "cowgirl"
 const CUSTOM_LEVEL_STORE := preload("res://scripts/levels/custom_level_store.gd")
 const SavePaths := preload("res://scripts/autoload/save_paths.gd")
 
@@ -58,16 +60,37 @@ func is_advanced_mode() -> bool:
 	return slot_is_advanced(active_slot_index)
 
 
+func get_player_character() -> String:
+	var character := String(get_settings().get("player_character", PLAYER_COWBOY))
+	return PLAYER_COWGIRL if character == PLAYER_COWGIRL else PLAYER_COWBOY
+
+
+func get_player_asset_folder() -> String:
+	if get_player_character() == PLAYER_COWGIRL:
+		return "res://assets/player/cowgirl/"
+	return "res://assets/player/"
+
+
+func get_mounted_horse_texture(frame: String) -> Texture2D:
+	var prefix := "cowgirl" if get_player_character() == PLAYER_COWGIRL else "cowboy"
+	return load("res://assets/world/%s_horse_%s.png" % [prefix, frame]) as Texture2D
+
+
+func is_advanced_mode_setting() -> bool:
+	return bool(get_settings().get("advanced_mode", false))
+
+
 func get_lives() -> int:
 	if not is_advanced_mode() or active_slot_index < 0:
 		return 0
 	return int(get_slot(active_slot_index).get("lives", ADVANCED_START_LIVES))
 
 
-func prepare_slot_for_start(slot_index: int, advanced_mode: bool) -> void:
+func prepare_slot_for_start(slot_index: int) -> void:
 	_validate_slot(slot_index)
 	_ensure_data()
 	var slot: Dictionary = get_slot(slot_index)
+	var advanced_mode := is_advanced_mode_setting()
 	var was_advanced := bool(slot.get("advanced_mode", false))
 	slot["advanced_mode"] = advanced_mode
 	if bool(slot.get("empty", true)):
@@ -521,6 +544,8 @@ func _default_data() -> Dictionary:
 			"vibration": true,
 			"fullscreen": false,
 			"language": "de",
+			"player_character": PLAYER_COWBOY,
+			"advanced_mode": false,
 		},
 	}
 

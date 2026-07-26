@@ -8,8 +8,8 @@ signal arrival_finished
 const HORSE_TEXTURE := preload("res://assets/world/trail_horse.png")
 const HORSE_GALLOP_0 := preload("res://assets/world/trail_horse_gallop_0.png")
 const HORSE_GALLOP_1 := preload("res://assets/world/trail_horse_gallop_1.png")
-const RIDE_TEXTURE_0 := preload("res://assets/world/cowboy_horse_ride_0.png")
-const RIDE_TEXTURE_1 := preload("res://assets/world/cowboy_horse_ride_1.png")
+const RIDE_TEXTURE_0_PATH := "res://assets/world/cowboy_horse_ride_0.png"
+const RIDE_TEXTURE_1_PATH := "res://assets/world/cowboy_horse_ride_1.png"
 const SALOON_TEXTURE := preload("res://assets/world/goal_saloon.png")
 ## Screen-space fallback when no goal/floor anchor exists (tuned for default trail zoom).
 const SALOON_CENTER_ABOVE_PLANK := 92.0
@@ -67,7 +67,7 @@ func _process(delta: float) -> void:
 		return
 	if _animating_rider and _rider != null and _rider.visible:
 		_ride_phase += delta
-		_rider.texture = RIDE_TEXTURE_0 if int(_ride_phase / GALLOP_FRAME_TIME) % 2 == 0 else RIDE_TEXTURE_1
+		_rider.texture = _ride_texture(0 if int(_ride_phase / GALLOP_FRAME_TIME) % 2 == 0 else 1)
 		return
 	if _animating_empty_horse and _horse != null and _horse.visible:
 		_ride_phase += delta
@@ -463,20 +463,29 @@ func _ensure_horse_art() -> void:
 	if _rider == null:
 		_rider = Sprite2D.new()
 		_rider.name = "CowboyHorse"
-		_rider.texture = RIDE_TEXTURE_0
+		_rider.texture = _ride_texture(0)
 		_rider.z_index = 4
 		add_child(_rider)
 	_apply_ride_scales()
 
 
 func _load_cowboy_idle_texture() -> void:
-	var walk: Texture2D = load("res://assets/player/idle_0.png")
+	var folder := GameManager.get_player_asset_folder()
+	var walk: Texture2D = load("%sidle_0.png" % folder)
 	if walk == null:
-		walk = load("res://assets/player/run_0.png")
+		walk = load("%srun_0.png" % folder)
 	if walk != null:
 		_cowboy.texture = walk
 	else:
-		_cowboy.texture = RIDE_TEXTURE_0
+		_cowboy.texture = _ride_texture(0)
+
+
+func _ride_texture(frame_index: int) -> Texture2D:
+	var frame := "ride_0" if frame_index == 0 else "ride_1"
+	var texture := GameManager.get_mounted_horse_texture(frame)
+	if texture != null:
+		return texture
+	return load(RIDE_TEXTURE_0_PATH if frame_index == 0 else RIDE_TEXTURE_1_PATH) as Texture2D
 
 
 func _place_badge_labels() -> void:

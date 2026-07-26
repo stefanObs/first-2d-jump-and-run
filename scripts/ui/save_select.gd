@@ -179,6 +179,7 @@ func _setup_mode_dropdown() -> void:
 	_mode_dropdown = get_node_or_null("ModeBoard/ModeRow/ModeDropdown") as OptionButton
 	if _mode_board != null:
 		_mode_board.add_theme_stylebox_override(&"panel", _wood_style(WOOD, 10, 8))
+		_mode_board.visible = false
 	if _mode_label != null:
 		_mode_label.text = tr("Trail mode")
 		_apply_cream_outline(_mode_label, Color(0.94, 0.84, 0.52, 1.0), Color(0.24, 0.09, 0.04, 0.78), 2)
@@ -649,7 +650,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _select_slot(slot_index: int) -> void:
 	AudioManager.ensure_gameplay_music()
-	GameManager.prepare_slot_for_start(slot_index, _mode_for_slot(slot_index))
+	GameManager.prepare_slot_for_start(slot_index)
 	GameManager.start_or_continue_slot(slot_index)
 
 

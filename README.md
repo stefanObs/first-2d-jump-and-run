@@ -1,8 +1,8 @@
 # Cowboy Trail
 
-Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, nonviolent lasso. **Classic mode** has no lives or game over; **Advanced Mode** (chosen on the save-select screen before starting a slot) adds a three-life limit, badge milestones, and a game-over return to the start screen. **German is the default language**; English is fully supported.
+Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, nonviolent lasso. **Classic mode** has no lives or game over; **Advanced Mode** (chosen in **Settings** before starting or continuing a slot) adds a three-life limit, badge milestones, and a game-over return to the start screen. Pick **Cowboy** or **Cowgirl** in Settings — the choice applies across all save slots. **German is the default language**; English is fully supported.
 
-**Content version:** `1.3.99` (see `content_version.txt`). Launchers reimport when this stamp changes.
+**Content version:** `1.4.2` (see `content_version.txt`). Launchers reimport when this stamp changes.
 
 This README is the **binding source of truth** for gameplay, level design, art, i18n, and audio. Agents and contributors must follow it (see [Agent / contributor rules](#agent--contributor-rules)).
 
@@ -125,7 +125,7 @@ Safe stars, forward-only solvability, reachable platforms/stars, visible themed 
 
 ## UI / art style
 
-- Warm **handmade / hand-painted** western look matching trail tiles (sky, ground, props, cowboy frames).
+- Warm **handmade / hand-painted** western look matching trail tiles (sky, ground, props, cowboy/cowgirl player frames).
 - HUD / doors / prompts: irregular **western wood signs** (`HandmadeSign`), not generic flat UI cards.
 - Start screen, settings, pause, save select: stay **handcrafted** and trail-themed (polish may continue; do not regress to stock Godot chrome or mismatched stock art). Save select / boot title use a painted weathered **saloon wood sign** (peeling red rim, cream lettering, optional pointing-hand motif) in the same soft handmade style as trail tiles — not photoreal stock art.
 - Between-level horse transitions use a dedicated hand-painted desert skyline.

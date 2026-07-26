@@ -217,6 +217,10 @@ Back to Cowboy Trail,Back to Cowboy Trail,Zurück zum Cowboy-Pfad
 Trail length: %d columns,Trail length: %d columns,Pfadlänge: %d Spalten
 Classic,Classic,Klassisch
 Advanced Mode,Advanced Mode,Fortgeschrittenen-Modus
+Character,Character,Figur
+Cowboy,Cowboy,Cowboy
+Cowgirl,Cowgirl,Cowgirl
+Trail mode,Trail mode,Spielmodus
 Lives: %s,Lives: %s,Leben: %s
 Lives: 0,Lives: 0,Leben: 0
 GAME OVER,GAME OVER,SPIEL VORBEI

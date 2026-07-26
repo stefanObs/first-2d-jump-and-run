@@ -15,9 +15,9 @@ func _ready() -> void:
 	failures += await _run("GameManager save slots persist", _test_save_slots)
 	failures += await _run("Portable saves fall back when exe folder is read-only", _test_save_paths_writable_fallback)
 	failures += await _run("Save select scene loads", _test_save_select_scene)
-	failures += await _run("Save select offers Advanced Mode dropdown", _test_save_select_mode_dropdown)
-	failures += await _run("Save select trail mode selection applies", _test_save_select_mode_selection)
-	failures += await _run("Save select trail mode survives refresh", _test_save_select_mode_refresh)
+	failures += await _run("Save select offers Advanced Mode in Settings", _test_settings_trail_mode_dropdown)
+	failures += await _run("Settings trail mode selection applies to slots", _test_settings_trail_mode_selection)
+	failures += await _run("Settings trail mode persists through refresh", _test_settings_trail_mode_refresh)
 	failures += await _run("Advanced Mode lives and badge milestones", _test_advanced_mode_lives)
 	failures += await _run("Advanced Mode lives hearts show in HUD", _test_advanced_mode_lives_hud)
 	failures += await _run("Advanced Mode respawn costs a life", _test_advanced_mode_respawn_cost)
@@ -33,6 +33,9 @@ func _ready() -> void:
 	)
 	failures += await _run("German text and language settings work", _test_localization_settings)
 	failures += await _run("Settings language dropdown persists and supports controller use", _test_settings_language_dropdown)
+	failures += await _run("Settings stores player character choice", _test_settings_player_character)
+	failures += await _run("Cowgirl matches cowboy animation names and frame counts", _test_cowgirl_animation_parity)
+	failures += await _run("Player applies cowgirl when selected", _test_player_applies_cowgirl)
 	failures += await _run("Translation CSV parses and round-trips safely", _test_translation_csv_round_trip)
 	failures += await _run("Translation placeholders render and validate", _test_translation_placeholders)
 	failures += await _run("Translation editor loads and exports portably", _test_translation_editor)
@@ -773,80 +776,81 @@ func _test_save_select_scene() -> Variant:
 	return error
 
 
-func _test_save_select_mode_dropdown() -> Variant:
+func _test_settings_trail_mode_dropdown() -> Variant:
 	var packed: PackedScene = load("res://scenes/ui/save_select.tscn")
 	if packed == null:
 		return "Missing save select scene."
 	var scene := packed.instantiate()
 	add_child(scene)
 	await get_tree().process_frame
-	var dropdown := scene.get_node_or_null("ModeBoard/ModeRow/ModeDropdown") as OptionButton
-	var label := scene.get_node_or_null("ModeBoard/ModeRow/ModeLabel") as Label
+	var dropdown := scene.get_node_or_null("SettingsPanel/Margin/VBox/TrailModeDropdown") as OptionButton
+	var label := scene.get_node_or_null("SettingsPanel/Margin/VBox/TrailModeLabel") as Label
 	var error: Variant = null
 	if dropdown == null or label == null:
-		error = "Save select needs a trail mode label and dropdown."
+		error = "Settings needs a trail mode label and dropdown."
 	elif dropdown.item_count < 2:
 		error = "Trail mode dropdown needs Classic and Advanced choices."
 	elif dropdown.get_item_text(0) not in ["Classic", "Klassisch"]:
-		error = "Classic mode label missing from trail mode dropdown."
+		error = "Classic mode label missing from settings trail mode dropdown."
 	elif dropdown.get_item_text(1) not in ["Advanced Mode", "Fortgeschrittenen-Modus"]:
-		error = "Advanced Mode label missing from trail mode dropdown."
+		error = "Advanced Mode label missing from settings trail mode dropdown."
 	scene.queue_free()
 	return error
 
 
-func _test_save_select_mode_selection() -> Variant:
+func _test_settings_trail_mode_selection() -> Variant:
 	GameManager.erase_slot(0)
+	var previous := bool(GameManager.get_settings().get("advanced_mode", false))
+	GameManager.set_setting("advanced_mode", true)
 	var packed: PackedScene = load("res://scenes/ui/save_select.tscn")
 	if packed == null:
+		GameManager.set_setting("advanced_mode", previous)
 		GameManager.erase_slot(0)
 		return "Missing save select scene."
 	var scene := packed.instantiate()
 	add_child(scene)
 	await get_tree().process_frame
-	scene._index = 0
-	scene._slot_mode_advanced[0] = true
-	scene._sync_mode_dropdown_for_slot(0)
-	scene._on_mode_selected(1)
-	if not scene._slot_mode_advanced[0]:
+	if not GameManager.is_advanced_mode_setting():
 		scene.queue_free()
+		GameManager.set_setting("advanced_mode", previous)
 		GameManager.erase_slot(0)
-		return "Advanced Mode should stick when chosen on an empty slot."
-	GameManager.prepare_slot_for_start(0, scene._mode_for_slot(0))
+		return "Advanced Mode should stick when chosen in Settings."
+	GameManager.prepare_slot_for_start(0)
 	if not GameManager.slot_is_advanced(0):
 		scene.queue_free()
+		GameManager.set_setting("advanced_mode", previous)
 		GameManager.erase_slot(0)
 		return "Advanced Mode should apply when starting an empty slot."
-	GameManager.prepare_slot_for_start(0, false)
-	GameManager.active_slot_index = 0
-	var slot := GameManager.get_slot(0)
-	slot["empty"] = false
-	slot["advanced_mode"] = false
-	slot["current_level"] = 1
-	GameManager.debug_set_slot(0, slot)
-	scene._index = 0
-	scene._last_mode_slot = -1
-	scene._highlight()
-	if scene._mode_dropdown.selected != 0:
+	GameManager.set_setting("advanced_mode", false)
+	GameManager.prepare_slot_for_start(0)
+	if GameManager.slot_is_advanced(0):
 		scene.queue_free()
+		GameManager.set_setting("advanced_mode", previous)
 		GameManager.erase_slot(0)
-		return "Filled Classic saves should show Classic in the trail mode dropdown."
-	scene._refresh_mode_dropdown_labels()
-	if scene._mode_dropdown.get_item_text(0) not in ["Classic", "Klassisch"]:
+		return "Classic mode should apply when Settings uses Classic."
+	var panel := scene.get_node_or_null("SettingsPanel") as SettingsPanel
+	panel._load_values()
+	var dropdown := scene.get_node_or_null("SettingsPanel/Margin/VBox/TrailModeDropdown") as OptionButton
+	if dropdown == null or dropdown.get_item_text(0) not in ["Classic", "Klassisch"]:
 		scene.queue_free()
+		GameManager.set_setting("advanced_mode", previous)
 		GameManager.erase_slot(0)
 		return "Trail mode dropdown should include Classic as the default/normal choice."
-	if scene._mode_dropdown.get_item_text(1) not in ["Advanced Mode", "Fortgeschrittenen-Modus"]:
+	if dropdown.get_item_text(1) not in ["Advanced Mode", "Fortgeschrittenen-Modus"]:
 		scene.queue_free()
+		GameManager.set_setting("advanced_mode", previous)
 		GameManager.erase_slot(0)
 		return "Trail mode dropdown should include Advanced Mode."
 	scene.queue_free()
+	GameManager.set_setting("advanced_mode", previous)
 	GameManager.erase_slot(0)
 	return null
 
 
-func _test_save_select_mode_refresh() -> Variant:
+func _test_settings_trail_mode_refresh() -> Variant:
 	GameManager.erase_slot(0)
+	var previous := bool(GameManager.get_settings().get("advanced_mode", false))
+	GameManager.set_setting("advanced_mode", false)
 	var slot := GameManager.get_slot(0)
 	slot["empty"] = false
 	slot["advanced_mode"] = false
@@ -854,47 +858,44 @@ func _test_save_select_mode_refresh() -> Variant:
 	GameManager.debug_set_slot(0, slot)
 	var packed: PackedScene = load("res://scenes/ui/save_select.tscn")
 	if packed == null:
+		GameManager.set_setting("advanced_mode", previous)
 		GameManager.erase_slot(0)
 		return "Missing save select scene."
 	var scene := packed.instantiate()
 	add_child(scene)
 	await get_tree().process_frame
-	scene._index = 0
-	scene._sync_mode_dropdown_for_slot(0)
-	if scene._mode_dropdown.disabled:
+	var dropdown := scene.get_node_or_null("SettingsPanel/Margin/VBox/TrailModeDropdown") as OptionButton
+	if dropdown == null or dropdown.disabled:
 		scene.queue_free()
+		GameManager.set_setting("advanced_mode", previous)
 		GameManager.erase_slot(0)
-		return "Trail mode dropdown should stay enabled on existing saves."
+		return "Trail mode dropdown should stay enabled in Settings."
 	GameManager.erase_slot(0)
 	scene._refresh()
-	if scene._mode_dropdown.disabled:
+	GameManager.set_setting("advanced_mode", true)
+	var panel := scene.get_node_or_null("SettingsPanel") as SettingsPanel
+	panel._load_values()
+	if dropdown.selected != 1:
 		scene.queue_free()
+		GameManager.set_setting("advanced_mode", previous)
 		GameManager.erase_slot(0)
-		return "Empty slot should keep trail mode dropdown enabled after delete."
-	scene._slot_mode_advanced[0] = true
-	scene._sync_mode_dropdown_for_slot(0)
-	scene._refresh_mode_dropdown_labels()
-	if not scene._slot_mode_advanced[0]:
-		scene.queue_free()
-		GameManager.erase_slot(0)
-		return "Advanced Mode should survive trail mode dropdown refresh."
-	if scene._mode_dropdown.selected != 1:
-		scene.queue_free()
-		GameManager.erase_slot(0)
-		return "Advanced Mode should stay selected after dropdown refresh."
-	GameManager.prepare_slot_for_start(0, scene._mode_for_slot(0))
+		return "Advanced Mode should stay selected after settings refresh."
+	GameManager.prepare_slot_for_start(0)
 	if not GameManager.slot_is_advanced(0):
 		scene.queue_free()
+		GameManager.set_setting("advanced_mode", previous)
 		GameManager.erase_slot(0)
 		return "Advanced Mode should apply after refresh and prepare."
 	scene.queue_free()
+	GameManager.set_setting("advanced_mode", previous)
 	GameManager.erase_slot(0)
 	return null
 
 
 func _test_advanced_mode_lives() -> Variant:
 	GameManager.erase_slot(0)
-	GameManager.prepare_slot_for_start(0, true)
+	GameManager.set_setting("advanced_mode", true)
+	GameManager.prepare_slot_for_start(0)
 	GameManager.active_slot_index = 0
 	if GameManager.get_lives() != 3:
 		return "Advanced Mode should start with three lives."
@@ -920,7 +921,8 @@ func _test_advanced_mode_lives() -> Variant:
 
 func _test_advanced_mode_lives_hud() -> Variant:
 	GameManager.erase_slot(0)
-	GameManager.prepare_slot_for_start(0, true)
+	GameManager.set_setting("advanced_mode", true)
+	GameManager.prepare_slot_for_start(0)
 	GameManager.active_slot_index = 0
 	var packed: PackedScene = load(GameManager.LEVEL_SCENES[0])
 	if packed == null:
@@ -970,7 +972,8 @@ func _test_advanced_mode_lives_hud() -> Variant:
 
 func _test_advanced_mode_respawn_cost() -> Variant:
 	GameManager.erase_slot(0)
-	GameManager.prepare_slot_for_start(0, true)
+	GameManager.set_setting("advanced_mode", true)
+	GameManager.prepare_slot_for_start(0)
 	GameManager.active_slot_index = 0
 	if not GameManager.lose_life():
 		return "Two lives should remain after the first loss."
@@ -1002,7 +1005,8 @@ func _test_advanced_mode_game_over_scene() -> Variant:
 
 func _test_advanced_boss_skips_hearts() -> Variant:
 	GameManager.erase_slot(0)
-	GameManager.prepare_slot_for_start(0, true)
+	GameManager.set_setting("advanced_mode", true)
+	GameManager.prepare_slot_for_start(0)
 	GameManager.active_slot_index = 0
 	var packed: PackedScene = load("res://scenes/bosses/boss_stampede_bull.tscn")
 	if packed == null:
@@ -1183,14 +1187,18 @@ func _test_settings_language_dropdown() -> Variant:
 	if error == null:
 		panel.visible = true
 		panel.focus_first()
-		var previous := InputEventAction.new()
-		previous.action = &"move_left"
-		previous.pressed = true
-		panel._unhandled_input(previous)
-		panel._unhandled_input(previous)
-		if panel._controls[panel._index] != dropdown:
-			error = "Controller navigation should reach the language dropdown."
+		var lang_index := panel._controls.find(dropdown)
+		if lang_index < 0:
+			error = "Settings panel should include the language dropdown in controller navigation."
 		else:
+			while panel._index != lang_index:
+				var step := InputEventAction.new()
+				step.action = &"move_right" if panel._index < lang_index else &"move_left"
+				step.pressed = true
+				panel._unhandled_input(step)
+		if error == null and panel._controls[panel._index] != dropdown:
+			error = "Controller navigation should reach the language dropdown."
+		elif error == null:
 			var activate := InputEventAction.new()
 			activate.action = &"jump"
 			activate.pressed = true
@@ -1712,7 +1720,7 @@ func _test_cowboy_animations() -> Variant:
 	cowboy.mount_horse()
 	var mounted := cowboy.get_node_or_null("MountedHorse") as Sprite2D
 	cowboy._update_animation(false)
-	var jump_texture: Texture2D = load("res://assets/world/cowboy_horse_jump.png")
+	var jump_texture: Texture2D = GameManager.get_mounted_horse_texture("jump")
 	if mounted == null or not mounted.visible or mounted.texture != jump_texture:
 		node.queue_free()
 		return "Mounted cowboy needs a dedicated handmade horse-jump pose."
@@ -2661,6 +2669,8 @@ func _test_slope_underfill_earth_color() -> Variant:
 
 func _test_filled_slot_advanced_mode_select() -> Variant:
 	GameManager.erase_slot(0)
+	var previous := bool(GameManager.get_settings().get("advanced_mode", false))
+	GameManager.set_setting("advanced_mode", true)
 	var slot := GameManager.get_slot(0)
 	slot["empty"] = false
 	slot["advanced_mode"] = false
@@ -2670,19 +2680,20 @@ func _test_filled_slot_advanced_mode_select() -> Variant:
 	GameManager.debug_set_slot(0, slot)
 	var packed: PackedScene = load("res://scenes/ui/save_select.tscn")
 	if packed == null:
+		GameManager.set_setting("advanced_mode", previous)
 		GameManager.erase_slot(0)
 		return "Missing save select scene."
 	var scene := packed.instantiate()
 	add_child(scene)
 	await get_tree().process_frame
 	scene._index = 0
-	scene._sync_mode_dropdown_for_slot(0)
-	if scene._mode_dropdown.disabled:
+	var dropdown := scene.get_node_or_null("SettingsPanel/Margin/VBox/TrailModeDropdown") as OptionButton
+	if dropdown == null or dropdown.disabled:
 		scene.queue_free()
+		GameManager.set_setting("advanced_mode", previous)
 		GameManager.erase_slot(0)
-		return "Filled saves should allow choosing Advanced Mode."
-	scene._on_mode_selected(1)
-	GameManager.prepare_slot_for_start(0, scene._mode_for_slot(0))
+		return "Filled saves should allow choosing Advanced Mode in Settings."
+	GameManager.prepare_slot_for_start(0)
 	GameManager.active_slot_index = 0
 	if not GameManager.slot_is_advanced(0):
 		scene.queue_free()
@@ -2726,7 +2737,113 @@ func _test_filled_slot_advanced_mode_select() -> Variant:
 		return "Advanced hearts should display filled glyphs after switching saves."
 	level.queue_free()
 	scene.queue_free()
+	GameManager.set_setting("advanced_mode", previous)
 	GameManager.erase_slot(0)
+	return null
+
+
+func _test_settings_player_character() -> Variant:
+	var previous := String(GameManager.get_settings().get("player_character", GameManager.PLAYER_COWBOY))
+	GameManager.set_setting("player_character", GameManager.PLAYER_COWGIRL)
+	if GameManager.get_player_character() != GameManager.PLAYER_COWGIRL:
+		GameManager.set_setting("player_character", previous)
+		return "Settings should store Cowgirl as the active player character."
+	GameManager.save_to_disk()
+	var save_json: Variant = JSON.parse_string(FileAccess.get_file_as_string(GameManager.save_path()))
+	if typeof(save_json) != TYPE_DICTIONARY:
+		GameManager.set_setting("player_character", previous)
+		return "Settings save file should remain valid JSON."
+	if String((save_json as Dictionary).get("settings", {}).get("player_character", "")) != GameManager.PLAYER_COWGIRL:
+		GameManager.set_setting("player_character", previous)
+		return "Persisted settings should contain the selected player character."
+	GameManager.load_from_disk()
+	if GameManager.get_player_character() != GameManager.PLAYER_COWGIRL:
+		GameManager.set_setting("player_character", previous)
+		return "Reloading settings should restore the selected player character."
+	GameManager.set_setting("player_character", previous)
+	return null
+
+
+func _test_cowgirl_animation_parity() -> Variant:
+	var cowboy_packed: PackedScene = load("res://scenes/player/player.tscn")
+	if cowboy_packed == null:
+		return "Missing player scene."
+	GameManager.set_setting("player_character", GameManager.PLAYER_COWBOY)
+	var cowboy_node := cowboy_packed.instantiate()
+	add_child(cowboy_node)
+	await get_tree().process_frame
+	var cowboy_sprite := (cowboy_node as Player).get_node_or_null("AnimatedSprite2D") as AnimatedSprite2D
+	if cowboy_sprite == null or cowboy_sprite.sprite_frames == null:
+		cowboy_node.queue_free()
+		return "Cowboy AnimatedSprite2D frames were not set up."
+	var cowboy_counts := {}
+	for anim_name in [&"idle", &"run", &"jump", &"celebrate"]:
+		if not cowboy_sprite.sprite_frames.has_animation(anim_name):
+			cowboy_node.queue_free()
+			return "Missing cowboy animation: %s" % String(anim_name)
+		cowboy_counts[String(anim_name)] = cowboy_sprite.sprite_frames.get_frame_count(anim_name)
+	cowboy_node.queue_free()
+	GameManager.set_setting("player_character", GameManager.PLAYER_COWGIRL)
+	var cowgirl_node := cowboy_packed.instantiate()
+	add_child(cowgirl_node)
+	await get_tree().process_frame
+	var cowgirl_sprite := (cowgirl_node as Player).get_node_or_null("AnimatedSprite2D") as AnimatedSprite2D
+	if cowgirl_sprite == null or cowgirl_sprite.sprite_frames == null:
+		cowgirl_node.queue_free()
+		GameManager.set_setting("player_character", GameManager.PLAYER_COWBOY)
+		return "Cowgirl AnimatedSprite2D frames were not set up."
+	for anim_name in cowboy_counts.keys():
+		if not cowgirl_sprite.sprite_frames.has_animation(StringName(anim_name)):
+			cowgirl_node.queue_free()
+			GameManager.set_setting("player_character", GameManager.PLAYER_COWBOY)
+			return "Missing cowgirl animation: %s" % anim_name
+		if cowgirl_sprite.sprite_frames.get_frame_count(StringName(anim_name)) != cowboy_counts[anim_name]:
+			cowgirl_node.queue_free()
+			GameManager.set_setting("player_character", GameManager.PLAYER_COWBOY)
+			return "Cowgirl animation frame count mismatch for %s." % anim_name
+	cowgirl_node.queue_free()
+	GameManager.set_setting("player_character", GameManager.PLAYER_COWBOY)
+	return null
+
+
+func _test_player_applies_cowgirl() -> Variant:
+	var previous := String(GameManager.get_settings().get("player_character", GameManager.PLAYER_COWBOY))
+	GameManager.set_setting("player_character", GameManager.PLAYER_COWGIRL)
+	var packed: PackedScene = load("res://scenes/player/player.tscn")
+	if packed == null:
+		GameManager.set_setting("player_character", previous)
+		return "Missing player scene."
+	var node := packed.instantiate()
+	add_child(node)
+	await get_tree().process_frame
+	var player := node as Player
+	var sprite := player.get_node_or_null("AnimatedSprite2D") as AnimatedSprite2D
+	if sprite == null or sprite.sprite_frames == null:
+		node.queue_free()
+		GameManager.set_setting("player_character", previous)
+		return "Player sprite frames were not set up."
+	var frame_tex: Texture2D = sprite.sprite_frames.get_frame_texture(&"idle", 0)
+	if frame_tex == null or frame_tex.resource_path.find("/cowgirl/") < 0:
+		node.queue_free()
+		GameManager.set_setting("player_character", previous)
+		return "Cowgirl selection should load sprites from the cowgirl asset folder."
+	player.mount_horse()
+	player._update_animation(false)
+	var mounted := player.get_node_or_null("MountedHorse") as Sprite2D
+	var jump_texture: Texture2D = GameManager.get_mounted_horse_texture("jump")
+	if mounted == null or mounted.texture != jump_texture:
+		node.queue_free()
+		GameManager.set_setting("player_character", previous)
+		return "Mounted cowgirl needs the handmade cowgirl horse-jump pose."
+	GameManager.settings_changed.emit()
+	await get_tree().process_frame
+	frame_tex = sprite.sprite_frames.get_frame_texture(&"idle", 0)
+	if frame_tex == null or frame_tex.resource_path.find("/cowgirl/") < 0:
+		node.queue_free()
+		GameManager.set_setting("player_character", previous)
+		return "Player should refresh cowgirl art when settings change."
+	node.queue_free()
+	GameManager.set_setting("player_character", previous)
 	return null
 
 
@@ -5443,7 +5560,7 @@ func _test_transition_gallop_frame_size() -> Variant:
 	var standing: Texture2D = LevelTransition.HORSE_TEXTURE
 	var gallop0: Texture2D = LevelTransition.HORSE_GALLOP_0
 	var gallop1: Texture2D = LevelTransition.HORSE_GALLOP_1
-	var ride: Texture2D = LevelTransition.RIDE_TEXTURE_0
+	var ride: Texture2D = GameManager.get_mounted_horse_texture("ride_0")
 	if standing == null or gallop0 == null or gallop1 == null or ride == null:
 		return "Transition horse textures failed to load."
 	if gallop0.get_width() != standing.get_width() or gallop0.get_height() != standing.get_height():
