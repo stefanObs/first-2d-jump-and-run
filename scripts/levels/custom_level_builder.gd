@@ -173,7 +173,10 @@ static func _canyon_runs(data: Dictionary, trail: int) -> Array[Dictionary]:
 ## Merge vertically stacked dirt cells into one tall bank so steps look handpainted.
 static func _add_ground_columns(level: Node, data: Dictionary, grid: float, trail: int) -> void:
 	var columns: Dictionary = {}
-	var pit_blocked := CustomLevelStore.pit_blocked_columns(data, trail)
+	# Pit columns stay as dirt banks so the trail crust runs unbroken behind the
+	# pit mouth (no sky/air pocket); only the mouth columns lose collision so the
+	# cowboy still drops in.
+	var pit_hole := CustomLevelStore.pit_hole_columns(data, trail)
 	for value in data.get("objects", []):
 		if not (value is Dictionary):
 			continue
@@ -181,8 +184,6 @@ static func _add_ground_columns(level: Node, data: Dictionary, grid: float, trai
 		if str(object.get("type", "")) != "ground":
 			continue
 		var x := int(object.get("x", 0))
-		if pit_blocked.has(x):
-			continue
 		var y := int(object.get("y", trail))
 		if not columns.has(x):
 			columns[x] = {"top": y, "bottom": y}
@@ -203,7 +204,7 @@ static func _add_ground_columns(level: Node, data: Dictionary, grid: float, trai
 			(float(x) + 0.5) * grid,
 			(float(top_y) + float(cell_count) * 0.5) * grid
 		)
-		_add_block(
+		var block := _add_block(
 			level,
 			"Ground%d" % index,
 			position,
@@ -211,6 +212,10 @@ static func _add_ground_columns(level: Node, data: Dictionary, grid: float, trai
 			Color(0.72, 0.46, 0.22),
 			true
 		)
+		if pit_hole.has(int(x)):
+			var hole_shape := block.get_node_or_null("CollisionShape2D") as CollisionShape2D
+			if hole_shape != null:
+				hole_shape.disabled = true
 		index += 1
 
 

@@ -1431,6 +1431,7 @@ func _test_camp_restores_state() -> Variant:
 		return level
 	var controller := level as LevelController
 	var bandit := controller.find_child("Opponent0", true, false) as Opponent
+	var bull := controller.find_child("BullEnemy0", true, false) as BullEnemy
 	var checkpoint_b := controller.find_child("CheckpointB", true, false) as Checkpoint
 	if bandit == null or checkpoint_b == null:
 		_free_level(controller)
@@ -1441,18 +1442,34 @@ func _test_camp_restores_state() -> Variant:
 		_free_level(controller)
 		return "A bandit tied after the camp should be untied on respawn."
 	bandit.tie_up(false)
+	if bull != null:
+		bull.tie_up(false)
 	controller.player.activate_mode(ModeController.Mode.WINGS)
 	controller.player.get_modes().remaining = 7.0
+	# Spawn a disposable bullet/shuriken — camp respawn must clear them.
+	var bullet := BanditBullet.new()
+	bullet.setup(1.0)
+	controller.add_child(bullet)
+	bullet.global_position = Vector2(500, 200)
+	var star := NinjaShuriken.new()
+	star.setup(Vector2(600, 100), Vector2(500, 200))
+	controller.add_child(star)
+	star.global_position = Vector2(500, 200)
 	checkpoint_b.activate()
 	controller.player.get_modes().remaining = 1.0
 	controller.respawn_player()
+	await get_tree().process_frame
 	var error: Variant = null
 	if not bandit.is_tied():
 		error = "A bandit tied before camp activation should stay tied."
+	elif bull != null and not bull.is_tied():
+		error = "A bull tied before camp activation should stay tied."
 	elif not controller.player.get_modes().is_flying():
 		error = "The active camp bonus should be restored."
 	elif controller.player.get_modes().remaining < 20.0:
 		error = "A restored camp bonus should have at least twenty seconds."
+	elif is_instance_valid(bullet) or is_instance_valid(star):
+		error = "Bullets and shuriken must be cleared on camp respawn."
 	_free_level(controller)
 	return error
 
@@ -2056,8 +2073,14 @@ func _test_bull_charges_player() -> Variant:
 	bull.position = Vector2(200, 400)
 	add_child(bull)
 	var player := Player.new()
+	player.name = "Player"
 	player.position = Vector2(420, 400)
 	add_child(player)
+	player.set_physics_process(false)
+	player.set_process(false)
+	if not player.is_in_group("player"):
+		player.add_to_group("player")
+	await get_tree().physics_frame
 	await get_tree().physics_frame
 	await get_tree().physics_frame
 	var start_x := bull.global_position.x
@@ -2078,17 +2101,27 @@ func _test_lasso_ties_bull() -> Variant:
 		return "Missing bull enemy scene."
 	var bull := packed.instantiate() as BullEnemy
 	add_child(bull)
+	await get_tree().process_frame
+	var stand_scale := bull.get_stand_scale()
 	bull.tie_up()
+	# Full tip-over sequence ends with the floor pose.
+	await get_tree().create_timer(2.4).timeout
 	var error: Variant = null
 	if not bull.is_tied():
 		error = "A lasso hit should tie the trail bull."
 	elif bull.collision_layer != 0:
 		error = "Tied bulls should not block the cowboy."
-	elif bull.get_node_or_null("TiedRopes") == null:
-		error = "Tied bulls should show rope artwork."
 	var sprite := bull.get_node_or_null("BullSprite") as Sprite2D
-	if sprite != null and sprite.texture != BullEnemy.BULL_TIED_TEX:
-		error = "Tied bulls should switch to the leg-bound sprite."
+	if sprite == null:
+		error = "Tied bulls need a BullSprite."
+	elif sprite.texture != BullEnemy.BULL_DOWN_TEX:
+		error = "Tied bulls should finish lying on the floor (down pose)."
+	else:
+		var expected_down := BullEnemy.DOWN_TARGET_HEIGHT / maxf(float(BullEnemy.BULL_DOWN_TEX.get_height()), 1.0)
+		if absf(sprite.scale.y - expected_down) > 0.01:
+			error = "Tied bulls should keep a floor pose sized like the standing bull."
+		elif stand_scale <= 0.0:
+			error = "Standing bull scale should be positive."
 	bull.queue_free()
 	return error
 

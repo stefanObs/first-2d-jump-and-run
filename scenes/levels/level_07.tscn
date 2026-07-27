@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=3 uid="uid://clevel07"]
+[gd_scene load_steps=25 format=3 uid="uid://clevel07"]
 
 [ext_resource type="Script" path="res://scripts/levels/level_07.gd" id="1_level"]
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2_player"]
@@ -19,6 +19,7 @@
 [ext_resource type="PackedScene" path="res://scenes/world/timed_door.tscn" id="17_door"]
 [ext_resource type="PackedScene" path="res://scenes/world/carrion.tscn" id="18_carrion"]
 [ext_resource type="PackedScene" path="res://scenes/world/treasure_chest.tscn" id="19_chest"]
+[ext_resource type="PackedScene" path="res://scenes/world/ninja_enemy.tscn" id="ninja_enemy"]
 
 [sub_resource type="RectangleShape2D" id="GroundSeg"]
 size = Vector2(420, 64)
@@ -1011,3 +1012,9 @@ position = Vector2(140, 280)
 [node name="Hud" parent="." instance=ExtResource("7_hud")]
 
 [node name="PauseMenu" parent="." instance=ExtResource("8_pause")]
+
+[node name="NinjaEnemy0" parent="." instance=ExtResource("ninja_enemy")]
+position = Vector2(1750, 320)
+
+[node name="NinjaEnemy1" parent="." instance=ExtResource("ninja_enemy")]
+position = Vector2(4600, 320)

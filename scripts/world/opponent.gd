@@ -326,6 +326,27 @@ func untie_for_respawn() -> void:
 	_shot_timer = randf_range(1.8, 3.0) if bounty_bandit else randf_range(3.0, 5.0)
 
 
+func restore_for_respawn() -> void:
+	## Untied bandits that wandered or mid-shot return to their post at camp respawn.
+	## Bullets are cleared separately by the level controller.
+	if _tied:
+		return
+	_shot_generation += 1
+	_shooting = false
+	_kill_pose_tween()
+	global_position = _origin
+	_going_to_b = true
+	if _revolver != null:
+		_revolver.hide_gun()
+	if _sprite != null:
+		_sprite.rotation = 0.0
+		_sprite.offset = STAND_FOOT_OFFSET
+		_sprite.scale = Vector2(STAND_SCALE, STAND_SCALE)
+		_apply_facing(_facing)
+		_sprite.play(&"idle")
+	_shot_timer = randf_range(1.8, 3.0) if bounty_bandit else randf_range(3.0, 5.0)
+
+
 func _kill_pose_tween() -> void:
 	if _pose_tween != null:
 		_pose_tween.kill()

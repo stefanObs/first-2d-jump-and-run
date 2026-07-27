@@ -106,6 +106,9 @@ func _configure_fixed_pit() -> void:
 		pit.centered = false
 		pit.position = Vector2(-PIT_PIXEL_SIZE.x * 0.5, 0.0)
 		pit.modulate = Color.WHITE
+		# Draw the mouth on top of the continuous trail crust the theme paints
+		# across the pit columns, so the hole reads as dug into the dirt.
+		pit.z_index = 3
 	var rim := get_node_or_null("PitRim") as CanvasItem
 	if rim != null:
 		rim.visible = false

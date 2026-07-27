@@ -1,4 +1,4 @@
-[gd_scene load_steps=21 format=3 uid="uid://clevel06"]
+[gd_scene load_steps=23 format=3 uid="uid://clevel06"]
 
 [ext_resource type="Script" path="res://scripts/levels/level_06.gd" id="1_level"]
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2_player"]
@@ -19,6 +19,7 @@
 [ext_resource type="PackedScene" path="res://scenes/world/timed_door.tscn" id="17_door"]
 [ext_resource type="PackedScene" path="res://scenes/world/rattlesnake.tscn" id="18_snake"]
 [ext_resource type="PackedScene" path="res://scenes/world/treasure_chest.tscn" id="19_chest"]
+[ext_resource type="PackedScene" path="res://scenes/world/bull_enemy.tscn" id="bull_enemy"]
 
 [sub_resource type="RectangleShape2D" id="GroundSeg"]
 size = Vector2(420, 64)
@@ -927,3 +928,6 @@ position = Vector2(140, 280)
 [node name="Hud" parent="." instance=ExtResource("7_hud")]
 
 [node name="PauseMenu" parent="." instance=ExtResource("8_pause")]
+
+[node name="BullEnemy0" parent="." instance=ExtResource("bull_enemy")]
+position = Vector2(1900, 320)

@@ -384,6 +384,8 @@ func _reset_unstored_opponents() -> void:
 					opponent.tie_up(false)
 			elif opponent.is_tied():
 				opponent.untie_for_respawn()
+			else:
+				opponent.restore_for_respawn()
 		elif node is BullEnemy:
 			var bull := node as BullEnemy
 			var bull_name := String(bull.name)
@@ -392,6 +394,8 @@ func _reset_unstored_opponents() -> void:
 					bull.tie_up(false)
 			elif bull.is_tied():
 				bull.untie_for_respawn()
+			else:
+				bull.restore_for_respawn()
 		elif node is NinjaEnemy:
 			var ninja := node as NinjaEnemy
 			var ninja_name := String(ninja.name)
@@ -400,7 +404,11 @@ func _reset_unstored_opponents() -> void:
 					ninja.tie_up(false)
 			elif ninja.is_tied():
 				ninja.untie_for_respawn()
+			else:
+				ninja.restore_for_respawn()
 	_tied_opponent_names = _stored_tied_opponent_names.duplicate()
+	# Bullets and shuriken are the one exception — they never persist across a camp respawn.
+	_clear_hostile_projectiles()
 
 
 func _restore_camp_mode() -> void:

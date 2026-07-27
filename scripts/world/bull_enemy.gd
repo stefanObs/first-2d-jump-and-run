@@ -8,14 +8,23 @@ signal captured(bull: BullEnemy)
 
 const BULL_TEX := preload("res://assets/world/boss_stampede_bull.png")
 const BULL_TIED_TEX := preload("res://assets/world/boss_stampede_bull_tied_legs.png")
+const BULL_DOWN_TEX := preload("res://assets/world/boss_stampede_bull_down.png")
 
+## Same on-screen height for standing and leg-bound poses so the bull does not shrink when tied.
 const STAND_TARGET_HEIGHT := 92.0
-const TIED_TARGET_HEIGHT := 78.0
+## Lying pose uses a shorter texture; keep body mass similar to the standing bull.
+const DOWN_TARGET_HEIGHT := 72.0
 const STOMP_BOUNCE := -420.0
 const STOMP_MIN_FALL_SPEED := 80.0
 const CHARGE_SPEED := 150.0
 const CHARGE_RANGE := 560.0
 const CHARGE_Y_BAND := 180.0
+const GRAVITY := 1400.0
+## Look this far up/down from the hooves for the trail crust when grounding.
+const GROUND_PROBE_UP := 48.0
+const GROUND_PROBE_DOWN := 64.0
+## Once the bull tumbles this far below its post it has cleared into the canyon.
+const FALL_DEATH_DEPTH := 1400.0
 
 var _origin: Vector2
 var _facing: float = 1.0
@@ -27,6 +36,9 @@ var _tied: bool = false
 var _charge_bob: float = 0.0
 var _pose_tween: Tween
 var _stand_scale: float = 1.0
+var _vel_y: float = 0.0
+var _fallen: bool = false
+var _was_grounded: bool = false
 
 
 func _ready() -> void:
@@ -38,6 +50,10 @@ func _ready() -> void:
 	_setup_sprite()
 	if _area != null:
 		_area.body_entered.connect(_on_body_entered)
+	set_physics_process(true)
+	set_process(true)
+	# Snap hooves to the trail on the first physics tick when a floor exists.
+	call_deferred("_snap_to_floor_once")
 
 
 func _setup_sprite() -> void:
@@ -70,44 +86,125 @@ func _process(delta: float) -> void:
 	_update_nearby_hint()
 
 
+func _snap_to_floor_once() -> void:
+	var hit_y := _probe_floor_y(GROUND_PROBE_DOWN + 120.0)
+	if not is_nan(hit_y):
+		global_position.y = hit_y
+		_origin.y = global_position.y
+		_was_grounded = true
+		_vel_y = 0.0
+
+
 func _physics_process(delta: float) -> void:
 	if _tied:
 		return
 	_resolve_player_overlap()
 	if _tied:
 		return
-	var player := _find_nearby_player(CHARGE_RANGE)
-	if player != null and absf(player.global_position.y - global_position.y) <= CHARGE_Y_BAND:
-		var toward := 1.0 if player.global_position.x >= global_position.x else -1.0
-		if _has_floor_ahead(toward):
-			_facing = toward
-			_apply_facing(_facing)
-			_charge_bob += delta * 14.0
-			if _sprite != null:
-				_sprite.offset.y = -float(BULL_TEX.get_height()) * 0.5 + sin(_charge_bob) * 3.0
-				_sprite.rotation = sin(_charge_bob * 0.5) * 0.04 * _facing
-			global_position.x += _facing * CHARGE_SPEED * delta
-		elif _sprite != null:
-			_sprite.offset.y = -float(BULL_TEX.get_height()) * 0.5
-			_sprite.rotation = 0.0
-	else:
-		if _sprite != null:
+	var player := _find_nearby_player(99999.0)
+	if player != null:
+		# Always turn to glare at the cowpoke, even before the charge begins.
+		_facing = 1.0 if player.global_position.x >= global_position.x else -1.0
+		_apply_facing(_facing)
+	var charging := (
+		player != null
+		and global_position.distance_to(player.global_position) <= CHARGE_RANGE
+		and absf(player.global_position.y - global_position.y) <= CHARGE_Y_BAND
+	)
+	# AnimatableBody2D defers transform writes — combine charge + gravity into one
+	# assignment so the X shove is not wiped by the floor snap.
+	var next := global_position
+	if charging:
+		_charge_bob += delta * 14.0
+		next.x += _facing * CHARGE_SPEED * delta
+	next = _integrate_gravity(next, delta)
+	global_position = next
+	if _sprite != null:
+		if charging and not _fallen:
+			_sprite.offset.y = -float(BULL_TEX.get_height()) * 0.5 + sin(_charge_bob) * 3.0
+			_sprite.rotation = sin(_charge_bob * 0.5) * 0.04 * _facing
+		else:
 			_sprite.offset.y = -float(BULL_TEX.get_height()) * 0.5
 			_sprite.rotation = 0.0
 
 
-func _has_floor_ahead(direction: float) -> bool:
+func _probe_floor_y_at(world_pos: Vector2, down_reach: float) -> float:
 	var world := get_world_2d()
 	if world == null:
-		return true
-	var ahead := global_position + Vector2(direction * 28.0, -4.0)
+		return NAN
+	var from := world_pos + Vector2(0.0, -GROUND_PROBE_UP)
 	var query := PhysicsRayQueryParameters2D.create(
-		ahead,
-		ahead + Vector2(0.0, 80.0),
+		from,
+		world_pos + Vector2(0.0, down_reach),
 		1
 	)
 	query.exclude = [get_rid()]
-	return not world.direct_space_state.intersect_ray(query).is_empty()
+	var hit := world.direct_space_state.intersect_ray(query)
+	if hit.is_empty():
+		return NAN
+	return float((hit["position"] as Vector2).y)
+
+
+func _probe_floor_y(down_reach: float) -> float:
+	return _probe_floor_y_at(global_position, down_reach)
+
+
+func _integrate_gravity(next: Vector2, delta: float) -> Vector2:
+	if _fallen:
+		_vel_y += GRAVITY * delta
+		next.y += _vel_y * delta
+		return next
+	var reach := GROUND_PROBE_DOWN + maxf(_vel_y, 0.0) * delta
+	var hit_y := _probe_floor_y_at(next, reach)
+	if not is_nan(hit_y):
+		next.y = hit_y
+		_vel_y = 0.0
+		_was_grounded = true
+		return next
+	# Only tumble after leaving a real trail crust (canyon rim / pit). Fixtures
+	# without a floor under the spawn post stay put so unit tests stay stable.
+	if not _was_grounded:
+		_vel_y = 0.0
+		return next
+	_vel_y += GRAVITY * delta
+	next.y += _vel_y * delta
+	if next.y > _origin.y + FALL_DEATH_DEPTH:
+		_begin_fallen()
+	return next
+
+
+func _apply_gravity(delta: float) -> void:
+	global_position = _integrate_gravity(global_position, delta)
+
+
+func _begin_fallen() -> void:
+	if _fallen:
+		return
+	_fallen = true
+	_was_grounded = false
+	collision_layer = 0
+	if _area != null:
+		_area.set_deferred("monitoring", false)
+		_area.set_deferred("monitorable", false)
+	visible = false
+
+
+func restore_for_respawn() -> void:
+	## Bulls that charged into a canyon (or wandered off) return to their post
+	## when the cowboy respawns at a camp.
+	if _tied:
+		return
+	_fallen = false
+	_vel_y = 0.0
+	_was_grounded = false
+	global_position = _origin
+	_facing = 1.0
+	visible = true
+	if _area != null:
+		_area.set_deferred("monitoring", true)
+		_area.set_deferred("monitorable", true)
+	_apply_facing(_facing)
+	call_deferred("_snap_to_floor_once")
 
 
 func _apply_facing(direction: float) -> void:
@@ -128,6 +225,8 @@ func tie_up(_award_bounty: bool = true) -> void:
 	if _tied:
 		return
 	_tied = true
+	_fallen = false
+	_vel_y = 0.0
 	collision_layer = 0
 	var body_shape := get_node_or_null("CollisionShape2D") as CollisionShape2D
 	if body_shape != null:
@@ -138,86 +237,153 @@ func tie_up(_award_bounty: bool = true) -> void:
 	var hurt_shape := get_node_or_null("HurtArea/CollisionShape2D") as CollisionShape2D
 	if hurt_shape != null:
 		hurt_shape.set_deferred("disabled", true)
-	_show_tied_pose()
-	if get_node_or_null("TiedRopes") == null:
-		var ropes := TiedBanditOverlay.new()
-		ropes.name = "TiedRopes"
-		ropes.z_index = 0
-		add_child(ropes)
-		_animate_rope_coils(ropes)
 	z_index = -1
-	if _label != null:
-		_label.text = "TIED!"
-		_label.modulate = Color(0.55, 0.25, 0.06, 1.0)
-		_label.position.y = -98.0
-	_play_tying_flourish()
 	captured.emit(self)
+	# Camp restore / load snaps straight to the floor pose; live captures play the full tip-over.
+	if _award_bounty:
+		_play_tie_sequence()
+	else:
+		_snap_to_down_pose()
 
 
-func _play_tying_flourish() -> void:
+func _play_tie_sequence() -> void:
 	if _sprite == null:
-		return
-	_kill_pose_tween()
-	var face := -1.0 if _sprite.flip_h else 1.0
-	var tied_scale := _scale_for(BULL_TIED_TEX, TIED_TARGET_HEIGHT)
-	_pose_tween = create_tween()
-	_pose_tween.tween_property(_sprite, "scale", Vector2(_stand_scale * 1.08 * face, _stand_scale * 0.72), 0.1)
-	_pose_tween.tween_property(_sprite, "scale", Vector2(tied_scale * face, tied_scale), 0.14)
-	if _label != null:
-		_label.text = "GOTCHA!"
-		var label_tween := create_tween()
-		label_tween.tween_interval(0.28)
-		label_tween.tween_callback(func() -> void:
-			if _label != null and _tied:
-				_label.text = "TIED!"
-		)
-
-
-func _show_tied_pose() -> void:
-	if _sprite == null:
+		_snap_to_down_pose()
 		return
 	_kill_pose_tween()
 	var face_left := _sprite.flip_h
-	_sprite.texture = BULL_TIED_TEX
-	_sprite.flip_h = face_left
-	_sprite.rotation = 0.0
-	var tied_scale := _scale_for(BULL_TIED_TEX, TIED_TARGET_HEIGHT)
-	var face := -1.0 if face_left else 1.0
-	_sprite.scale = Vector2(tied_scale * face, tied_scale)
-	_sprite.offset = Vector2(0.0, -float(BULL_TIED_TEX.get_height()) * 0.5)
+	var stand_s := _stand_scale
+	var tied_s := _scale_for(BULL_TIED_TEX, STAND_TARGET_HEIGHT)
+	var down_s := _scale_for(BULL_DOWN_TEX, DOWN_TARGET_HEIGHT)
 
+	if _label != null:
+		_label.text = "TIED!"
+		_label.modulate = Color(0.25, 0.75, 0.3, 1.0)
+		_label.position.y = -98.0
 
-func _animate_rope_coils(ropes: Node2D) -> void:
-	for i in range(3):
+	# Rope coils whip around the standing bull's legs (same flourish as the boss).
+	var ropes := Node2D.new()
+	ropes.name = "WinRopes"
+	ropes.z_index = 6
+	add_child(ropes)
+	for i in range(5):
 		var loop := Line2D.new()
-		loop.width = 4.5
-		loop.default_color = Color(0.72, 0.5, 0.22, 1.0)
-		loop.z_index = 2
-		var radius := 34.0 + float(i) * 10.0
+		loop.width = 4.5 - float(i) * 0.25
+		loop.default_color = Color(0.78, 0.58, 0.28, 1.0)
+		var radius := 16.0 + float(i) * 5.0
 		var points := PackedVector2Array()
-		for step in range(10):
-			var ang := TAU * float(step) / 9.0
+		for step in range(14):
+			var ang := TAU * float(step) / 13.0 + float(i) * 0.35
 			points.append(Vector2(
-				cos(ang) * radius * 0.55,
-				-44.0 - float(i) * 12.0 + sin(ang) * radius * 0.28
+				cos(ang) * radius * 0.7,
+				-10.0 - float(i) * 4.5 + sin(ang) * radius * 0.35
 			))
 		loop.points = points
 		loop.modulate.a = 0.0
 		ropes.add_child(loop)
-		var tween := create_tween()
-		tween.tween_property(loop, "modulate:a", 1.0, 0.08).set_delay(0.05 * float(i))
-		tween.tween_property(loop, "modulate:a", 0.0, 0.35).set_delay(0.22)
-		tween.tween_callback(loop.queue_free)
+		var rt := create_tween()
+		rt.tween_property(loop, "modulate:a", 1.0, 0.12).set_delay(0.07 * float(i))
+		rt.parallel().tween_property(loop, "scale", Vector2(1.05, 1.05), 0.12).from(Vector2(0.4, 0.4)).set_delay(0.07 * float(i))
+
+	_pose_tween = create_tween()
+	_pose_tween.tween_property(_sprite, "scale", Vector2(stand_s * 1.12, stand_s * 0.82), 0.12)
+	_pose_tween.tween_property(_sprite, "scale", Vector2(stand_s * 0.92, stand_s * 1.08), 0.1)
+	_pose_tween.tween_property(_sprite, "scale", Vector2(stand_s, stand_s), 0.1)
+	await get_tree().create_timer(0.55).timeout
+	if not is_instance_valid(self) or not _tied:
+		return
+
+	if is_instance_valid(ropes):
+		ropes.queue_free()
+	# Standing pose with legs bound — same on-screen height as the charging bull.
+	_sprite.texture = BULL_TIED_TEX
+	_sprite.flip_h = face_left
+	_sprite.rotation = 0.0
+	_sprite.scale = Vector2(tied_s, tied_s)
+	_sprite.offset = Vector2(0.0, -float(BULL_TIED_TEX.get_height()) * 0.5)
+	var wobble := create_tween()
+	wobble.tween_property(_sprite, "rotation", 0.12 if face_left else -0.12, 0.18)
+	wobble.tween_property(_sprite, "rotation", -0.1 if face_left else 0.1, 0.18)
+	wobble.tween_property(_sprite, "rotation", 0.0, 0.14)
+	await wobble.finished
+	if not is_instance_valid(self) or not _tied:
+		return
+	await get_tree().create_timer(0.2).timeout
+	if not is_instance_valid(self) or not _tied:
+		return
+
+	# Tip over onto its side, then land on the floor pose.
+	if _label != null:
+		_label.text = "DOWN!"
+		_label.modulate = Color(0.55, 0.3, 0.1, 1.0)
+	var tip_dir := -1.0 if face_left else 1.0
+	var tip := create_tween()
+	tip.set_parallel(true)
+	tip.tween_property(_sprite, "rotation", tip_dir * PI * 0.5, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	tip.tween_property(_sprite, "offset:y", -float(BULL_TIED_TEX.get_height()) * 0.22, 0.45)
+	await tip.finished
+	if not is_instance_valid(self) or not _tied:
+		return
+
+	_show_down_pose(face_left, down_s)
+	_puff_dust()
+	var settle := create_tween()
+	settle.tween_property(_sprite, "scale", Vector2(down_s * 1.08, down_s * 0.9), 0.1)
+	settle.tween_property(_sprite, "scale", Vector2(down_s, down_s), 0.16)
+	if _label != null:
+		_label.text = "TIED!"
+		_label.modulate = Color(0.2, 0.7, 0.3, 1.0)
+		_label.position.y = -58.0
+
+
+func _snap_to_down_pose() -> void:
+	_kill_pose_tween()
+	var face_left := _sprite != null and _sprite.flip_h
+	var down_s := _scale_for(BULL_DOWN_TEX, DOWN_TARGET_HEIGHT)
+	_show_down_pose(face_left, down_s)
+	if _label != null:
+		_label.text = "TIED!"
+		_label.modulate = Color(0.2, 0.7, 0.3, 1.0)
+		_label.position.y = -58.0
+
+
+func _show_down_pose(face_left: bool, down_s: float) -> void:
+	if _sprite == null:
+		return
+	_sprite.texture = BULL_DOWN_TEX
+	_sprite.flip_h = face_left
+	_sprite.rotation = 0.0
+	_sprite.scale = Vector2(down_s, down_s)
+	# Belly sits on the trail crust (node origin is the walk surface).
+	_sprite.offset = Vector2(0.0, -float(BULL_DOWN_TEX.get_height()) * 0.5)
+
+
+func _puff_dust() -> void:
+	var dust := Polygon2D.new()
+	dust.color = Color(0.82, 0.62, 0.38, 0.55)
+	dust.polygon = PackedVector2Array([
+		Vector2(-42, 0), Vector2(-8, -14), Vector2(24, -6), Vector2(46, 5), Vector2(8, 11), Vector2(-28, 8)
+	])
+	dust.position = Vector2(0, 4)
+	dust.z_index = 2
+	add_child(dust)
+	var dt := create_tween()
+	dt.tween_property(dust, "modulate:a", 0.0, 0.55)
+	dt.parallel().tween_property(dust, "scale", Vector2(1.4, 0.7), 0.55)
+	dt.tween_callback(dust.queue_free)
 
 
 func untie_for_respawn() -> void:
 	if not _tied:
 		return
 	_tied = false
+	_fallen = false
+	_vel_y = 0.0
 	_kill_pose_tween()
 	collision_layer = 0
 	z_index = 0
 	global_position = _origin
+	visible = true
 	var body_shape := get_node_or_null("CollisionShape2D") as CollisionShape2D
 	if body_shape != null:
 		body_shape.set_deferred("disabled", true)
@@ -227,9 +393,10 @@ func untie_for_respawn() -> void:
 	var hurt_shape := get_node_or_null("HurtArea/CollisionShape2D") as CollisionShape2D
 	if hurt_shape != null:
 		hurt_shape.set_deferred("disabled", false)
-	var ropes := get_node_or_null("TiedRopes")
-	if ropes != null:
-		ropes.queue_free()
+	for node_name in ["TiedRopes", "WinRopes"]:
+		var leftover := get_node_or_null(node_name)
+		if leftover != null:
+			leftover.queue_free()
 	_setup_sprite()
 	if _label != null:
 		_label.position.y = 0.0

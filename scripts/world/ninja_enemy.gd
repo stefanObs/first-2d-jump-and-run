@@ -399,6 +399,9 @@ func untie_for_respawn() -> void:
 	_tied = false
 	_state = State.DORMANT
 	_activated = false
+	_attack_token += 1
+	_throw_token += 1
+	_throw_timer = 0.0
 	_kill_pose_tween()
 	collision_layer = 0
 	z_index = 0
@@ -416,6 +419,26 @@ func untie_for_respawn() -> void:
 	var ropes := get_node_or_null("TiedRopes")
 	if ropes != null:
 		ropes.queue_free()
+	_setup_sprite()
+	if _label != null:
+		_label.position.y = 0.0
+		_label.text = "NINJA"
+		_label.modulate = Color.WHITE
+
+
+func restore_for_respawn() -> void:
+	## Untied ninjas that already ambushed return to their dormant anchor.
+	## Shuriken are cleared separately by the level controller.
+	if _tied:
+		return
+	_state = State.DORMANT
+	_activated = false
+	_attack_token += 1
+	_throw_token += 1
+	_throw_timer = 0.0
+	_kill_pose_tween()
+	global_position = _anchor
+	_set_dormant(true)
 	_setup_sprite()
 	if _label != null:
 		_label.position.y = 0.0

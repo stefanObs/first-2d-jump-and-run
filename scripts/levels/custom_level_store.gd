@@ -271,6 +271,30 @@ static func pit_blocked_columns(data: Dictionary, trail: int) -> Dictionary:
 	return blocked
 
 
+## Trail columns whose crust the cowboy actually drops through — the ones whose
+## cell centre sits inside the painted pit mouth. The dirt bank stays solid on
+## the shoulders so the hole reads as dug into the trail, not floating in air.
+static func pit_hole_columns(data: Dictionary, trail: int, grid: float = GRID_SIZE) -> Dictionary:
+	var hole := {}
+	for value in data.get("objects", []):
+		if not (value is Dictionary):
+			continue
+		var object := value as Dictionary
+		if str(object.get("type", "")) != "pit":
+			continue
+		if int(object.get("y", -1)) != trail:
+			continue
+		var center_x := (float(object.get("x", 0)) + 0.5) * grid
+		var mouth_left := center_x - PIT_PIXEL_SIZE.x * 0.5
+		var mouth_right := center_x + PIT_PIXEL_SIZE.x * 0.5
+		var span := pit_column_span(object, grid)
+		for col in range(span.x, span.y + 1):
+			var col_center := (float(col) + 0.5) * grid
+			if col_center >= mouth_left and col_center <= mouth_right:
+				hole[col] = true
+	return hole
+
+
 static func object_world_position(object: Dictionary, grid: float, trail: int) -> Vector2:
 	var type_name := str(object.get("type", ""))
 	var cell_x := float(object.get("x", 0))
