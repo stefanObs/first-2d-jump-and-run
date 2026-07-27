@@ -71,3 +71,10 @@ throw_0/1, tied on a **64×80** canvas — body ~67 px, feet on y=76 — plus th
 28×28 `ninja_shuriken` projectile). Rebuild them from `assets/source/ninja/` with
 `python tools/build_ninja_frames.py`. Enemy action animations are authored as
 **2-frame horizontal strips** (run / sword / throw).
+
+The treasure chest is a 3-part hinged rig (`treasure_chest_lid` 60×27,
+`treasure_chest_body`/`treasure_chest_interior` 60×39, `treasure_chest_stamp`
+64×64). Rebuild from `assets/source/chest/` (`closed.png` / `open.png`) with
+`python tools/build_chest_frames.py`. Use **dark espresso wood + bright gold**
+so it keeps strong value/accent contrast against the warm orange-red mesa
+backdrops (a mid-brown chest blends in).
