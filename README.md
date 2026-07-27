@@ -24,14 +24,6 @@ godot --headless --path . res://tests/test_runner.tscn
 godot --headless --path . res://tests/test_moving_platform_obstruction.tscn
 ```
 
-### Art regeneration (optional)
-
-```bash
-python3 tools/generate_treasure_chest_art.py  # treasure chest PNGs
-```
-
-After regenerating art, bump `content_version.txt` if shipped assets change.
-
 ---
 
 ## Campaign
@@ -72,7 +64,7 @@ After Kingpin: horizon victory ride, fade, dedication **VOM PAPI FÜR FINN**, th
 - **Lasso:** Alt / F / L (Xbox X) — ties bandits, trail bulls, and ninjas (pass-through, seated rope pose). A downward jump stomp from above also ties + small bounce; side/upward/standing contact hurts. Trail bulls **charge the cowboy** when he is nearby. **Ninjas ambush** ~6 grid cells ahead of the cowboy, then slash with a sword; while the cowboy **flies with Wings**, they throw handcrafted **shuriken**. Bandits placed in mid-air (workshop or level layout) **fall to the walkable surface below** before patrolling.
 - **Modes** (one at a time; badge pickup adds ~5s): Wings / Magic Boots / Speed Star **30s**; Bubble Shield **7.5s** (blocks bandits, bounces cacti; **does not** save canyon falls).
 - **Camps:** checkpoints; respawn there after canyon/cactus hurt. Classic mode has no life limit; **Advanced Mode** costs one life per respawn (three lives at start; every **30 badges** collected across the save grants +1 life; at zero lives a western game-over plays and returns to save select). Camps store badges/mode state appropriately.
-- **Treasure chests:** optional mid-trail rewards — touch to open once; a random power-up (Wings, Magic Boots, Speed Star, Bubble Shield) or one sheriff badge is rolled at open time, revealed with a handcrafted pop-out animation, and activated immediately on the player (same effect as collecting that pickup); chest stays open and cannot be re-triggered; Advanced Mode badge milestones count only badge loot (+1), not power-ups. Chest collision scales to **~109% of player height** (handcrafted prop, not a flat grid stamp).
+- **Treasure chests:** optional mid-trail rewards — touch to open once; a random power-up (Wings, Magic Boots, Speed Star, Bubble Shield) or one sheriff badge is rolled at open time, revealed with a pop-out animation, and activated immediately on the player (same effect as collecting that pickup); chest stays open and cannot be re-triggered; Advanced Mode badge milestones count only badge loot (+1), not power-ups. Chest collision scales to **~109% of player height** (scaled prop, not a flat grid stamp).
 - **Player characters:** **Cowboy** or **Cowgirl** in Settings (all slots). Both share the same animation set (idle, run, jump, celebrate, Magic Boots variants). **Idle uses a single pose frame** with a gentle scale breathe — do not alternate mismatched idle frames (causes flicker).
 - **Canyons vs cactus vs pits:** **Canyons** are wide trail gaps (merged stamps, hand-painted rims, sky mouth). **Pits** are fixed **128×64 px** holes (`assets/world/pit.png`, no scaling) stamped only on trail **dirt** cells. Falling into a pit or canyon → spin recovery → camp. Cactus/bandit/carrion/snake hurt → camp (Bubble can block some damage). User-facing copy: call wide gaps **canyons**; call fixed holes **pits** (never use “pit” for a canyon).
 - **Stars:** optional; goals are saloon doorways (flying over counts). Level clear → horse ride-in/mount/ride-out → next level: ride in, dismount, and **leave the horse at the level start**. Handmade desert skyline behind transitions.
@@ -138,7 +130,6 @@ Safe stars, forward-only solvability, reachable platforms/stars, visible themed 
 ## UI / art style
 
 - Warm **handmade / hand-painted** western look matching trail tiles (sky, ground, props).
-- **Treasure chest** props: handcrafted western wood/brass (`tools/generate_treasure_chest_art.py`); gameplay collision height follows `TreasureChest.HEIGHT_RATIO` (~109% of player).
 - HUD / doors / prompts: irregular **western wood signs** (`HandmadeSign`), not generic flat UI cards.
 - Start screen, settings, pause, save select: stay **handcrafted** and trail-themed (polish may continue; do not regress to stock Godot chrome or mismatched stock art). Save select / boot title use a painted weathered **saloon wood sign** (peeling red rim, cream lettering, optional pointing-hand motif) in the same soft handmade style as trail tiles — not photoreal stock art.
 - Between-level horse transitions use a dedicated hand-painted desert skyline.
