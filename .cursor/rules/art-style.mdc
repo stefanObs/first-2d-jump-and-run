@@ -10,6 +10,7 @@ The canonical look for this western platformer. Match it whenever creating or
 replacing art. Approved reference images live in
 `assets/source/style_reference/` (cowgirl on-foot, mounted, run strip) — pass
 them, plus the relevant existing frame, as references when generating new art.
+Approved concept sources for the ninja enemy live in `assets/source/ninja/`.
 
 ## Visual language
 
@@ -39,6 +40,10 @@ Shared finishing (both tiers):
   flips for left movement).
 - **Idle is a single pose frame** (idle_0 == idle_1) — never alternate mismatched
   idle frames (causes flicker).
+- **Enemies that always face the player** (e.g. the ninja) use a 3/4 **facing-right**
+  idle/ready stance instead of a front idle, so it blends when the run cycle
+  interleaves the idle frame. Keep weapons in action frames **compact** (blade tip
+  close to the body) so the head-to-foot body scale stays consistent across frames.
 
 ## Generation + integration pipeline
 
@@ -60,3 +65,9 @@ Shared finishing (both tiers):
 Cowgirl on-foot frames live in `assets/player/cowgirl/`; mounted in
 `assets/world/cowgirl_horse_*.png`. Cowboy frames in `assets/player/` are the
 Tier-A reference for pose, scale, and in-frame registration.
+
+Ninja enemy frames live in `assets/world/ninja_*.png` (idle, run_0/1, sword_0/1,
+throw_0/1, tied on a **64×80** canvas — body ~67 px, feet on y=76 — plus the
+28×28 `ninja_shuriken` projectile). Rebuild them from `assets/source/ninja/` with
+`python tools/build_ninja_frames.py`. Enemy action animations are authored as
+**2-frame horizontal strips** (run / sword / throw).
