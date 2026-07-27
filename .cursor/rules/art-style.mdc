@@ -1,0 +1,62 @@
+---
+description: Hand-drawn art style + sprite generation pipeline for creating or replacing game art (characters, props, mounts)
+globs: tools/*.py,assets/**
+alwaysApply: false
+---
+
+# Hand-Drawn Art Style
+
+The canonical look for this western platformer. Match it whenever creating or
+replacing art. Approved reference images live in
+`assets/source/style_reference/` (cowgirl on-foot, mounted, run strip) — pass
+them, plus the relevant existing frame, as references when generating new art.
+
+## Visual language
+
+Warm **hand-painted storybook western cartoon**. Two tiers:
+
+- **Tier A — chibi characters** (player, humanoid enemies/bosses): oversized
+  friendly head ~40% of height, small chunky body, short stubby limbs, big
+  boots/hat. Large expressive eyes, simple warm smile.
+- **Tier B — naturalistic cartoon** (animals, terrain, structures, props,
+  power-up icons): correct proportions, softer painterly shading, more internal
+  detail (fur/scale/grain).
+
+Shared finishing (both tiers):
+
+- **Thick warm dark-brown ink outline** (`~(28,12,4)`, never pure black); thinner
+  ink for internal seams.
+- **Soft cel shading**: one base + one shadow + one highlight per material.
+- **Light from upper-left**; soft low contact shadow when on ground.
+- Warm desert palette: tan hat, denim-blue shirt/jeans, red kerchief, brown
+  vest/boots, brass buckles; orange-red mesa rock; grass-green over brown dirt.
+
+## Character pose conventions (match the cowboy)
+
+- **idle** and **celebrate**: front-facing. Idle head/gaze angled slightly
+  off-camera (3/4) — the character does **not** stare straight at the player.
+- **run** (4-frame cycle) and **jump**: 3/4 view **facing right** (the engine
+  flips for left movement).
+- **Idle is a single pose frame** (idle_0 == idle_1) — never alternate mismatched
+  idle frames (causes flicker).
+
+## Generation + integration pipeline
+
+1. Generate with the image tool, passing `assets/source/style_reference/*` and the
+   existing frame as references. Ask for a plain flat background.
+2. Generators paint a **fake light checkerboard / white background** (not real
+   alpha). Key it out with `tools/art_pipeline.py::cutout` (border flood-fill of
+   light near-gray pixels; preserves interior eye-whites).
+3. Frame with `art_pipeline.frame_sprite`:
+   - **On-foot player frames**: 64×64, figure ~60 px tall, feet on y=63, centered.
+   - **Mounted frames**: `ride_*` 360×320 (fill ~280 px, ~20 px top/bottom margin);
+     `jump` 336×268 (hooves at bottom).
+4. Generate a **run cycle as one horizontal 4-frame strip** (keeps the character
+   consistent), then split with `art_pipeline.slice_strip`.
+5. **`_boots` (Magic Boots) variants are identical copies** of the base frame —
+   the boots glow is a separate in-engine overlay, not baked into the sprite.
+6. After changing shipped art, bump `content_version.txt`.
+
+Cowgirl on-foot frames live in `assets/player/cowgirl/`; mounted in
+`assets/world/cowgirl_horse_*.png`. Cowboy frames in `assets/player/` are the
+Tier-A reference for pose, scale, and in-frame registration.
