@@ -2255,6 +2255,10 @@ func _test_lasso_ties_ninja() -> Variant:
 	var sprite := ninja.get_node_or_null("NinjaSprite") as AnimatedSprite2D
 	if sprite != null and sprite.animation != &"tied":
 		error = "Tied ninjas should switch to the bound pose."
+	elif sprite != null and absf(sprite.scale.y - NinjaEnemy.STAND_SCALE) > 0.01:
+		error = "Tied ninjas must keep standing size (got scale %.2f)." % sprite.scale.y
+	elif sprite != null and sprite.offset != NinjaEnemy.STAND_FOOT_OFFSET:
+		error = "Tied ninjas must sit on the floor with the standing foot offset."
 	ninja.queue_free()
 	return error
 

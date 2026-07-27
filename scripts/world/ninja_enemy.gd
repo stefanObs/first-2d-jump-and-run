@@ -9,7 +9,8 @@ signal captured(ninja: NinjaEnemy)
 enum State { DORMANT, APPEAR, CHASE, ATTACK, THROW, TIED }
 
 const STAND_SCALE := 1.15
-const TIED_SCALE := 0.72
+## Tied art is the same 64×80 frame as idle — keep standing size so he does not shrink.
+const STAND_FOOT_OFFSET := Vector2(0, -40)
 const STOMP_BOUNCE := -420.0
 const STOMP_MIN_FALL_SPEED := 80.0
 const SPAWN_AHEAD := 240.0
@@ -55,7 +56,7 @@ func _setup_sprite() -> void:
 	_sprite.name = "NinjaSprite"
 	_sprite.sprite_frames = _make_sprite_frames()
 	_sprite.centered = true
-	_sprite.offset = Vector2(0, -40)
+	_sprite.offset = STAND_FOOT_OFFSET
 	_sprite.scale = Vector2(STAND_SCALE, STAND_SCALE)
 	_apply_facing(1.0)
 	_sprite.play(&"idle")
@@ -357,20 +358,19 @@ func _show_tied_pose() -> void:
 	if _sprite == null:
 		return
 	_kill_pose_tween()
-	var face := -1.0 if _sprite.flip_h else 1.0
 	_sprite.play(&"tied")
-	_sprite.offset = Vector2(0, -65)
-	_sprite.scale = Vector2(TIED_SCALE * face, TIED_SCALE)
+	# Same frame size as idle — keep standing scale and foot offset so he sits on the trail.
+	_sprite.offset = STAND_FOOT_OFFSET
+	_sprite.scale = Vector2(STAND_SCALE, STAND_SCALE)
 
 
 func _play_tying_flourish() -> void:
 	if _sprite == null:
 		return
 	_kill_pose_tween()
-	var face := -1.0 if _sprite.flip_h else 1.0
 	_pose_tween = create_tween()
-	_pose_tween.tween_property(_sprite, "scale", Vector2(0.9 * face, 0.55), 0.1)
-	_pose_tween.tween_property(_sprite, "scale", Vector2(TIED_SCALE * face, TIED_SCALE), 0.14)
+	_pose_tween.tween_property(_sprite, "scale", Vector2(STAND_SCALE * 1.08, STAND_SCALE * 0.72), 0.1)
+	_pose_tween.tween_property(_sprite, "scale", Vector2(STAND_SCALE, STAND_SCALE), 0.14)
 
 
 func _animate_rope_coils(ropes: Node2D) -> void:
