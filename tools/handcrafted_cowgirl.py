@@ -1,19 +1,21 @@
+#!/usr/bin/env python3
 """Hand-painted cowgirl player sprites — drawn from scratch (no cowboy source frames)."""
 
 from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from pathlib import Path
 
 from PIL import Image, ImageDraw
 
 SIZE = 64
 SUPER = 2
 CANVAS = SIZE * SUPER
+OUTPUT_DIR = Path(__file__).resolve().parents[1] / "assets" / "player" / "cowgirl"
 
 INK = (24, 16, 12, 255)
 SKIN = (238, 192, 152, 255)
-SKIN_SHADOW = (206, 148, 108, 255)
 SKIN_BLUSH = (232, 138, 128, 255)
 HAT = (210, 162, 96, 255)
 HAT_SHADOW = (148, 102, 54, 255)
@@ -39,6 +41,17 @@ MAGIC_BOOT = (168, 88, 220, 255)
 MAGIC_GLOW = (232, 196, 255, 255)
 EYE_WHITE = (252, 248, 242, 255)
 
+FRAME_NAMES = (
+    "idle_0",
+    "idle_1",
+    "run_0",
+    "run_1",
+    "run_2",
+    "run_3",
+    "jump",
+    "celebrate",
+)
+
 
 @dataclass(frozen=True)
 class Pose:
@@ -52,12 +65,20 @@ class Pose:
     celebrate: bool = False
 
 
+FRAME_POSES: dict[str, Pose] = {
+    "idle_0": Pose(),
+    "idle_1": Pose(bob=0.5, hair_swing=0.4),
+    "run_0": Pose(left_leg=-2.0, right_leg=2.2, left_arm=1.8, right_arm=-1.8, hair_swing=-0.8, bob=0.4),
+    "run_1": Pose(bob=0.7, left_arm=0.4, right_arm=-0.4),
+    "run_2": Pose(left_leg=2.2, right_leg=-2.0, left_arm=-1.8, right_arm=1.8, hair_swing=0.8, bob=0.4),
+    "run_3": Pose(bob=0.7, left_arm=-0.4, right_arm=0.4),
+    "jump": Pose(bob=-1.2, left_leg=-2.5, right_leg=1.8, left_arm=-2.8, right_arm=-2.8, hair_swing=-1.2),
+    "celebrate": Pose(bob=-0.8, left_arm=3.5, right_arm=3.5, hair_swing=1.0, celebrate=True),
+}
+
+
 def _s(value: float) -> float:
     return value * SUPER
-
-
-def _downscale(img: Image.Image) -> Image.Image:
-    return img.resize((SIZE, SIZE), Image.Resampling.NEAREST)
 
 
 def _line(
@@ -80,28 +101,24 @@ def _bezier2(
     for i in range(steps + 1):
         t = i / steps
         u = 1.0 - t
-        x = u * u * start[0] + 2 * u * t * control[0] + t * t * end[0]
-        y = u * u * start[1] + 2 * u * t * control[1] + t * t * end[1]
-        points.append((x, y))
+        points.append(
+            (
+                u * u * start[0] + 2 * u * t * control[0] + t * t * end[0],
+                u * u * start[1] + 2 * u * t * control[1] + t * t * end[1],
+            )
+        )
     return points
 
 
-def _stroke_path(
+def _stroke_dot(
     draw: ImageDraw.ImageDraw,
-    points: list[tuple[float, float]],
+    center: tuple[float, float],
     radius: float,
     fill: tuple[int, int, int, int],
-    outline: tuple[int, int, int, int] | None = INK,
 ) -> None:
+    cx, cy = center
     r = _s(radius)
-    for cx, cy in points:
-        draw.ellipse((cx - r, cy - r, cx + r, cy + r), fill=fill)
-        if outline is not None:
-            draw.ellipse(
-                (cx - r, cy - r, cx + r, cy + r),
-                outline=outline,
-                width=max(1, int(round(_s(0.55)))),
-            )
+    draw.ellipse((cx - r, cy - r, cx + r, cy + r), fill=fill, outline=INK, width=max(1, int(round(_s(0.55)))))
 
 
 def _draw_boot(
@@ -115,10 +132,11 @@ def _draw_boot(
     hi = MAGIC_GLOW if magic else BOOT_LIGHT
     if facing == "right":
         box = (tx - _s(5.5), ty - _s(5.0), tx + _s(1.0), ty + _s(1.0))
+        heel_x = tx - _s(4.0)
     else:
         box = (tx - _s(1.0), ty - _s(5.0), tx + _s(5.5), ty + _s(1.0))
+        heel_x = tx + _s(4.0)
     draw.rounded_rectangle(box, radius=max(1, int(_s(1.5))), fill=color, outline=INK, width=max(1, int(_s(0.8))))
-    heel_x = tx - _s(4.0) if facing == "right" else tx + _s(4.0)
     draw.line([(heel_x, ty - _s(3.5)), (tx, ty - _s(4.5))], fill=hi, width=max(1, int(_s(0.8))))
     if magic:
         spark = (tx - _s(1.5), ty - _s(6.0))
@@ -191,26 +209,16 @@ def _draw_pigtail(
         wave = math.sin(t * math.pi * 2.8) * (1.0 + abs(swing) * 0.2)
         px = cx + (_s(wave) if side == "left" else -_s(wave))
         tone = HAIR_LIGHT if t < 0.25 else HAIR if t < 0.7 else HAIR_DARK
-        _stroke_path(draw, [(px, cy)], radius, tone)
+        _stroke_dot(draw, (px, cy), radius, tone)
     rx, ry = root
     draw.ellipse((rx - _s(1.8), ry - _s(1.5), rx + _s(1.8), ry + _s(1.5)), fill=BANDANA, outline=INK, width=1)
 
 
 def _draw_hat(draw: ImageDraw.ImageDraw, cx: float, cy: float) -> None:
     brim_y = cy + _s(4.0)
-    draw.pieslice(
-        (cx - _s(13.0), brim_y - _s(2.0), cx + _s(13.0), brim_y + _s(3.0)),
-        start=10,
-        end=170,
-        fill=HAT,
-    )
-    draw.arc(
-        (cx - _s(13.0), brim_y - _s(2.0), cx + _s(13.0), brim_y + _s(3.0)),
-        start=10,
-        end=170,
-        fill=INK,
-        width=max(1, int(_s(0.9))),
-    )
+    brim_box = (cx - _s(13.0), brim_y - _s(2.0), cx + _s(13.0), brim_y + _s(3.0))
+    draw.pieslice(brim_box, start=10, end=170, fill=HAT)
+    draw.arc(brim_box, start=10, end=170, fill=INK, width=max(1, int(_s(0.9))))
     crown = [
         (cx - _s(7.0), cy + _s(1.0)),
         (cx + _s(7.0), cy + _s(1.0)),
@@ -219,16 +227,12 @@ def _draw_hat(draw: ImageDraw.ImageDraw, cx: float, cy: float) -> None:
     ]
     draw.polygon(crown, fill=HAT, outline=INK)
     draw.rectangle((cx - _s(7.0), cy - _s(1.0), cx + _s(7.0), cy + _s(0.5)), fill=HAT_BAND)
-    draw.pieslice(
-        (cx - _s(7.0), cy - _s(8.0), cx + _s(7.0), cy + _s(2.0)),
-        start=205,
-        end=335,
-        fill=HAT_SHADOW,
-    )
+    draw.pieslice((cx - _s(7.0), cy - _s(8.0), cx + _s(7.0), cy + _s(2.0)), start=205, end=335, fill=HAT_SHADOW)
 
 
 def _draw_face(draw: ImageDraw.ImageDraw, cx: float, cy: float) -> None:
-    draw.ellipse((cx - _s(6.5), cy - _s(6.5), cx + _s(6.5), cy + _s(6.5)), fill=SKIN, outline=INK, width=max(1, int(_s(0.9))))
+    face_box = (cx - _s(6.5), cy - _s(6.5), cx + _s(6.5), cy + _s(6.5))
+    draw.ellipse(face_box, fill=SKIN, outline=INK, width=max(1, int(_s(0.9))))
     draw.ellipse((cx - _s(4.8), cy - _s(0.8), cx - _s(1.2), cy + _s(2.0)), fill=SKIN_BLUSH)
     draw.ellipse((cx + _s(1.2), cy - _s(0.8), cx + _s(4.8), cy + _s(2.0)), fill=SKIN_BLUSH)
     for ex in (cx - _s(3.2), cx + _s(3.2)):
@@ -243,7 +247,11 @@ def _draw_face(draw: ImageDraw.ImageDraw, cx: float, cy: float) -> None:
 def _draw_bangs(draw: ImageDraw.ImageDraw, cx: float, cy: float) -> None:
     for ox in range(-3, 4):
         x = cx + _s(float(ox) * 1.3)
-        draw.line([(x, cy - _s(6.0)), (x, cy - _s(2.8 if abs(ox) < 2 else 3.6))], fill=HAIR if ox % 2 else HAIR_LIGHT, width=max(1, int(_s(1.2))))
+        draw.line(
+            [(x, cy - _s(6.0)), (x, cy - _s(2.8 if abs(ox) < 2 else 3.6))],
+            fill=HAIR if ox % 2 else HAIR_LIGHT,
+            width=max(1, int(_s(1.2))),
+        )
 
 
 def _draw_torso(draw: ImageDraw.ImageDraw, cx: float, top: float) -> None:
@@ -254,20 +262,26 @@ def _draw_torso(draw: ImageDraw.ImageDraw, cx: float, top: float) -> None:
         (cx - _s(6.0), top + _s(14.0)),
     ]
     draw.polygon(shirt, fill=SHIRT, outline=INK)
-    yoke = [
-        (cx - _s(6.5), top + _s(0.5)),
-        (cx + _s(6.5), top + _s(0.5)),
-        (cx + _s(4.0), top + _s(6.0)),
-        (cx - _s(4.0), top + _s(6.0)),
-    ]
-    draw.polygon(yoke, fill=YOKE, outline=YOKE_DARK)
-    vest = [
-        (cx - _s(7.2), top + _s(6.5)),
-        (cx + _s(7.2), top + _s(6.5)),
-        (cx + _s(5.8), top + _s(14.0)),
-        (cx - _s(5.8), top + _s(14.0)),
-    ]
-    draw.polygon(vest, fill=VEST, outline=INK)
+    draw.polygon(
+        [
+            (cx - _s(6.5), top + _s(0.5)),
+            (cx + _s(6.5), top + _s(0.5)),
+            (cx + _s(4.0), top + _s(6.0)),
+            (cx - _s(4.0), top + _s(6.0)),
+        ],
+        fill=YOKE,
+        outline=YOKE_DARK,
+    )
+    draw.polygon(
+        [
+            (cx - _s(7.2), top + _s(6.5)),
+            (cx + _s(7.2), top + _s(6.5)),
+            (cx + _s(5.8), top + _s(14.0)),
+            (cx - _s(5.8), top + _s(14.0)),
+        ],
+        fill=VEST,
+        outline=INK,
+    )
     belt_y = top + _s(13.2)
     draw.rectangle((cx - _s(7.0), belt_y, cx + _s(7.0), belt_y + _s(2.0)), fill=BELT, outline=INK, width=1)
     draw.rectangle((cx - _s(2.0), belt_y + _s(0.2), cx + _s(2.0), belt_y + _s(1.6)), fill=BRASS)
@@ -275,11 +289,7 @@ def _draw_torso(draw: ImageDraw.ImageDraw, cx: float, top: float) -> None:
 
 def _draw_bandana(draw: ImageDraw.ImageDraw, cx: float, cy: float) -> None:
     draw.polygon(
-        [
-            (cx - _s(4.5), cy + _s(4.5)),
-            (cx + _s(4.5), cy + _s(4.5)),
-            (cx, cy + _s(7.5)),
-        ],
+        [(cx - _s(4.5), cy + _s(4.5)), (cx + _s(4.5), cy + _s(4.5)), (cx, cy + _s(7.5))],
         fill=BANDANA,
         outline=INK,
     )
@@ -293,45 +303,40 @@ def draw_cowgirl_frame(pose: Pose, *, magic_boots: bool = False) -> Image.Image:
     torso_top = head_y + _s(11.0)
     hip_y = torso_top + _s(14.0)
 
-    left_toe = (cx - _s(5.0 + pose.left_leg), _s(58.0))
-    right_toe = (cx + _s(6.0 + pose.right_leg), _s(58.0))
-    left_hip = (cx - _s(3.5), hip_y)
-    right_hip = (cx + _s(3.5), hip_y)
-    _draw_leg(draw, left_hip, left_toe, "left", magic_boots)
-    _draw_leg(draw, right_hip, right_toe, "right", magic_boots)
+    _draw_leg(draw, (cx - _s(3.5), hip_y), (cx - _s(5.0 + pose.left_leg), _s(58.0)), "left", magic_boots)
+    _draw_leg(draw, (cx + _s(3.5), hip_y), (cx + _s(6.0 + pose.right_leg), _s(58.0)), "right", magic_boots)
     _draw_torso(draw, cx, torso_top)
     _draw_arm(draw, (cx - _s(7.0), torso_top + _s(4.0)), pose.left_arm, "left", pose.celebrate)
     _draw_arm(draw, (cx + _s(7.0), torso_top + _s(4.0)), pose.right_arm, "right", pose.celebrate)
     _draw_bandana(draw, cx, head_y + _s(1.0))
     _draw_face(draw, cx, head_y)
     _draw_bangs(draw, cx, head_y)
-    _draw_pigtail(
-        draw,
-        (cx - _s(7.5), head_y + _s(0.5)),
-        (cx - _s(11.0), head_y + _s(14.0)),
-        (cx - _s(8.0), _s(46.0)),
-        "left",
-        pose.hair_swing,
-    )
-    _draw_pigtail(
-        draw,
-        (cx + _s(7.5), head_y + _s(0.5)),
-        (cx + _s(11.0), head_y + _s(14.0)),
-        (cx + _s(8.0), _s(46.0)),
-        "right",
-        pose.hair_swing,
-    )
+    for side, root_x, ctrl_x, tip_x in (
+        ("left", -7.5, -11.0, -8.0),
+        ("right", 7.5, 11.0, 8.0),
+    ):
+        _draw_pigtail(
+            draw,
+            (cx + _s(root_x), head_y + _s(0.5)),
+            (cx + _s(ctrl_x), head_y + _s(14.0)),
+            (cx + _s(tip_x), _s(46.0)),
+            side,
+            pose.hair_swing,
+        )
     _draw_hat(draw, cx, head_y - _s(1.0))
-    return _downscale(img)
+    return img.resize((SIZE, SIZE), Image.Resampling.NEAREST)
 
 
-FRAME_POSES: dict[str, Pose] = {
-    "idle_0": Pose(),
-    "idle_1": Pose(bob=0.5, hair_swing=0.4),
-    "run_0": Pose(left_leg=-2.0, right_leg=2.2, left_arm=1.8, right_arm=-1.8, hair_swing=-0.8, bob=0.4),
-    "run_1": Pose(bob=0.7, left_arm=0.4, right_arm=-0.4),
-    "run_2": Pose(left_leg=2.2, right_leg=-2.0, left_arm=-1.8, right_arm=1.8, hair_swing=0.8, bob=0.4),
-    "run_3": Pose(bob=0.7, left_arm=-0.4, right_arm=0.4),
-    "jump": Pose(bob=-1.2, left_leg=-2.5, right_leg=1.8, left_arm=-2.8, right_arm=-2.8, hair_swing=-1.2),
-    "celebrate": Pose(bob=-0.8, left_arm=3.5, right_arm=3.5, hair_swing=1.0, celebrate=True),
-}
+def generate_all(output_dir: Path = OUTPUT_DIR) -> None:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    for name in FRAME_NAMES:
+        pose = FRAME_POSES[name]
+        for magic, suffix in ((False, ""), (True, "_boots")):
+            path = output_dir / f"{name}{suffix}.png"
+            draw_cowgirl_frame(pose, magic_boots=magic).save(path)
+            print(f"wrote {path}")
+
+
+if __name__ == "__main__":
+    generate_all()
+    print(f"Wrote handcrafted cowgirl frames to {OUTPUT_DIR}")
