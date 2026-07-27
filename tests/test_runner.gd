@@ -2832,7 +2832,9 @@ func _test_slope_dirt_below_crust() -> Variant:
 		var surface_y := WildWestTheme._slope_y_at(
 			sample_x, x_start, y_start, x_end, y_end, curved
 		)
-		if slope_dirt.global_position.y > surface_y + 6.0:
+		# Slope earth fills UNDER the crust (the upper wedge is the FloorSlopeUnderfill
+		# polygon). Dirt tiles must never poke above the sand crust line.
+		if slope_dirt.global_position.y < surface_y - 6.0:
 			level.free()
 			return "FloorSlopeDirt must not paint above the dune crust line."
 		if slope_dirt.z_index >= 3:
@@ -4548,11 +4550,11 @@ func _test_workshop_stamp_catalog() -> Variant:
 		for tool in (category as Dictionary).get("tools", []) as Array:
 			palette_types.append(str((tool as Array)[0]))
 	editor.queue_free()
-	for type_name in ["bounty_bandit", "carrion", "pit", "chest"]:
+	for type_name in ["bounty_bandit", "carrion", "pit", "chest", "bull", "ninja"]:
 		if type_name not in palette_types:
 			return "Workshop palette missing %s stamp." % type_name
 	var trail := CustomLevelStore.trail_row(8)
-	for type_name in ["bounty_bandit", "carrion", "chest"]:
+	for type_name in ["bounty_bandit", "carrion", "chest", "bull", "ninja"]:
 		if not CustomLevelStore._valid_object({"type": type_name, "x": 1, "y": trail - 1}, trail):
 			return "%s should be accepted by CustomLevelStore." % type_name
 	var data := CustomLevelStore.default_level(0)
@@ -4561,6 +4563,8 @@ func _test_workshop_stamp_catalog() -> Variant:
 		{"type": "bounty_bandit", "x": 2, "y": trail - 1},
 		{"type": "carrion", "x": 6, "y": trail - 3},
 		{"type": "chest", "x": 10, "y": trail - 1},
+		{"type": "bull", "x": 12, "y": trail - 1},
+		{"type": "ninja", "x": 14, "y": trail - 1},
 	]
 	var level := LevelController.new()
 	CustomLevelBuilder.build(level, data)
@@ -4581,6 +4585,12 @@ func _test_workshop_stamp_catalog() -> Variant:
 		return "Workshop chest should stand on the trail surface (y=%.1f, expected %.1f)." % [
 			chest.global_position.y, expected_floor
 		]
+	if level.find_child("Bull0", true, false) as BullEnemy == null:
+		level.free()
+		return "Builder should spawn a bull from the bull stamp."
+	if level.find_child("Ninja0", true, false) as NinjaEnemy == null:
+		level.free()
+		return "Builder should spawn a ninja from the ninja stamp."
 	level.free()
 	return null
 

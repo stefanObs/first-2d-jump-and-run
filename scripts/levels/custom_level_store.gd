@@ -654,8 +654,9 @@ static func migrate_v3_to_v4(source: Dictionary) -> Dictionary:
 				elif y == old_near:
 					object["y"] = maxi(trail - 1, 0)
 				else:
-					# Ground props stand one cell above dirt on the trail row.
-					object["y"] = maxi(trail - 1, 0)
+					# The H-2 walk surface collapses onto the single trail row, so its
+					# surface props (cactus, goal, ...) share that row with the dirt.
+					object["y"] = trail
 			else:
 				# Shift sky/platform rows down by the two removed rows.
 				object["y"] = clampi(y, 0, trail)
