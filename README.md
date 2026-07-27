@@ -125,7 +125,7 @@ Safe stars, forward-only solvability, reachable platforms/stars, visible themed 
 
 ## UI / art style
 
-- Warm **handmade / hand-painted** western look matching trail tiles (sky, ground, props, cowboy/cowgirl player frames).
+- Warm **handmade / hand-painted** western look matching trail tiles (sky, ground, props, cowboy/cowgirl player frames). Cowgirl on-foot sprites are **original handcrafted art** (`tools/handcrafted_cowgirl.py`); regenerate with `python3 tools/generate_cowgirl_player_art.py`.
 - HUD / doors / prompts: irregular **western wood signs** (`HandmadeSign`), not generic flat UI cards.
 - Start screen, settings, pause, save select: stay **handcrafted** and trail-themed (polish may continue; do not regress to stock Godot chrome or mismatched stock art). Save select / boot title use a painted weathered **saloon wood sign** (peeling red rim, cream lettering, optional pointing-hand motif) in the same soft handmade style as trail tiles — not photoreal stock art.
 - Between-level horse transitions use a dedicated hand-painted desert skyline.

@@ -1,21 +1,13 @@
 #!/usr/bin/env python3
-"""Build handcrafted cowgirl player sprites from cowboy frames + reference cues."""
+"""Generate handcrafted cowgirl player sprites from scratch (no cowboy source frames)."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from PIL import Image
+from handcrafted_cowgirl import FRAME_POSES, draw_cowgirl_frame
 
-from cowgirl_character import (
-    add_eyelashes,
-    add_pink_cuffs,
-)
-from cowgirl_hair import draw_player_cowgirl_hair
-
-ROOT = Path(__file__).resolve().parents[1] / "assets" / "player"
-COWBOY = ROOT
-COWGIRL = ROOT / "cowgirl"
+ROOT = Path(__file__).resolve().parents[1] / "assets" / "player" / "cowgirl"
 
 PLAYER_FRAMES = [
     "idle_0.png",
@@ -29,42 +21,19 @@ PLAYER_FRAMES = [
 ]
 
 
-def _swing_for_frame(name: str) -> float:
-    if "idle_1" in name:
-        return 1.0
-    if "run_0" in name:
-        return -1.5
-    if "run_1" in name:
-        return 0.0
-    if "run_2" in name:
-        return 1.5
-    if "run_3" in name:
-        return 0.5
-    if "jump" in name:
-        return -2.0
-    if "celebrate" in name:
-        return 2.0
-    return 0.0
-
-
-def transform_frame(cowboy_path: Path, out_path: Path) -> None:
-    img = Image.open(cowboy_path).convert("RGBA")
-    add_pink_cuffs(img)
-    draw_player_cowgirl_hair(img, _swing_for_frame(cowboy_path.name))
-    add_eyelashes(img)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    img.save(out_path)
-    print(f"wrote {out_path}")
-
-
 def generate_all() -> None:
-    COWGIRL.mkdir(parents=True, exist_ok=True)
+    ROOT.mkdir(parents=True, exist_ok=True)
     for name in PLAYER_FRAMES:
-        transform_frame(COWBOY / name, COWGIRL / name)
-        boots_name = name.replace(".png", "_boots.png")
-        transform_frame(COWBOY / boots_name, COWGIRL / boots_name)
+        stem = name.replace(".png", "")
+        pose = FRAME_POSES[stem]
+        out = ROOT / name
+        draw_cowgirl_frame(pose, magic_boots=False).save(out)
+        print(f"wrote {out}")
+        boots_out = ROOT / f"{stem}_boots.png"
+        draw_cowgirl_frame(pose, magic_boots=True).save(boots_out)
+        print(f"wrote {boots_out}")
 
 
 if __name__ == "__main__":
     generate_all()
-    print(f"Wrote cowgirl frames to {COWGIRL}")
+    print(f"Wrote handcrafted cowgirl frames to {ROOT}")
