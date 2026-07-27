@@ -68,8 +68,54 @@ static func stamp_world_size(type_name: String) -> Vector2:
 			return Vector2(GRID_SIZE * 2.0, 24.0)
 		"pit":
 			return PIT_PIXEL_SIZE
+		"chest":
+			return _texture_pixel_size(
+				"res://assets/world/treasure_chest_body.png",
+				TreasureChest.SIZE_SCALE
+			)
+		"spring":
+			return _texture_pixel_size("res://assets/world/spring.png")
+		"cactus":
+			return _texture_pixel_size("res://assets/world/cactus.png")
+		"bandit", "bounty_bandit":
+			return _texture_pixel_size("res://assets/world/bandit.png")
+		"rattlesnake":
+			return _texture_pixel_size("res://assets/world/rattlesnake_idle.png")
+		"carrion":
+			return _texture_pixel_size("res://assets/world/carrion_bird.png")
+		"star":
+			return _texture_pixel_size("res://assets/world/star_badge.png")
+		"checkpoint":
+			return _texture_pixel_size("res://assets/world/checkpoint_active.png")
+		"goal":
+			return _texture_pixel_size("res://assets/world/goal_saloon.png")
+		"wings", "boots", "speed", "shield":
+			return _texture_pixel_size(_mode_item_icon_path(type_name))
 		_:
 			return Vector2(GRID_SIZE, GRID_SIZE)
+
+
+static func _mode_item_icon_path(type_name: String) -> String:
+	match type_name:
+		"wings":
+			return "res://assets/world/modes/wings.png"
+		"boots":
+			return "res://assets/world/modes/magic_boots.png"
+		"speed":
+			return "res://assets/world/modes/speed_badge.png"
+		"shield":
+			return "res://assets/world/modes/bubble_shield.png"
+		_:
+			return ""
+
+
+static func _texture_pixel_size(path: String, scale: float = 1.0) -> Vector2:
+	if path.is_empty() or not ResourceLoader.exists(path):
+		return Vector2(GRID_SIZE, GRID_SIZE)
+	var texture := load(path) as Texture2D
+	if texture == null:
+		return Vector2(GRID_SIZE, GRID_SIZE)
+	return texture.get_size() * scale
 
 
 static func stamp_hover_cells(
@@ -132,6 +178,33 @@ static func stamp_world_rect(
 		float(max_col - min_col + 1) * grid,
 		float(max_row - min_row + 1) * grid
 	)
+
+
+static func stamp_visual_world_rect(
+	type_name: String, hover_col: int, hover_row: int, trail: int, width: int, grid: float = GRID_SIZE
+) -> Rect2:
+	if type_name in ["erase", "ground", "canyon"] or hover_col < 0 or hover_row < 0:
+		return Rect2()
+	var size := stamp_world_size(type_name)
+	if type_name == "pit":
+		if hover_row != trail:
+			return Rect2()
+		var center := pit_world_position({"type": "pit", "x": hover_col, "y": trail}, grid, trail)
+		return Rect2(center - size * 0.5, size)
+	if type_name == "platform":
+		var cells := stamp_hover_cells(type_name, hover_col, hover_row, trail, width)
+		if cells.is_empty():
+			return Rect2()
+		var left_col := cells[0].x
+		return Rect2(float(left_col) * grid, float(trail) * grid - size.y, size.x, size.y)
+	var place_row := placement_row(type_name, hover_row, trail)
+	var object := {"type": type_name, "x": hover_col, "y": place_row}
+	var anchor := object_world_position(object, grid, trail)
+	if is_ground_standing(type_name):
+		return Rect2(anchor.x - size.x * 0.5, anchor.y - size.y, size.x, size.y)
+	if type_name == "carrion":
+		return Rect2(anchor.x - size.x * 0.5, anchor.y - size.y * 0.5, size.x, size.y)
+	return Rect2(anchor.x - size.x * 0.5, anchor.y - size.y, size.x, size.y)
 
 
 static func pit_world_position(object: Dictionary, grid: float, trail: int) -> Vector2:

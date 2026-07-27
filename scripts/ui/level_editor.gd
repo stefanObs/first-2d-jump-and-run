@@ -312,8 +312,8 @@ func _build_ui() -> void:
 	_grid_collapse_toggle = Button.new()
 	_grid_collapse_toggle.name = "GridCollapseToggle"
 	_grid_collapse_toggle.focus_mode = Control.FOCUS_NONE
-	_grid_collapse_toggle.custom_minimum_size = Vector2(148, 24)
-	_grid_collapse_toggle.add_theme_font_size_override(&"font_size", 11)
+	_grid_collapse_toggle.custom_minimum_size = Vector2(28, 24)
+	_grid_collapse_toggle.add_theme_font_size_override(&"font_size", 14)
 	_grid_collapse_toggle.pressed.connect(_toggle_grid_collapsed)
 	_grid_header.add_child(_grid_collapse_toggle)
 
@@ -341,8 +341,7 @@ func _build_ui() -> void:
 			cell.add_theme_font_size_override(&"font_size", 9)
 			var cell_x := x
 			var cell_y := y
-			cell.pressed.connect(func() -> void: _place(cell_x, cell_y))
-			cell.mouse_entered.connect(func() -> void: _set_hover_cell(cell_x, cell_y))
+			_wire_grid_cell(cell, cell_x, cell_y)
 			_grid.add_child(cell)
 			_cells.append(cell)
 
@@ -389,6 +388,7 @@ func _build_ui() -> void:
 	_preview.hover_column_changed.connect(_on_preview_hover_column)
 	_preview.hover_cell_changed.connect(_on_preview_hover_cell)
 	_preview.stamp_requested.connect(_on_preview_stamp)
+	_preview.remove_requested.connect(_on_preview_remove)
 	root.add_child(_preview)
 	_preview.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_preview.size_flags_stretch_ratio = _PREVIEW_EXPANDED_STRETCH
@@ -658,7 +658,8 @@ func _toggle_grid_collapsed() -> void:
 func _apply_grid_collapsed_state() -> void:
 	var collapsed: bool = GameManager.workshop_grid_collapsed
 	if _grid_collapse_toggle != null:
-		_grid_collapse_toggle.text = (
+		_grid_collapse_toggle.text = "▶" if collapsed else "▼"
+		_grid_collapse_toggle.tooltip_text = (
 			tr("Show stamp grid") if collapsed else tr("Hide stamp grid")
 		)
 	if _grid_scroll != null:
@@ -773,6 +774,70 @@ func _on_preview_hover_cell(column: int, row: int) -> void:
 
 func _on_preview_stamp(column: int, row: int) -> void:
 	_place(column, row)
+
+
+func _on_preview_remove(column: int, row: int) -> void:
+	_remove_at(column, row)
+
+
+func _wire_grid_cell(cell: Button, cell_x: int, cell_y: int) -> void:
+	cell.pressed.connect(func() -> void: _place(cell_x, cell_y))
+	cell.mouse_entered.connect(func() -> void: _set_hover_cell(cell_x, cell_y))
+	cell.gui_input.connect(func(event: InputEvent) -> void:
+		if event is InputEventMouseButton:
+			var mouse := event as InputEventMouseButton
+			if mouse.pressed and mouse.button_index == MOUSE_BUTTON_RIGHT:
+				_remove_at(cell_x, cell_y)
+				cell.accept_event()
+	)
+
+
+func _object_occupies_cell(object: Dictionary, x: int, y: int, trail: int) -> bool:
+	var ox := int(object.get("x", -1))
+	var oy := int(object.get("y", -1))
+	var type_name := str(object.get("type", ""))
+	match type_name:
+		"pit":
+			if y != trail:
+				return false
+			var span := CustomLevelStore.pit_column_span(object)
+			return x >= span.x and x <= span.y
+		"platform":
+			var footprint := CustomLevelStore.stamp_footprint("platform")
+			return y == oy and x >= ox and x < ox + int(footprint.x)
+		_:
+			return ox == x and oy == y
+
+
+func _remove_at(x: int, y: int) -> void:
+	var objects := _objects()
+	var before := objects.duplicate(true)
+	var trail := _trail_y()
+	var removed := false
+	for i in range(objects.size() - 1, -1, -1):
+		var object := objects[i] as Dictionary
+		if str(object.get("type", "")) == "ground":
+			continue
+		if _object_occupies_cell(object, x, y, trail):
+			objects.remove_at(i)
+			removed = true
+	if not removed:
+		for i in range(objects.size() - 1, -1, -1):
+			var object := objects[i] as Dictionary
+			if (
+				str(object.get("type", "")) == "ground"
+				and int(object.get("x", -1)) == x
+				and int(object.get("y", -1)) == y
+			):
+				objects.remove_at(i)
+				removed = true
+				break
+	if not removed or objects == before:
+		return
+	_data["objects"] = objects
+	_mark_dirty()
+	_refresh_grid()
+	_set_hover_cell(x, y)
 
 
 func _horizontal_scroll_max() -> float:
@@ -1215,8 +1280,7 @@ func _rebuild_stamp_grid() -> void:
 			cell.add_theme_font_size_override(&"font_size", 9)
 			var cell_x := x
 			var cell_y := y
-			cell.pressed.connect(func() -> void: _place(cell_x, cell_y))
-			cell.mouse_entered.connect(func() -> void: _set_hover_cell(cell_x, cell_y))
+			_wire_grid_cell(cell, cell_x, cell_y)
 			_grid.add_child(cell)
 			_cells.append(cell)
 	call_deferred("_fit_grid_layout")

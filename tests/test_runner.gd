@@ -149,6 +149,7 @@ func _ready() -> void:
 	failures += await _run("Workshop preview hover ghost tracks cursor", _test_workshop_preview_ghost)
 	failures += await _run("Workshop preview ghost matches stamp size", _test_workshop_preview_ghost_size)
 	failures += await _run("Workshop stamp grid can collapse", _test_workshop_grid_collapse)
+	failures += await _run("Workshop right click removes stamp", _test_workshop_right_click_remove)
 	failures += await _run("Workshop preview click places stamp", _test_workshop_preview_places_stamp)
 	failures += await _run("Airborne bandits fall to walkable ground", _test_airborne_bandit_falls)
 	failures += await _run("Campaign workshop edits and inserts levels", _test_campaign_workshop)
@@ -4577,7 +4578,15 @@ func _test_workshop_preview_ghost_size() -> Variant:
 	var ghost := preview._ghost_rect_screen()
 	var metrics := preview._view_metrics()
 	var zoom := float(metrics["zoom"])
-	var expected := CustomLevelStore.stamp_world_size("platform") * zoom
+	var expected_world := CustomLevelStore.stamp_visual_world_rect(
+		"platform",
+		12,
+		trail,
+		trail,
+		int(data.get("width", CustomLevelStore.DEFAULT_WIDTH)),
+		float(metrics["grid"])
+	)
+	var expected := expected_world.size * zoom
 	if absf(ghost.size.x - expected.x) > 1.5 or absf(ghost.size.y - expected.y) > 1.5:
 		preview.queue_free()
 		return (
@@ -4621,11 +4630,17 @@ func _test_workshop_grid_collapse() -> Variant:
 	if not grid_scroll.visible or not h_scroll.visible:
 		editor.queue_free()
 		return "Stamp grid should start expanded."
+	if toggle.text != "▼":
+		editor.queue_free()
+		return "Expanded stamp grid should show a down chevron toggle."
 	editor._toggle_grid_collapsed()
 	await get_tree().process_frame
 	if grid_scroll.visible or h_scroll.visible:
 		editor.queue_free()
 		return "Collapsing the stamp grid should hide the grid and slide bar."
+	if toggle.text != "▶":
+		editor.queue_free()
+		return "Collapsed stamp grid should show a right chevron toggle."
 	if not GameManager.workshop_grid_collapsed:
 		editor.queue_free()
 		return "Grid collapse should persist for the session."
@@ -4637,6 +4652,38 @@ func _test_workshop_grid_collapse() -> Variant:
 	if not grid_scroll.visible or not h_scroll.visible:
 		editor.queue_free()
 		return "Expanding the stamp grid should restore the grid and slide bar."
+	editor.queue_free()
+	return null
+
+
+func _test_workshop_right_click_remove() -> Variant:
+	var editor_packed: PackedScene = load("res://scenes/ui/level_editor.tscn")
+	if editor_packed == null:
+		return "Missing level editor scene."
+	var editor := editor_packed.instantiate()
+	add_child(editor)
+	await get_tree().process_frame
+	var trail: int = editor._trail_y()
+	editor._select_tool("cactus")
+	editor._place(10, trail - 1)
+	await get_tree().process_frame
+	var objects: Array = editor._objects()
+	var had_cactus := false
+	for value in objects:
+		var object := value as Dictionary
+		if str(object.get("type", "")) == "cactus" and int(object.get("x", -1)) == 10:
+			had_cactus = true
+			break
+	if not had_cactus:
+		editor.queue_free()
+		return "Workshop should place a cactus before right-click remove test."
+	editor._remove_at(10, trail - 1)
+	await get_tree().process_frame
+	for value in editor._objects():
+		var object := value as Dictionary
+		if str(object.get("type", "")) == "cactus" and int(object.get("x", -1)) == 10:
+			editor.queue_free()
+			return "Right click remove should delete the stamped cactus."
 	editor.queue_free()
 	return null
 

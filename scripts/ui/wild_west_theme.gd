@@ -708,14 +708,19 @@ static func _paint_slope_fill(
 	var x0 := minf(x_start, x_end)
 	var x1 := maxf(x_start, x_end)
 	var deep := maxf(y_start, y_end) + 96.0
+	var bank_top := minf(y_start, y_end)
 	if dirt != null:
 		var tex_size := dirt.get_size()
-		var row_h := 28.0
-		var scale_y := row_h / tex_size.y
-		var tile_w := tex_size.x * scale_y
-		var y := minf(y_start, y_end) + 18.0
+		var row_h_full := 28.0
+		var row_h_small := row_h_full / 3.0
+		var y := bank_top + 18.0
 		var row := 0
 		while y < deep:
+			var near_crust := y < bank_top + 72.0
+			var row_h := row_h_small if near_crust else row_h_full
+			var scale_y := row_h / tex_size.y
+			var tile_w := tex_size.x * scale_y
+			var step_factor := 0.97 if near_crust else 0.92
 			var x := x0
 			var tile_i := 0
 			while x < x1 - 0.5:
@@ -723,7 +728,7 @@ static func _paint_slope_fill(
 					x + tile_w * 0.5, x_start, y_start, x_end, y_end, curved
 				)
 				if y < surface_y + 48.0:
-					x += tile_w * 0.85
+					x += tile_w * step_factor
 					continue
 				var use_w := minf(tile_w, x1 - x)
 				var sprite := Sprite2D.new()
@@ -735,13 +740,13 @@ static func _paint_slope_fill(
 				sprite.z_index = 2
 				sprite.modulate = Color(0.96, 0.9, 0.82, 1.0)
 				parent.add_child(sprite)
-				x += use_w * 0.85
+				x += use_w * step_factor
 				tile_i += 1
-				if tile_i > 60:
+				if tile_i > 80:
 					break
-			y += row_h - 3.0
+			y += row_h - (1.0 if near_crust else 3.0)
 			row += 1
-			if row > 12:
+			if row > 28:
 				break
 
 

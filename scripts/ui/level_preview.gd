@@ -6,6 +6,7 @@ extends Control
 signal hover_column_changed(column: int)
 signal hover_cell_changed(column: int, row: int)
 signal stamp_requested(column: int, row: int)
+signal remove_requested(column: int, row: int)
 
 const FRAME_CONTENT_MARGIN := 6.0
 const MIN_PREVIEW_SIZE := Vector2(160, 120)
@@ -363,7 +364,7 @@ func _ghost_world_rect() -> Rect2:
 	if _hover_column < 0 or _hover_row < 0 or _data.is_empty():
 		return Rect2()
 	var metrics := _view_metrics()
-	return CustomLevelStore.stamp_world_rect(
+	return CustomLevelStore.stamp_visual_world_rect(
 		_selected_type,
 		_hover_column,
 		_hover_row,
@@ -409,7 +410,7 @@ func _update_ghost_overlay() -> void:
 		icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		icon.modulate = Color(1, 1, 1, 0.55)
-		var icon_size := rect.size * 0.92
+		var icon_size := rect.size
 		icon.custom_minimum_size = icon_size
 		icon.size = icon_size
 		icon.position = rect.position + (rect.size - icon_size) * 0.5
@@ -475,6 +476,9 @@ func _gui_input(event: InputEvent) -> void:
 			var mouse := event as InputEventMouseButton
 			if mouse.pressed and mouse.button_index == MOUSE_BUTTON_LEFT:
 				stamp_requested.emit(cell.x, cell.y)
+				accept_event()
+			elif mouse.pressed and mouse.button_index == MOUSE_BUTTON_RIGHT:
+				remove_requested.emit(cell.x, cell.y)
 				accept_event()
 
 
