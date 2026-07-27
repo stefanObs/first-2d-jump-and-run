@@ -4074,9 +4074,9 @@ func _test_canyon_center_illustrated() -> Variant:
 	if not canyon_art.rims_are_thin_faces():
 		controller.queue_free()
 		return "Canyon ridges must be thin canyon-facing faces, not full bank slabs."
-	if not canyon_art.rim_bank_is_transparent():
+	if not canyon_art.rim_bank_is_opaque_dirt():
 		controller.queue_free()
-		return "Canyon rim bank side must stay transparent so TrailFloor dirt shows."
+		return "Canyon rim bank side must be opaque dirt so sky/abyss cannot show through."
 	if not canyon_art.rim_sky_edge_is_irregular():
 		controller.queue_free()
 		return "Canyon rim sky edge must be jagged/irregular, not a ruler-straight cut."

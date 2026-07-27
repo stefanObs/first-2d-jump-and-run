@@ -1,30 +1,89 @@
 #!/usr/bin/env python3
-"""Build the thin hand-drawn canyon ridge used by ScalableCanyonArt.
+"""Build canyon_rim_left.png from the hand-drawn left-ridge concept.
 
-Source: handcrafted concept art (checkerboard background). Output is a tall
-left-rim strip with a sealed sand crust at y=0, a transparent bank/inland
-fade, and a jagged canyon-facing lip on the right.
+Produces a tall left rim with:
+- sealed sand crust at y=0 (flush with the desert floor)
+- opaque packed-dirt bank (no sky/abyss peek-through)
+- jagged canyon-facing lip on the right
 """
 
 from __future__ import annotations
 
+from collections import deque
 from pathlib import Path
+import random
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from PIL import Image  # noqa: E402
-from tools.art_pipeline import cutout  # noqa: E402
 
-SRC = ROOT / "assets/source/canyon/ridge_handcrafted_gen.png"
+SRC = ROOT / "assets/source/canyon/ridge_left_concept.png"
 OUT = ROOT / "assets/world/canyon_rim_left.png"
-SRC_KEEP = ROOT / "assets/source/canyon/ridge_handcrafted_cutout.png"
 TARGET_H = 980
-FACE_KEEP = 100
-## Sealed sand rows after the final resize — desert floor meets this top.
 CRUST_ROWS = 14
-FADE = 34
+
+
+def _is_key(r: int, g: int, b: int) -> bool:
+	if r > 180 and b > 180 and g < 120:
+		return True
+	if min(r, g, b) >= 200 and (max(r, g, b) - min(r, g, b)) <= 30:
+		return True
+	if r > 200 and g < 80 and b > 200:
+		return True
+	return False
+
+
+def _key_out(im: Image.Image) -> Image.Image:
+	w, h = im.size
+	px = im.load()
+	bg = bytearray(w * h)
+	dq: deque[tuple[int, int]] = deque()
+
+	def idx(x: int, y: int) -> int:
+		return y * w + x
+
+	seeds = [(x, y) for x in range(w) for y in (0, h - 1)]
+	seeds += [(x, y) for y in range(h) for x in (0, w - 1)]
+	for x, y in seeds:
+		r, g, b, _ = px[x, y]
+		if _is_key(r, g, b):
+			bg[idx(x, y)] = 1
+			dq.append((x, y))
+	while dq:
+		x, y = dq.popleft()
+		for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+			if 0 <= nx < w and 0 <= ny < h and not bg[idx(nx, ny)]:
+				r, g, b, _ = px[nx, ny]
+				if _is_key(r, g, b):
+					bg[idx(nx, ny)] = 1
+					dq.append((nx, ny))
+	for _ in range(3):
+		add: list[tuple[int, int]] = []
+		for y in range(h):
+			for x in range(w):
+				if bg[idx(x, y)]:
+					continue
+				r, g, b, _ = px[x, y]
+				near = (r > 160 and b > 160 and g < 140) or (
+					min(r, g, b) >= 180 and max(r, g, b) - min(r, g, b) <= 40
+				)
+				if not near:
+					continue
+				for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+					if 0 <= nx < w and 0 <= ny < h and bg[idx(nx, ny)]:
+						add.append((x, y))
+						break
+		for x, y in add:
+			bg[idx(x, y)] = 1
+	out = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+	opx = out.load()
+	for y in range(h):
+		for x in range(w):
+			if not bg[idx(x, y)]:
+				opx[x, y] = px[x, y]
+	return out
 
 
 def _lips(im: Image.Image) -> list[int]:
@@ -41,106 +100,61 @@ def _lips(im: Image.Image) -> list[int]:
 	return out
 
 
-def _sample_sand(im: Image.Image) -> tuple[int, int, int]:
+def _fill_bank(im: Image.Image) -> None:
 	w, h = im.size
 	px = im.load()
-	for y in range(min(120, h)):
-		for x in range(w - 1, -1, -1):
-			r, g, b, a = px[x, y]
-			if a > 200 and r > 200 and g > 120 and b < 150:
-				return (r, g, b)
-	return (232, 160, 72)
+	lips = _lips(im)
+	for y in range(h):
+		lip = lips[y]
+		if lip < 10:
+			continue
+		sample = (140, 62, 28, 255)
+		for x in range(0, max(1, lip // 2)):
+			if px[x, y][3] > 200:
+				sample = px[x, y]
+				break
+		for x in range(0, max(0, lip - 4)):
+			if px[x, y][3] < 160:
+				px[x, y] = sample
 
 
-def _seal_crust(im: Image.Image, sand: tuple[int, int, int], rows: int) -> int:
-	"""Paint a horizontal sealed sand cap; returns the outer lip X."""
-	import random
-
+def _seal_crust(im: Image.Image, rows: int) -> int:
 	w, h = im.size
 	px = im.load()
 	lips = _lips(im)
 	env = max((lip for lip in lips if lip >= 0), default=w - 1)
-	inland = w
-	for y in range(rows, min(rows + 80, h)):
-		for x in range(w):
-			if px[x, y][3] > 80:
-				inland = min(inland, x)
-				break
-	if inland >= w:
-		inland = max(0, env - FACE_KEEP)
-	rng = random.Random(7)
+	rng = random.Random(3)
 	for y in range(rows):
-		shade = 1.0 - 0.08 * (y / max(1, rows - 1))
-		for x in range(inland, env + 1):
+		shade = 1.0 - 0.08 * y / max(1, rows - 1)
+		for x in range(0, env + 1):
 			n = rng.randint(-8, 8)
-			r = max(0, min(255, int(sand[0] * shade) + n))
-			g = max(0, min(255, int(sand[1] * shade) + n // 2))
-			b = max(0, min(255, int(sand[2] * shade) + n // 3))
+			r = max(0, min(255, int(236 * shade) + n))
+			g = max(0, min(255, int(170 * shade) + n // 2))
+			b = max(0, min(255, int(95 * shade) + n // 3))
 			if env - x <= 2:
-				r = int(r * 0.82)
-				g = int(g * 0.75)
-				b = int(b * 0.7)
+				r = int(r * 0.85)
+				g = int(g * 0.8)
+				b = int(b * 0.75)
 			px[x, y] = (r, g, b, 255)
 	return env
 
 
 def build() -> dict:
-	im = cutout(SRC, feather=4)
+	if not SRC.exists():
+		raise SystemExit(f"missing concept art: {SRC}")
+	im = _key_out(Image.open(SRC).convert("RGBA"))
 	bbox = im.getbbox()
 	if bbox is None:
-		raise SystemExit("cutout produced an empty image")
+		raise SystemExit("keyed image empty")
 	im = im.crop(bbox)
-	w, h = im.size
-	px = im.load()
-	lips = _lips(im)
-	sand = _sample_sand(im)
-
-	# Keep only a thin canyon-facing strip; fade the bank so TrailFloor shows.
-	face = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-	fpx = face.load()
-	for y in range(h):
-		lip = lips[y]
-		if lip < 0:
-			continue
-		keep_from = max(0, lip - FACE_KEEP)
-		for x in range(keep_from, lip + 1):
-			r, g, b, a = px[x, y]
-			if a <= 0:
-				continue
-			dist = x - keep_from
-			if dist < FADE:
-				a = int(a * (dist / float(FADE)))
-			if a > 0:
-				fpx[x, y] = (r, g, b, a)
-
-	cb = face.getbbox()
-	if cb is None:
-		raise SystemExit("face strip empty")
-	face = face.crop(cb)
-
-	# Drop wispy tip rows before normalizing height.
-	fpx = face.load()
-	fw, fh = face.size
-	top = 0
-	while top < min(40, fh - 1):
-		xs = [x for x in range(fw) if fpx[x, top][3] > 180]
-		if xs and (xs[-1] - xs[0]) >= 40:
-			break
-		top += 1
-	if top > 0:
-		face = face.crop((0, top, fw, fh))
-
-	SRC_KEEP.parent.mkdir(parents=True, exist_ok=True)
-	face.save(SRC_KEEP)
-
-	ow, oh = face.size
-	nw = max(24, int(round(ow * (TARGET_H / float(oh)))))
-	final = face.resize((nw, TARGET_H), Image.Resampling.LANCZOS)
-	# Seal the sand crust AFTER resize so it stays a full-height desert lip.
-	lip_x = _seal_crust(final, sand, CRUST_ROWS)
+	_fill_bank(im)
+	ow, oh = im.size
+	nw = max(40, int(round(ow * (TARGET_H / float(oh)))))
+	final = im.resize((nw, TARGET_H), Image.Resampling.LANCZOS)
+	_fill_bank(final)
+	lip_x = _seal_crust(final, CRUST_ROWS)
 	OUT.parent.mkdir(parents=True, exist_ok=True)
 	final.save(OUT)
-
 	return {
 		"path": str(OUT),
 		"size": final.size,
@@ -151,5 +165,4 @@ def build() -> dict:
 
 
 if __name__ == "__main__":
-	info = build()
-	print(info)
+	print(build())

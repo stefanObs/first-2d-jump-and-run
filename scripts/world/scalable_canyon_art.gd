@@ -2,20 +2,20 @@ class_name ScalableCanyonArt
 extends Node2D
 
 ## Slim hand-painted full-height cliff faces outside the desert floor, framing
-## an open canyon mouth. Only the canyon-facing edge is ridge art — the bank
-## side is transparent so TrailFloor dirt shows. Sky shows through the mouth
-## (no fill column) — no depth shelves, floor wash, or mountain scenery inside.
+## an open canyon mouth. The bank/inland side is opaque packed dirt so sky and
+## FloorAbyss never peek beside the ridge; the canyon-facing edge is jagged rock.
+## Sky shows through the mouth (no fill column).
 
 const RIM_TEXTURE: Texture2D = preload("res://assets/world/canyon_rim_left.png")
 
 ## World size of one ridge face: thin canyon lip, tall enough to reach the
 ## bottom of the trail dirt / view (not a short surface lip).
-const RIM_SIZE := Vector2(88.0, 900.0)
+const RIM_SIZE := Vector2(96.0, 900.0)
 ## Pixel row of the painted desert sand crust on canyon_rim_left.png.
 ## Top of the sealed sand cap — flush with the trail desert floor.
 const RIM_SURFACE_TEX_Y := 0.0
-## Texture X of the outermost canyon-facing sand/lip (right edge of the strip).
-const RIM_LIP_TEX_X := 311.0
+## Texture X of the outermost canyon-facing sand/lip.
+const RIM_LIP_TEX_X := 368.0
 ## Sand-crust rows at the top of the rim texture that must stay sealed.
 const RIM_CRUST_TEX_ROWS := 14
 ## Draw above TrailFloor surface tiles (z 1) so ridge lips sit on the desert edge.
@@ -130,7 +130,7 @@ func rims_reach_canyon_bottom(tolerance: float = 40.0) -> bool:
 
 
 func rims_are_thin_faces(tolerance: float = 8.0) -> bool:
-	## Handcrafted art is only a slim canyon-facing strip (bank is TrailFloor dirt).
+	## Handcrafted art stays a slim ridge strip (opaque dirt bank + jagged face).
 	if _left_rim == null or _right_rim == null or _left_rim.texture == null:
 		return false
 	var tex_w := float(_left_rim.texture.get_size().x)
@@ -150,8 +150,8 @@ func _rim_source_image() -> Image:
 	return img
 
 
-func rim_bank_is_transparent() -> bool:
-	## Inland/bank side of the rim texture must let TrailFloor dirt show through.
+func rim_bank_is_opaque_dirt() -> bool:
+	## Inland/bank side is packed dirt (opaque) so sky/abyss cannot show through.
 	var img := _rim_source_image()
 	if img == null:
 		return false
@@ -159,14 +159,15 @@ func rim_bank_is_transparent() -> bool:
 	var h := img.get_height()
 	if w < 8 or h < 40:
 		return false
-	# Sample mid-height near the bank (left) edge — must be mostly clear.
 	var y := mini(h - 1, maxi(40, int(h * 0.35)))
-	var clear := 0
-	var samples := mini(10, w / 3)
+	var solid := 0
+	var samples := mini(12, maxi(4, w / 4))
 	for i in range(samples):
-		if img.get_pixel(i, y).a < 0.35:
-			clear += 1
-	return clear >= samples / 2
+		var c := img.get_pixel(i, y)
+		# Opaque warm earth — not sky-blue, not near-black void.
+		if c.a >= 0.85 and c.r > 0.25 and c.b < c.r * 0.85:
+			solid += 1
+	return solid >= samples * 3 / 4
 
 
 func rim_sky_edge_is_irregular(min_spread_px: float = 8.0) -> bool:
@@ -285,7 +286,7 @@ func _layout_rims() -> void:
 
 	# Place rims OUTSIDE the desert floor gap: outermost sky lip at the bank
 	# edge, thin rock face under the trail bank, drawn in front of desert tiles.
-	# Bank-side texels are transparent so TrailFloor dirt shows through.
+	# Bank-side texels are opaque packed dirt so sky/abyss cannot peek through.
 	var surface_from_center := (RIM_SURFACE_TEX_Y - tex_size.y * 0.5) * rim_scale.y
 	var lip_from_center := (RIM_LIP_TEX_X - tex_size.x * 0.5) * rim_scale.x
 	# Flush with the desert top so sand crust and ridge meet with no sky slit.

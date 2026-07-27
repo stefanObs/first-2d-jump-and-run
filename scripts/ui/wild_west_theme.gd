@@ -303,10 +303,11 @@ static func _make_contiguous_floors(level: Node) -> void:
 	# so the real Background sky shows through the gap (no blue fill column).
 	# Painted per strip below with the same slope/canyon insets as FloorDirt.
 
-	# Lip inset: sand stops just shy of the thin ridge face; dirt runs almost to
-	# the lip so the bank behind the transparent rim reads as normal TrailFloor earth.
-	const CANYON_SURFACE_INSET := 6.0
-	const CANYON_DIRT_INSET := 2.0
+	# Lip inset: desert sand crust stops at the inland edge of the ridge face so
+	# FloorSurface never paints over the cliff. Dirt still runs nearly to the lip
+	# behind the opaque bank fill (no sky/abyss peeking beside the ridge).
+	const CANYON_SURFACE_INSET := 88.0
+	const CANYON_DIRT_INSET := 4.0
 
 	for i in range(merged.size()):
 		var strip: Dictionary = merged[i]
