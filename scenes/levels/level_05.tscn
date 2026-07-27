@@ -736,7 +736,7 @@ position = Vector2(4050, 320)
 
 
 [node name="CheckpointC" parent="." instance=ExtResource("3_checkpoint")]
-position = Vector2(5490, 320)
+position = Vector2(5320, 320)
 
 
 [node name="Opponent0" parent="." instance=ExtResource("13_opp")]

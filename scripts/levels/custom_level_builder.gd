@@ -11,6 +11,8 @@ const CHEST := preload("res://scenes/world/treasure_chest.tscn")
 const STAR := preload("res://scenes/world/star.tscn")
 const SPRING := preload("res://scenes/world/spring_pad.tscn")
 const BANDIT := preload("res://scenes/world/opponent.tscn")
+const BULL := preload("res://scenes/world/bull_enemy.tscn")
+const NINJA := preload("res://scenes/world/ninja_enemy.tscn")
 const RATTLESNAKE := preload("res://scenes/world/rattlesnake.tscn")
 const CARRION := preload("res://scenes/world/carrion.tscn")
 const MODE_ITEM := preload("res://scenes/world/mode_item.tscn")
@@ -74,9 +76,16 @@ static func build(level: LevelController, data: Dictionary, preview: bool = fals
 			"bandit":
 				_add_scene(level, BANDIT, "Opponent%d" % index, position)
 			"bounty_bandit":
-				var bounty := _add_scene(level, BANDIT, "Opponent%d" % index, position) as Opponent
+				var bounty := BANDIT.instantiate() as Opponent
 				if bounty != null:
 					bounty.bounty_bandit = true
+					bounty.name = "Opponent%d" % index
+					bounty.position = position
+					level.add_child(bounty)
+			"bull":
+				_add_scene(level, BULL, "Bull%d" % index, position)
+			"ninja":
+				_add_scene(level, NINJA, "Ninja%d" % index, position)
 			"rattlesnake":
 				_add_scene(level, RATTLESNAKE, "Rattlesnake%d" % index, position)
 			"carrion":

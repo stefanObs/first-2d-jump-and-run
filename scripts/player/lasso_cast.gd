@@ -101,17 +101,27 @@ func _try_lasso_target(node: Node) -> bool:
 		_returning = true
 		_elapsed = 0.0
 		return true
-	var opponent := _resolve_opponent(node)
-	if opponent != null:
-		if opponent.is_tied():
+	var tie_target := _resolve_tie_target(node)
+	if tie_target != null:
+		if tie_target.is_tied():
 			return false
 		_caught = true
 		monitoring = false
-		opponent.tie_up()
+		tie_target.tie_up()
 		_returning = true
 		_elapsed = 0.0
 		return true
 	return false
+
+
+func _resolve_tie_target(node: Node) -> Node:
+	var ninja := _resolve_ninja_enemy(node)
+	if ninja != null:
+		return ninja
+	var bull := _resolve_bull_enemy(node)
+	if bull != null:
+		return bull
+	return _resolve_opponent(node)
 
 
 func _resolve_opponent(node: Node) -> Opponent:
@@ -120,6 +130,24 @@ func _resolve_opponent(node: Node) -> Opponent:
 	var parent := node.get_parent()
 	if parent is Opponent:
 		return parent as Opponent
+	return null
+
+
+func _resolve_bull_enemy(node: Node) -> BullEnemy:
+	if node is BullEnemy:
+		return node as BullEnemy
+	var parent := node.get_parent()
+	if parent is BullEnemy:
+		return parent as BullEnemy
+	return null
+
+
+func _resolve_ninja_enemy(node: Node) -> NinjaEnemy:
+	if node is NinjaEnemy:
+		return node as NinjaEnemy
+	var parent := node.get_parent()
+	if parent is NinjaEnemy:
+		return parent as NinjaEnemy
 	return null
 
 

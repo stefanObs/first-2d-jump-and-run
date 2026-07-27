@@ -541,7 +541,7 @@ static func _carve_ground_walls_for_slope(
 ) -> void:
 	## Remove Ground boxes from the dune bridge column so FloorSlopeBody is the only
 	## walk surface — leftover vertical cliff faces blocked continuous slope walking.
-	const BANK_EXTEND := 36.0
+	const BANK_EXTEND := 56.0
 	var bridge_left := minf(x_start, x_end) - BANK_EXTEND
 	var bridge_right := maxf(x_start, x_end) + BANK_EXTEND
 	var high_y := minf(y_start, y_end)
@@ -776,7 +776,7 @@ static func _add_slope_collision(
 		top_pts.append(Vector2(x, y))
 		bottom_pts.append(Vector2(x, y + thick))
 	# Continue the walk surface onto both flat bank lips so the crest/base seams stay walkable.
-	const BANK_EXTEND := 36.0
+	const BANK_EXTEND := 56.0
 	top_pts.insert(0, Vector2(x_start - BANK_EXTEND, y_start))
 	bottom_pts.insert(0, Vector2(x_start - BANK_EXTEND, y_start + thick))
 	top_pts.append(Vector2(x_end + BANK_EXTEND, y_end))

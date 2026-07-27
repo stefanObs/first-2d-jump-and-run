@@ -376,15 +376,30 @@ func _reset_unstored_badges() -> void:
 
 func _reset_unstored_opponents() -> void:
 	for node in find_children("*", "AnimatableBody2D", true, false):
-		if not (node is Opponent):
-			continue
-		var opponent := node as Opponent
-		var opponent_name := String(opponent.name)
-		if opponent_name in _stored_tied_opponent_names:
-			if not opponent.is_tied():
-				opponent.tie_up(false)
-		elif opponent.is_tied():
-			opponent.untie_for_respawn()
+		if node is Opponent:
+			var opponent := node as Opponent
+			var opponent_name := String(opponent.name)
+			if opponent_name in _stored_tied_opponent_names:
+				if not opponent.is_tied():
+					opponent.tie_up(false)
+			elif opponent.is_tied():
+				opponent.untie_for_respawn()
+		elif node is BullEnemy:
+			var bull := node as BullEnemy
+			var bull_name := String(bull.name)
+			if bull_name in _stored_tied_opponent_names:
+				if not bull.is_tied():
+					bull.tie_up(false)
+			elif bull.is_tied():
+				bull.untie_for_respawn()
+		elif node is NinjaEnemy:
+			var ninja := node as NinjaEnemy
+			var ninja_name := String(ninja.name)
+			if ninja_name in _stored_tied_opponent_names:
+				if not ninja.is_tied():
+					ninja.tie_up(false)
+			elif ninja.is_tied():
+				ninja.untie_for_respawn()
 	_tied_opponent_names = _stored_tied_opponent_names.duplicate()
 
 
@@ -467,6 +482,18 @@ func _wire_world_objects() -> void:
 				opponent.bounty_caught.connect(_on_bounty_caught)
 			if not opponent.captured.is_connected(_on_opponent_captured):
 				opponent.captured.connect(_on_opponent_captured)
+		elif node is BullEnemy:
+			var bull := node as BullEnemy
+			if not bull.hurt_player.is_connected(_on_opponent_hurt):
+				bull.hurt_player.connect(_on_opponent_hurt)
+			if not bull.captured.is_connected(_on_bull_captured):
+				bull.captured.connect(_on_bull_captured)
+		elif node is NinjaEnemy:
+			var ninja := node as NinjaEnemy
+			if not ninja.hurt_player.is_connected(_on_opponent_hurt):
+				ninja.hurt_player.connect(_on_opponent_hurt)
+			if not ninja.captured.is_connected(_on_ninja_captured):
+				ninja.captured.connect(_on_ninja_captured)
 	for node in find_children("*", "PhysicsBody2D", true, false):
 		if node is ConveyorBelt:
 			var belt := node as ConveyorBelt
@@ -535,9 +562,20 @@ func _on_badge_taken(badge_name: String) -> void:
 
 
 func _on_opponent_captured(opponent: Opponent) -> void:
-	var opponent_name := String(opponent.name)
-	if opponent_name not in _tied_opponent_names:
-		_tied_opponent_names.append(opponent_name)
+	_register_tied_enemy(String(opponent.name))
+
+
+func _on_bull_captured(bull: BullEnemy) -> void:
+	_register_tied_enemy(String(bull.name))
+
+
+func _on_ninja_captured(ninja: NinjaEnemy) -> void:
+	_register_tied_enemy(String(ninja.name))
+
+
+func _register_tied_enemy(enemy_name: String) -> void:
+	if enemy_name not in _tied_opponent_names:
+		_tied_opponent_names.append(enemy_name)
 
 
 func _save_run_state(show_feedback: bool = true) -> bool:
@@ -600,6 +638,14 @@ func _restore_run_state() -> void:
 			var opponent := node as Opponent
 			if String(opponent.name) in _stored_tied_opponent_names:
 				opponent.tie_up(false)
+		elif node is BullEnemy:
+			var bull := node as BullEnemy
+			if String(bull.name) in _stored_tied_opponent_names:
+				bull.tie_up(false)
+		elif node is NinjaEnemy:
+			var ninja := node as NinjaEnemy
+			if String(ninja.name) in _stored_tied_opponent_names:
+				ninja.tie_up(false)
 	_stored_mode = int(state.get("active_mode", ModeController.Mode.NONE))
 	_stored_mode_remaining = maxf(float(state.get("mode_remaining", 0.0)), 0.0)
 	if _stored_mode != ModeController.Mode.NONE:

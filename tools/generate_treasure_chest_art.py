@@ -228,22 +228,26 @@ def make_interior() -> Image.Image:
 
     inner_box = (_s(14.0), _s(22.0), w - _s(14.0), h - _s(12.0))
     draw.rounded_rectangle(inner_box, radius=max(1, int(_s(3.5))), fill=(32, 16, 6, 220))
+    draw.rounded_rectangle(
+        (_s(16.0), _s(24.0), w - _s(16.0), h - _s(14.0)),
+        radius=max(1, int(_s(2.5))),
+        fill=(20, 10, 4, 255),
+    )
+    # Empty chest — dark interior with wood lip, no coin pile.
+    lip_y = _s(22.0)
+    draw.line(
+        [(inner_box[0], lip_y), (inner_box[2], lip_y)],
+        fill=WOOD_DARK,
+        width=max(1, int(_s(2.0))),
+    )
+    for i in range(3):
+        x = inner_box[0] + (inner_box[2] - inner_box[0]) * (i + 1) / 4.0
+        draw.line(
+            [(x, lip_y), (x, inner_box[3] - _s(2.0))],
+            fill=(28, 14, 5, 180),
+            width=max(1, int(_s(1.2))),
+        )
 
-    for ox, oy, r in [
-        (0, 0, 5),
-        (-10, 4, 4),
-        (12, 2, 4),
-        (-4, 8, 3),
-        (8, 10, 3),
-    ]:
-        cx = w * 0.5 + _s(ox)
-        cy = _s(30 + oy)
-        rr = _s(r)
-        draw.ellipse((cx - rr, cy - rr, cx + rr, cy + rr), fill=TREASURE)
-        draw.ellipse((cx - rr * 0.4, cy - rr * 0.5, cx, cy), fill=(255, 248, 200, 180))
-
-    glow = _soft_glow_layer((w, h))
-    img = Image.alpha_composite(img, glow)
     return _downscale(img, 80.0, 52.0)
 
 

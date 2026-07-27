@@ -36,6 +36,8 @@ const TOOL_CATEGORIES: Array = [
 		"tools": [
 			["bandit", "Bandit", "res://assets/world/bandit.png"],
 			["bounty_bandit", "Bounty Bandit", "res://assets/world/bandit_red.png"],
+			["bull", "Bull", "res://assets/world/boss_stampede_bull.png"],
+			["ninja", "Ninja", "res://assets/world/ninja_idle.png"],
 			["rattlesnake", "Rattlesnake", "res://assets/world/rattlesnake_idle.png"],
 			["carrion", "Carrion Bird", "res://assets/world/carrion_bird.png"],
 		],
@@ -93,6 +95,10 @@ var _editor_pane: VBoxContainer
 var _grid_header: HBoxContainer
 var _grid_collapse_toggle: Button
 var _h_scroll: HScrollBar
+var _grid_scroll_left: Button
+var _grid_scroll_right: Button
+var _preview_scroll_left: Button
+var _preview_scroll_right: Button
 var _length_minus: Button
 var _length_plus: Button
 const _CELL_WIDTH := 42.0
@@ -345,12 +351,18 @@ func _build_ui() -> void:
 			_grid.add_child(cell)
 			_cells.append(cell)
 
+	var grid_scroll_row := HBoxContainer.new()
+	grid_scroll_row.name = "GridScrollRow"
+	grid_scroll_row.add_theme_constant_override(&"separation", 4)
+	_editor_pane.add_child(grid_scroll_row)
+	_grid_scroll_left = _make_scroll_arrow(grid_scroll_row, "◀", func() -> void: _nudge_horizontal_scroll(-_CELL_WIDTH * 2.0))
 	_h_scroll = HScrollBar.new()
 	_h_scroll.name = "TrailScrollBar"
 	_h_scroll.custom_minimum_size = Vector2(0, 16)
 	_h_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_h_scroll.value_changed.connect(_on_h_scroll_changed)
-	_editor_pane.add_child(_h_scroll)
+	grid_scroll_row.add_child(_h_scroll)
+	_grid_scroll_right = _make_scroll_arrow(grid_scroll_row, "▶", func() -> void: _nudge_horizontal_scroll(_CELL_WIDTH * 2.0))
 	call_deferred("_sync_scroll_range")
 	set_process(true)
 
@@ -382,6 +394,27 @@ func _build_ui() -> void:
 	preview_label.add_theme_font_size_override(&"font_size", 13)
 	preview_label.add_theme_color_override(&"font_color", Color(0.35, 0.16, 0.05))
 	root.add_child(preview_label)
+
+	var preview_scroll_row := HBoxContainer.new()
+	preview_scroll_row.name = "PreviewScrollRow"
+	preview_scroll_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	preview_scroll_row.add_theme_constant_override(&"separation", 6)
+	root.add_child(preview_scroll_row)
+	_preview_scroll_left = _make_scroll_arrow(
+		preview_scroll_row,
+		"◀",
+		func() -> void: _nudge_preview_scroll(-_CELL_WIDTH * 2.0)
+	)
+	var preview_scroll_hint := Label.new()
+	preview_scroll_hint.text = tr("Preview pan")
+	preview_scroll_hint.add_theme_font_size_override(&"font_size", 11)
+	preview_scroll_hint.add_theme_color_override(&"font_color", Color(0.35, 0.16, 0.05))
+	preview_scroll_row.add_child(preview_scroll_hint)
+	_preview_scroll_right = _make_scroll_arrow(
+		preview_scroll_row,
+		"▶",
+		func() -> void: _nudge_preview_scroll(_CELL_WIDTH * 2.0)
+	)
 
 	_preview = LevelPreview.new()
 	_preview.name = "LevelPreview"
@@ -666,6 +699,10 @@ func _apply_grid_collapsed_state() -> void:
 		_grid_scroll.visible = not collapsed
 	if _h_scroll != null:
 		_h_scroll.visible = not collapsed
+	if _grid_scroll_left != null:
+		_grid_scroll_left.visible = not collapsed
+	if _grid_scroll_right != null:
+		_grid_scroll_right.visible = not collapsed
 	if _preview != null:
 		_preview.size_flags_stretch_ratio = (
 			_PREVIEW_COLLAPSED_STRETCH if collapsed else _PREVIEW_EXPANDED_STRETCH
@@ -749,12 +786,69 @@ func _update_length_buttons() -> void:
 		_length_plus.disabled = width >= CustomLevelStore.MAX_WIDTH
 
 
+func _make_scroll_arrow(parent: Control, label: String, action: Callable) -> Button:
+	var button := Button.new()
+	button.text = label
+	button.focus_mode = Control.FOCUS_NONE
+	button.custom_minimum_size = Vector2(28, 24)
+	button.add_theme_font_size_override(&"font_size", 14)
+	button.pressed.connect(action)
+	parent.add_child(button)
+	return button
+
+
+func _nudge_horizontal_scroll(delta: float) -> void:
+	if _grid_scroll == null:
+		return
+	_apply_horizontal_scroll(_grid_scroll.scroll_horizontal + delta)
+
+
+func _nudge_preview_scroll(delta_screen: float) -> void:
+	if _preview == null:
+		return
+	_preview.pan_view_screen(delta_screen)
+	var max_scroll := _horizontal_scroll_max()
+	if max_scroll > 0.0 and _grid_scroll != null:
+		_apply_horizontal_scroll(_grid_scroll.scroll_horizontal + delta_screen)
+
+
+func _scroll_column_into_view(column: int) -> void:
+	if _grid_scroll == null or column < 0:
+		return
+	var target := column * (_CELL_WIDTH + float(_grid.get_theme_constant(&"h_separation", "GridContainer")))
+	var margin := _CELL_WIDTH * 1.5
+	var view_left := float(_grid_scroll.scroll_horizontal)
+	var view_right := view_left + _grid_scroll.size.x
+	if target < view_left + margin:
+		_apply_horizontal_scroll(target - margin)
+	elif target + _CELL_WIDTH > view_right - margin:
+		_apply_horizontal_scroll(target + _CELL_WIDTH - _grid_scroll.size.x + margin)
+
+
+func _sync_preview_to_hover() -> void:
+	if _preview == null or _hover_column < 0:
+		return
+	_preview.set_view_center_column(_hover_column)
+	var max_scroll := _horizontal_scroll_max()
+	if max_scroll > 0.0 and _grid_scroll != null:
+		var grid := float(_data.get("grid", 40))
+		var width := maxi(int(_data.get("width", 24)), 1)
+		var target_scroll := (
+			(float(_hover_column) + 0.5) * _CELL_WIDTH
+			- _grid_scroll.size.x * 0.5
+		)
+		_apply_horizontal_scroll(target_scroll)
+
+
 func _set_hover_cell(column: int, row: int) -> void:
 	_hover_column = column
 	_hover_row = row
 	if _preview != null:
 		_preview.set_hover_cell(column, row)
 	_refresh_grid_highlights()
+	if _grid_scroll != null and _grid_scroll.get_global_rect().has_point(get_global_mouse_position()):
+		_scroll_column_into_view(column)
+		_sync_preview_to_hover()
 
 
 func _set_hover_column(column: int) -> void:
@@ -895,6 +989,8 @@ func _process(delta: float) -> void:
 		delta_x = _edge_scroll_delta(_grid_scroll.get_local_mouse_position().x, _grid_scroll.size.x, delta)
 		if absf(delta_x) > 0.01:
 			_apply_horizontal_scroll(_grid_scroll.scroll_horizontal + delta_x)
+		if _hover_column >= 0:
+			_sync_preview_to_hover()
 		return
 	if _preview == null:
 		return
@@ -1109,7 +1205,7 @@ func _short_label(type_name: String) -> String:
 	var labels := {
 		"ground": "DIRT", "platform": "WOOD", "star": "STAR",
 		"cactus": "OUCH", "canyon": "CANYON", "pit": "PIT", "checkpoint": "CAMP",
-		"spring": "BOING", "bandit": "BANDIT", "bounty_bandit": "BOUNTY",
+		"spring": "BOING", "bandit": "BANDIT", "bounty_bandit": "BOUNTY", "bull": "BULL", "ninja": "NINJA",
 		"rattlesnake": "SNAKE", "carrion": "BIRD",
 		"wings": "WINGS", "boots": "BOOTS", "speed": "FAST", "shield": "BUBBLE",
 		"goal": "END", "chest": "CHEST",
@@ -1124,6 +1220,8 @@ func _type_color(type_name: String) -> Color:
 		"cactus": Color(0.35, 0.75, 0.3), "canyon": Color(0.55, 0.28, 0.14), "pit": Color(0.55, 0.28, 0.14),
 		"checkpoint": Color(0.95, 0.45, 0.2), "spring": Color(0.3, 0.9, 0.45),
 		"bandit": Color(0.32, 0.18, 0.08), "bounty_bandit": Color(0.75, 0.12, 0.08),
+		"bull": Color(0.55, 0.28, 0.1),
+		"ninja": Color(0.28, 0.22, 0.42),
 		"rattlesnake": Color(0.55, 0.4, 0.15), "carrion": Color(0.45, 0.35, 0.55),
 		"wings": Color(0.75, 0.85, 1.0), "boots": Color(0.7, 0.45, 0.9),
 		"speed": Color(1.0, 0.75, 0.2), "shield": Color(0.45, 0.75, 1.0),

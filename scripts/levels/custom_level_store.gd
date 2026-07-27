@@ -37,7 +37,7 @@ static func trail_row(height: int) -> int:
 
 
 const GROUND_STANDING_TYPES: PackedStringArray = [
-	"cactus", "checkpoint", "spring", "bandit", "bounty_bandit",
+	"cactus", "checkpoint", "spring", "bandit", "bounty_bandit", "bull", "ninja",
 	"rattlesnake", "goal", "chest", "wings", "boots", "speed", "shield",
 ]
 
@@ -78,7 +78,11 @@ static func stamp_world_size(type_name: String) -> Vector2:
 		"cactus":
 			return _texture_pixel_size("res://assets/world/cactus.png")
 		"bandit", "bounty_bandit":
-			return _texture_pixel_size("res://assets/world/bandit.png")
+			return _texture_pixel_size("res://assets/world/bandit.png", 1.15)
+		"bull":
+			return _bull_stamp_world_size()
+		"ninja":
+			return _texture_pixel_size("res://assets/world/ninja_idle.png", 1.15)
 		"rattlesnake":
 			return _texture_pixel_size("res://assets/world/rattlesnake_idle.png")
 		"carrion":
@@ -116,6 +120,16 @@ static func _texture_pixel_size(path: String, scale: float = 1.0) -> Vector2:
 	if texture == null:
 		return Vector2(GRID_SIZE, GRID_SIZE)
 	return texture.get_size() * scale
+
+
+static func _bull_stamp_world_size() -> Vector2:
+	const TARGET_HEIGHT := 92.0
+	var texture := load("res://assets/world/boss_stampede_bull.png") as Texture2D
+	if texture == null:
+		return Vector2(GRID_SIZE, GRID_SIZE)
+	var tex_size := texture.get_size()
+	var scale := TARGET_HEIGHT / maxf(tex_size.y, 1.0)
+	return tex_size * scale
 
 
 static func stamp_hover_cells(
@@ -750,6 +764,10 @@ static func _import_type_for(node: Node) -> String:
 		return "goal"
 	if node is Opponent:
 		return "bounty_bandit" if (node as Opponent).bounty_bandit else "bandit"
+	if node is BullEnemy:
+		return "bull"
+	if node is NinjaEnemy:
+		return "ninja"
 	if node is Carrion:
 		return "carrion"
 	if node is Rattlesnake:
@@ -808,7 +826,7 @@ static func sanitize(source: Dictionary, slot_index: int) -> Dictionary:
 static func _valid_object(object: Dictionary, trail: int) -> bool:
 	var valid_types := [
 		"ground", "platform", "star", "chest", "cactus", "canyon", "pit",
-		"checkpoint", "spring", "goal", "bandit", "bounty_bandit",
+		"checkpoint", "spring", "goal", "bandit", "bounty_bandit", "bull", "ninja",
 		"rattlesnake", "carrion", "wings", "boots", "speed", "shield",
 	]
 	var type_name := str(object.get("type", ""))

@@ -83,10 +83,21 @@ func _process(delta: float) -> void:
 
 
 func _finish() -> void:
+	reset()
+
+
+func reset() -> void:
 	_playing = false
+	_phase = 0.0
+	position = Vector2(0.0, -8.0)
 	if _sprite != null:
 		_sprite.visible = false
+		_sprite.rotation = 0.0
+		_sprite.scale = Vector2.ONE
+		_sprite.modulate = Color.WHITE
 	if _glow != null:
 		_glow.visible = false
+		_glow.modulate.a = 0.0
 	if _sparkle != null:
 		_sparkle.visible = false
+		_sparkle.modulate.a = 0.0

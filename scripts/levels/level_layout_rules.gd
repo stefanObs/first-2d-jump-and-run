@@ -37,6 +37,7 @@ static func validate_level_node(level: Node) -> PackedStringArray:
 	errors.append_array(_validate_forward_route(level))
 	errors.append_array(_validate_stars(level))
 	errors.append_array(_validate_platforms(level))
+	errors.append_array(_validate_goal_reachable_without_items(level))
 	errors.append_array(_validate_checkpoints(level))
 	errors.append_array(_validate_no_plank_highway(level))
 	errors.append_array(_validate_ground_props_clear_of_raised_platforms(level))
@@ -109,8 +110,6 @@ static func _validate_stars(level: Node) -> PackedStringArray:
 			if not surface.is_empty():
 				surfaces.append(surface)
 	var jump_height := BASE_JUMP_HEIGHT
-	if _has_mode(level, ModeController.Mode.MAGIC_BOOTS):
-		jump_height = ASSISTED_JUMP_HEIGHT
 	if _has_spring(level):
 		jump_height = maxf(jump_height, SPRING_JUMP_HEIGHT)
 	var has_wings := _has_mode(level, ModeController.Mode.WINGS)
@@ -165,14 +164,9 @@ static func _validate_platforms(level: Node) -> PackedStringArray:
 		errors.append("Level has no standable, styled surfaces.")
 		return errors
 
-	var has_wings := _has_mode(level, ModeController.Mode.WINGS)
-	var has_boots := _has_mode(level, ModeController.Mode.MAGIC_BOOTS)
 	var has_spring := _has_spring(level)
 	var jump_height := BASE_JUMP_HEIGHT
 	var horizontal_gap := BASE_HORIZONTAL_GAP
-	if has_boots:
-		jump_height = ASSISTED_JUMP_HEIGHT
-		horizontal_gap = ASSISTED_HORIZONTAL_GAP
 	if has_spring:
 		jump_height = maxf(jump_height, SPRING_JUMP_HEIGHT)
 		horizontal_gap = ASSISTED_HORIZONTAL_GAP
@@ -185,12 +179,14 @@ static func _validate_platforms(level: Node) -> PackedStringArray:
 		errors.append("No reachable ground surface starts the level.")
 		return errors
 
-	if not has_wings:
+	if not _has_mode(level, ModeController.Mode.WINGS):
 		var changed := true
 		while changed:
 			changed = false
 			for target_index in range(surfaces.size()):
 				if target_index in reachable:
+					continue
+				if _is_optional_platform(String(surfaces[target_index]["name"])):
 					continue
 				for source_index in reachable:
 					if _can_reach_surface(
@@ -204,49 +200,96 @@ static func _validate_platforms(level: Node) -> PackedStringArray:
 						break
 
 	for index in range(surfaces.size()):
-		if has_wings or index in reachable:
+		if _has_mode(level, ModeController.Mode.WINGS):
+			continue
+		if _is_optional_platform(String(surfaces[index]["name"])):
+			continue
+		if index in reachable:
 			continue
 		errors.append("Platform %s is not reachable from the forward route." % surfaces[index]["name"])
 	return errors
 
 
+static func _validate_goal_reachable_without_items(level: Node) -> PackedStringArray:
+	var errors: PackedStringArray = []
+	if _has_mode(level, ModeController.Mode.WINGS):
+		return errors
+	var goal := level.find_child("Goal", true, false) as Node2D
+	if goal == null:
+		return errors
+	var surfaces: Array[Dictionary] = []
+	for node in level.find_children("*", "PhysicsBody2D", true, false):
+		if not _is_platform(node):
+			continue
+		if _is_optional_platform(String(node.name)):
+			continue
+		var surface := _surface_for(node as Node2D)
+		if not surface.is_empty():
+			surfaces.append(surface)
+	if surfaces.is_empty():
+		errors.append("Goal route needs standable ground surfaces.")
+		return errors
+
+	var has_spring := _has_spring(level)
+	var jump_height := BASE_JUMP_HEIGHT
+	var horizontal_gap := BASE_HORIZONTAL_GAP
+	if has_spring:
+		jump_height = maxf(jump_height, SPRING_JUMP_HEIGHT)
+		horizontal_gap = ASSISTED_HORIZONTAL_GAP
+
+	var reachable: Array[int] = []
+	for index in range(surfaces.size()):
+		if bool(surfaces[index].get("is_ground", false)):
+			reachable.append(index)
+	if reachable.is_empty():
+		errors.append("Goal route needs reachable ground at the level start.")
+		return errors
+
+	var changed := true
+	while changed:
+		changed = false
+		for target_index in range(surfaces.size()):
+			if target_index in reachable:
+				continue
+			for source_index in reachable:
+				if _can_reach_surface(
+					surfaces[source_index],
+					surfaces[target_index],
+					jump_height,
+					horizontal_gap
+				):
+					reachable.append(target_index)
+					changed = true
+					break
+
+	var goal_pos := goal.global_position
+	var goal_supported := false
+	for index in reachable:
+		var surface := surfaces[index]
+		if (
+			goal_pos.x >= float(surface["left"]) - 48.0
+			and goal_pos.x <= float(surface["right"]) + 48.0
+			and float(surface["top"]) - goal_pos.y <= jump_height + 24.0
+		):
+			goal_supported = true
+			break
+	if not goal_supported:
+		errors.append(
+			"Goal is not reachable without power-up items (springs are allowed)."
+		)
+	return errors
+
+
 static func _validate_checkpoints(level: Node) -> PackedStringArray:
 	var errors: PackedStringArray = []
-	var grounds: Array[Dictionary] = []
-	for node in level.find_children("*", "PhysicsBody2D", true, false):
-		var node_name := String(node.name)
-		if node_name.begins_with("Ground") or node_name.begins_with("FloorSlopeBody"):
-			if node_name.ends_with("Fill"):
-				continue
-			if node_name.begins_with("FloorSlopeBody"):
-				var col := (node as Node).get_node_or_null("CollisionPolygon2D") as CollisionPolygon2D
-				if col == null or col.polygon.size() < 2:
-					continue
-				var min_x := INF
-				var max_x := -INF
-				for point in col.polygon:
-					var world: Vector2 = (node as Node2D).to_global(point)
-					min_x = minf(min_x, world.x)
-					max_x = maxf(max_x, world.x)
-				if max_x > min_x:
-					grounds.append({"left": min_x, "right": max_x})
-				continue
-			var surface := _surface_for(node as Node2D)
-			if not surface.is_empty():
-				grounds.append(surface)
 	for node in level.find_children("*", "Area2D", true, false):
 		if not (node is Checkpoint):
 			continue
 		var checkpoint := node as Node2D
-		var supported := false
-		for ground in grounds:
-			if (
-				checkpoint.global_position.x >= float(ground["left"]) + 32.0
-				and checkpoint.global_position.x <= float(ground["right"]) - 32.0
-			):
-				supported = true
-				break
-		if not supported:
+		var pos := checkpoint.global_position
+		var surface := WildWestTheme.walk_surface_at(level, pos.x)
+		var floor_y := float(surface["y"])
+		if pos.y > floor_y + 16.0 or pos.y < floor_y - 96.0:
 			errors.append("Checkpoint %s is not safely supported by ground." % checkpoint.name)
 	return errors
 
@@ -306,6 +349,8 @@ static func _validate_ground_props_clear_of_raised_platforms(level: Node) -> Pac
 		if not _is_platform(node):
 			continue
 		if String(node.name).begins_with("FloorSlopeBody"):
+			continue
+		if _is_optional_platform(String(node.name)):
 			continue
 		var surface := _surface_for(node as Node2D)
 		if not surface.is_empty() and float(surface["top"]) < 290.0:
@@ -813,6 +858,16 @@ static func _validate_mode_item_spacing(level: Node) -> PackedStringArray:
 			if left.global_position.distance_to(right.global_position) < 220.0:
 				errors.append("Mode items %s and %s are too close." % [left.name, right.name])
 	return errors
+
+
+static func _is_optional_platform(name_text: String) -> bool:
+	return (
+		name_text.contains("Reward")
+		or name_text.begins_with("MovingHop")
+		or name_text == "BootsHopLedge"
+		or name_text.begins_with("WindLedge")
+		or name_text.begins_with("SpringLedge")
+	)
 
 
 static func _is_platform(node: Node) -> bool:

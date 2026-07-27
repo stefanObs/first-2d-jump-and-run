@@ -71,11 +71,22 @@ func _ready() -> void:
 	failures += await _run("Cowboy idle avoids pose flicker", _test_cowboy_idle_smooth)
 	failures += await _run("Lasso ties bandits and makes them pass-through", _test_lasso_ties_bandit)
 	failures += await _run("Treasure chest random loot and reveal", _test_treasure_chest)
+	failures += await _run("Treasure chest resets on respawn before camp", _test_treasure_chest_respawn_reset)
 	failures += await _run("Treasure chest height ratio", _test_treasure_chest_height_ratio)
 	failures += await _run("Treasure chest campaign placement", _test_treasure_chest_campaign_placement)
 	failures += await _run("Treasure chests stand on walk surface", _test_treasure_chest_on_walk_surface)
 	failures += await _run("Lasso cast ties bandits via HurtArea", _test_lasso_cast_hits_hurt_area)
 	failures += await _run("Jumping on a bandit head ties him", _test_stomp_ties_bandit)
+	failures += await _run("Trail bull charges toward the player", _test_bull_charges_player)
+	failures += await _run("Lasso ties trail bulls", _test_lasso_ties_bull)
+	failures += await _run("Jumping on a bull head ties it", _test_stomp_ties_bull)
+	failures += await _run("Side contact with a bull sends the cowboy to camp", _test_bull_side_contact_hurts)
+	failures += await _run("Ninja ambushes in front of the player", _test_ninja_ambush_spawn)
+	failures += await _run("Ninja sword attack hurts the cowboy", _test_ninja_sword_hurts)
+	failures += await _run("Lasso ties ninjas", _test_lasso_ties_ninja)
+	failures += await _run("Jumping on a ninja head ties him", _test_stomp_ties_ninja)
+	failures += await _run("Ninja throws shuriken at flying player", _test_ninja_shuriken_vs_wings)
+	failures += await _run("Shuriken sprite is handcrafted art", _test_shuriken_art)
 	failures += await _run("Side contact with a bandit sends the cowboy to camp", _test_side_contact_hurts)
 	failures += await _run("Upward contact with a bandit sends the cowboy to camp", _test_upward_contact_hurts)
 	failures += await _run(
@@ -1949,6 +1960,51 @@ func _test_treasure_chest() -> Variant:
 	return null
 
 
+func _test_treasure_chest_respawn_reset() -> Variant:
+	var packed: PackedScene = load("res://scenes/world/treasure_chest.tscn")
+	if packed == null:
+		return "Missing treasure chest scene."
+	var chest := packed.instantiate() as TreasureChest
+	var player_packed: PackedScene = load("res://scenes/player/player.tscn")
+	if player_packed == null:
+		chest.queue_free()
+		return "Missing player scene."
+	var player := player_packed.instantiate() as Player
+	var controller := LevelController.new()
+	controller.is_custom_level = true
+	add_child(controller)
+	controller.add_child(player)
+	controller.add_child(chest)
+	controller.player = player
+	chest.name = "TestChest0"
+	controller._wire_world_objects()
+
+	TreasureChest.test_loot_override = TreasureChestLoot.POOL.find(TreasureChestLoot.Type.SPEED_STAR)
+	chest.body_entered.emit(player)
+	await get_tree().process_frame
+	await get_tree().create_timer(0.55).timeout
+	TreasureChest.test_loot_override = -1
+	if not chest.is_opened():
+		controller.queue_free()
+		return "Chest should open before respawn reset test."
+
+	controller.respawn_player()
+	await get_tree().process_frame
+	if chest.is_opened():
+		controller.queue_free()
+		return "Treasure chest should close again when respawning before camp."
+	var collision := chest.get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if collision != null and collision.disabled:
+		controller.queue_free()
+		return "Respawned treasure chest should re-enable collision."
+	var art := chest.get_node_or_null("ChestArt") as TreasureChestArt
+	if art != null and art.open_amount > 0.05:
+		controller.queue_free()
+		return "Respawned treasure chest lid should close."
+	controller.queue_free()
+	return null
+
+
 func _test_treasure_chest_height_ratio() -> Variant:
 	var packed: PackedScene = load("res://scenes/world/treasure_chest.tscn")
 	if packed == null:
@@ -2070,6 +2126,272 @@ func _test_stomp_ties_bandit() -> Variant:
 	player.queue_free()
 	bandit.queue_free()
 	return error
+
+
+func _test_bull_charges_player() -> Variant:
+	var floor := StaticBody2D.new()
+	floor.collision_layer = 1
+	var shape := CollisionShape2D.new()
+	var rect := RectangleShape2D.new()
+	rect.size = Vector2(800, 40)
+	shape.shape = rect
+	shape.position = Vector2(0, 20)
+	floor.add_child(shape)
+	floor.position = Vector2(300, 400)
+	add_child(floor)
+	var packed: PackedScene = load("res://scenes/world/bull_enemy.tscn")
+	if packed == null:
+		floor.queue_free()
+		return "Missing bull enemy scene."
+	var bull := packed.instantiate() as BullEnemy
+	bull.position = Vector2(200, 400)
+	add_child(bull)
+	var player := Player.new()
+	player.position = Vector2(420, 400)
+	add_child(player)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	var start_x := bull.global_position.x
+	for _i in range(30):
+		await get_tree().physics_frame
+	var error: Variant = null
+	if bull.global_position.x <= start_x + 8.0:
+		error = "Trail bull should charge toward the nearby player."
+	player.queue_free()
+	bull.queue_free()
+	floor.queue_free()
+	return error
+
+
+func _test_lasso_ties_bull() -> Variant:
+	var packed: PackedScene = load("res://scenes/world/bull_enemy.tscn")
+	if packed == null:
+		return "Missing bull enemy scene."
+	var bull := packed.instantiate() as BullEnemy
+	add_child(bull)
+	bull.tie_up()
+	var error: Variant = null
+	if not bull.is_tied():
+		error = "A lasso hit should tie the trail bull."
+	elif bull.collision_layer != 0:
+		error = "Tied bulls should not block the cowboy."
+	elif bull.get_node_or_null("TiedRopes") == null:
+		error = "Tied bulls should show rope artwork."
+	var sprite := bull.get_node_or_null("BullSprite") as Sprite2D
+	if sprite != null and sprite.texture != BullEnemy.BULL_TIED_TEX:
+		error = "Tied bulls should switch to the leg-bound sprite."
+	bull.queue_free()
+	return error
+
+
+func _test_stomp_ties_bull() -> Variant:
+	var packed: PackedScene = load("res://scenes/world/bull_enemy.tscn")
+	if packed == null:
+		return "Missing bull enemy scene."
+	var bull := packed.instantiate() as BullEnemy
+	bull.position = Vector2(200, 400)
+	add_child(bull)
+	var player := Player.new()
+	player.position = Vector2(200, 360)
+	add_child(player)
+	player.velocity = Vector2(0.0, 180.0)
+	var hurt := [false]
+	bull.hurt_player.connect(func(_p: Player) -> void: hurt[0] = true)
+	bull._on_body_entered(player)
+	var error: Variant = null
+	if not bull.is_tied():
+		error = "Jumping onto a bull's head while falling should tie it."
+	elif hurt[0]:
+		error = "A head stomp should not hurt the cowboy."
+	elif player.velocity.y >= 0.0:
+		error = "A head stomp should bounce the cowboy upward."
+	player.queue_free()
+	bull.queue_free()
+	return error
+
+
+func _test_bull_side_contact_hurts() -> Variant:
+	var packed: PackedScene = load("res://scenes/world/bull_enemy.tscn")
+	if packed == null:
+		return "Missing bull enemy scene."
+	var bull := packed.instantiate() as BullEnemy
+	bull.position = Vector2(200, 400)
+	add_child(bull)
+	var player := Player.new()
+	player.position = Vector2(200, 400)
+	add_child(player)
+	var hurt := [false]
+	bull.hurt_player.connect(func(_p: Player) -> void: hurt[0] = true)
+	bull._on_body_entered(player)
+	var error: Variant = null
+	if bull.is_tied():
+		error = "Walking into a bull's side must not tie it."
+	elif not hurt[0]:
+		error = "Any non-stomp bull contact should send the cowboy back to camp."
+	player.queue_free()
+	bull.queue_free()
+	return error
+
+
+func _test_ninja_ambush_spawn() -> Variant:
+	var floor := StaticBody2D.new()
+	floor.collision_layer = 1
+	var shape := CollisionShape2D.new()
+	var rect := RectangleShape2D.new()
+	rect.size = Vector2(900, 40)
+	shape.shape = rect
+	shape.position = Vector2(0, 20)
+	floor.add_child(shape)
+	floor.position = Vector2(400, 400)
+	add_child(floor)
+	var packed: PackedScene = load("res://scenes/world/ninja_enemy.tscn")
+	if packed == null:
+		floor.queue_free()
+		return "Missing ninja enemy scene."
+	var ninja := packed.instantiate() as NinjaEnemy
+	ninja.position = Vector2(300, 400)
+	add_child(ninja)
+	var player := Player.new()
+	player.position = Vector2(340, 400)
+	player.velocity = Vector2(120.0, 0.0)
+	add_child(player)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	for _i in range(20):
+		await get_tree().physics_frame
+	var error: Variant = null
+	if ninja.modulate.a < 0.5:
+		error = "Ninja should appear when the player enters ambush range."
+	elif ninja.global_position.x <= player.global_position.x + 120.0:
+		error = "Ninja should spawn ahead of the player (got x=%.1f vs player x=%.1f)." % [
+			ninja.global_position.x, player.global_position.x
+		]
+	player.queue_free()
+	ninja.queue_free()
+	floor.queue_free()
+	return error
+
+
+func _test_ninja_sword_hurts() -> Variant:
+	var packed: PackedScene = load("res://scenes/world/ninja_enemy.tscn")
+	if packed == null:
+		return "Missing ninja enemy scene."
+	var ninja := packed.instantiate() as NinjaEnemy
+	ninja.position = Vector2(200, 400)
+	add_child(ninja)
+	ninja._state = NinjaEnemy.State.CHASE
+	ninja._set_dormant(false)
+	var player := Player.new()
+	player.position = Vector2(228, 400)
+	add_child(player)
+	var hurt := [false]
+	ninja.hurt_player.connect(func(_p: Player) -> void: hurt[0] = true)
+	ninja._begin_sword_attack(player)
+	for _i in range(20):
+		await get_tree().physics_frame
+	var error: Variant = null
+	if not hurt[0]:
+		error = "Ninja sword attack should hurt the cowboy in melee range."
+	player.queue_free()
+	ninja.queue_free()
+	return error
+
+
+func _test_lasso_ties_ninja() -> Variant:
+	var packed: PackedScene = load("res://scenes/world/ninja_enemy.tscn")
+	if packed == null:
+		return "Missing ninja enemy scene."
+	var ninja := packed.instantiate() as NinjaEnemy
+	add_child(ninja)
+	ninja._set_dormant(false)
+	ninja.tie_up()
+	var error: Variant = null
+	if not ninja.is_tied():
+		error = "A lasso hit should tie the ninja."
+	elif ninja.get_node_or_null("TiedRopes") == null:
+		error = "Tied ninjas should show rope artwork."
+	var sprite := ninja.get_node_or_null("NinjaSprite") as AnimatedSprite2D
+	if sprite != null and sprite.animation != &"tied":
+		error = "Tied ninjas should switch to the bound pose."
+	ninja.queue_free()
+	return error
+
+
+func _test_stomp_ties_ninja() -> Variant:
+	var packed: PackedScene = load("res://scenes/world/ninja_enemy.tscn")
+	if packed == null:
+		return "Missing ninja enemy scene."
+	var ninja := packed.instantiate() as NinjaEnemy
+	ninja.position = Vector2(200, 400)
+	add_child(ninja)
+	ninja._state = NinjaEnemy.State.CHASE
+	ninja._set_dormant(false)
+	var player := Player.new()
+	player.position = Vector2(200, 360)
+	add_child(player)
+	player.velocity = Vector2(0.0, 180.0)
+	var hurt := [false]
+	ninja.hurt_player.connect(func(_p: Player) -> void: hurt[0] = true)
+	ninja._on_body_entered(player)
+	var error: Variant = null
+	if not ninja.is_tied():
+		error = "Jumping onto a ninja's head while falling should tie him."
+	elif hurt[0]:
+		error = "A head stomp should not hurt the cowboy."
+	player.queue_free()
+	ninja.queue_free()
+	return error
+
+
+func _test_ninja_shuriken_vs_wings() -> Variant:
+	var packed: PackedScene = load("res://scenes/world/ninja_enemy.tscn")
+	if packed == null:
+		return "Missing ninja enemy scene."
+	var ninja := packed.instantiate() as NinjaEnemy
+	ninja.position = Vector2(200, 400)
+	add_child(ninja)
+	ninja._state = NinjaEnemy.State.CHASE
+	ninja._set_dormant(false)
+	var player := Player.new()
+	player.position = Vector2(320, 280)
+	add_child(player)
+	player.get_modes().activate(ModeController.Mode.WINGS)
+	var star_spawned := [false]
+	ninja._begin_throw(player)
+	for _i in range(20):
+		await get_tree().physics_frame
+		if ninja.get_parent().get_node_or_null("NinjaShuriken") != null:
+			star_spawned[0] = true
+			break
+	var error: Variant = null
+	if not star_spawned[0]:
+		error = "Ninja should throw a shuriken at a winged player."
+	player.queue_free()
+	ninja.queue_free()
+	for child in get_children():
+		if child is NinjaShuriken:
+			child.queue_free()
+	return error
+
+
+func _test_shuriken_art() -> Variant:
+	var tex: Texture2D = load("res://assets/world/ninja_shuriken.png")
+	if tex == null:
+		return "Missing shuriken texture."
+	var size := tex.get_size()
+	if size.x < 20 or size.y < 20:
+		return "Shuriken art should be a visible sprite (got %s)." % str(size)
+	var img := tex.get_image()
+	if img == null or img.is_empty():
+		return "Shuriken texture image data missing."
+	var filled := 0
+	for y in range(img.get_height()):
+		for x in range(img.get_width()):
+			if img.get_pixel(x, y).a > 0.1:
+				filled += 1
+	if filled < 40:
+		return "Shuriken art looks too empty (%d opaque pixels)." % filled
+	return null
 
 
 func _test_side_contact_hurts() -> Variant:
@@ -2527,6 +2849,24 @@ func _test_slope_crest_walkable() -> Variant:
 	if not player.is_on_floor():
 		level.queue_free()
 		return "Cowboy should stay on the floor while crossing the dune crest."
+
+	var left_start_x := float(span["x_end"]) + 12.0
+	var left_surface := WildWestTheme.walk_surface_at(level, left_start_x)
+	player.global_position = Vector2(left_start_x, float(left_surface["y"]) - 28.0)
+	player.velocity = Vector2.ZERO
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	for _step in range(180):
+		player.velocity = Vector2(-140.0, player.velocity.y)
+		await get_tree().physics_frame
+		if player.global_position.x <= float(span["x_start"]) - 20.0:
+			break
+	if player.global_position.x > float(span["x_start"]) - 8.0:
+		level.queue_free()
+		return "Cowboy should walk left over the dune crest onto the lower bank."
+	if not player.is_on_floor():
+		level.queue_free()
+		return "Cowboy should stay on the floor while walking left over the dune crest."
 	level.queue_free()
 	return null
 

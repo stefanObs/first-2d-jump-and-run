@@ -27,6 +27,7 @@ var _world: LevelController
 var _camera: Camera2D
 var _cursor_marker: Node2D
 var _ghost_overlay: Control
+var _ghost_root: Node2D
 var _rebuild_pending := false
 var _last_built_hash := ""
 
@@ -46,7 +47,7 @@ func _ready() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
 		_fit_preview_to_pane()
-		_update_ghost_overlay()
+		_update_ghost_world()
 
 
 func show_level(data: Dictionary) -> void:
@@ -56,7 +57,7 @@ func show_level(data: Dictionary) -> void:
 
 func set_selected_type(type_name: String) -> void:
 	_selected_type = type_name
-	_update_ghost_overlay()
+	_update_ghost_world()
 
 
 func set_hover_column(column: int) -> void:
@@ -73,7 +74,7 @@ func set_hover_cell(column: int, row: int) -> void:
 	_hover_column = next_col
 	_hover_row = next_row
 	_update_cursor_marker()
-	_update_ghost_overlay()
+	_update_ghost_world()
 	hover_column_changed.emit(_hover_column)
 	hover_cell_changed.emit(_hover_column, _hover_row)
 
@@ -130,7 +131,8 @@ func _build_viewport() -> void:
 	_container = SubViewportContainer.new()
 	_container.name = "LivePreviewContainer"
 	_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_container.stretch = false
+	_container.stretch = true
+	_container.stretch_shrink = 1
 	_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_frame.add_child(_container)
 
@@ -166,17 +168,18 @@ func _rebuild_world() -> void:
 	var digest := JSON.stringify(_data)
 	if digest == _last_built_hash and _world != null and is_instance_valid(_world):
 		_update_camera()
-		_update_ghost_overlay()
+		_update_ghost_world()
 		return
 	_last_built_hash = digest
-	_view_center_x = -1.0
+	var preserved_center := _view_center_x
+	_clear_ghost_root()
 	for child in _viewport.get_children():
 		child.queue_free()
 	_world = null
 	_camera = null
 	_cursor_marker = null
 	if _data.is_empty():
-		_update_ghost_overlay()
+		_update_ghost_world()
 		return
 
 	var level := LevelController.new()
@@ -220,8 +223,17 @@ func _rebuild_world() -> void:
 	level.add_child(_cursor_marker)
 
 	_world = level
+	if preserved_center >= 0.0:
+		var metrics := _view_metrics()
+		var grid: float = metrics["grid"]
+		var width: int = metrics["width"]
+		var min_x := grid * 0.5
+		var max_x := (float(width) - 0.5) * grid
+		_view_center_x = clampf(preserved_center, min_x, max_x)
+	else:
+		_view_center_x = -1.0
 	_update_camera()
-	_update_ghost_overlay()
+	_update_ghost_world()
 
 
 func _ensure_view_center() -> void:
@@ -291,7 +303,7 @@ func _fit_preview_to_pane() -> void:
 	if viewport_changed:
 		_viewport.size = viewport_size
 	_update_camera()
-	_update_ghost_overlay()
+	_update_ghost_world()
 
 
 func _view_metrics() -> Dictionary:
@@ -321,13 +333,18 @@ func _view_metrics() -> Dictionary:
 
 func _mouse_to_cell(local: Vector2) -> Vector2i:
 	var display := _preview_display_rect()
-	if display.size.x <= 1.0 or display.size.y <= 1.0 or _camera == null:
+	if display.size.x <= 1.0 or not display.has_point(local) or _camera == null:
 		return Vector2i(-1, -1)
 	var metrics := _view_metrics()
 	var grid: float = metrics["grid"]
 	var zoom: float = metrics["zoom"]
-	var rel := local - display.position - display.size * 0.5
-	var world := _camera.position + Vector2(rel.x / zoom, rel.y / zoom)
+	var vp_size := Vector2(_viewport.size)
+	var norm := (local - display.position) / display.size
+	var vp_pixel := Vector2(
+		clampf(norm.x, 0.0, 1.0) * vp_size.x,
+		clampf(norm.y, 0.0, 1.0) * vp_size.y
+	)
+	var world := _camera.position + (vp_pixel - vp_size * 0.5) / zoom
 	var width: int = metrics["width"]
 	var height: int = metrics["height"]
 	return Vector2i(
@@ -345,6 +362,10 @@ func _ghost_rect_screen() -> Rect2:
 	return _world_rect_to_screen(_ghost_world_rect())
 
 
+func _ghost_world_rect() -> Rect2:
+	return _aligned_ghost_world_rect()
+
+
 func _ghost_cell_rects_screen() -> Array[Rect2]:
 	var rects: Array[Rect2] = []
 	var metrics := _view_metrics()
@@ -360,82 +381,154 @@ func _ghost_cell_rects_screen() -> Array[Rect2]:
 	return rects
 
 
-func _ghost_world_rect() -> Rect2:
+func _ghost_placement_object() -> Dictionary:
+	if _hover_column < 0 or _hover_row < 0 or _data.is_empty():
+		return {}
+	var metrics := _view_metrics()
+	var trail: int = metrics["trail"]
+	var width: int = metrics["width"]
+	var place_row := CustomLevelStore.placement_row(_selected_type, _hover_row, trail)
+	var col := _hover_column
+	var cells := CustomLevelStore.stamp_hover_cells(
+		_selected_type, _hover_column, _hover_row, trail, width
+	)
+	if not cells.is_empty():
+		col = cells[0].x
+		place_row = cells[0].y
+	return {"type": _selected_type, "x": col, "y": place_row}
+
+
+func _aligned_ghost_world_rect() -> Rect2:
 	if _hover_column < 0 or _hover_row < 0 or _data.is_empty():
 		return Rect2()
+	if _selected_type in ["erase", "ground", "canyon"]:
+		return Rect2()
 	var metrics := _view_metrics()
-	return CustomLevelStore.stamp_visual_world_rect(
+	var grid: float = metrics["grid"]
+	var trail: int = metrics["trail"]
+	var width: int = metrics["width"]
+	var rect := CustomLevelStore.stamp_visual_world_rect(
 		_selected_type,
 		_hover_column,
 		_hover_row,
-		metrics["trail"],
-		metrics["width"],
-		metrics["grid"]
+		trail,
+		width,
+		grid
 	)
+	if rect.size.x <= 0.0:
+		return Rect2()
+	if _world == null or not is_instance_valid(_world):
+		return rect
+	var center_x := rect.position.x + rect.size.x * 0.5
+	var surface := WildWestTheme.walk_surface_at(_world, center_x)
+	var floor_y := float(surface["y"])
+	if CustomLevelStore.is_ground_standing(_selected_type):
+		rect.position.y = floor_y + WildWestTheme.CACTUS_DESERT_SINK - rect.size.y
+	elif _selected_type == "chest":
+		rect.position.y = floor_y + WildWestTheme.CHEST_FOOT_SINK - rect.size.y
+	elif _selected_type in ["spring", "checkpoint", "goal", "star", "bandit", "bounty_bandit", "bull", "ninja"]:
+		rect.position.y = floor_y - rect.size.y
+	return rect
+
+
+func _clear_ghost_root() -> void:
+	if _ghost_root != null and is_instance_valid(_ghost_root):
+		_ghost_root.queue_free()
+	_ghost_root = null
+
+
+func _update_ghost_world() -> void:
+	_clear_ghost_root()
+	if _ghost_overlay != null:
+		for child in _ghost_overlay.get_children():
+			child.queue_free()
+	if _world == null or not is_instance_valid(_world):
+		return
+	var world_rect := _aligned_ghost_world_rect()
+	if world_rect.size.x <= 0.0:
+		return
+
+	_ghost_root = Node2D.new()
+	_ghost_root.name = "StampGhost"
+	_ghost_root.z_index = 120
+	_world.add_child(_ghost_root)
+
+	var fill := Polygon2D.new()
+	fill.name = "GhostFill"
+	fill.color = Color(1.0, 0.92, 0.45, 0.18)
+	fill.polygon = PackedVector2Array([
+		world_rect.position,
+		world_rect.position + Vector2(world_rect.size.x, 0.0),
+		world_rect.position + world_rect.size,
+		world_rect.position + Vector2(0.0, world_rect.size.y),
+	])
+	_ghost_root.add_child(fill)
+
+	var icon_path := _icon_path_for_type(_selected_type)
+	if not icon_path.is_empty() and ResourceLoader.exists(icon_path):
+		var texture := load(icon_path) as Texture2D
+		if texture != null:
+			var sprite := Sprite2D.new()
+			sprite.name = "GhostIcon"
+			sprite.texture = texture
+			sprite.centered = false
+			sprite.modulate = Color(1, 1, 1, 0.55)
+			var tex_size := texture.get_size()
+			if tex_size.x > 0.0 and tex_size.y > 0.0:
+				sprite.scale = world_rect.size / tex_size
+			sprite.position = world_rect.position
+			_ghost_root.add_child(sprite)
+
+	var metrics := _view_metrics()
+	var grid: float = metrics["grid"]
+	var trail: int = metrics["trail"]
+	var width: int = metrics["width"]
+	for cell in CustomLevelStore.stamp_hover_cells(
+		_selected_type, _hover_column, _hover_row, trail, width
+	):
+		var cell_rect := Rect2(float(cell.x) * grid, float(cell.y) * grid, grid, grid)
+		_ghost_root.add_child(_make_world_outline(cell_rect))
+
+
+func _make_world_outline(world_rect: Rect2) -> Node2D:
+	var root := Node2D.new()
+	root.position = world_rect.position
+	var w := world_rect.size.x
+	var h := world_rect.size.y
+	var width := 2.0
+	var color := Color(1.0, 0.82, 0.12, 0.95)
+	for points in [
+		[Vector2(0, 0), Vector2(w, 0)],
+		[Vector2(0, h), Vector2(w, h)],
+		[Vector2(0, 0), Vector2(0, h)],
+		[Vector2(w, 0), Vector2(w, h)],
+	]:
+		var line := Line2D.new()
+		line.width = width
+		line.default_color = color
+		line.points = PackedVector2Array(points)
+		root.add_child(line)
+	return root
 
 
 func _world_rect_to_screen(world_rect: Rect2) -> Rect2:
 	if world_rect.size.x <= 0.0 or world_rect.size.y <= 0.0:
 		return Rect2()
 	var display := _preview_display_rect()
-	if display.size.x <= 1.0 or _camera == null:
+	if display.size.x <= 1.0 or _camera == null or _viewport == null:
 		return Rect2()
 	var metrics := _view_metrics()
 	var zoom: float = metrics["zoom"]
+	var vp_size := Vector2(_viewport.size)
+	var screen_scale := display.size / vp_size
 	var center := display.position + display.size * 0.5
-	var top_left := center + (world_rect.position - _camera.position) * zoom
-	return Rect2(top_left, world_rect.size * zoom)
-
-
-func _update_ghost_overlay() -> void:
-	if _ghost_overlay == null:
-		return
-	for child in _ghost_overlay.get_children():
-		child.queue_free()
-	var rect := _ghost_rect_screen()
-	if rect.size.x <= 1.0 or rect.size.y <= 1.0:
-		return
-	var fill := ColorRect.new()
-	fill.position = rect.position
-	fill.size = rect.size
-	fill.color = Color(1.0, 0.92, 0.45, 0.18)
-	fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_ghost_overlay.add_child(fill)
-	for cell_rect in _ghost_cell_rects_screen():
-		_ghost_overlay.add_child(_make_outline(cell_rect, Color(1.0, 0.82, 0.12, 0.95), 2.0))
-	var icon_path := _icon_path_for_type(_selected_type)
-	if not icon_path.is_empty() and ResourceLoader.exists(icon_path):
-		var icon := TextureRect.new()
-		icon.texture = load(icon_path) as Texture2D
-		icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
-		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		icon.modulate = Color(1, 1, 1, 0.55)
-		var icon_size := rect.size
-		icon.custom_minimum_size = icon_size
-		icon.size = icon_size
-		icon.position = rect.position + (rect.size - icon_size) * 0.5
-		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_ghost_overlay.add_child(icon)
-
-
-func _make_outline(rect: Rect2, color: Color, width: float) -> Control:
-	var root := Control.new()
-	root.position = rect.position
-	root.size = rect.size
-	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	for edge in [
-		Rect2(0, 0, rect.size.x, width),
-		Rect2(0, rect.size.y - width, rect.size.x, width),
-		Rect2(0, 0, width, rect.size.y),
-		Rect2(rect.size.x - width, 0, width, rect.size.y),
-	]:
-		var line := ColorRect.new()
-		line.position = edge.position
-		line.size = edge.size
-		line.color = color
-		line.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		root.add_child(line)
-	return root
+	var vp_offset := (world_rect.position - _camera.position) * zoom
+	var top_left := center + Vector2(vp_offset.x * screen_scale.x, vp_offset.y * screen_scale.y)
+	var screen_size := Vector2(
+		world_rect.size.x * zoom * screen_scale.x,
+		world_rect.size.y * zoom * screen_scale.y
+	)
+	return Rect2(top_left, screen_size)
 
 
 func _icon_path_for_type(type_name: String) -> String:
@@ -450,6 +543,8 @@ func _icon_path_for_type(type_name: String) -> String:
 		"spring": "res://assets/world/spring.png",
 		"bandit": "res://assets/world/bandit.png",
 		"bounty_bandit": "res://assets/world/bandit_red.png",
+		"bull": "res://assets/world/boss_stampede_bull.png",
+		"ninja": "res://assets/world/ninja_idle.png",
 		"rattlesnake": "res://assets/world/rattlesnake_idle.png",
 		"carrion": "res://assets/world/carrion_bird.png",
 		"wings": "res://assets/world/modes/wings.png",
@@ -475,7 +570,9 @@ func _gui_input(event: InputEvent) -> void:
 		if event is InputEventMouseButton:
 			var mouse := event as InputEventMouseButton
 			if mouse.pressed and mouse.button_index == MOUSE_BUTTON_LEFT:
-				stamp_requested.emit(cell.x, cell.y)
+				var placement := _ghost_placement_object()
+				var stamp_col := int(placement.get("x", cell.x)) if not placement.is_empty() else cell.x
+				stamp_requested.emit(stamp_col, cell.y)
 				accept_event()
 			elif mouse.pressed and mouse.button_index == MOUSE_BUTTON_RIGHT:
 				remove_requested.emit(cell.x, cell.y)

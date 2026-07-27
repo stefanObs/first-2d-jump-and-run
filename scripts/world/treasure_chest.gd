@@ -24,6 +24,7 @@ var _rolled_loot: TreasureChestLoot.Type = TreasureChestLoot.Type.WINGS
 var _art: TreasureChestArt
 var _loot_reveal: TreasureChestLootReveal
 var _collision: CollisionShape2D
+var _open_tween: Tween
 
 
 func _ready() -> void:
@@ -103,13 +104,14 @@ func _roll_loot() -> TreasureChestLoot.Type:
 func _play_open_animation(player: Player) -> void:
 	if _art == null:
 		return
-	var tween := create_tween()
-	tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tween.tween_method(_art.set_open_amount, 0.0, 1.0, 0.42)
-	tween.parallel().tween_property(self, "scale", Vector2(1.08, 1.08), 0.16)
-	tween.tween_property(self, "scale", Vector2.ONE, 0.18)
+	_kill_open_tween()
+	_open_tween = create_tween()
+	_open_tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_open_tween.tween_method(_art.set_open_amount, 0.0, 1.0, 0.42)
+	_open_tween.parallel().tween_property(self, "scale", Vector2(1.08, 1.08), 0.16)
+	_open_tween.tween_property(self, "scale", Vector2.ONE, 0.18)
 	if _loot_reveal != null:
-		tween.parallel().tween_callback(
+		_open_tween.parallel().tween_callback(
 			func() -> void: _loot_reveal.play(_rolled_loot, player.global_position)
 		).set_delay(0.14)
 
@@ -124,10 +126,25 @@ func restore_as_opened() -> void:
 
 
 func restore_for_respawn() -> void:
+	_kill_open_tween()
 	_opened = false
-	monitoring = true
+	monitoring = false
 	if _collision != null:
-		_collision.disabled = false
+		_collision.set_deferred("disabled", false)
 	scale = Vector2.ONE
 	if _art != null:
 		_art.set_open_amount(0.0)
+	if _loot_reveal != null:
+		_loot_reveal.reset()
+	call_deferred("_enable_monitoring_after_reset")
+
+
+func _enable_monitoring_after_reset() -> void:
+	if not _opened:
+		monitoring = true
+
+
+func _kill_open_tween() -> void:
+	if _open_tween != null and _open_tween.is_valid():
+		_open_tween.kill()
+	_open_tween = null
