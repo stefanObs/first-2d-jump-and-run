@@ -2,7 +2,7 @@
 
 Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, nonviolent lasso. **Classic mode** has no lives or game over; **Advanced Mode** (chosen in **Settings** before starting or continuing a slot) adds a three-life limit, badge milestones, and a game-over return to the start screen. Pick **Cowboy** or **Cowgirl** in Settings — the choice applies across all save slots. **German is the default language**; English is fully supported.
 
-**Content version:** `1.4.7` (see `content_version.txt`). Launchers reimport when this stamp changes.
+**Content version:** `1.5.5` (see `content_version.txt`). Launchers reimport when this stamp changes.
 
 This README is the **binding source of truth** for gameplay, level design, art, i18n, and audio. Agents and contributors must follow it (see [Agent / contributor rules](#agent--contributor-rules)).
 
@@ -23,6 +23,16 @@ This README is the **binding source of truth** for gameplay, level design, art, 
 godot --headless --path . res://tests/test_runner.tscn
 godot --headless --path . res://tests/test_moving_platform_obstruction.tscn
 ```
+
+### Art regeneration (optional)
+
+```bash
+python3 tools/handcrafted_cowgirl.py          # cowgirl on-foot player sprites
+python3 tools/generate_cowgirl_horse_art.py   # mounted cowgirl horse sprites
+python3 tools/generate_treasure_chest_art.py  # treasure chest PNGs
+```
+
+After regenerating art, bump `content_version.txt` if shipped assets change.
 
 ---
 
@@ -64,7 +74,8 @@ After Kingpin: horizon victory ride, fade, dedication **VOM PAPI FÜR FINN**, th
 - **Lasso:** Alt / F / L (Xbox X) — ties bandits (pass-through, seated rope pose). A downward jump stomp from above also ties + small bounce; side/upward/standing contact hurts. Bandits placed in mid-air (workshop or level layout) **fall to the walkable surface below** before patrolling.
 - **Modes** (one at a time; badge pickup adds ~5s): Wings / Magic Boots / Speed Star **30s**; Bubble Shield **7.5s** (blocks bandits, bounces cacti; **does not** save canyon falls).
 - **Camps:** checkpoints; respawn there after canyon/cactus hurt. Classic mode has no life limit; **Advanced Mode** costs one life per respawn (three lives at start; every **30 badges** collected across the save grants +1 life; at zero lives a western game-over plays and returns to save select). Camps store badges/mode state appropriately.
-- **Treasure chests:** optional mid-trail rewards — touch to open once; a random power-up (Wings, Magic Boots, Speed Star, Bubble Shield) or one sheriff badge is rolled at open time, revealed with a handcrafted pop-out animation, and activated immediately on the player (same effect as collecting that pickup); chest stays open and cannot be re-triggered; Advanced Mode badge milestones count only badge loot (+1), not power-ups.
+- **Treasure chests:** optional mid-trail rewards — touch to open once; a random power-up (Wings, Magic Boots, Speed Star, Bubble Shield) or one sheriff badge is rolled at open time, revealed with a handcrafted pop-out animation, and activated immediately on the player (same effect as collecting that pickup); chest stays open and cannot be re-triggered; Advanced Mode badge milestones count only badge loot (+1), not power-ups. Chest collision scales to **~109% of player height** (handcrafted prop, not a flat grid stamp).
+- **Player characters:** **Cowboy** or **Cowgirl** in Settings (all slots). Both share the same animation set (idle, run, jump, celebrate, Magic Boots variants). **Idle uses a single pose frame** with a gentle scale breathe — do not alternate mismatched idle frames (causes flicker). Cowgirl on-foot sprites are **original handcrafted art**, not cowboy derivatives.
 - **Canyons vs cactus vs pits:** **Canyons** are wide trail gaps (merged stamps, hand-painted rims, sky mouth). **Pits** are fixed **128×64 px** holes (`assets/world/pit.png`, no scaling) stamped only on trail **dirt** cells. Falling into a pit or canyon → spin recovery → camp. Cactus/bandit/carrion/snake hurt → camp (Bubble can block some damage). User-facing copy: call wide gaps **canyons**; call fixed holes **pits** (never use “pit” for a canyon).
 - **Stars:** optional; goals are saloon doorways (flying over counts). Level clear → horse ride-in/mount/ride-out → next level: ride in, dismount, and **leave the horse at the level start**. Handmade desert skyline behind transitions.
 
@@ -96,7 +107,7 @@ Agents **must** honor these when editing levels or trail systems:
 
 ### Floor height
 
-- Where desert banks sit at different heights **with continuous ground** (no canyon between), paint a **natural soft curved slope** (gentle dune) with trail desert/dirt art (not a flat cliff face or ColorRect step). Slopes must be **walkable without jumping** (carve away Ground cliff walls into the dune; long gentle run so peak grade stays walkable). Slope crust ends must **start and end on the flat desert tops** (same height/seam, no stepped lip).
+- Where desert banks sit at different heights **with continuous ground** (no canyon between), paint a **natural soft curved slope** (gentle dune) with trail desert/dirt art (not a flat cliff face or ColorRect step). Slopes must be **walkable without jumping** (carve away Ground cliff walls into the dune; long gentle run so peak grade stays walkable). Slope crust ends must **start and end on the flat desert tops** (same height/seam, no stepped lip). Under the curved crust, pack **dense earth fill** (smaller tiles in the upper wedge) plus a solid warm underfill wedge — **no black or sky gaps** below the dune face.
 - If a **canyon** separates banks at different heights, the canyon is the transition — do **not** paint a slope (or slope collision) across the gap.
 - If the far bank after a canyon is **higher** than the near bank, there **must** be a spring on the approach (near) side so the jump is solvable. Without that spring, the far bank must be the same height or lower.
 - Levels **7–10** each need **2–10** continuous height differences (distinct walk-surface Y changes along continuous ground; canyon-only transitions do not count).
@@ -125,7 +136,10 @@ Safe stars, forward-only solvability, reachable platforms/stars, visible themed 
 
 ## UI / art style
 
-- Warm **handmade / hand-painted** western look matching trail tiles (sky, ground, props, cowboy/cowgirl player frames). Cowgirl on-foot sprites are **original handcrafted art** (`tools/handcrafted_cowgirl.py`); regenerate with `python3 tools/handcrafted_cowgirl.py`.
+- Warm **handmade / hand-painted** western look matching trail tiles (sky, ground, props, cowboy/cowgirl player frames).
+- **Cowboy** player frames live in `assets/player/`; **cowgirl on-foot** frames in `assets/player/cowgirl/` — original handcrafted sprites (`tools/handcrafted_cowgirl.py`). **Do not** re-derive cowgirl on-foot art from cowboy frames. Regenerate: `python3 tools/handcrafted_cowgirl.py`.
+- **Mounted cowgirl** horse sprites (`assets/world/cowgirl_horse_*.png`) keep the horse art and repaint the rider (golden pigtails, pink cuffs) via `python3 tools/generate_cowgirl_horse_art.py` (`tools/cowgirl_hair.py`).
+- **Treasure chest** props: handcrafted western wood/brass (`tools/generate_treasure_chest_art.py`); gameplay collision height follows `TreasureChest.HEIGHT_RATIO` (~109% of player).
 - HUD / doors / prompts: irregular **western wood signs** (`HandmadeSign`), not generic flat UI cards.
 - Start screen, settings, pause, save select: stay **handcrafted** and trail-themed (polish may continue; do not regress to stock Godot chrome or mismatched stock art). Save select / boot title use a painted weathered **saloon wood sign** (peeling red rim, cream lettering, optional pointing-hand motif) in the same soft handmade style as trail tiles — not photoreal stock art.
 - Between-level horse transitions use a dedicated hand-painted desert skyline.
@@ -153,5 +167,10 @@ Safe stars, forward-only solvability, reachable platforms/stars, visible themed 
 8. Keep handmade western UI/art language; SFX via AudioManager; German default.
 9. Run the headless test runner (and obstruction test when touching movers) for layout/gameplay changes.
 10. If a change **requires** altering a documented rule, **update this README in the same change**.
+11. **Cowgirl on-foot art:** keep original handcrafted sprites; never rebuild from cowboy source frames.
+12. **Dune slopes:** dense earth under the crust; no black/sky holes below the curved bank face.
+13. **Workshop editor:** placement ghosts and preview icons use **final in-game stamp size** (`CustomLevelStore.stamp_visual_world_rect`); right-click removes stamps; **▼ / ▶** chevron collapses the stamp grid for the session.
+14. **Treasure chests:** keep ~109% player-height gameplay scale unless this README and tests change together.
+15. **Player idle:** one idle frame only (gentle breathe); no alternating mismatched idle poses.
 
 **Workflow note:** after coherent completed work, commit and push to `main` per `.cursor/rules/always-commit-push.mdc` (unless the user/parent agent says otherwise for that task).
