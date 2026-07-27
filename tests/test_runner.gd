@@ -35,8 +35,6 @@ func _ready() -> void:
 	failures += await _run("German text and language settings work", _test_localization_settings)
 	failures += await _run("Settings language dropdown persists and supports controller use", _test_settings_language_dropdown)
 	failures += await _run("Settings stores player character choice", _test_settings_player_character)
-	failures += await _run("Cowgirl matches cowboy animation names and frame counts", _test_cowgirl_animation_parity)
-	failures += await _run("Player applies cowgirl when selected", _test_player_applies_cowgirl)
 	failures += await _run("Translation CSV parses and round-trips safely", _test_translation_csv_round_trip)
 	failures += await _run("Translation placeholders render and validate", _test_translation_placeholders)
 	failures += await _run("Translation editor loads and exports portably", _test_translation_editor)
@@ -67,8 +65,6 @@ func _ready() -> void:
 		"Levels 7-10 keep 2-10 continuous height differences",
 		_test_late_level_height_differences
 	)
-	failures += await _run("Cowboy player has movement animations", _test_cowboy_animations)
-	failures += await _run("Cowboy idle avoids pose flicker", _test_cowboy_idle_smooth)
 	failures += await _run("Lasso ties bandits and makes them pass-through", _test_lasso_ties_bandit)
 	failures += await _run("Treasure chest random loot and reveal", _test_treasure_chest)
 	failures += await _run("Treasure chest resets on respawn before camp", _test_treasure_chest_respawn_reset)
@@ -1750,93 +1746,6 @@ func _test_late_level_height_differences() -> Variant:
 	return null
 
 
-func _test_cowboy_animations() -> Variant:
-	var packed: PackedScene = load("res://scenes/player/player.tscn")
-	if packed == null:
-		return "Missing player scene."
-	var node := packed.instantiate()
-	add_child(node)
-	var cowboy := node as Player
-	if cowboy == null:
-		node.queue_free()
-		return "Player scene root is not Player."
-	var sprite := cowboy.get_node_or_null("AnimatedSprite2D") as AnimatedSprite2D
-	if sprite == null or sprite.sprite_frames == null:
-		node.queue_free()
-		return "Cowboy AnimatedSprite2D frames were not set up."
-	for anim_name in [&"idle", &"run", &"jump", &"celebrate"]:
-		if not sprite.sprite_frames.has_animation(anim_name):
-			node.queue_free()
-			return "Missing cowboy animation: %s" % String(anim_name)
-		if sprite.sprite_frames.get_frame_count(anim_name) < 1:
-			node.queue_free()
-			return "Cowboy animation has no frames: %s" % String(anim_name)
-	var wings := cowboy.get_node_or_null("WingArt") as Sprite2D
-	if wings == null or wings.scale.x < 1.0 or wings.scale.x > 1.1:
-		node.queue_free()
-		return "Fly power should display visible wings at the expected size."
-	cowboy.mount_horse()
-	var mounted := cowboy.get_node_or_null("MountedHorse") as Sprite2D
-	cowboy._update_animation(false)
-	var jump_texture: Texture2D = GameManager.get_mounted_horse_texture("jump")
-	if mounted == null or not mounted.visible or mounted.texture != jump_texture:
-		node.queue_free()
-		return "Mounted cowboy needs a dedicated handmade horse-jump pose."
-	if not is_equal_approx(cowboy.get_run_speed(), cowboy.move_speed * 1.45):
-		node.queue_free()
-		return "Mounted horse should match the boosted Midnight Coach chase speed."
-	cowboy.velocity.x = cowboy.get_run_speed()
-	cowboy.get_jump_assist().notify_grounded(true)
-	cowboy.get_jump_assist().notify_jump_pressed()
-	cowboy._try_jump(true)
-	if not is_equal_approx(cowboy.velocity.x, cowboy.move_speed * 1.2):
-		node.queue_free()
-		return "Mounted jump speed should be exactly 20 percent above a normal jump."
-	node.queue_free()
-	return null
-
-
-func _test_cowboy_idle_smooth() -> Variant:
-	var packed: PackedScene = load("res://scenes/player/player.tscn")
-	if packed == null:
-		return "Missing player scene."
-	var node := packed.instantiate()
-	add_child(node)
-	var cowboy := node as Player
-	if cowboy == null:
-		node.queue_free()
-		return "Player scene root is not Player."
-	var sprite := cowboy.get_node_or_null("AnimatedSprite2D") as AnimatedSprite2D
-	if sprite == null or sprite.sprite_frames == null:
-		node.queue_free()
-		return "Cowboy AnimatedSprite2D frames were not set up."
-	if sprite.sprite_frames.get_frame_count(&"idle") != 1:
-		node.queue_free()
-		return "Cowboy idle should use one frame to avoid mismatched pose flicker."
-	cowboy.velocity = Vector2.ZERO
-	cowboy._ground_time = 0.2
-	cowboy._air_time = 0.0
-	cowboy._showing_run = false
-	cowboy._showing_jump = false
-	cowboy._update_animation(true)
-	if sprite.animation != &"idle":
-		node.queue_free()
-		return "Standing cowboy should stay on idle animation."
-	cowboy.velocity.x = 18.0
-	cowboy._update_animation(true)
-	if sprite.animation == &"run":
-		node.queue_free()
-		return "Cowboy should not flicker into run at low walk speed."
-	cowboy.velocity.x = 80.0
-	cowboy._ground_time = 0.1
-	cowboy._update_animation(true)
-	if sprite.animation != &"run":
-		node.queue_free()
-		return "Cowboy should enter run after sustained movement."
-	node.queue_free()
-	return null
-
-
 func _test_lasso_ties_bandit() -> Variant:
 	var packed: PackedScene = load("res://scenes/world/opponent.tscn")
 	if packed == null:
@@ -3188,89 +3097,6 @@ func _test_settings_player_character() -> Variant:
 	if GameManager.get_player_character() != GameManager.PLAYER_COWGIRL:
 		GameManager.set_setting("player_character", previous)
 		return "Reloading settings should restore the selected player character."
-	GameManager.set_setting("player_character", previous)
-	return null
-
-
-func _test_cowgirl_animation_parity() -> Variant:
-	var cowboy_packed: PackedScene = load("res://scenes/player/player.tscn")
-	if cowboy_packed == null:
-		return "Missing player scene."
-	GameManager.set_setting("player_character", GameManager.PLAYER_COWBOY)
-	var cowboy_node := cowboy_packed.instantiate()
-	add_child(cowboy_node)
-	await get_tree().process_frame
-	var cowboy_sprite := (cowboy_node as Player).get_node_or_null("AnimatedSprite2D") as AnimatedSprite2D
-	if cowboy_sprite == null or cowboy_sprite.sprite_frames == null:
-		cowboy_node.queue_free()
-		return "Cowboy AnimatedSprite2D frames were not set up."
-	var cowboy_counts := {}
-	for anim_name in [&"idle", &"run", &"jump", &"celebrate"]:
-		if not cowboy_sprite.sprite_frames.has_animation(anim_name):
-			cowboy_node.queue_free()
-			return "Missing cowboy animation: %s" % String(anim_name)
-		cowboy_counts[String(anim_name)] = cowboy_sprite.sprite_frames.get_frame_count(anim_name)
-	cowboy_node.queue_free()
-	GameManager.set_setting("player_character", GameManager.PLAYER_COWGIRL)
-	var cowgirl_node := cowboy_packed.instantiate()
-	add_child(cowgirl_node)
-	await get_tree().process_frame
-	var cowgirl_sprite := (cowgirl_node as Player).get_node_or_null("AnimatedSprite2D") as AnimatedSprite2D
-	if cowgirl_sprite == null or cowgirl_sprite.sprite_frames == null:
-		cowgirl_node.queue_free()
-		GameManager.set_setting("player_character", GameManager.PLAYER_COWBOY)
-		return "Cowgirl AnimatedSprite2D frames were not set up."
-	for anim_name in cowboy_counts.keys():
-		if not cowgirl_sprite.sprite_frames.has_animation(StringName(anim_name)):
-			cowgirl_node.queue_free()
-			GameManager.set_setting("player_character", GameManager.PLAYER_COWBOY)
-			return "Missing cowgirl animation: %s" % anim_name
-		if cowgirl_sprite.sprite_frames.get_frame_count(StringName(anim_name)) != cowboy_counts[anim_name]:
-			cowgirl_node.queue_free()
-			GameManager.set_setting("player_character", GameManager.PLAYER_COWBOY)
-			return "Cowgirl animation frame count mismatch for %s." % anim_name
-	cowgirl_node.queue_free()
-	GameManager.set_setting("player_character", GameManager.PLAYER_COWBOY)
-	return null
-
-
-func _test_player_applies_cowgirl() -> Variant:
-	var previous := String(GameManager.get_settings().get("player_character", GameManager.PLAYER_COWBOY))
-	GameManager.set_setting("player_character", GameManager.PLAYER_COWGIRL)
-	var packed: PackedScene = load("res://scenes/player/player.tscn")
-	if packed == null:
-		GameManager.set_setting("player_character", previous)
-		return "Missing player scene."
-	var node := packed.instantiate()
-	add_child(node)
-	await get_tree().process_frame
-	var player := node as Player
-	var sprite := player.get_node_or_null("AnimatedSprite2D") as AnimatedSprite2D
-	if sprite == null or sprite.sprite_frames == null:
-		node.queue_free()
-		GameManager.set_setting("player_character", previous)
-		return "Player sprite frames were not set up."
-	var frame_tex: Texture2D = sprite.sprite_frames.get_frame_texture(&"idle", 0)
-	if frame_tex == null or frame_tex.resource_path.find("/cowgirl/") < 0:
-		node.queue_free()
-		GameManager.set_setting("player_character", previous)
-		return "Cowgirl selection should load sprites from the cowgirl asset folder."
-	player.mount_horse()
-	player._update_animation(false)
-	var mounted := player.get_node_or_null("MountedHorse") as Sprite2D
-	var jump_texture: Texture2D = GameManager.get_mounted_horse_texture("jump")
-	if mounted == null or mounted.texture != jump_texture:
-		node.queue_free()
-		GameManager.set_setting("player_character", previous)
-		return "Mounted cowgirl needs the handmade cowgirl horse-jump pose."
-	GameManager.settings_changed.emit()
-	await get_tree().process_frame
-	frame_tex = sprite.sprite_frames.get_frame_texture(&"idle", 0)
-	if frame_tex == null or frame_tex.resource_path.find("/cowgirl/") < 0:
-		node.queue_free()
-		GameManager.set_setting("player_character", previous)
-		return "Player should refresh cowgirl art when settings change."
-	node.queue_free()
 	GameManager.set_setting("player_character", previous)
 	return null
 

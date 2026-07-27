@@ -1,18 +1,11 @@
 ---
-description: Cowgirl art, workshop editor, slopes, and treasure chest conventions
+description: Workshop editor, slopes, and treasure chest conventions
 alwaysApply: true
 ---
 
-# Cowgirl, Workshop, Slopes, And Chests
+# Workshop, Slopes, And Chests
 
-Consult `README.md` (Core gameplay, Campaign Workshop, Floor height, UI / art style, Agent rules 11–15). These are common regression areas.
-
-## Cowgirl player art
-
-- On-foot cowgirl sprites in `assets/player/cowgirl/` are **original handcrafted art** from `tools/handcrafted_cowgirl.py`.
-- **Never** rebuild on-foot cowgirl frames by editing or copying cowboy sprites.
-- Mounted rider art is separate: `tools/generate_cowgirl_horse_art.py` + `tools/cowgirl_hair.py` on `assets/world/cowgirl_horse_*.png`.
-- Cowboy and cowgirl share animation names and frame counts; idle animation uses **one frame** only (no flickering idle_0/idle_1 alternation).
+Consult `README.md` (Core gameplay, Campaign Workshop, Floor height, UI / art style, Agent rules 11–14). These are common regression areas.
 
 ## Campaign Workshop
 

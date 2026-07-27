@@ -9,7 +9,7 @@ alwaysApply: true
 
 ## Before changing those areas
 
-1. **Read or consult `README.md`** (especially Core gameplay, World / level design rules, UI / art style, Audio, Agent / contributor rules, and rules 11–15).
+1. **Read or consult `README.md`** (especially Core gameplay, World / level design rules, UI / art style, Audio, Agent / contributor rules, and rules 11–14).
 2. **Do not violate** documented rules. Examples of forbidden regressions:
    - Calling canyons “pits” in user-facing text
    - English as the default language
@@ -19,7 +19,6 @@ alwaysApply: true
    - Ferry-raft / ferry-step look on Level 4 movers (use clouds + planks)
    - Uncapped runaway wind
    - Generic flat UI that breaks the handmade western style
-   - Re-deriving cowgirl on-foot sprites from cowboy frames
    - Workshop placement ghosts at grid-cell size instead of final stamp size
    - Removing workshop right-click erase or chevron grid collapse
    - Treasure chests smaller than the documented ~109% player-height scale
