@@ -2,7 +2,7 @@
 
 Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, nonviolent lasso. **Classic mode** has no lives or game over; **Advanced Mode** (chosen in **Settings** before starting or continuing a slot) adds a three-life limit, badge milestones, and a game-over return to the start screen. Pick **Cowboy** or **Cowgirl** in Settings — the choice applies across all save slots. **German is the default language**; English is fully supported.
 
-**Content version:** `1.5.5` (see `content_version.txt`). Launchers reimport when this stamp changes.
+**Content version:** `1.5.6` (see `content_version.txt`). Launchers reimport when this stamp changes.
 
 This README is the **binding source of truth** for gameplay, level design, art, i18n, and audio. Agents and contributors must follow it (see [Agent / contributor rules](#agent--contributor-rules)).
 
@@ -137,7 +137,7 @@ Safe stars, forward-only solvability, reachable platforms/stars, visible themed 
 ## UI / art style
 
 - Warm **handmade / hand-painted** western look matching trail tiles (sky, ground, props, cowboy/cowgirl player frames).
-- **Cowboy** player frames live in `assets/player/`; **cowgirl on-foot** frames in `assets/player/cowgirl/` — original handcrafted sprites (`tools/handcrafted_cowgirl.py`). **Do not** re-derive cowgirl on-foot art from cowboy frames. Regenerate: `python3 tools/handcrafted_cowgirl.py`.
+- **Cowboy** player frames live in `assets/player/`; **cowgirl on-foot** frames in `assets/player/cowgirl/` — original handcrafted sprites (`tools/handcrafted_cowgirl.py`) rendered in the same **3/4 cel-shaded western style** as cowboy/bandit props (thick ink outlines, shadow/highlight layers, 4× supersample down to 64×64). **Do not** re-derive cowgirl on-foot art from cowboy frames. Regenerate: `python3 tools/handcrafted_cowgirl.py`.
 - **Mounted cowgirl** horse sprites (`assets/world/cowgirl_horse_*.png`) keep the horse art and repaint the rider (golden pigtails, pink cuffs) via `python3 tools/generate_cowgirl_horse_art.py` (`tools/cowgirl_hair.py`).
 - **Treasure chest** props: handcrafted western wood/brass (`tools/generate_treasure_chest_art.py`); gameplay collision height follows `TreasureChest.HEIGHT_RATIO` (~109% of player).
 - HUD / doors / prompts: irregular **western wood signs** (`HandmadeSign`), not generic flat UI cards.
