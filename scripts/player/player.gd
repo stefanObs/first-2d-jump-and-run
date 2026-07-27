@@ -29,6 +29,11 @@ const HORSE_SPEED_MULTIPLIER := 1.45
 const HORSE_JUMP_DISTANCE_MULTIPLIER := 1.2
 const HORSE_VISUAL_SCALE := 0.48
 const WING_BASE_SCALE := 1.05
+const PLAYER_DISPLAY_SCALE := 1.5
+## Idle uses one frame plus a gentle breathe — idle_0/idle_1 were mismatched poses and flickered.
+const RUN_SPEED_ENTER := 34.0
+const RUN_SPEED_EXIT := 14.0
+const JUMP_ANIM_AIR_TIME := 0.07
 
 var input_enabled: bool = true
 var stars_collected: int = 0
@@ -55,6 +60,10 @@ var _body_shape: CollisionShape2D
 var _normal_shape: Shape2D
 var _normal_shape_position: Vector2
 var _player_character: String = GameManager.PLAYER_COWBOY
+var _air_time: float = 0.0
+var _ground_time: float = 0.0
+var _showing_run: bool = false
+var _showing_jump: bool = false
 
 
 func _ready() -> void:
@@ -119,6 +128,12 @@ func _physics_process(delta: float) -> void:
 	external_velocity = Vector2.ZERO
 
 	on_floor = is_on_floor()
+	if on_floor:
+		_air_time = 0.0
+		_ground_time += delta
+	else:
+		_ground_time = 0.0
+		_air_time += delta
 	if on_floor and not _was_on_floor:
 		landed.emit()
 		_spawn_dust_puff()
@@ -227,7 +242,7 @@ func respawn_at(world_position: Vector2) -> void:
 	collision_layer = 2
 	if _sprite != null:
 		_sprite.rotation = 0.0
-		_sprite.scale = Vector2(1.5, 1.5)
+		_sprite.scale = Vector2(PLAYER_DISPLAY_SCALE, PLAYER_DISPLAY_SCALE)
 		_sprite.modulate = Color.WHITE
 	if _mounted_sprite != null:
 		_mounted_sprite.rotation = 0.0
@@ -235,6 +250,10 @@ func respawn_at(world_position: Vector2) -> void:
 		_mounted_sprite.modulate = Color.WHITE
 	_jump_assist.reset()
 	_jump_cut_applied = false
+	_air_time = 0.0
+	_ground_time = 0.0
+	_showing_run = false
+	_showing_jump = false
 	_invulnerable_remaining = respawn_invulnerability_time
 	respawned.emit(world_position)
 
@@ -253,7 +272,7 @@ func play_boss_heart_recovery(world_position: Vector2, duration: float = 1.15) -
 	global_position = start
 	if _sprite != null:
 		_sprite.rotation = 0.0
-		_sprite.scale = Vector2(1.5, 1.5)
+		_sprite.scale = Vector2(PLAYER_DISPLAY_SCALE, PLAYER_DISPLAY_SCALE)
 		_sprite.modulate = Color(1, 1, 1, 0.35)
 	if _mounted_sprite != null and _mounted:
 		_mounted_sprite.rotation = 0.0
@@ -387,7 +406,7 @@ func _setup_sprite_frames(use_magic_boots: bool) -> void:
 	_player_character = GameManager.get_player_character()
 	var frames := SpriteFrames.new()
 	var suffix := "_boots" if use_magic_boots else ""
-	_add_anim(frames, &"idle", ["idle_0%s.png" % suffix, "idle_1%s.png" % suffix], 4.0, true, folder)
+	_add_anim(frames, &"idle", ["idle_0%s.png" % suffix], 1.0, true, folder)
 	_add_anim(
 		frames,
 		&"run",
@@ -397,7 +416,7 @@ func _setup_sprite_frames(use_magic_boots: bool) -> void:
 			"run_2%s.png" % suffix,
 			"run_3%s.png" % suffix,
 		],
-		10.0,
+		8.0,
 		true,
 		folder
 	)
@@ -409,7 +428,7 @@ func _setup_sprite_frames(use_magic_boots: bool) -> void:
 	# Boots sit near the frame bottom. Offset is scaled with the sprite, so
 	# -30 (not -46) plants soles on the collision floor at 1.5x scale.
 	_sprite.offset = Vector2(0, -30)
-	_sprite.scale = Vector2(1.5, 1.5)
+	_sprite.scale = Vector2(PLAYER_DISPLAY_SCALE, PLAYER_DISPLAY_SCALE)
 	_using_magic_boots_art = use_magic_boots
 	if previous != StringName() and frames.has_animation(previous):
 		_sprite.play(previous)
@@ -494,15 +513,35 @@ func _update_animation(on_floor: bool) -> void:
 		return
 	_sprite.visible = true
 
-	var next := &"idle"
-	if _celebrating:
-		next = &"celebrate"
-	elif not on_floor or _modes.is_flying():
-		next = &"jump"
-	elif absf(velocity.x) > 20.0:
-		next = &"run"
+	var next := _resolve_body_animation(on_floor)
 	if _sprite.animation != next:
 		_sprite.play(next)
+
+
+func _resolve_body_animation(on_floor: bool) -> StringName:
+	if _celebrating:
+		return &"celebrate"
+	if _modes.is_flying():
+		_showing_jump = true
+		_showing_run = false
+		return &"jump"
+	if not on_floor:
+		if _air_time >= JUMP_ANIM_AIR_TIME or _showing_jump:
+			_showing_jump = true
+			_showing_run = false
+			return &"jump"
+		# Brief floor-edge bumps: keep the last grounded pose until air time builds up.
+		if _showing_run:
+			return &"run"
+		return &"idle"
+	_showing_jump = false
+	if _showing_run:
+		if absf(velocity.x) <= RUN_SPEED_EXIT:
+			_showing_run = false
+	else:
+		if absf(velocity.x) >= RUN_SPEED_ENTER and _ground_time >= 0.04:
+			_showing_run = true
+	return &"run" if _showing_run else &"idle"
 
 
 func _update_mode_visual() -> void:
@@ -555,12 +594,20 @@ func _update_land_squash(delta: float) -> void:
 		var t := 1.0 - (_land_squash / 0.18)
 		var y := lerpf(0.82, 1.0, t)
 		var x := lerpf(1.18, 1.0, t)
-		_sprite.scale = Vector2(1.5 * x, 1.5 * y)
+		_sprite.scale = Vector2(PLAYER_DISPLAY_SCALE * x, PLAYER_DISPLAY_SCALE * y)
 	elif _modes.is_flying():
 		var flap := 1.0 + sin(Time.get_ticks_msec() * 0.02) * 0.04
-		_sprite.scale = Vector2(1.5, 1.5 * flap)
+		_sprite.scale = Vector2(PLAYER_DISPLAY_SCALE, PLAYER_DISPLAY_SCALE * flap)
+	elif (
+		not _mounted
+		and _sprite.animation == &"idle"
+		and is_on_floor()
+		and absf(velocity.x) < RUN_SPEED_EXIT
+	):
+		var breathe := 1.0 + sin(Time.get_ticks_msec() * 0.0035) * 0.025
+		_sprite.scale = Vector2(PLAYER_DISPLAY_SCALE, PLAYER_DISPLAY_SCALE * breathe)
 	else:
-		_sprite.scale = Vector2(1.5, 1.5)
+		_sprite.scale = Vector2(PLAYER_DISPLAY_SCALE, PLAYER_DISPLAY_SCALE)
 
 
 func _ensure_wings() -> void:

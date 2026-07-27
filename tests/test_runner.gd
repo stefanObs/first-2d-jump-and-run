@@ -68,6 +68,7 @@ func _ready() -> void:
 		_test_late_level_height_differences
 	)
 	failures += await _run("Cowboy player has movement animations", _test_cowboy_animations)
+	failures += await _run("Cowboy idle avoids pose flicker", _test_cowboy_idle_smooth)
 	failures += await _run("Lasso ties bandits and makes them pass-through", _test_lasso_ties_bandit)
 	failures += await _run("Treasure chest random loot and reveal", _test_treasure_chest)
 	failures += await _run("Treasure chest height ratio", _test_treasure_chest_height_ratio)
@@ -1779,6 +1780,47 @@ func _test_cowboy_animations() -> Variant:
 	if not is_equal_approx(cowboy.velocity.x, cowboy.move_speed * 1.2):
 		node.queue_free()
 		return "Mounted jump speed should be exactly 20 percent above a normal jump."
+	node.queue_free()
+	return null
+
+
+func _test_cowboy_idle_smooth() -> Variant:
+	var packed: PackedScene = load("res://scenes/player/player.tscn")
+	if packed == null:
+		return "Missing player scene."
+	var node := packed.instantiate()
+	add_child(node)
+	var cowboy := node as Player
+	if cowboy == null:
+		node.queue_free()
+		return "Player scene root is not Player."
+	var sprite := cowboy.get_node_or_null("AnimatedSprite2D") as AnimatedSprite2D
+	if sprite == null or sprite.sprite_frames == null:
+		node.queue_free()
+		return "Cowboy AnimatedSprite2D frames were not set up."
+	if sprite.sprite_frames.get_frame_count(&"idle") != 1:
+		node.queue_free()
+		return "Cowboy idle should use one frame to avoid mismatched pose flicker."
+	cowboy.velocity = Vector2.ZERO
+	cowboy._ground_time = 0.2
+	cowboy._air_time = 0.0
+	cowboy._showing_run = false
+	cowboy._showing_jump = false
+	cowboy._update_animation(true)
+	if sprite.animation != &"idle":
+		node.queue_free()
+		return "Standing cowboy should stay on idle animation."
+	cowboy.velocity.x = 18.0
+	cowboy._update_animation(true)
+	if sprite.animation == &"run":
+		node.queue_free()
+		return "Cowboy should not flicker into run at low walk speed."
+	cowboy.velocity.x = 80.0
+	cowboy._ground_time = 0.1
+	cowboy._update_animation(true)
+	if sprite.animation != &"run":
+		node.queue_free()
+		return "Cowboy should enter run after sustained movement."
 	node.queue_free()
 	return null
 
