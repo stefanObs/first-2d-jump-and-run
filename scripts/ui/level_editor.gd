@@ -80,7 +80,8 @@ func _ready() -> void:
 		_data = CustomLevelStore.load_level(GameManager.active_custom_slot)
 	_data = CustomLevelStore.sanitize(_data, GameManager.active_custom_slot)
 	_tool_categories = LevelStyle.tool_categories(
-		CustomLevelStore.normalize_style(_data.get("style", "desert"))
+		CustomLevelStore.normalize_style(_data.get("style", "desert")),
+		bool(_data.get("start_mounted", false))
 	)
 	_initial_data = _data.duplicate(true)
 	_has_saved_state = CustomLevelStore.exists(GameManager.active_custom_slot)
@@ -153,12 +154,12 @@ func _build_ui() -> void:
 	heading.add_child(_title_edit)
 	_level_style_dropdown = OptionButton.new()
 	_level_style_dropdown.name = "LevelStyle"
-	_level_style_dropdown.custom_minimum_size = Vector2(110, 30)
+	_level_style_dropdown.custom_minimum_size = Vector2(128, 30)
 	_level_style_dropdown.add_theme_font_size_override(&"font_size", 12)
 	_level_style_dropdown.add_item(tr("Desert"), 0)
 	_level_style_dropdown.add_item(tr("Cave"), 1)
-	var initial_style := LevelStyle.normalize(_data.get("style", "desert"))
-	_level_style_dropdown.select(1 if initial_style == LevelStyle.CAVE else 0)
+	_level_style_dropdown.add_item(tr("Horse"), 2)
+	_level_style_dropdown.select(_theme_index_from_data())
 	_level_style_dropdown.item_selected.connect(_on_style_selected)
 	heading.add_child(_level_style_dropdown)
 	_style_dropdown(_level_style_dropdown)
@@ -642,10 +643,31 @@ func _tool_type_available(type_id: String) -> bool:
 	return false
 
 
+func _theme_index_from_data() -> int:
+	## Horse is a play theme (mounted desert trail), not a cave biome.
+	if bool(_data.get("start_mounted", false)):
+		return 2
+	if LevelStyle.normalize(_data.get("style", "desert")) == LevelStyle.CAVE:
+		return 1
+	return 0
+
+
 func _on_style_selected(index: int) -> void:
-	var style := LevelStyle.CAVE if index == 1 else LevelStyle.DESERT
-	_data["style"] = style
-	_tool_categories = LevelStyle.tool_categories(style)
+	match index:
+		1:
+			_data["style"] = LevelStyle.CAVE
+			_data["start_mounted"] = false
+		2:
+			_data["style"] = LevelStyle.DESERT
+			_data["start_mounted"] = true
+			var objects := _objects()
+			CustomLevelStore.strip_mounted_banned_stamps(objects)
+			_data["objects"] = objects
+		_:
+			_data["style"] = LevelStyle.DESERT
+			_data["start_mounted"] = false
+	var style := CustomLevelStore.normalize_style(_data.get("style", "desert"))
+	_tool_categories = LevelStyle.tool_categories(style, bool(_data.get("start_mounted", false)))
 	if not _tool_type_available(_selected_type):
 		_selected_type = "ground"
 	_populate_category_dropdown()
@@ -657,10 +679,11 @@ func _on_style_selected(index: int) -> void:
 
 func _apply_style_from_data() -> void:
 	var style := CustomLevelStore.normalize_style(_data.get("style", "desert"))
-	_tool_categories = LevelStyle.tool_categories(style)
+	var mounted := bool(_data.get("start_mounted", false))
+	_tool_categories = LevelStyle.tool_categories(style, mounted)
 	if _level_style_dropdown != null:
 		_level_style_dropdown.set_block_signals(true)
-		_level_style_dropdown.select(1 if style == LevelStyle.CAVE else 0)
+		_level_style_dropdown.select(_theme_index_from_data())
 		_level_style_dropdown.set_block_signals(false)
 	if not _tool_type_available(_selected_type):
 		_selected_type = "ground"
@@ -1013,6 +1036,11 @@ func _place(x: int, y: int) -> void:
 	var before := objects.duplicate(true)
 	var trail := _trail_y()
 	var place_y := CustomLevelStore.placement_row(_selected_type, y, trail)
+	if (
+		bool(_data.get("start_mounted", false))
+		and CustomLevelStore.is_mounted_banned(_selected_type)
+	):
+		return
 	if _selected_type == "erase":
 		_erase_at(objects, x, place_y)
 	elif _selected_type == "canyon":

@@ -30,6 +30,9 @@ static func build(level: LevelController, data: Dictionary, preview: bool = fals
 	var height := int(data.get("height", 8))
 	var trail := CustomLevelStore.trail_row(height)
 	var style := CustomLevelStore.normalize_style(data.get("style", CustomLevelStore.STYLE_DESERT))
+	var start_mounted := (
+		bool(data.get("start_mounted", false)) or int(data.get("source_level", 0)) == 1
+	)
 	level.set_meta("level_style", style)
 	_add_background(level, width * grid, style)
 
@@ -52,6 +55,8 @@ static func build(level: LevelController, data: Dictionary, preview: bool = fals
 		if type_name == "ground" or type_name == "canyon":
 			continue
 		if type_name == "goal" and has_goal:
+			continue
+		if start_mounted and CustomLevelStore.is_mounted_banned(type_name):
 			continue
 		if (
 			type_name == "bull"

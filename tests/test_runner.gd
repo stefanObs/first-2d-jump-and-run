@@ -158,6 +158,10 @@ func _ready() -> void:
 	failures += await _run("Trail workshop uses one trail row and stacked dirt", _test_trail_row_model)
 	failures += await _run("Workshop ground props stamp one row above dirt", _test_workshop_ground_prop_offset)
 	failures += await _run("Workshop stamp catalog includes bounty and carrion", _test_workshop_stamp_catalog)
+	failures += await _run(
+		"Horse theme bans chests and power-up items",
+		_test_horse_theme_bans_items_and_chests
+	)
 	failures += await _run("Fixed pits use pit.png at native size", _test_fixed_pit_art)
 	failures += await _run("Workshop pits require trail dirt", _test_pit_dirt_placement)
 	failures += await _run("Pit falls match canyon respawn rules", _test_pit_canyon_parity)
@@ -5083,6 +5087,55 @@ func _test_cave_levels_belts_fences_ladders() -> Variant:
 	return null
 
 
+func _test_horse_theme_bans_items_and_chests() -> Variant:
+	## Horse play theme mounts the cowboy and strips chests / mode pickups.
+	var trail := CustomLevelStore.trail_row(8)
+	var data := CustomLevelStore.default_level(CustomLevelStore.EXTRA_SLOT_START)
+	data["start_mounted"] = true
+	data["style"] = CustomLevelStore.STYLE_DESERT
+	data["objects"] = [
+		{"type": "ground", "x": 2, "y": trail},
+		{"type": "chest", "x": 4, "y": trail - 1},
+		{"type": "wings", "x": 5, "y": trail - 1},
+		{"type": "boots", "x": 6, "y": trail - 1},
+		{"type": "speed", "x": 7, "y": trail - 1},
+		{"type": "shield", "x": 8, "y": trail - 1},
+		{"type": "star", "x": 9, "y": trail - 1},
+		{"type": "checkpoint", "x": 10, "y": trail - 1},
+		{"type": "goal", "x": 12, "y": trail - 1},
+	]
+	var cleaned := CustomLevelStore.sanitize(data, CustomLevelStore.EXTRA_SLOT_START)
+	if not bool(cleaned.get("start_mounted", false)):
+		return "Horse theme sanitize should keep start_mounted."
+	var kept_star := false
+	var kept_camp := false
+	for value in cleaned.get("objects", []):
+		var type_name := str((value as Dictionary).get("type", ""))
+		if CustomLevelStore.is_mounted_banned(type_name):
+			return "Sanitize should strip %s from horse trails." % type_name
+		if type_name == "star":
+			kept_star = true
+		elif type_name == "checkpoint":
+			kept_camp = true
+	if not kept_star or not kept_camp:
+		return "Horse trails should keep badges and camps."
+
+	var level := LevelController.new()
+	add_child(level)
+	CustomLevelBuilder.build(level, cleaned)
+	await get_tree().process_frame
+	var player := level.find_child("Player", true, false) as Player
+	var error: Variant = null
+	if player == null or not player.start_mounted:
+		error = "Horse theme builds should spawn the cowboy mounted."
+	elif level.find_child("CustomChest0", true, false) != null:
+		error = "Horse theme builds must not spawn treasure chests."
+	elif not level.find_children("*", "ModeItem", true, false).is_empty():
+		error = "Horse theme builds must not spawn power-up items."
+	level.queue_free()
+	return error
+
+
 func _test_workshop_default_width() -> Variant:
 	var builtin := CustomLevelStore.import_builtin(1)
 	var draft := CustomLevelStore.default_level(CustomLevelStore.EXTRA_SLOT_START)
@@ -5441,8 +5494,8 @@ func _test_workshop_stamp_catalog() -> Variant:
 			palette_types.append(str((tool as Array)[0]))
 	var style_dropdown := editor.find_child("LevelStyle", true, false) as OptionButton
 	editor.queue_free()
-	if style_dropdown == null:
-		return "Workshop editor needs a Desert/Cave level style picker."
+	if style_dropdown == null or style_dropdown.item_count < 3:
+		return "Workshop editor needs a Desert/Cave/Horse level style picker."
 	for type_name in ["bounty_bandit", "carrion", "pit", "chest", "bull", "ninja"]:
 		if type_name not in palette_types:
 			return "Workshop palette missing %s stamp." % type_name
@@ -5456,6 +5509,15 @@ func _test_workshop_stamp_catalog() -> Variant:
 	for type_name in ["acid_drip", "stalactite", "bat", "conveyor", "timed_door", "fence"]:
 		if type_name not in cave_palette:
 			return "Cave style palette missing %s stamp." % type_name
+	var horse_palette: PackedStringArray = []
+	for category in LevelStyle.tool_categories(LevelStyle.DESERT, true):
+		for tool in (category as Dictionary).get("tools", []) as Array:
+			horse_palette.append(str((tool as Array)[0]))
+	for banned in ["chest", "wings", "boots", "speed", "shield"]:
+		if banned in horse_palette:
+			return "Horse theme palette must not offer %s." % banned
+	if "star" not in horse_palette or "checkpoint" not in horse_palette:
+		return "Horse theme should still allow badges and camps."
 	var trail := CustomLevelStore.trail_row(8)
 	for type_name in [
 		"bounty_bandit", "carrion", "chest", "bull", "ninja", "acid_drip", "stalactite", "bat",

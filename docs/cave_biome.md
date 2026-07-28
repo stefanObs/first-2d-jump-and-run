@@ -15,7 +15,7 @@ count). Workshop stamp id stays `goal`; cave style swaps the art and label.
 
 ## Level style (trail editor)
 
-Each trail document stores `"style": "desert" | "cave"` (default `desert`).
+Each trail document stores `"style": "desert" | "cave"` (default `desert`). Workshop also offers a **Horse** play theme that keeps desert art, sets `"start_mounted": true`, and strips treasure chests plus power-up item stamps.
 
 When **Cave** is selected, stamp labels/icons switch and cave-only tools appear.
 Stamp **type ids stay the same** for remapped foes/hazards so packs stay simple:

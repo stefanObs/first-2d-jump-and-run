@@ -150,7 +150,7 @@ static func stamp_label(type_name: String, style: String = DESERT) -> String:
 		_:
 			return type_name.capitalize()
 
-static func tool_categories(style: String = DESERT) -> Array:
+static func tool_categories(style: String = DESERT, start_mounted: bool = false) -> Array:
 	var cave := is_cave(style)
 	var hazards: Array = [
 		_tool("cactus", style),
@@ -174,7 +174,10 @@ static func tool_categories(style: String = DESERT) -> Array:
 		enemies.append(_tool("bat", style))
 	else:
 		enemies.append(_tool("carrion", style))
-	return [
+	var pickup_tools: Array = [_tool("star", style), _tool("checkpoint", style)]
+	if not start_mounted:
+		pickup_tools.insert(1, _tool("chest", style))
+	var categories: Array = [
 		{
 			"id": "trail",
 			"label": "Trail",
@@ -191,11 +194,7 @@ static func tool_categories(style: String = DESERT) -> Array:
 		{
 			"id": "pickups",
 			"label": "Pickups",
-			"tools": [
-				_tool("star", style),
-				_tool("chest", style),
-				_tool("checkpoint", style),
-			],
+			"tools": pickup_tools,
 		},
 		{
 			"id": "hazards",
@@ -207,7 +206,9 @@ static func tool_categories(style: String = DESERT) -> Array:
 			"label": "Enemies",
 			"tools": enemies,
 		},
-		{
+	]
+	if not start_mounted:
+		categories.append({
 			"id": "powerups",
 			"label": "Power-ups",
 			"tools": [
@@ -216,7 +217,8 @@ static func tool_categories(style: String = DESERT) -> Array:
 				_tool("speed", style),
 				_tool("shield", style),
 			],
-		},
+		})
+	categories.append_array([
 		{
 			"id": "goal",
 			"label": "Goal",
@@ -227,7 +229,8 @@ static func tool_categories(style: String = DESERT) -> Array:
 			"label": "Tools",
 			"tools": [["erase", stamp_label("erase", style), ""]],
 		},
-	]
+	])
+	return categories
 
 static func _tool(type_name: String, style: String) -> Array:
 	return [type_name, stamp_label(type_name, style), stamp_icon_path(type_name, style)]

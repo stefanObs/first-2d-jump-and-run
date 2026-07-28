@@ -46,6 +46,10 @@ const GROUND_STANDING_TYPES: PackedStringArray = [
 const CEILING_HANGING_TYPES: PackedStringArray = ["acid_drip", "stalactite", "stalactite_static"]
 const STYLE_DESERT := "desert"
 const STYLE_CAVE := "cave"
+## Horse-ride workshop theme: start mounted; no power-up items or treasure chests.
+const MOUNTED_BANNED_TYPES: PackedStringArray = [
+	"chest", "wings", "boots", "speed", "shield",
+]
 const LADDER_HEIGHT_CELLS := 3
 
 static func is_ground_standing(type_name: String) -> bool:
@@ -53,6 +57,9 @@ static func is_ground_standing(type_name: String) -> bool:
 
 static func is_ceiling_hanging(type_name: String) -> bool:
 	return type_name in CEILING_HANGING_TYPES
+
+static func is_mounted_banned(type_name: String) -> bool:
+	return type_name in MOUNTED_BANNED_TYPES
 
 static func normalize_style(value: Variant) -> String:
 	return LevelStyle.normalize(value)
@@ -924,11 +931,21 @@ static func sanitize(source: Dictionary, slot_index: int) -> Dictionary:
 					break
 		realign_ladder_ledges(objects, trail)
 		_strip_bulls_off_gaps(objects, trail)
+		if bool(result["start_mounted"]):
+			strip_mounted_banned_stamps(objects)
 		result["objects"] = objects
 	var spawn: Array = result["spawn"]
 	if spawn is Array and spawn.size() >= 2:
 		result["spawn"] = [int(spawn[0]), clampi(int(spawn[1]), 0, trail)]
 	return result
+
+
+static func strip_mounted_banned_stamps(objects: Array) -> void:
+	## Horse-ride trails keep badges/camps but never power-ups or treasure chests.
+	for i in range(objects.size() - 1, -1, -1):
+		var object := objects[i] as Dictionary
+		if is_mounted_banned(str(object.get("type", ""))):
+			objects.remove_at(i)
 
 
 static func _strip_bulls_off_gaps(objects: Array, trail: int) -> void:
