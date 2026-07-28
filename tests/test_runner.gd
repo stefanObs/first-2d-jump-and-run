@@ -1949,7 +1949,16 @@ func _test_treasure_chest() -> Variant:
 	var chest_art := art as TreasureChestArt
 	if chest_art == null or chest_art.open_amount < 0.9:
 		controller.queue_free()
-		return "Treasure chest opening animation should raise the lid."
+		return "Treasure chest opening animation should reveal the open chest art."
+	var open_sprite := chest_art.get_node_or_null("Open") as Sprite2D
+	if (
+		open_sprite == null
+		or open_sprite.texture == null
+		or not open_sprite.texture.resource_path.ends_with("treasure_chest_open.png")
+		or open_sprite.modulate.a < 0.9
+	):
+		controller.queue_free()
+		return "Opened chest should display treasure_chest_open.png."
 
 	for loot in TreasureChestLoot.POOL:
 		if TreasureChestLoot.texture_for(loot) == null:
@@ -2079,6 +2088,13 @@ func _test_treasure_chest_on_walk_surface() -> Variant:
 				_free_level(level)
 				return (
 					"%s chest should stand on the desert top (feet y=%.1f, expected %.1f)."
+					% [level_path.get_file(), chest.ground_contact_y(), expected_y]
+				)
+			chest.restore_as_opened()
+			if absf(chest.ground_contact_y() - expected_y) > 2.5:
+				_free_level(level)
+				return (
+					"%s open chest should keep its feet on the desert top (feet y=%.1f, expected %.1f)."
 					% [level_path.get_file(), chest.ground_contact_y(), expected_y]
 				)
 		_free_level(level)

@@ -1,16 +1,13 @@
-"""Build the treasure chest sprite set from hand-drawn concept art.
+"""Build full-frame treasure chest sprites from hand-drawn concept art.
 
-The chest is a 3-part rig (see ``scripts/world/treasure_chest_art.gd``): a lid cap
-that rotates on a hinge, a box front (carrying the lock plate), and a gold
-interior revealed when open, plus a combined 64x64 workshop stamp. Source
-concepts live in ``assets/source/chest/`` (``closed.png`` / ``open.png``).
+Source concepts live in ``assets/source/chest/`` (``closed.png`` / ``open.png``).
+Exports drop-in game sprites (no lid/body/interior rig slices):
 
-    python tools/build_chest_frames.py
+  - treasure_chest_closed.png — height ≈ 48 px (player 44 × HEIGHT_RATIO 1.0925)
+  - treasure_chest_open.png   — same width as closed (taller with lid up)
+  - treasure_chest_stamp.png  — 64×64 workshop stamp, closed chest near bottom
 
-The chest uses DARK espresso wood + bright gold so it keeps strong contrast
-against the warm orange-red mesa backdrops. See ``.cursor/rules/art-style.mdc``.
-Output sizes are drop-in for the existing rig: lid 60x27, body/interior 60x39,
-stamp 64x64.
+    python3 tools/build_chest_frames.py
 """
 from __future__ import annotations
 
@@ -24,58 +21,81 @@ ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "assets" / "source" / "chest"
 OUT = ROOT / "assets" / "world"
 
-# Seam fractions of the closed-chest height: the lid cap is the top slice; the
-# box front (with lock plate) begins a bit higher so it reads as a full front.
-LID_FRAC = 0.46
-BODY_TOP = 0.30
+# Match TreasureChest.HEIGHT_RATIO / TARGET_HEIGHT (player height 44).
+CLOSED_HEIGHT = 48
+STAMP_SIZE = 64
+# Feet sit just above the stamp bottom edge (same idea as the old stamp).
+STAMP_BASELINE = 52
 
 
 def _load(name: str) -> Image.Image:
     im = cutout(str(SRC / name))
-    return im.crop(im.getbbox())
+    bbox = im.getbbox()
+    if bbox is None:
+        raise RuntimeError(f"cutout produced empty image: {name}")
+    return im.crop(bbox)
 
 
-def _fit_width(im: Image.Image, w: int) -> Image.Image:
-    return im.resize((w, max(1, round(im.height * w / im.width))), Image.LANCZOS)
+def _scale_h(im: Image.Image, height: int) -> Image.Image:
+    w = max(1, round(im.width * height / im.height))
+    return im.resize((w, height), Image.LANCZOS)
 
 
-def build() -> None:
-    closed = _load("closed.png")
-    openc = _load("open.png")
-    wc, hc = closed.size
-    wo, ho = openc.size
+def _scale_w(im: Image.Image, width: int) -> Image.Image:
+    h = max(1, round(im.height * width / im.width))
+    return im.resize((width, h), Image.LANCZOS)
 
-    lid = closed.crop((0, 0, wc, round(hc * LID_FRAC))).resize((60, 27), Image.LANCZOS)
 
-    face = _fit_width(closed.crop((0, round(hc * BODY_TOP), wc, hc)), 60)
-    if face.height > 39:
-        face = face.resize((max(1, round(face.width * 39 / face.height)), 39), Image.LANCZOS)
-    body = Image.new("RGBA", (60, 39), (0, 0, 0, 0))
-    body.alpha_composite(face, ((60 - face.width) // 2, 39 - face.height))
-
-    gold = openc.crop((round(wo * 0.14), round(ho * 0.36), round(wo * 0.86), round(ho * 0.60)))
-    gb = gold.getbbox()
-    if gb:
-        gold = gold.crop(gb)
-    gold = gold.resize((46, 22), Image.LANCZOS)
-    interior = Image.new("RGBA", (60, 39), (0, 0, 0, 0))
-    interior.alpha_composite(gold, ((60 - 46) // 2, (39 - 22) // 2 + 2))
-
+def _make_stamp(closed: Image.Image) -> Image.Image:
+    # Fit closed chest into stamp, preferring ~50px wide / max ~40px tall.
     scw, sch = 50, round(closed.height * 50 / closed.width)
     if sch > 40:
         scw, sch = round(closed.width * 40 / closed.height), 40
     sc = closed.resize((scw, sch), Image.LANCZOS)
-    stamp = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
-    stamp.alpha_composite(sc, ((64 - scw) // 2, 52 - sch))
+    stamp = Image.new("RGBA", (STAMP_SIZE, STAMP_SIZE), (0, 0, 0, 0))
+    stamp.alpha_composite(sc, ((STAMP_SIZE - scw) // 2, STAMP_BASELINE - sch))
+    return stamp
 
-    for name, img in [
-        ("treasure_chest_lid", lid),
-        ("treasure_chest_body", body),
-        ("treasure_chest_interior", interior),
+
+def _bottom_row_opaque(im: Image.Image) -> tuple[bool, int, int]:
+    """Return (has_opaque_on_bbox_bottom, opaque_count, width) for feet check."""
+    bbox = im.getbbox()
+    if bbox is None:
+        return False, 0, 0
+    _l, _t, r, b = bbox
+    y = b - 1
+    px = im.load()
+    opaque = 0
+    for x in range(_l, r):
+        if px[x, y][3] >= 200:
+            opaque += 1
+    return opaque > 0, opaque, r - _l
+
+
+def build() -> None:
+    closed_src = _load("closed.png")
+    open_src = _load("open.png")
+
+    closed = _scale_h(closed_src, CLOSED_HEIGHT)
+    open_im = _scale_w(open_src, closed.width)
+
+    stamp = _make_stamp(closed)
+
+    outputs = [
+        ("treasure_chest_closed", closed),
+        ("treasure_chest_open", open_im),
         ("treasure_chest_stamp", stamp),
-    ]:
-        img.save(OUT / f"{name}.png")
-        print(f"wrote assets/world/{name}.png {img.size}")
+    ]
+    OUT.mkdir(parents=True, exist_ok=True)
+    for name, img in outputs:
+        path = OUT / f"{name}.png"
+        img.save(path)
+        print(f"wrote assets/world/{name}.png size={img.size} bbox={img.getbbox()}")
+
+    for label, img in (("closed", closed), ("open", open_im)):
+        ok, count, width = _bottom_row_opaque(img)
+        status = "OK opaque feet" if ok else "MISSING opaque bottom"
+        print(f"{label} bottom row: {status} ({count}/{width} opaque px on bbox bottom)")
 
 
 if __name__ == "__main__":

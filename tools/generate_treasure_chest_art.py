@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Generate hand-painted western treasure chest PNGs at 0.95× player height."""
+"""DEPRECATED: live chest pipeline is tools/build_chest_frames.py (full closed/open frames).
+
+This generator is legacy and kept only for reference; do not use it for shipping art.
+"""
 
 from __future__ import annotations
 

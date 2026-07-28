@@ -82,10 +82,7 @@ static func stamp_world_size(type_name: String, style: String = STYLE_DESERT) ->
 		"pit":
 			return PIT_PIXEL_SIZE
 		"chest":
-			return _texture_pixel_size(
-				"res://assets/world/treasure_chest_body.png",
-				TreasureChest.SIZE_SCALE
-			)
+			return _texture_pixel_size("res://assets/world/treasure_chest_closed.png")
 		"spring":
 			return _texture_pixel_size("res://assets/world/spring.png")
 		"cactus", "bandit", "bounty_bandit", "rattlesnake", "carrion", "checkpoint", "goal", "bat":

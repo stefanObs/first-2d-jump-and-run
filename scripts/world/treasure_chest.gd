@@ -68,12 +68,12 @@ func _apply_size_scale() -> void:
 		shape.size = Vector2(48.0, BASE_COLLISION_HEIGHT) * SIZE_SCALE
 		_collision.position = Vector2(0.0, -10.0 * SIZE_SCALE)
 	if _art != null:
-		_art.position = Vector2(0.0, -8.0 * SIZE_SCALE)
-		var target_foot := FOOT_OFFSET
-		var painted_foot := _art.visual_foot_local_y()
-		_art.position.y += target_foot - painted_foot
+		# Closed frame is authored at TARGET_HEIGHT; keep native pixels (scale 1).
+		_art.scale = Vector2.ONE
+		# Foot of the painted chest sits at art-local y=0 → place on FOOT_OFFSET.
+		_art.position = Vector2(0.0, FOOT_OFFSET)
 		if _loot_reveal != null:
-			_loot_reveal.position.y = -10.0 * SIZE_SCALE
+			_loot_reveal.position = Vector2(0.0, -TARGET_HEIGHT * 0.55)
 
 
 func _on_body_entered(body: Node2D) -> void:
