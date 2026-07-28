@@ -191,18 +191,25 @@ def _draw_segment(start: str, end: str, seed: int) -> tuple[Image.Image, list[di
         sx = int(seat["x"])
         seat["y"] = round(lip[sx], 1)
 
-    # Final lift: no near-black border on the underside lip or panel sides.
+    # Final lift: no near-black border on the underside silhouette or panel sides.
+    # Use the real opaque edge (includes fused tooth nubs), not only the lip curve.
     for x in range(W):
-        edge = int(round(max(40.0, min(H - 4.0, lip[x]))))
-        for yy in range(max(0, edge - 3), edge + 1):
+        edge = -1
+        for y in range(H - 1, -1, -1):
+            if px[x, y][3] > 20:
+                edge = y
+                break
+        if edge < 0:
+            continue
+        for yy in range(max(0, edge - 4), edge + 1):
             r, g, b, a = px[x, yy]
             if a < 20:
                 continue
-            if (r + g + b) / 3.0 < 58:
+            if (r + g + b) / 3.0 < 62:
                 px[x, yy] = (
-                    max(58, min(140, r + 28)),
-                    max(44, min(120, g + 22)),
-                    max(62, min(150, b + 26)),
+                    max(62, min(145, r + 32)),
+                    max(48, min(125, g + 24)),
+                    max(68, min(155, b + 28)),
                     255,
                 )
     for y in range(H):
@@ -210,11 +217,11 @@ def _draw_segment(start: str, end: str, seed: int) -> tuple[Image.Image, list[di
             r, g, b, a = px[x, y]
             if a < 20:
                 continue
-            if (r + g + b) / 3.0 < 58:
+            if (r + g + b) / 3.0 < 62:
                 px[x, y] = (
-                    max(58, min(140, r + 24)),
-                    max(44, min(120, g + 18)),
-                    max(62, min(150, b + 22)),
+                    max(62, min(145, r + 28)),
+                    max(48, min(125, g + 20)),
+                    max(68, min(155, b + 24)),
                     255,
                 )
 
