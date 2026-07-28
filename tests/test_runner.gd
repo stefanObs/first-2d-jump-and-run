@@ -598,6 +598,10 @@ func _test_boss_arenas() -> Variant:
 		"res://assets/world/boss_cave_dragon_3.png",
 		"res://assets/world/boss_cave_dragon_fly_0.png",
 		"res://assets/world/boss_cave_dragon_fly_1.png",
+		"res://assets/world/boss_cave_dragon_fly_bound1_0.png",
+		"res://assets/world/boss_cave_dragon_fly_bound1_1.png",
+		"res://assets/world/boss_cave_dragon_fly_bound2_0.png",
+		"res://assets/world/boss_cave_dragon_fly_bound2_1.png",
 		"res://assets/world/boss_cave_dragon_land.png",
 		"res://assets/world/dragon_flameball.png",
 	]:

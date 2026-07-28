@@ -35,6 +35,10 @@ def main() -> int:
     for src_name, dest_name in (
         ("dragon_fly_0_concept.png", "boss_cave_dragon_fly_0.png"),
         ("dragon_fly_1_concept.png", "boss_cave_dragon_fly_1.png"),
+        ("dragon_fly_bound1_0_concept.png", "boss_cave_dragon_fly_bound1_0.png"),
+        ("dragon_fly_bound1_1_concept.png", "boss_cave_dragon_fly_bound1_1.png"),
+        ("dragon_fly_bound2_0_concept.png", "boss_cave_dragon_fly_bound2_0.png"),
+        ("dragon_fly_bound2_1_concept.png", "boss_cave_dragon_fly_bound2_1.png"),
         ("dragon_land_concept.png", "boss_cave_dragon_land.png"),
     ):
         src = CONCEPT / src_name

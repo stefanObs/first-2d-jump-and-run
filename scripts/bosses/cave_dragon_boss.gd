@@ -9,9 +9,20 @@ const DRAGON_TEX := [
 	preload("res://assets/world/boss_cave_dragon_2.png"),
 	preload("res://assets/world/boss_cave_dragon_3.png"),
 ]
+## Fly flap pairs per rope stage (0 unbound, 1 one rope, 2 two ropes). Stage 3 never flies.
 const FLY_TEX := [
-	preload("res://assets/world/boss_cave_dragon_fly_0.png"),
-	preload("res://assets/world/boss_cave_dragon_fly_1.png"),
+	[
+		preload("res://assets/world/boss_cave_dragon_fly_0.png"),
+		preload("res://assets/world/boss_cave_dragon_fly_1.png"),
+	],
+	[
+		preload("res://assets/world/boss_cave_dragon_fly_bound1_0.png"),
+		preload("res://assets/world/boss_cave_dragon_fly_bound1_1.png"),
+	],
+	[
+		preload("res://assets/world/boss_cave_dragon_fly_bound2_0.png"),
+		preload("res://assets/world/boss_cave_dragon_fly_bound2_1.png"),
+	],
 ]
 const LAND_TEX := preload("res://assets/world/boss_cave_dragon_land.png")
 
@@ -131,7 +142,11 @@ func _begin_landing() -> void:
 	if _lasso != null:
 		_lasso.set_lasso_active(false)
 	if _sprite != null:
-		_sprite.texture = LAND_TEX
+		# Bound stages keep rope art while landing; unbound uses the land pose.
+		if _lassos > 0:
+			_sprite.texture = DRAGON_TEX[clampi(_lassos, 0, DRAGON_TEX.size() - 1)]
+		else:
+			_sprite.texture = LAND_TEX
 		_sprite.rotation = 0.12 * _fly_dir
 	if _label != null:
 		_label.text = "LANDING!"
@@ -252,22 +267,25 @@ func _update_takeoff(delta: float) -> void:
 
 
 func _spit_flameball() -> void:
-	if player == null:
+	var target := player
+	if target == null:
+		target = find_child("Player", true, false) as Player
+	if target == null:
 		return
 	var ball := DragonFlameball.new()
 	ball.name = "DragonFlameball"
 	var mouth := _mouth_global()
-	var aim := player.global_position + Vector2(0, -24.0)
-	ball.setup(mouth, aim, player)
+	var aim := target.global_position + Vector2(0, -24.0)
+	ball.setup(mouth, aim, target)
 	ball.hurt_player.connect(_on_flame_hurt)
 	add_child(ball)
 	ball.global_position = mouth
 
 
 func _mouth_global() -> Vector2:
-	# Mouth sits toward the facing direction.
+	# Spawn clearly in front of the snout so the shot never overlaps the body.
 	var face := _facing_sign()
-	return _dragon.global_position + Vector2(face * 78.0, -78.0)
+	return _dragon.global_position + Vector2(face * 110.0, -72.0)
 
 
 func _facing_sign() -> float:
@@ -298,11 +316,9 @@ func _clamp_land_x(x: float) -> float:
 func _set_fly_pose() -> void:
 	if _sprite == null:
 		return
-	# While ropes are on, keep stage texture but still bob as if flapping.
-	if _lassos > 0:
-		_sprite.texture = DRAGON_TEX[clampi(_lassos, 0, DRAGON_TEX.size() - 1)]
-	else:
-		_sprite.texture = FLY_TEX[clampi(_flap_frame, 0, FLY_TEX.size() - 1)]
+	var stage := clampi(_lassos, 0, FLY_TEX.size() - 1)
+	var frames: Array = FLY_TEX[stage]
+	_sprite.texture = frames[clampi(_flap_frame, 0, frames.size() - 1)]
 	_sprite.centered = true
 
 

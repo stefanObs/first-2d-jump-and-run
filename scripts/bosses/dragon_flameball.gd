@@ -26,8 +26,10 @@ func setup(from: Vector2, toward: Vector2, target: Player = null) -> void:
 func _ready() -> void:
 	add_to_group("hostile_projectile")
 	collision_layer = 0
-	collision_mask = 3
+	# Player only — never collide with the dragon body / ground or shots vanish instantly.
+	collision_mask = 2
 	monitorable = false
+	monitoring = false
 	_sprite = Sprite2D.new()
 	_sprite.texture = TEX
 	_sprite.centered = true
@@ -39,6 +41,12 @@ func _ready() -> void:
 	add_child(shape)
 	body_entered.connect(_on_body_entered)
 	set_physics_process(true)
+	# Arm hit detection next frame so spawn at the mouth never self-hits.
+	call_deferred("_arm_monitoring")
+
+
+func _arm_monitoring() -> void:
+	monitoring = true
 
 
 func _physics_process(delta: float) -> void:
@@ -70,5 +78,3 @@ func _on_body_entered(body: Node2D) -> void:
 		if not player.is_invulnerable():
 			hurt_player.emit(player)
 		queue_free()
-		return
-	queue_free()
