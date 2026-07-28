@@ -108,6 +108,13 @@ func setup_level() -> void:
 
 	_completion = LevelCompletionFlow.new(celebration_duration)
 	_completion.finished.connect(_on_celebration_finished)
+	if not has_meta("level_style"):
+		var style := (
+			LevelStyle.CAVE
+			if (is_custom_level == false and (level_number == 5 or campaign_source_level == 5))
+			else LevelStyle.DESERT
+		)
+		set_meta("level_style", style)
 	_wire_world_objects()
 	_wire_ui()
 
@@ -453,6 +460,18 @@ func _wire_world_objects() -> void:
 			var carrion := node as Carrion
 			if not carrion.hurt_player.is_connected(_on_opponent_hurt):
 				carrion.hurt_player.connect(_on_opponent_hurt)
+		elif node is BatEnemy:
+			var bat := node as BatEnemy
+			if not bat.hurt_player.is_connected(_on_opponent_hurt):
+				bat.hurt_player.connect(_on_opponent_hurt)
+		elif node is AcidDrip:
+			var drip := node as AcidDrip
+			if not drip.hurt.is_connected(_on_cave_fall_hurt):
+				drip.hurt.connect(_on_cave_fall_hurt)
+		elif node is StalactiteHazard:
+			var spike := node as StalactiteHazard
+			if not spike.hurt.is_connected(_on_cave_fall_hurt):
+				spike.hurt.connect(_on_cave_fall_hurt)
 		elif node is Rattlesnake:
 			var snake := node as Rattlesnake
 			if not snake.hurt_player.is_connected(_on_opponent_hurt):
@@ -705,6 +724,13 @@ func _play_canyon_fall_and_respawn() -> void:
 
 
 func _on_opponent_hurt(_hurt_player: Player) -> void:
+	respawn_player()
+
+
+func _on_cave_fall_hurt(hurt_player: Player) -> void:
+	## Pink drips / falling stalactites — always respawn (Bubble does not save).
+	if hurt_player != null and hurt_player.is_invulnerable():
+		return
 	respawn_player()
 
 

@@ -4583,15 +4583,28 @@ func _test_workshop_stamp_catalog() -> Variant:
 	add_child(editor)
 	await get_tree().process_frame
 	var palette_types: PackedStringArray = []
-	for category in editor.TOOL_CATEGORIES:
+	var categories: Array = editor.get("_tool_categories") as Array
+	if categories.is_empty():
+		categories = LevelStyle.tool_categories(LevelStyle.DESERT)
+	for category in categories:
 		for tool in (category as Dictionary).get("tools", []) as Array:
 			palette_types.append(str((tool as Array)[0]))
+	var style_dropdown := editor.find_child("LevelStyle", true, false) as OptionButton
 	editor.queue_free()
+	if style_dropdown == null:
+		return "Workshop editor needs a Desert/Cave level style picker."
 	for type_name in ["bounty_bandit", "carrion", "pit", "chest", "bull", "ninja"]:
 		if type_name not in palette_types:
 			return "Workshop palette missing %s stamp." % type_name
+	var cave_palette: PackedStringArray = []
+	for category in LevelStyle.tool_categories(LevelStyle.CAVE):
+		for tool in (category as Dictionary).get("tools", []) as Array:
+			cave_palette.append(str((tool as Array)[0]))
+	for type_name in ["acid_drip", "stalactite", "bat"]:
+		if type_name not in cave_palette:
+			return "Cave style palette missing %s stamp." % type_name
 	var trail := CustomLevelStore.trail_row(8)
-	for type_name in ["bounty_bandit", "carrion", "chest", "bull", "ninja"]:
+	for type_name in ["bounty_bandit", "carrion", "chest", "bull", "ninja", "acid_drip", "stalactite", "bat"]:
 		if not CustomLevelStore._valid_object({"type": type_name, "x": 1, "y": trail - 1}, trail):
 			return "%s should be accepted by CustomLevelStore." % type_name
 	var data := CustomLevelStore.default_level(0)
@@ -4977,7 +4990,10 @@ func _test_airborne_bandit_falls() -> Variant:
 
 func _editor_tool_count(editor: Node) -> int:
 	var total := 0
-	for category in editor.TOOL_CATEGORIES:
+	var categories: Array = editor.get("_tool_categories") as Array
+	if categories.is_empty():
+		categories = LevelStyle.tool_categories(LevelStyle.DESERT)
+	for category in categories:
 		for tool in (category as Dictionary).get("tools", []) as Array:
 			total += 1
 	return total

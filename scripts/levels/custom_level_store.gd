@@ -40,13 +40,26 @@ const GROUND_STANDING_TYPES: PackedStringArray = [
 	"cactus", "checkpoint", "spring", "bandit", "bounty_bandit", "bull", "ninja",
 	"rattlesnake", "goal", "chest", "wings", "boots", "speed", "shield",
 ]
+const CEILING_HANGING_TYPES: PackedStringArray = ["acid_drip", "stalactite"]
+const STYLE_DESERT := "desert"
+const STYLE_CAVE := "cave"
 
 
 static func is_ground_standing(type_name: String) -> bool:
 	return type_name in GROUND_STANDING_TYPES
 
 
+static func is_ceiling_hanging(type_name: String) -> bool:
+	return type_name in CEILING_HANGING_TYPES
+
+
+static func normalize_style(value: Variant) -> String:
+	return LevelStyle.normalize(value)
+
+
 static func placement_row(type_name: String, click_y: int, trail: int) -> int:
+	if is_ceiling_hanging(type_name):
+		return clampi(mini(click_y, 1), 0, trail)
 	if is_ground_standing(type_name) and click_y >= trail - 1:
 		return maxi(trail - 1, 0)
 	return clampi(click_y, 0, trail)
@@ -62,7 +75,8 @@ static func stamp_footprint(type_name: String) -> Vector2:
 			return Vector2(1.0, 1.0)
 
 
-static func stamp_world_size(type_name: String) -> Vector2:
+static func stamp_world_size(type_name: String, style: String = STYLE_DESERT) -> Vector2:
+	var resolved := normalize_style(style)
 	match type_name:
 		"platform":
 			return Vector2(GRID_SIZE * 2.0, 24.0)
@@ -75,24 +89,19 @@ static func stamp_world_size(type_name: String) -> Vector2:
 			)
 		"spring":
 			return _texture_pixel_size("res://assets/world/spring.png")
-		"cactus":
-			return _texture_pixel_size("res://assets/world/cactus.png")
-		"bandit", "bounty_bandit":
-			return _texture_pixel_size("res://assets/world/bandit.png", 1.15)
+		"cactus", "bandit", "bounty_bandit", "rattlesnake", "carrion", "checkpoint", "goal", "bat":
+			var scale := 1.15 if type_name in ["bandit", "bounty_bandit"] else 1.0
+			return _texture_pixel_size(LevelStyle.stamp_icon_path(type_name, resolved), scale)
 		"bull":
-			return _bull_stamp_world_size()
+			return _bull_stamp_world_size(resolved)
 		"ninja":
 			return _texture_pixel_size("res://assets/world/ninja_idle.png", 1.15)
-		"rattlesnake":
-			return _texture_pixel_size("res://assets/world/rattlesnake_idle.png")
-		"carrion":
-			return _texture_pixel_size("res://assets/world/carrion_bird.png")
 		"star":
 			return _texture_pixel_size("res://assets/world/star_badge.png")
-		"checkpoint":
-			return _texture_pixel_size("res://assets/world/checkpoint_active.png")
-		"goal":
-			return _texture_pixel_size("res://assets/world/goal_saloon.png")
+		"acid_drip":
+			return _texture_pixel_size("res://assets/world/acid_drip.png")
+		"stalactite":
+			return _texture_pixel_size("res://assets/world/stalactite.png")
 		"wings", "boots", "speed", "shield":
 			return _texture_pixel_size(_mode_item_icon_path(type_name))
 		_:
@@ -122,9 +131,10 @@ static func _texture_pixel_size(path: String, scale: float = 1.0) -> Vector2:
 	return texture.get_size() * scale
 
 
-static func _bull_stamp_world_size() -> Vector2:
+static func _bull_stamp_world_size(style: String = STYLE_DESERT) -> Vector2:
 	const TARGET_HEIGHT := 92.0
-	var texture := load("res://assets/world/boss_stampede_bull.png") as Texture2D
+	var path := LevelStyle.stamp_icon_path("bull", style)
+	var texture := load(path) as Texture2D
 	if texture == null:
 		return Vector2(GRID_SIZE, GRID_SIZE)
 	var tex_size := texture.get_size()
@@ -195,11 +205,17 @@ static func stamp_world_rect(
 
 
 static func stamp_visual_world_rect(
-	type_name: String, hover_col: int, hover_row: int, trail: int, width: int, grid: float = GRID_SIZE
+	type_name: String,
+	hover_col: int,
+	hover_row: int,
+	trail: int,
+	width: int,
+	grid: float = GRID_SIZE,
+	style: String = STYLE_DESERT
 ) -> Rect2:
 	if type_name in ["erase", "ground", "canyon"] or hover_col < 0 or hover_row < 0:
 		return Rect2()
-	var size := stamp_world_size(type_name)
+	var size := stamp_world_size(type_name, style)
 	if type_name == "pit":
 		if hover_row != trail:
 			return Rect2()
@@ -214,9 +230,11 @@ static func stamp_visual_world_rect(
 	var place_row := placement_row(type_name, hover_row, trail)
 	var object := {"type": type_name, "x": hover_col, "y": place_row}
 	var anchor := object_world_position(object, grid, trail)
+	if is_ceiling_hanging(type_name):
+		return Rect2(anchor.x - size.x * 0.5, anchor.y, size.x, size.y)
 	if is_ground_standing(type_name):
 		return Rect2(anchor.x - size.x * 0.5, anchor.y - size.y, size.x, size.y)
-	if type_name == "carrion":
+	if type_name == "carrion" or type_name == "bat":
 		return Rect2(anchor.x - size.x * 0.5, anchor.y - size.y * 0.5, size.x, size.y)
 	return Rect2(anchor.x - size.x * 0.5, anchor.y - size.y, size.x, size.y)
 
@@ -300,9 +318,11 @@ static func object_world_position(object: Dictionary, grid: float, trail: int) -
 	var cell_x := float(object.get("x", 0))
 	var cell_y := float(object.get("y", 0))
 	var world_x := (cell_x + 0.5) * grid
+	if is_ceiling_hanging(type_name):
+		return Vector2(world_x, cell_y * grid + 8.0)
 	if is_ground_standing(type_name):
 		return Vector2(world_x, (cell_y + 1.0) * grid)
-	if type_name == "carrion":
+	if type_name == "carrion" or type_name == "bat":
 		return Vector2(world_x, (cell_y + 0.5) * grid)
 	return Vector2(world_x, cell_y * grid)
 
@@ -324,6 +344,7 @@ static func default_level(slot_index: int) -> Dictionary:
 		"slot": clampi(slot_index, 0, SLOT_COUNT - 1),
 		"title": "Family Trail %d" % (slot_index + 1),
 		"kind": "standalone",
+		"style": STYLE_DESERT,
 		"source_level": 0,
 		"insert_position": 11,
 		"grid": 40,
@@ -704,6 +725,7 @@ static func import_builtin(level_number: int) -> Dictionary:
 	result["kind"] = "override"
 	result["source_level"] = number
 	result["title"] = BUILTIN_NAMES[number - 1]
+	result["style"] = STYLE_CAVE if number == 5 else STYLE_DESERT
 	result["height"] = 10
 	var packed := load(BUILTIN_SCENES[number - 1]) as PackedScene
 	if packed == null:
@@ -827,6 +849,8 @@ static func sanitize(source: Dictionary, slot_index: int) -> Dictionary:
 	result["height"] = clampi(int(source.get("height", result["height"])), 6, 14)
 	result["version"] = VERSION
 	result["start_mounted"] = bool(source.get("start_mounted", false)) or int(result["source_level"]) == 1
+	var default_style := STYLE_CAVE if int(result["source_level"]) == 5 else STYLE_DESERT
+	result["style"] = normalize_style(source.get("style", default_style))
 	var trail := trail_row(int(result["height"]))
 	var objects: Array[Dictionary] = []
 	var source_objects: Variant = source.get("objects", [])
@@ -838,6 +862,8 @@ static func sanitize(source: Dictionary, slot_index: int) -> Dictionary:
 				var type_name := str(object.get("type", ""))
 				if is_ground_standing(type_name) and int(object.get("y", 0)) == trail:
 					object["y"] = maxi(trail - 1, 0)
+				if is_ceiling_hanging(type_name):
+					object["y"] = clampi(int(object.get("y", 0)), 0, mini(1, trail))
 				objects.append(object)
 				if objects.size() >= 900:
 					break
@@ -852,7 +878,8 @@ static func _valid_object(object: Dictionary, trail: int) -> bool:
 	var valid_types := [
 		"ground", "platform", "star", "chest", "cactus", "canyon", "pit",
 		"checkpoint", "spring", "goal", "bandit", "bounty_bandit", "bull", "ninja",
-		"rattlesnake", "carrion", "wings", "boots", "speed", "shield",
+		"rattlesnake", "carrion", "bat", "acid_drip", "stalactite",
+		"wings", "boots", "speed", "shield",
 	]
 	var type_name := str(object.get("type", ""))
 	if type_name not in valid_types:

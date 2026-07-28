@@ -36,6 +36,16 @@ var _shot_timer: float = 0.0
 var _shot_generation: int = 0
 var _revolver: RevolverOverlay
 var _pose_tween: Tween
+var _level_style: String = LevelStyle.DESERT
+
+
+func apply_level_style(style: String) -> void:
+	_level_style = LevelStyle.normalize(style)
+	if _sprite != null and not _tied:
+		_sprite.sprite_frames = _make_sprite_frames()
+		_sprite.play(&"idle")
+	if _label != null and not _tied:
+		_label.text = "BOUNTY!" if bounty_bandit else ("SKELETON" if LevelStyle.is_cave(_level_style) else "BANDIT")
 
 
 func _ready() -> void:
@@ -77,8 +87,23 @@ func _setup_sprite() -> void:
 
 func _make_sprite_frames() -> SpriteFrames:
 	var frames := SpriteFrames.new()
-	var suffix := "_red" if bounty_bandit else ""
-	var stand_path := "res://assets/world/bandit%s.png" % suffix
+	var cave := LevelStyle.is_cave(_level_style)
+	var stand_path: String
+	var walk0: String
+	var walk1: String
+	var tied_path: String
+	if cave:
+		var skel := "skeleton_crystal" if bounty_bandit else "skeleton"
+		stand_path = "res://assets/world/%s.png" % skel
+		walk0 = "res://assets/world/%s_walk_0.png" % skel
+		walk1 = "res://assets/world/%s_walk_1.png" % skel
+		tied_path = "res://assets/world/%s_tied.png" % skel
+	else:
+		var suffix := "_red" if bounty_bandit else ""
+		stand_path = "res://assets/world/bandit%s.png" % suffix
+		walk0 = "res://assets/world/bandit_walk_0%s.png" % suffix
+		walk1 = "res://assets/world/bandit_walk_1%s.png" % suffix
+		tied_path = "res://assets/world/bandit_tied%s.png" % suffix
 	frames.add_animation(&"idle")
 	frames.set_animation_speed(&"idle", 1.0)
 	frames.set_animation_loop(&"idle", true)
@@ -88,15 +113,18 @@ func _make_sprite_frames() -> SpriteFrames:
 	frames.add_animation(&"walk")
 	frames.set_animation_speed(&"walk", 8.0)
 	frames.set_animation_loop(&"walk", true)
-	for path in [
-		"res://assets/world/bandit_walk_0%s.png" % suffix,
-		stand_path,
-		"res://assets/world/bandit_walk_1%s.png" % suffix,
-		stand_path,
-	]:
+	for path in [walk0, stand_path, walk1, stand_path]:
 		var tex: Texture2D = load(path)
 		if tex != null:
 			frames.add_frame(&"walk", tex)
+	frames.add_animation(&"tied")
+	frames.set_animation_speed(&"tied", 1.0)
+	frames.set_animation_loop(&"tied", true)
+	var tied_tex: Texture2D = load(tied_path)
+	if tied_tex != null:
+		frames.add_frame(&"tied", tied_tex)
+	elif stand_tex != null:
+		frames.add_frame(&"tied", stand_tex)
 	return frames
 
 
@@ -358,11 +386,19 @@ func _show_floor_bound_pose() -> void:
 		return
 	_kill_pose_tween()
 	_sprite.pause()
-	var path := (
-		"res://assets/world/bandit_tied_red.png"
-		if bounty_bandit
-		else "res://assets/world/bandit_tied.png"
-	)
+	var path: String
+	if LevelStyle.is_cave(_level_style):
+		path = (
+			"res://assets/world/skeleton_crystal_tied.png"
+			if bounty_bandit
+			else "res://assets/world/skeleton_tied.png"
+		)
+	else:
+		path = (
+			"res://assets/world/bandit_tied_red.png"
+			if bounty_bandit
+			else "res://assets/world/bandit_tied.png"
+		)
 	var tex: Texture2D = load(path)
 	if tex == null:
 		return
@@ -392,8 +428,12 @@ func _shoot_at(player: Player) -> void:
 	_apply_facing(_facing)
 	if _sprite != null:
 		_sprite.play(&"idle")
+	var cave := LevelStyle.is_cave(_level_style)
 	if _revolver != null:
-		_revolver.show_aim(_facing)
+		if cave:
+			_revolver.hide_gun()
+		else:
+			_revolver.show_aim(_facing)
 	if _label != null:
 		_label.text = "LOOK OUT!"
 		_label.modulate = Color(0.9, 0.16, 0.05, 1.0)
@@ -401,11 +441,11 @@ func _shoot_at(player: Player) -> void:
 	if shot_id != _shot_generation or _tied:
 		_shooting = false
 		return
-	if _revolver != null:
+	if _revolver != null and not cave:
 		_revolver.show_flash()
 	var bullet := BanditBullet.new()
 	bullet.name = "BanditBullet"
-	bullet.setup(_facing)
+	bullet.setup(_facing, cave)
 	bullet.hurt_player.connect(func(hit_player: Player) -> void: hurt_player.emit(hit_player))
 	get_parent().add_child(bullet)
 	bullet.global_position = global_position + Vector2(36.0 * _facing, -39.0)
@@ -418,7 +458,9 @@ func _shoot_at(player: Player) -> void:
 	if not _tied:
 		_shooting = false
 		if _label != null:
-			_label.text = "BOUNTY!" if bounty_bandit else "BANDIT"
+			_label.text = (
+				"BOUNTY!" if bounty_bandit else ("SKELETON" if cave else "BANDIT")
+			)
 			_label.modulate = Color.WHITE
 
 
@@ -431,7 +473,7 @@ func _update_nearby_hint() -> void:
 		_label.modulate = Color(1.0, 0.85 + sin(_hint_phase) * 0.15, 0.2, 1.0)
 		_label.add_theme_font_size_override(&"font_size", 16)
 	else:
-		_label.text = "BANDIT"
+		_label.text = "BOUNTY!" if bounty_bandit else ("SKELETON" if LevelStyle.is_cave(_level_style) else "BANDIT")
 		_label.modulate = Color(1, 1, 1, 1)
 		_label.add_theme_font_size_override(&"font_size", 13)
 

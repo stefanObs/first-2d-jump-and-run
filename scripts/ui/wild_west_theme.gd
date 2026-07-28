@@ -25,22 +25,30 @@ static func sand_color() -> Color:
 
 
 static func apply_to_level(level: Node) -> void:
-	_dress_sky(level)
-	_dress_sun(level)
+	var style := LevelStyle.from_level(level)
+	_dress_sky(level, style)
+	_dress_sun(level, style)
 	_hide_fences(level)
-	_make_endless_hills(level)
-	_dress_platforms(level)
+	_make_endless_hills(level, style)
+	_dress_platforms(level, style)
 	_disable_ground_fill_collision(level)
-	_make_contiguous_floors(level)
+	_make_contiguous_floors(level, style)
 	_align_cacti(level)
 	_align_chests(level)
 	_align_pits(level)
+	_apply_actor_styles(level, style)
 
 
-static func _dress_sky(level: Node) -> void:
+static func _apply_actor_styles(level: Node, style: String) -> void:
+	for node in level.find_children("*", "Node", true, false):
+		if node.has_method("apply_level_style"):
+			node.call("apply_level_style", style)
+
+
+static func _dress_sky(level: Node, style: String = LevelStyle.DESERT) -> void:
 	var background := level.get_node_or_null("Background") as ColorRect
 	if background != null:
-		background.color = desert_sky_color()
+		background.color = LevelStyle.sky_color(style)
 	var sky_band := level.get_node_or_null("SkyBand") as ColorRect
 	if sky_band != null:
 		sky_band.visible = false
@@ -54,7 +62,7 @@ static func _dress_sky(level: Node) -> void:
 	root.z_index = -19
 	level.add_child(root)
 
-	var tex: Texture2D = load("res://assets/world/sky_handdrawn.png")
+	var tex: Texture2D = load(LevelStyle.sky_path(style))
 	if tex == null:
 		return
 	# Continuous trail sky — punch only Mesa hills out of canyon columns so the
@@ -62,11 +70,13 @@ static func _dress_sky(level: Node) -> void:
 	_tile_backdrop(root, tex, "SkyTile", width, -520.0, 700.0, 8.0, Color.WHITE)
 
 
-static func _dress_sun(level: Node) -> void:
+static func _dress_sun(level: Node, style: String = LevelStyle.DESERT) -> void:
 	var sun := level.get_node_or_null("Sun") as ColorRect
 	if sun == null:
 		return
 	sun.visible = false
+	if LevelStyle.is_cave(style):
+		return
 	if level.get_node_or_null("SunArt") != null:
 		return
 	var sprite := Sprite2D.new()
@@ -85,12 +95,14 @@ static func _hide_fences(level: Node) -> void:
 			(node as CanvasItem).visible = false
 
 
-static func _make_endless_hills(level: Node) -> void:
+static func _make_endless_hills(level: Node, style: String = LevelStyle.DESERT) -> void:
 	for node in level.find_children("*", "CanvasItem", true, false):
 		var name_text := String(node.name)
 		if name_text.begins_with("Mesa"):
 			(node as CanvasItem).visible = false
 
+	if LevelStyle.is_cave(style):
+		return
 	if level.get_node_or_null("HorizonHills") != null:
 		return
 
@@ -232,7 +244,8 @@ static func _tile_backdrop_span(
 	return index
 
 
-static func _dress_platforms(level: Node) -> void:
+static func _dress_platforms(level: Node, style: String = LevelStyle.DESERT) -> void:
+	var plank_path := LevelStyle.plank_path(style)
 	for node in level.find_children("*", "PhysicsBody2D", true, false):
 		var parent_name := String(node.name)
 		if (
@@ -250,10 +263,10 @@ static func _dress_platforms(level: Node) -> void:
 			or parent_name.contains("Ledge")
 			or parent_name.begins_with("Boots")
 		):
-			_replace_block_art(node, "res://assets/world/wood_plank.png")
+			_replace_block_art(node, plank_path)
 
 
-static func _make_contiguous_floors(level: Node) -> void:
+static func _make_contiguous_floors(level: Node, style: String = LevelStyle.DESERT) -> void:
 	for node in level.find_children("*", "PhysicsBody2D", true, false):
 		if not String(node.name).begins_with("Ground"):
 			continue
@@ -278,8 +291,8 @@ static func _make_contiguous_floors(level: Node) -> void:
 	floor_root.z_index = 0
 	level.add_child(floor_root)
 
-	var surface: Texture2D = load("res://assets/world/trail_desert_tile.png")
-	var dirt: Texture2D = load("res://assets/world/trail_dirt_tile.png")
+	var surface: Texture2D = load(LevelStyle.floor_path(style))
+	var dirt: Texture2D = load(LevelStyle.dirt_path(style))
 	if dirt == null:
 		dirt = load("res://assets/world/trail_dirt_strip.png")
 	if surface == null:

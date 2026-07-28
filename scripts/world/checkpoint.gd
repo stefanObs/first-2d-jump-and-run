@@ -9,12 +9,20 @@ signal activated(checkpoint: Checkpoint)
 
 const TEX_INACTIVE := preload("res://assets/world/checkpoint_inactive.png")
 const TEX_ACTIVE := preload("res://assets/world/checkpoint_active.png")
+const TEX_CAVE_INACTIVE := preload("res://assets/world/checkpoint_cave_inactive.png")
+const TEX_CAVE_ACTIVE := preload("res://assets/world/checkpoint_cave_active.png")
 
 var _sprite: Sprite2D
 var _label: Label
 var _pulse: float = 0.0
 var _pop_time: float = 0.0
 var _sprite_base_y: float = -40.0
+var _level_style: String = LevelStyle.DESERT
+
+
+func apply_level_style(style: String) -> void:
+	_level_style = LevelStyle.normalize(style)
+	_update_visual()
 
 
 func _ready() -> void:
@@ -114,9 +122,12 @@ func _on_body_entered(body: Node2D) -> void:
 
 func _update_visual() -> void:
 	if _sprite != null:
-		_sprite.texture = TEX_ACTIVE if is_active else TEX_INACTIVE
+		if LevelStyle.is_cave(_level_style):
+			_sprite.texture = TEX_CAVE_ACTIVE if is_active else TEX_CAVE_INACTIVE
+		else:
+			_sprite.texture = TEX_ACTIVE if is_active else TEX_INACTIVE
 	if _label != null:
-		_label.text = "SAVED!" if is_active else "CAMP"
+		_label.text = "SAVED!" if is_active else ("LANTERN" if LevelStyle.is_cave(_level_style) else "CAMP")
 		_label.add_theme_color_override(
 			&"font_color",
 			Color(0.2, 0.45, 0.12, 1.0) if is_active else Color(0.35, 0.18, 0.05, 1.0)

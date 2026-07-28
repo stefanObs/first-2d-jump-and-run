@@ -26,7 +26,9 @@ static func build(level: LevelController, data: Dictionary, preview: bool = fals
 	var width := int(data.get("width", 24))
 	var height := int(data.get("height", 8))
 	var trail := CustomLevelStore.trail_row(height)
-	_add_background(level, width * grid)
+	var style := CustomLevelStore.normalize_style(data.get("style", CustomLevelStore.STYLE_DESERT))
+	level.set_meta("level_style", style)
+	_add_background(level, width * grid, style)
 
 	var spawn_data: Array = data.get("spawn", [2, trail])
 	var spawn := Marker2D.new()
@@ -57,7 +59,9 @@ static func build(level: LevelController, data: Dictionary, preview: bool = fals
 			"chest":
 				_add_scene(level, CHEST, "CustomChest%d" % index, position)
 			"cactus":
-				_add_scene(level, HAZARD, "Cactus%d" % index, position)
+				var cactus := _add_scene(level, HAZARD, "Cactus%d" % index, position) as Hazard
+				if cactus != null:
+					cactus.apply_level_style(style)
 			"pit":
 				var pit := _add_scene(
 					level,
@@ -68,13 +72,23 @@ static func build(level: LevelController, data: Dictionary, preview: bool = fals
 				if pit != null:
 					pit.set_meta("fixed_pit", true)
 					pit.scale = Vector2.ONE
+					pit.apply_level_style(style)
 					pit._configure_visual()
 			"checkpoint":
-				_add_scene(level, CHECKPOINT, "Checkpoint" if index == 0 else "Checkpoint%d" % index, position)
+				var camp := _add_scene(
+					level,
+					CHECKPOINT,
+					"Checkpoint" if index == 0 else "Checkpoint%d" % index,
+					position
+				) as Checkpoint
+				if camp != null:
+					camp.apply_level_style(style)
 			"spring":
 				_add_scene(level, SPRING, "Spring%d" % index, position)
 			"bandit":
-				_add_scene(level, BANDIT, "Opponent%d" % index, position)
+				var bandit := _add_scene(level, BANDIT, "Opponent%d" % index, position) as Opponent
+				if bandit != null:
+					bandit.apply_level_style(style)
 			"bounty_bandit":
 				var bounty := BANDIT.instantiate() as Opponent
 				if bounty != null:
@@ -82,21 +96,43 @@ static func build(level: LevelController, data: Dictionary, preview: bool = fals
 					bounty.name = "Opponent%d" % index
 					bounty.position = position
 					level.add_child(bounty)
+					bounty.apply_level_style(style)
 			"bull":
-				_add_scene(level, BULL, "Bull%d" % index, position)
+				var bull := _add_scene(level, BULL, "Bull%d" % index, position) as BullEnemy
+				if bull != null:
+					bull.apply_level_style(style)
 			"ninja":
 				_add_scene(level, NINJA, "Ninja%d" % index, position)
 			"rattlesnake":
-				_add_scene(level, RATTLESNAKE, "Rattlesnake%d" % index, position)
+				var snake := _add_scene(level, RATTLESNAKE, "Rattlesnake%d" % index, position) as Rattlesnake
+				if snake != null:
+					snake.apply_level_style(style)
 			"carrion":
 				_add_scene(level, CARRION, "Carrion%d" % index, position)
+			"bat":
+				var bat := BatEnemy.new()
+				bat.name = "Bat%d" % index
+				bat.position = position
+				level.add_child(bat)
+			"acid_drip":
+				var drip := AcidDrip.new()
+				drip.name = "AcidDrip%d" % index
+				drip.position = position
+				level.add_child(drip)
+			"stalactite":
+				var spike := StalactiteHazard.new()
+				spike.name = "Stalactite%d" % index
+				spike.position = position
+				level.add_child(spike)
 			"wings", "boots", "speed", "shield":
 				var mode_item := _add_scene(level, MODE_ITEM, "ModeItem%d" % index, position) as ModeItem
 				if mode_item != null:
 					mode_item.mode = _mode_for_type(type_name)
 			"goal":
 				if not has_goal:
-					_add_scene(level, GOAL, "Goal", position)
+					var goal := _add_scene(level, GOAL, "Goal", position) as Goal
+					if goal != null:
+						goal.apply_level_style(style)
 					has_goal = true
 
 	for run_index in range(canyon_runs.size()):
@@ -107,12 +143,14 @@ static func build(level: LevelController, data: Dictionary, preview: bool = fals
 		canyon.scale = Vector2(1.8, 1.8)
 
 	if not has_goal:
-		_add_scene(
+		var auto_goal := _add_scene(
 			level,
 			GOAL,
 			"Goal",
 			Vector2((width - 2) * grid, float(trail) * grid)
-		)
+		) as Goal
+		if auto_goal != null:
+			auto_goal.apply_level_style(style)
 	var player := PLAYER.instantiate() as Player
 	player.name = "Player"
 	# Dusty Trail (campaign source 1) teaches mounted riding — keep that when
@@ -219,12 +257,12 @@ static func _add_ground_columns(level: Node, data: Dictionary, grid: float, trai
 		index += 1
 
 
-static func _add_background(level: Node, width: float) -> void:
+static func _add_background(level: Node, width: float, style: String = CustomLevelStore.STYLE_DESERT) -> void:
 	var background := ColorRect.new()
 	background.name = "Background"
 	background.position = Vector2(-200, -300)
 	background.size = Vector2(width + 400, 900)
-	background.color = Color(0.62, 0.84, 0.96)
+	background.color = LevelStyle.sky_color(style)
 	background.z_index = -20
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	level.add_child(background)
@@ -232,7 +270,7 @@ static func _add_background(level: Node, width: float) -> void:
 	sky.name = "SkyBand"
 	sky.position = Vector2(-200, -300)
 	sky.size = Vector2(width + 400, 360)
-	sky.color = Color(0.42, 0.74, 0.98)
+	sky.color = LevelStyle.sky_color(style).darkened(0.08)
 	sky.z_index = -19
 	sky.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	level.add_child(sky)

@@ -2,7 +2,7 @@
 
 Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, nonviolent lasso. **Classic mode** has no lives or game over; **Advanced Mode** (chosen in **Settings** before starting or continuing a slot) adds a three-life limit, badge milestones, and a game-over return to the start screen. Pick **Cowboy** or **Cowgirl** in Settings — the choice applies across all save slots. **German is the default language**; English is fully supported.
 
-**Content version:** `1.6.6` (see `content_version.txt`). Launchers reimport when this stamp changes.
+**Content version:** `1.7.0` (see `content_version.txt`). Launchers reimport when this stamp changes.
 
 This README is the **binding source of truth** for gameplay, level design, art, i18n, and audio. Agents and contributors must follow it (see [Agent / contributor rules](#agent--contributor-rules)).
 
@@ -38,7 +38,7 @@ godot --headless --path . res://tests/test_moving_platform_obstruction.tscn
 2. Badge Meadow — collect sheriff badges  
 3. Bronco Springs — spring pads and higher ledges  
 4. Canyon Ferry — clouds + wooden planks (not ferry-raft look); spring/plank/cloud variety  
-5. Outlaw Cave — camps, bandits, careful jumps  
+5. Outlaw Cave — camps, bandits, careful jumps (workshop **Cave** style: Crystal Gate goal, cave remaps)  
 6. Windy Mesa — Magic Boots, gentle wind, longer jumps  
 7. Sky Ranch — Wings flying trail  
 8. Rail Yard — Bubble Shields, conveyors, timed gates  
@@ -57,7 +57,7 @@ After Kingpin: horizon victory ride, fade, dedication **VOM PAPI FÜR FINN**, th
 
 **Saves:** three slots; auto-save; local `savegames/` (gitignored). `SAVE_VERSION` 4 — older formats discarded. Delete via card context / Space / Xbox Y + confirm.
 
-**Campaign Workshop / trail editor:** Upper half edits the trail with a **category picker** (each category shows an example thumbnail) plus stamp tools — the **Trail / path** category uses direct **Dirt / Canyon / Plank** icon buttons (canyon icon: both ridges with sky-blue gap), while other categories use a compact tool dropdown. **+ Length / − Length** adjust the trail in **12-column steps** (defaults match built-in campaign width: **180 columns**; min 12, max 180). A stamp grid shows the **full level height** plus a horizontal slide bar to reach the end; a **▼ / ▶ chevron** collapses or expands the grid for the session so the live preview gets more room. **Right-click** a grid cell or the live preview to remove the element there. Sideways grid scroll is **edge auto-scroll or the slide bar only** (no wheel/trackpad pan). **Ground-standing props** (cactus, camps, springs, bandits, trail bulls, ninjas, snakes, power-ups, treasure chests, saloon) stamp **one row above dirt** so they stand on the trail surface; hovering shows a ghost at **final in-game size** of where the stamp will land, and the live preview draws a **grid-aligned cell outline** plus a footprint at the correct world size (plank 80×24, pit 128×64, etc.). **Bounty Bandit**, **Trail Bull**, **Ninja**, and **Carrion Bird** stamps join the enemy palette. Clicking the **live preview** places the selected stamp at the matching column/row (same as the grid). Lower half gives priority to a **live gameplay preview** (same build/theme as play) framed to the **full vertical extent**; horizontal pan uses the same **edge auto-scroll or slide bar** as the grid (no mid-pane follow). Chrome and grid heights stay compact so the preview stays visible on 720p. Explicit **Save Trail** and **Reset Changes**. The grid keeps a minimum edit height and scrolls vertically when the window is short so stamps stay tappable. Adjacent **canyon stamps merge into one wider gap** at build time. **Export Trails / Import Trails** in the workshop (or **Export Trail / Import Trail** in the editor) share custom levels as one portable `.cowboytrail` JSON pack — the editor reads/writes a single trail into the current session without auto-saving until you press Save. Translation editor (debug-only, F1 on save select) edits DE/EN CSV export into `savegames/`.
+**Campaign Workshop / trail editor:** Upper half edits the trail with a **level style** picker (**Desert** / **Cave**), a **category picker** (each category shows an example thumbnail) plus stamp tools — the **Trail / path** category uses direct **Dirt / Canyon / Plank** icon buttons (canyon icon: both ridges with sky-blue gap; cave style swaps labels to Cave Floor / Cave Gap / Crystal Ledge), while other categories use a compact tool dropdown. Cave style remaps stamp presentation (poison fungus, bow skeletons, cave lizards, scorpions, lantern camps, Crystal Gate) and unlocks cave-only stamps (pink ceiling drops, falling stalactites, curve-flying bats). See `docs/cave_biome.md`. **+ Length / − Length** adjust the trail in **12-column steps** (defaults match built-in campaign width: **180 columns**; min 12, max 180). A stamp grid shows the **full level height** plus a horizontal slide bar to reach the end; a **▼ / ▶ chevron** collapses or expands the grid for the session so the live preview gets more room. **Right-click** a grid cell or the live preview to remove the element there. Sideways grid scroll is **edge auto-scroll or the slide bar only** (no wheel/trackpad pan). **Ground-standing props** (cactus/fungus, camps, springs, bandits/skeletons, trail bulls/lizards, ninjas, snakes/scorpions, power-ups, treasure chests, saloon/Crystal Gate) stamp **one row above dirt** so they stand on the trail surface; ceiling drips/stalactites hang from the top rows; hovering shows a ghost at **final in-game size** of where the stamp will land, and the live preview draws a **grid-aligned cell outline** plus a footprint at the correct world size (plank 80×24, pit 128×64, etc.). **Bounty Bandit**, **Trail Bull**, **Ninja**, and **Carrion Bird** stamps join the enemy palette (cave: Crystal Skeleton / Cave Lizard / Cave Bat instead of bird). Clicking the **live preview** places the selected stamp at the matching column/row (same as the grid). Lower half gives priority to a **live gameplay preview** (same build/theme as play) framed to the **full vertical extent**; horizontal pan uses the same **edge auto-scroll or slide bar** as the grid (no mid-pane follow). Chrome and grid heights stay compact so the preview stays visible on 720p. Explicit **Save Trail** and **Reset Changes**. The grid keeps a minimum edit height and scrolls vertically when the window is short so stamps stay tappable. Adjacent **canyon stamps merge into one wider gap** at build time. **Export Trails / Import Trails** in the workshop (or **Export Trail / Import Trail** in the editor) share custom levels as one portable `.cowboytrail` JSON pack — the editor reads/writes a single trail into the current session without auto-saving until you press Save. Translation editor (debug-only, F1 on save select) edits DE/EN CSV export into `savegames/`.
 
 ---
 
@@ -92,6 +92,13 @@ Agents **must** honor these when editing levels or trail systems:
 - **No rattlesnake directly in front of** (approaching) a canyon mouth.
 - **No timed doors** (`TimedDoor`) over ground canyon gaps or on rim bands (tall gates must not sit above canyon mouths).
 - **Conveyors** must not push the cowboy into a canyon. Pair each belt with a timed door on **solid ground** in the push direction (Door0/Door4 pattern), or keep clear solid runout — never a belt that dumps into an open gap after a rim door was removed.
+
+### Cave style
+
+- Trail documents may set `"style": "cave"` (workshop **Level style**). Binding art/behavior notes: `docs/cave_biome.md`.
+- Cave remaps stamp **presentation** (same type ids): fungus/lizard/scorpion/bow skeleton/lantern camp/**Crystal Gate** (saloon replacement). Cave-only stamps: `acid_drip`, `stalactite`, `bat`.
+- Pink drips and falling stalactites hurt → camp respawn; **Bubble does not block** them. Bats can bounce off Bubble.
+- Cave floors/sky use cool slate + pink mineral accents; no desert sun/mesa hills.
 
 ### Canyon art
 

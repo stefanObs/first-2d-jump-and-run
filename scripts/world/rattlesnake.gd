@@ -7,6 +7,8 @@ signal hurt_player(player: Player)
 
 const IDLE_TEXTURE := preload("res://assets/world/rattlesnake_idle.png")
 const BITE_TEXTURE := preload("res://assets/world/rattlesnake_bite.png")
+const SCORPION_IDLE := preload("res://assets/world/scorpion_idle.png")
+const SCORPION_STING := preload("res://assets/world/scorpion_sting.png")
 
 var _sprite: Sprite2D
 var _label: Label
@@ -14,12 +16,27 @@ var _shadow: Polygon2D
 var _biting: bool = false
 var _phase: float = 0.0
 var _raised: bool = false
+var _level_style: String = LevelStyle.DESERT
 
 const WATCH_DISTANCE := 380.0
 const RAISE_DISTANCE := 210.0
 const BODY_SCALE := Vector2(0.48, 0.38)
 const REST_OFFSET := Vector2(0, -18)
 const RAISED_OFFSET := Vector2(0, -34)
+
+
+func apply_level_style(style: String) -> void:
+	_level_style = LevelStyle.normalize(style)
+	if _sprite != null and not _biting:
+		_sprite.texture = _idle_tex()
+
+
+func _idle_tex() -> Texture2D:
+	return SCORPION_IDLE if LevelStyle.is_cave(_level_style) else IDLE_TEXTURE
+
+
+func _bite_tex() -> Texture2D:
+	return SCORPION_STING if LevelStyle.is_cave(_level_style) else BITE_TEXTURE
 
 
 func _ready() -> void:
@@ -33,6 +50,7 @@ func _ready() -> void:
 		_sprite.position = REST_OFFSET
 		_sprite.scale = BODY_SCALE
 		_sprite.modulate = Color(1.06, 1.02, 0.94, 1.0)
+		_sprite.texture = _idle_tex()
 	if _label != null:
 		_label.position = Vector2(-48, -78)
 		_label.add_theme_font_size_override(&"font_size", 16)
@@ -58,7 +76,7 @@ func _process(delta: float) -> void:
 		_shadow.modulate.a = 0.4 if _raised else 0.28
 	if _label != null and not _biting:
 		_label.visible = _raised
-		_label.text = "RATTLE!"
+		_label.text = "STING!" if LevelStyle.is_cave(_level_style) else "RATTLE!"
 		_label.position.y = -78.0 + sin(_phase * 10.0) * 2.0
 
 
@@ -129,7 +147,7 @@ func _bite(player: Player) -> void:
 	_biting = true
 	_face_player(player)
 	if _sprite != null:
-		_sprite.texture = BITE_TEXTURE
+		_sprite.texture = _bite_tex()
 		_sprite.scale = BODY_SCALE
 		var tween := create_tween()
 		tween.tween_property(_sprite, "position", RAISED_OFFSET + Vector2(0, -8), 0.08)
@@ -142,7 +160,7 @@ func _bite(player: Player) -> void:
 		hurt_player.emit(player)
 	await get_tree().create_timer(0.45).timeout
 	if _sprite != null:
-		_sprite.texture = IDLE_TEXTURE
+		_sprite.texture = _idle_tex()
 		_sprite.scale = BODY_SCALE
 	if _label != null:
 		_label.visible = false

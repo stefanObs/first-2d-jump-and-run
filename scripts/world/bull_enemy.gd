@@ -9,6 +9,9 @@ signal captured(bull: BullEnemy)
 const BULL_TEX := preload("res://assets/world/boss_stampede_bull.png")
 const BULL_TIED_TEX := preload("res://assets/world/boss_stampede_bull_tied_legs.png")
 const BULL_DOWN_TEX := preload("res://assets/world/boss_stampede_bull_down.png")
+const LIZARD_TEX := preload("res://assets/world/cave_lizard.png")
+const LIZARD_TIED_TEX := preload("res://assets/world/cave_lizard_tied_legs.png")
+const LIZARD_DOWN_TEX := preload("res://assets/world/cave_lizard_down.png")
 
 ## Same on-screen height for standing and leg-bound poses so the bull does not shrink when tied.
 const STAND_TARGET_HEIGHT := 92.0
@@ -39,6 +42,25 @@ var _stand_scale: float = 1.0
 var _vel_y: float = 0.0
 var _fallen: bool = false
 var _was_grounded: bool = false
+var _level_style: String = LevelStyle.DESERT
+
+
+func apply_level_style(style: String) -> void:
+	_level_style = LevelStyle.normalize(style)
+	if _sprite != null and not _tied:
+		_setup_sprite()
+
+
+func _stand_tex() -> Texture2D:
+	return LIZARD_TEX if LevelStyle.is_cave(_level_style) else BULL_TEX
+
+
+func _tied_tex() -> Texture2D:
+	return LIZARD_TIED_TEX if LevelStyle.is_cave(_level_style) else BULL_TIED_TEX
+
+
+func _down_tex() -> Texture2D:
+	return LIZARD_DOWN_TEX if LevelStyle.is_cave(_level_style) else BULL_DOWN_TEX
 
 
 func _ready() -> void:
@@ -63,11 +85,11 @@ func _setup_sprite() -> void:
 	var old := get_node_or_null("Sprite2D") as Node
 	_sprite = Sprite2D.new()
 	_sprite.name = "BullSprite"
-	_sprite.texture = BULL_TEX
+	_sprite.texture = _stand_tex()
 	_sprite.centered = true
-	_stand_scale = _scale_for(BULL_TEX, STAND_TARGET_HEIGHT)
+	_stand_scale = _scale_for(_stand_tex(), STAND_TARGET_HEIGHT)
 	_sprite.scale = Vector2(_stand_scale, _stand_scale)
-	_sprite.offset = Vector2(0.0, -float(BULL_TEX.get_height()) * 0.5)
+	_sprite.offset = Vector2(0.0, -float(_stand_tex().get_height()) * 0.5)
 	_apply_facing(_facing)
 	add_child(_sprite)
 	if old != null:
@@ -121,10 +143,10 @@ func _physics_process(delta: float) -> void:
 	global_position = next
 	if _sprite != null:
 		if charging and not _fallen:
-			_sprite.offset.y = -float(BULL_TEX.get_height()) * 0.5 + sin(_charge_bob) * 3.0
+			_sprite.offset.y = -float(_stand_tex().get_height()) * 0.5 + sin(_charge_bob) * 3.0
 			_sprite.rotation = sin(_charge_bob * 0.5) * 0.04 * _facing
 		else:
-			_sprite.offset.y = -float(BULL_TEX.get_height()) * 0.5
+			_sprite.offset.y = -float(_stand_tex().get_height()) * 0.5
 			_sprite.rotation = 0.0
 
 
@@ -253,8 +275,8 @@ func _play_tie_sequence() -> void:
 	_kill_pose_tween()
 	var face_left := _sprite.flip_h
 	var stand_s := _stand_scale
-	var tied_s := _scale_for(BULL_TIED_TEX, STAND_TARGET_HEIGHT)
-	var down_s := _scale_for(BULL_DOWN_TEX, DOWN_TARGET_HEIGHT)
+	var tied_s := _scale_for(_tied_tex(), STAND_TARGET_HEIGHT)
+	var down_s := _scale_for(_down_tex(), DOWN_TARGET_HEIGHT)
 
 	if _label != null:
 		_label.text = "TIED!"
@@ -296,11 +318,11 @@ func _play_tie_sequence() -> void:
 	if is_instance_valid(ropes):
 		ropes.queue_free()
 	# Standing pose with legs bound — same on-screen height as the charging bull.
-	_sprite.texture = BULL_TIED_TEX
+	_sprite.texture = _tied_tex()
 	_sprite.flip_h = face_left
 	_sprite.rotation = 0.0
 	_sprite.scale = Vector2(tied_s, tied_s)
-	_sprite.offset = Vector2(0.0, -float(BULL_TIED_TEX.get_height()) * 0.5)
+	_sprite.offset = Vector2(0.0, -float(_tied_tex().get_height()) * 0.5)
 	var wobble := create_tween()
 	wobble.tween_property(_sprite, "rotation", 0.12 if face_left else -0.12, 0.18)
 	wobble.tween_property(_sprite, "rotation", -0.1 if face_left else 0.1, 0.18)
@@ -320,7 +342,7 @@ func _play_tie_sequence() -> void:
 	var tip := create_tween()
 	tip.set_parallel(true)
 	tip.tween_property(_sprite, "rotation", tip_dir * PI * 0.5, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
-	tip.tween_property(_sprite, "offset:y", -float(BULL_TIED_TEX.get_height()) * 0.22, 0.45)
+	tip.tween_property(_sprite, "offset:y", -float(_tied_tex().get_height()) * 0.22, 0.45)
 	await tip.finished
 	if not is_instance_valid(self) or not _tied:
 		return
@@ -339,7 +361,7 @@ func _play_tie_sequence() -> void:
 func _snap_to_down_pose() -> void:
 	_kill_pose_tween()
 	var face_left := _sprite != null and _sprite.flip_h
-	var down_s := _scale_for(BULL_DOWN_TEX, DOWN_TARGET_HEIGHT)
+	var down_s := _scale_for(_down_tex(), DOWN_TARGET_HEIGHT)
 	_show_down_pose(face_left, down_s)
 	if _label != null:
 		_label.text = "TIED!"
@@ -350,12 +372,12 @@ func _snap_to_down_pose() -> void:
 func _show_down_pose(face_left: bool, down_s: float) -> void:
 	if _sprite == null:
 		return
-	_sprite.texture = BULL_DOWN_TEX
+	_sprite.texture = _down_tex()
 	_sprite.flip_h = face_left
 	_sprite.rotation = 0.0
 	_sprite.scale = Vector2(down_s, down_s)
 	# Belly sits on the trail crust (node origin is the walk surface).
-	_sprite.offset = Vector2(0.0, -float(BULL_DOWN_TEX.get_height()) * 0.5)
+	_sprite.offset = Vector2(0.0, -float(_down_tex().get_height()) * 0.5)
 
 
 func _puff_dust() -> void:

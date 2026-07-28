@@ -10,6 +10,14 @@ const CANYON_ART := preload("res://scripts/world/scalable_canyon_art.gd")
 const PIT_TEXTURE := preload("res://assets/world/pit.png")
 const PIT_PIXEL_SIZE := Vector2(128.0, 64.0)
 
+var _level_style: String = LevelStyle.DESERT
+
+
+func apply_level_style(style: String) -> void:
+	_level_style = LevelStyle.normalize(style)
+	if is_inside_tree():
+		_configure_visual()
+
 
 func is_pit() -> bool:
 	return has_meta("fixed_pit") and bool(get_meta("fixed_pit"))
@@ -76,6 +84,11 @@ func _configure_visual() -> void:
 		_strip_cactus_visuals()
 	elif sprite != null:
 		sprite.visible = true
+		if sprite is Sprite2D:
+			var path := LevelStyle.stamp_icon_path("cactus", _level_style)
+			var tex: Texture2D = load(path)
+			if tex != null:
+				(sprite as Sprite2D).texture = tex
 	if pit != null:
 		pit.visible = false
 	if rim != null:
@@ -85,7 +98,10 @@ func _configure_visual() -> void:
 		if not wide:
 			label.text = "OUCH!"
 			label.add_theme_font_size_override(&"font_size", 15)
-			label.add_theme_color_override(&"font_color", Color(0.15, 0.5, 0.18, 1.0))
+			if LevelStyle.is_cave(_level_style):
+				label.add_theme_color_override(&"font_color", Color(0.55, 0.2, 0.55, 1.0))
+			else:
+				label.add_theme_color_override(&"font_color", Color(0.15, 0.5, 0.18, 1.0))
 	if wide:
 		# Temporary until WildWestTheme supplies the real floor gap.
 		align_canyon_to_gap(global_position.y - 80.0, global_position.x - 80.0, global_position.x + 80.0)
@@ -101,7 +117,8 @@ func _configure_fixed_pit() -> void:
 	var pit := get_node_or_null("PitVisual") as Sprite2D
 	if pit != null:
 		pit.visible = true
-		pit.texture = PIT_TEXTURE
+		var pit_tex: Texture2D = load(LevelStyle.pit_path(_level_style))
+		pit.texture = pit_tex if pit_tex != null else PIT_TEXTURE
 		pit.scale = Vector2.ONE
 		pit.centered = false
 		pit.position = Vector2(-PIT_PIXEL_SIZE.x * 0.5, 0.0)

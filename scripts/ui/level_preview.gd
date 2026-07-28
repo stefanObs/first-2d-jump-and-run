@@ -413,7 +413,8 @@ func _aligned_ghost_world_rect() -> Rect2:
 		_hover_row,
 		trail,
 		width,
-		grid
+		grid,
+		str(_data.get("style", CustomLevelStore.STYLE_DESERT))
 	)
 	if rect.size.x <= 0.0:
 		return Rect2()
@@ -532,29 +533,8 @@ func _world_rect_to_screen(world_rect: Rect2) -> Rect2:
 
 
 func _icon_path_for_type(type_name: String) -> String:
-	var icons := {
-		"ground": "res://assets/world/trail_desert_tile.png",
-		"canyon": "res://assets/ui/editor_canyon_stamp_icon.png",
-		"platform": "res://assets/world/trail_dirt_tile.png",
-		"star": "res://assets/world/star_badge.png",
-		"checkpoint": "res://assets/world/checkpoint_active.png",
-		"cactus": "res://assets/world/cactus.png",
-		"pit": "res://assets/world/pit.png",
-		"spring": "res://assets/world/spring.png",
-		"bandit": "res://assets/world/bandit.png",
-		"bounty_bandit": "res://assets/world/bandit_red.png",
-		"bull": "res://assets/world/boss_stampede_bull.png",
-		"ninja": "res://assets/world/ninja_idle.png",
-		"rattlesnake": "res://assets/world/rattlesnake_idle.png",
-		"carrion": "res://assets/world/carrion_bird.png",
-		"wings": "res://assets/world/modes/wings.png",
-		"boots": "res://assets/world/modes/magic_boots.png",
-		"speed": "res://assets/world/modes/speed_badge.png",
-		"shield": "res://assets/world/modes/bubble_shield.png",
-		"goal": "res://assets/world/goal_saloon.png",
-		"chest": "res://assets/world/treasure_chest_stamp.png",
-	}
-	return str(icons.get(type_name, ""))
+	var style := CustomLevelStore.normalize_style(_data.get("style", "desert")) if not _data.is_empty() else "desert"
+	return LevelStyle.stamp_icon_path(type_name, style)
 
 
 func _gui_input(event: InputEvent) -> void:

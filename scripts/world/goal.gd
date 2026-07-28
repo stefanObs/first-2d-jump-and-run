@@ -11,6 +11,12 @@ var _label: Label
 var _arrow: Label
 var _phase: float = 0.0
 var _base_scale: Vector2 = Vector2.ONE
+var _level_style: String = LevelStyle.DESERT
+
+
+func apply_level_style(style: String) -> void:
+	_level_style = LevelStyle.normalize(style)
+	_apply_goal_art()
 
 
 func _ready() -> void:
@@ -20,11 +26,20 @@ func _ready() -> void:
 	_label = get_node_or_null("Label") as Label
 	if _sprite != null:
 		_base_scale = _sprite.scale
-	if _label != null:
-		_label.text = "SALOON!"
-		_label.add_theme_font_size_override(&"font_size", 20)
+	_apply_goal_art()
 	_ensure_arrow()
 	body_entered.connect(_on_body_entered)
+
+
+func _apply_goal_art() -> void:
+	if _sprite is Sprite2D:
+		var path := LevelStyle.stamp_icon_path("goal", _level_style)
+		var tex: Texture2D = load(path)
+		if tex != null:
+			(_sprite as Sprite2D).texture = tex
+	if _label != null:
+		_label.text = "GATE!" if LevelStyle.is_cave(_level_style) else "SALOON!"
+		_label.add_theme_font_size_override(&"font_size", 20)
 
 
 func _process(delta: float) -> void:

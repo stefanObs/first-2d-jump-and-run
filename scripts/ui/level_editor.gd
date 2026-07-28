@@ -2,77 +2,14 @@ extends Control
 
 ## Grid/stamp editor: typed stamp dropdowns + scrollable trail grid above a live preview.
 
-const TOOL_CATEGORIES: Array = [
-	{
-		"id": "trail",
-		"label": "Trail",
-		"tools": [
-			["ground", "Dirt", "res://assets/world/trail_desert_tile.png"],
-			["canyon", "Canyon", "res://assets/ui/editor_canyon_stamp_icon.png"],
-			["platform", "Plank", "res://assets/world/trail_dirt_tile.png"],
-		],
-	},
-	{
-		"id": "pickups",
-		"label": "Pickups",
-		"tools": [
-			["star", "Badge", "res://assets/world/star_badge.png"],
-			["chest", "Treasure Chest", "res://assets/world/treasure_chest_stamp.png"],
-			["checkpoint", "Camp", "res://assets/world/checkpoint_active.png"],
-		],
-	},
-	{
-		"id": "hazards",
-		"label": "Hazards",
-		"tools": [
-			["cactus", "Cactus", "res://assets/world/cactus.png"],
-			["pit", "Pit", "res://assets/world/pit.png"],
-			["spring", "Spring", "res://assets/world/spring.png"],
-		],
-	},
-	{
-		"id": "enemies",
-		"label": "Enemies",
-		"tools": [
-			["bandit", "Bandit", "res://assets/world/bandit.png"],
-			["bounty_bandit", "Bounty Bandit", "res://assets/world/bandit_red.png"],
-			["bull", "Bull", "res://assets/world/boss_stampede_bull.png"],
-			["ninja", "Ninja", "res://assets/world/ninja_idle.png"],
-			["rattlesnake", "Rattlesnake", "res://assets/world/rattlesnake_idle.png"],
-			["carrion", "Carrion Bird", "res://assets/world/carrion_bird.png"],
-		],
-	},
-	{
-		"id": "powerups",
-		"label": "Power-ups",
-		"tools": [
-			["wings", "Wings", "res://assets/world/modes/wings.png"],
-			["boots", "Magic Boots", "res://assets/world/modes/magic_boots.png"],
-			["speed", "Speed Star", "res://assets/world/modes/speed_badge.png"],
-			["shield", "Bubble Shield", "res://assets/world/modes/bubble_shield.png"],
-		],
-	},
-	{
-		"id": "goal",
-		"label": "Goal",
-		"tools": [
-			["goal", "Saloon", "res://assets/world/goal_saloon.png"],
-		],
-	},
-	{
-		"id": "tools",
-		"label": "Tools",
-		"tools": [
-			["erase", "Erase", ""],
-		],
-	},
-]
+var _tool_categories: Array = LevelStyle.tool_categories(LevelStyle.DESERT)
 
 var _data: Dictionary
 var _selected_type: String = "ground"
 var _cells: Array[Button] = []
 var _category_dropdown: OptionButton
 var _tool_dropdown: OptionButton
+var _level_style_dropdown: OptionButton
 var _trail_tool_bar: HBoxContainer
 var _trail_tool_buttons: Dictionary = {}
 var _category_example: TextureRect
@@ -142,6 +79,9 @@ func _ready() -> void:
 	else:
 		_data = CustomLevelStore.load_level(GameManager.active_custom_slot)
 	_data = CustomLevelStore.sanitize(_data, GameManager.active_custom_slot)
+	_tool_categories = LevelStyle.tool_categories(
+		CustomLevelStore.normalize_style(_data.get("style", "desert"))
+	)
 	_initial_data = _data.duplicate(true)
 	_has_saved_state = CustomLevelStore.exists(GameManager.active_custom_slot)
 	_saved_data = (
@@ -211,6 +151,17 @@ func _build_ui() -> void:
 	_title_edit.custom_minimum_size = Vector2(240, 30)
 	_title_edit.text_changed.connect(_on_title_changed)
 	heading.add_child(_title_edit)
+	_level_style_dropdown = OptionButton.new()
+	_level_style_dropdown.name = "LevelStyle"
+	_level_style_dropdown.custom_minimum_size = Vector2(110, 30)
+	_level_style_dropdown.add_theme_font_size_override(&"font_size", 12)
+	_level_style_dropdown.add_item(tr("Desert"), 0)
+	_level_style_dropdown.add_item(tr("Cave"), 1)
+	var initial_style := LevelStyle.normalize(_data.get("style", "desert"))
+	_level_style_dropdown.select(1 if initial_style == LevelStyle.CAVE else 0)
+	_level_style_dropdown.item_selected.connect(_on_style_selected)
+	heading.add_child(_level_style_dropdown)
+	_style_dropdown(_level_style_dropdown)
 	var length_box := HBoxContainer.new()
 	length_box.add_theme_constant_override(&"separation", 4)
 	heading.add_child(length_box)
@@ -502,8 +453,8 @@ func _style_dropdown(dropdown: OptionButton) -> void:
 
 func _populate_category_dropdown() -> void:
 	_category_dropdown.clear()
-	for i in range(TOOL_CATEGORIES.size()):
-		var category := TOOL_CATEGORIES[i] as Dictionary
+	for i in range(_tool_categories.size()):
+		var category := _tool_categories[i] as Dictionary
 		_category_dropdown.add_item(tr(str(category.get("label", ""))), i)
 		var icon := _category_icon(category)
 		if icon != null:
@@ -523,7 +474,7 @@ func _build_trail_tool_bar() -> void:
 	for child in _trail_tool_bar.get_children():
 		child.queue_free()
 	_trail_tool_buttons.clear()
-	for category in TOOL_CATEGORIES:
+	for category in _tool_categories:
 		if str((category as Dictionary).get("id", "")) != _TRAIL_CATEGORY_ID:
 			continue
 		for tool in (category as Dictionary).get("tools", []) as Array:
@@ -549,9 +500,9 @@ func _build_trail_tool_bar() -> void:
 
 
 func _is_trail_category(category_index: int) -> bool:
-	if category_index < 0 or category_index >= TOOL_CATEGORIES.size():
+	if category_index < 0 or category_index >= _tool_categories.size():
 		return false
-	return str((TOOL_CATEGORIES[category_index] as Dictionary).get("id", "")) == _TRAIL_CATEGORY_ID
+	return str((_tool_categories[category_index] as Dictionary).get("id", "")) == _TRAIL_CATEGORY_ID
 
 
 func _update_tool_picker_visibility(category_index: int) -> void:
@@ -566,9 +517,9 @@ func _update_tool_picker_visibility(category_index: int) -> void:
 
 func _populate_tool_dropdown(category_index: int) -> void:
 	_tool_dropdown.clear()
-	if category_index < 0 or category_index >= TOOL_CATEGORIES.size():
+	if category_index < 0 or category_index >= _tool_categories.size():
 		return
-	var category := TOOL_CATEGORIES[category_index] as Dictionary
+	var category := _tool_categories[category_index] as Dictionary
 	for tool in category.get("tools", []) as Array:
 		var entry := tool as Array
 		var type_id := str(entry[0])
@@ -582,7 +533,7 @@ func _populate_tool_dropdown(category_index: int) -> void:
 
 
 func _tool_entry(type_id: String) -> Array:
-	for category in TOOL_CATEGORIES:
+	for category in _tool_categories:
 		for tool in (category as Dictionary).get("tools", []) as Array:
 			if str((tool as Array)[0]) == type_id:
 				return tool as Array
@@ -590,17 +541,17 @@ func _tool_entry(type_id: String) -> Array:
 
 
 func _category_index_for_type(type_id: String) -> int:
-	for i in range(TOOL_CATEGORIES.size()):
-		for tool in (TOOL_CATEGORIES[i] as Dictionary).get("tools", []) as Array:
+	for i in range(_tool_categories.size()):
+		for tool in (_tool_categories[i] as Dictionary).get("tools", []) as Array:
 			if str((tool as Array)[0]) == type_id:
 				return i
 	return 0
 
 
 func _tool_index_for_type(category_index: int, type_id: String) -> int:
-	if category_index < 0 or category_index >= TOOL_CATEGORIES.size():
+	if category_index < 0 or category_index >= _tool_categories.size():
 		return 0
-	var tools := (TOOL_CATEGORIES[category_index] as Dictionary).get("tools", []) as Array
+	var tools := (_tool_categories[category_index] as Dictionary).get("tools", []) as Array
 	for i in range(tools.size()):
 		if str((tools[i] as Array)[0]) == type_id:
 			return i
@@ -632,10 +583,10 @@ func _sync_tool_dropdowns() -> void:
 func _update_category_example(category_index: int) -> void:
 	if _category_example == null:
 		return
-	if category_index < 0 or category_index >= TOOL_CATEGORIES.size():
+	if category_index < 0 or category_index >= _tool_categories.size():
 		_category_example.texture = null
 		return
-	var icon := _category_icon(TOOL_CATEGORIES[category_index] as Dictionary)
+	var icon := _category_icon(_tool_categories[category_index] as Dictionary)
 	_category_example.texture = icon
 
 
@@ -665,7 +616,7 @@ func _on_category_selected(index: int) -> void:
 	_update_tool_picker_visibility(index)
 	_update_category_example(index)
 	if _is_trail_category(index):
-		var tools := (TOOL_CATEGORIES[index] as Dictionary).get("tools", []) as Array
+		var tools := (_tool_categories[index] as Dictionary).get("tools", []) as Array
 		if not tools.is_empty():
 			_select_tool(str((tools[0] as Array)[0]))
 		return
@@ -681,6 +632,41 @@ func _on_tool_selected(index: int) -> void:
 	if type_id.is_empty():
 		return
 	_select_tool(type_id)
+
+
+func _tool_type_available(type_id: String) -> bool:
+	for category in _tool_categories:
+		for tool in (category as Dictionary).get("tools", []) as Array:
+			if str((tool as Array)[0]) == type_id:
+				return true
+	return false
+
+
+func _on_style_selected(index: int) -> void:
+	var style := LevelStyle.CAVE if index == 1 else LevelStyle.DESERT
+	_data["style"] = style
+	_tool_categories = LevelStyle.tool_categories(style)
+	if not _tool_type_available(_selected_type):
+		_selected_type = "ground"
+	_populate_category_dropdown()
+	_build_trail_tool_bar()
+	_sync_tool_dropdowns()
+	_refresh_grid()
+	_mark_dirty()
+
+
+func _apply_style_from_data() -> void:
+	var style := CustomLevelStore.normalize_style(_data.get("style", "desert"))
+	_tool_categories = LevelStyle.tool_categories(style)
+	if _level_style_dropdown != null:
+		_level_style_dropdown.set_block_signals(true)
+		_level_style_dropdown.select(1 if style == LevelStyle.CAVE else 0)
+		_level_style_dropdown.set_block_signals(false)
+	if not _tool_type_available(_selected_type):
+		_selected_type = "ground"
+	_populate_category_dropdown()
+	_build_trail_tool_bar()
+	_sync_tool_dropdowns()
 
 
 func _toggle_grid_collapsed() -> void:
@@ -1202,13 +1188,29 @@ func _display_type_at(x: int, y: int) -> String:
 
 
 func _short_label(type_name: String) -> String:
+	var style := CustomLevelStore.normalize_style(_data.get("style", "desert"))
+	var cave := LevelStyle.is_cave(style)
 	var labels := {
-		"ground": "DIRT", "platform": "WOOD", "star": "STAR",
-		"cactus": "OUCH", "canyon": "CANYON", "pit": "PIT", "checkpoint": "CAMP",
-		"spring": "BOING", "bandit": "BANDIT", "bounty_bandit": "BOUNTY", "bull": "BULL", "ninja": "NINJA",
-		"rattlesnake": "SNAKE", "carrion": "BIRD",
+		"ground": "CAVE" if cave else "DIRT",
+		"platform": "CRYS" if cave else "WOOD",
+		"star": "STAR",
+		"cactus": "FUNG" if cave else "OUCH",
+		"canyon": "GAP" if cave else "CANYON",
+		"pit": "HOLE" if cave else "PIT",
+		"checkpoint": "LAMP" if cave else "CAMP",
+		"spring": "BOING",
+		"bandit": "SKEL" if cave else "BANDIT",
+		"bounty_bandit": "CRYS" if cave else "BOUNTY",
+		"bull": "LIZ" if cave else "BULL",
+		"ninja": "NINJA",
+		"rattlesnake": "SCOR" if cave else "SNAKE",
+		"carrion": "BIRD",
+		"bat": "BAT",
+		"acid_drip": "DRIP",
+		"stalactite": "SPIKE",
 		"wings": "WINGS", "boots": "BOOTS", "speed": "FAST", "shield": "BUBBLE",
-		"goal": "END", "chest": "CHEST",
+		"goal": "GATE" if cave else "END",
+		"chest": "CHEST",
 	}
 	return str(labels.get(type_name, ""))
 
@@ -1223,6 +1225,9 @@ func _type_color(type_name: String) -> Color:
 		"bull": Color(0.55, 0.28, 0.1),
 		"ninja": Color(0.28, 0.22, 0.42),
 		"rattlesnake": Color(0.55, 0.4, 0.15), "carrion": Color(0.45, 0.35, 0.55),
+		"bat": Color(0.45, 0.32, 0.55),
+		"acid_drip": Color(0.95, 0.35, 0.75),
+		"stalactite": Color(0.55, 0.6, 0.75),
 		"wings": Color(0.75, 0.85, 1.0), "boots": Color(0.7, 0.45, 0.9),
 		"speed": Color(1.0, 0.75, 0.2), "shield": Color(0.45, 0.75, 1.0),
 		"goal": Color(0.85, 0.3, 0.2), "chest": Color(0.72, 0.52, 0.18),
@@ -1270,6 +1275,7 @@ func _reset() -> void:
 	_title_edit.set_block_signals(true)
 	_title_edit.text = str(_data.get("title", "Family Trail"))
 	_title_edit.set_block_signals(false)
+	_apply_style_from_data()
 	_dirty = false
 	_refresh_grid()
 	_update_action_state()
@@ -1342,6 +1348,7 @@ func _on_import_selected(path: String) -> void:
 	_title_edit.set_block_signals(true)
 	_title_edit.text = str(_data.get("title", "Family Trail"))
 	_title_edit.set_block_signals(false)
+	_apply_style_from_data()
 	_rebuild_stamp_grid_if_needed()
 	_refresh_grid()
 	_dirty = true
