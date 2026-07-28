@@ -102,9 +102,9 @@ Agents **must** honor these when editing levels or trail systems:
 ### Cave style
 
 - Trail documents may set `"style": "cave"` (workshop **Level style**). Binding art/behavior notes: `docs/cave_biome.md`.
-- Cave remaps stamp **presentation** (same type ids): fungus/lizard/scorpion/bow skeleton/lantern camp/**Crystal Gate** (saloon replacement). Cave-only stamps: `acid_drip`, `stalactite`, `bat`.
-- Pink drips and falling stalactites hurt → camp respawn; **Bubble does not block** them. Bats can bounce off Bubble.
-- Cave floors/sky use cool slate + pink mineral accents; no desert sun/mesa hills.
+- Cave remaps stamp **presentation** (same type ids): fungus/lizard/scorpion/bow skeleton/lantern camp/**Crystal Gate** (saloon replacement). Cave-only stamps: `acid_drip`, `stalactite`, `stalactite_static`, `bat`.
+- Pink drips splash on the floor then respawn; falling stalactites pull free before dropping; **Bubble does not block** drips/spikes. Bats can bounce off Bubble.
+- Cave floors use dense cool stone + pink flecks; curved rock ceiling hangs over the deep cave wash; no desert sun/mesa hills.
 - **Ladders** (workshop Trail stamp): 3-cell climb; Space/Up climbs up, S/Down climbs down. Use ladder + elevated one-way planks for an upper path; drop off the ledge end back to dirt (no second “down” ladder required). Sample branches appear on new trails and on cave workshop imports.
 
 ### Canyon art
