@@ -141,9 +141,11 @@ def main() -> int:
             continue
         dest_src = SOURCE_DIR / src_name
         shutil.copy2(src, dest_src)
-        # Skeleton concept plates use a stubborn mid-gray matte below the default key.
+        # Skeleton / camp concept plates use a stubborn mid-gray matte below the default key.
         if out_name.startswith("skeleton") and out_name != "skeleton_arrow.png":
             cut = cutout(dest_src, level=185, sat=40)
+        elif out_name == "checkpoint_cave_active.png":
+            cut = cutout(dest_src, level=170, sat=35, feather=4)
         else:
             cut = cutout(dest_src)
 
@@ -175,7 +177,10 @@ def main() -> int:
         elif out_name == "cave_pit.png":
             out = _fit(cut, (128, 64))
         elif out_name == "checkpoint_cave_active.png":
+            from tools.fix_cave_visuals import _strip_residual_gray_plate
+
             out = _feet(cut, (96, 96), target_h=88, baseline=95)
+            out = _strip_residual_gray_plate(out)
         elif out_name == "skeleton_arrow.png":
             out = _fit(cut, (40, 16))
         else:
@@ -205,17 +210,24 @@ def main() -> int:
             framed.save(path)
             print(f"wrote {path.relative_to(ROOT)} {framed.size}")
 
-    # Inactive camp: dim copy of active.
+    # Inactive camp: dim copy of active (keep alpha cutout).
     active = OUT_DIR / "checkpoint_cave_active.png"
     if active.is_file():
         from PIL import Image, ImageEnhance
+        from tools.fix_cave_visuals import _strip_residual_gray_plate, _gray_plate_pct
 
         im = Image.open(active).convert("RGBA")
+        im = _strip_residual_gray_plate(im)
+        im.save(active)
         rgb = ImageEnhance.Brightness(im.convert("RGB")).enhance(0.72)
         out = Image.merge("RGBA", (*rgb.split(), im.split()[-1]))
         dest = OUT_DIR / "checkpoint_cave_inactive.png"
         out.save(dest)
         print(f"wrote {dest.relative_to(ROOT)}")
+        for path in (active, dest):
+            plate = _gray_plate_pct(Image.open(path).convert("RGBA"))
+            if plate > 3.0:
+                raise RuntimeError(f"{path.name} still has gray plate ({plate:.1f}%)")
 
     # Floor/dirt must be fully opaque after framing (tiling shows sky through margins).
     from tools.fix_cave_visuals import solidify_cave_floor_tile

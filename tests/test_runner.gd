@@ -108,6 +108,7 @@ func _ready() -> void:
 	failures += await _run("Slope underfill uses warm bank earth", _test_slope_underfill_earth_color)
 	failures += await _run("Cave floor tiles are solid without holes", _test_cave_floor_tiles_solid)
 	failures += await _run("Cave sky wash tucks under the floor", _test_cave_sky_meets_floor)
+	failures += await _run("Cave camp sprites have transparent backgrounds", _test_cave_camp_transparent)
 	failures += await _run("Filled save can pick Advanced Mode", _test_filled_slot_advanced_mode_select)
 	failures += await _run("Bandits play walk animation while moving", _test_bandit_walk_animation)
 	failures += await _run("Campaign hazards are no longer blocked by plank highways", _test_no_plank_highways)
@@ -3291,6 +3292,47 @@ func _test_cave_sky_meets_floor() -> Variant:
 			% [sky_bottom, floor_top, sky.get_child_count()]
 		)
 	level.queue_free()
+	return null
+
+
+func _test_cave_camp_transparent() -> Variant:
+	## Lantern camp art must be a cutout — no mid-gray background plate.
+	for path in [
+		"res://assets/world/checkpoint_cave_active.png",
+		"res://assets/world/checkpoint_cave_inactive.png",
+	]:
+		var tex := load(path) as Texture2D
+		if tex == null:
+			return "Missing camp asset: %s" % path
+		var img := tex.get_image()
+		if img == null:
+			return "Could not read pixels for %s" % path
+		if img.get_format() != Image.FORMAT_RGBA8:
+			img.convert(Image.FORMAT_RGBA8)
+		var clear := 0
+		var opaque := 0
+		var gray_plate := 0
+		for y in range(img.get_height()):
+			for x in range(img.get_width()):
+				var c := img.get_pixel(x, y)
+				if c.a < 0.05:
+					clear += 1
+					continue
+				opaque += 1
+				var mn := minf(c.r, minf(c.g, c.b))
+				var mx := maxf(c.r, maxf(c.g, c.b))
+				# Mid-gray matte (~0.55–0.82) with near-zero chroma — the concept plate.
+				if mx - mn <= 0.08 and mn >= 0.55 and mn <= 0.82:
+					gray_plate += 1
+		var total := img.get_width() * img.get_height()
+		if clear < int(total * 0.35):
+			return "%s should be mostly transparent around the camp (clear=%d/%d)." % [
+				path.get_file(), clear, total
+			]
+		if opaque > 0 and float(gray_plate) / float(opaque) > 0.05:
+			return "%s still has a gray background plate (%d/%d opaque)." % [
+				path.get_file(), gray_plate, opaque
+			]
 	return null
 
 

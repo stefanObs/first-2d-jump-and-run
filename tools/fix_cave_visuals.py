@@ -818,15 +818,20 @@ def fix_skeleton_walk() -> None:
 def fix_camp_and_impact() -> None:
     camp_src = SOURCE / "cave_camp_concept.png"
     if camp_src.is_file():
-        # Camp matte sits ~180–185; default 208 / 185 leave a gray plate.
-        cut = cutout(camp_src, level=180)
+        # Concept plate is mid-gray (~184); default cutout level 208 leaves it.
+        cut = cutout(camp_src, level=170, sat=35, feather=4)
         active = _feet(cut, (96, 96), target_h=88, baseline=95)
+        active = _strip_residual_gray_plate(active)
         _save(active, OUT / "checkpoint_cave_active.png")
         print(f"checkpoint_cave_active: clear%={_clear_pct(active):.1f}")
         rgb = ImageEnhance.Brightness(active.convert("RGB")).enhance(0.72)
         inactive = Image.merge("RGBA", (*rgb.split(), active.split()[-1]))
         _save(inactive, OUT / "checkpoint_cave_inactive.png")
         print(f"checkpoint_cave_inactive: clear%={_clear_pct(inactive):.1f}")
+        for name in ("checkpoint_cave_active.png", "checkpoint_cave_inactive.png"):
+            im = Image.open(OUT / name).convert("RGBA")
+            if _gray_plate_pct(im) > 3.0:
+                raise RuntimeError(f"{name} still has a gray background plate")
 
     impact_src = SOURCE / "cave_stalactite_impact_concept.png"
     if impact_src.is_file():
@@ -834,6 +839,79 @@ def fix_camp_and_impact() -> None:
         framed = _fit(cut, (96, 64))
         _save(framed, OUT / "stalactite_impact.png")
         print(f"stalactite_impact: clear%={_clear_pct(framed):.1f}")
+
+
+def _is_camp_gray_plate(r: int, g: int, b: int, a: int) -> bool:
+    if a < 8:
+        return False
+    return (
+        abs(r - g) <= 18
+        and abs(g - b) <= 18
+        and abs(r - b) <= 18
+        and 140 <= min(r, g, b) <= 210
+    )
+
+
+def _gray_plate_pct(im: Image.Image) -> float:
+    px = im.load()
+    w, h = im.size
+    gray = opaque = 0
+    for y in range(h):
+        for x in range(w):
+            r, g, b, a = px[x, y]
+            if a < 8:
+                continue
+            opaque += 1
+            if _is_camp_gray_plate(r, g, b, a):
+                gray += 1
+    return 0.0 if opaque == 0 else 100.0 * gray / opaque
+
+
+def _strip_residual_gray_plate(im: Image.Image) -> Image.Image:
+    """Clear any leftover mid-gray matte still connected to the canvas border."""
+    out = im.convert("RGBA").copy()
+    px = out.load()
+    w, h = out.size
+    bg = bytearray(w * h)
+
+    def idx(x: int, y: int) -> int:
+        return y * w + x
+
+    dq: deque[tuple[int, int]] = deque()
+    seeds = [(x, y) for x in range(w) for y in (0, h - 1)]
+    seeds += [(x, y) for y in range(h) for x in (0, w - 1)]
+    for x, y in seeds:
+        if _is_camp_gray_plate(*px[x, y]) and not bg[idx(x, y)]:
+            bg[idx(x, y)] = 1
+            dq.append((x, y))
+    while dq:
+        x, y = dq.popleft()
+        for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+            if 0 <= nx < w and 0 <= ny < h and not bg[idx(nx, ny)]:
+                if _is_camp_gray_plate(*px[nx, ny]):
+                    bg[idx(nx, ny)] = 1
+                    dq.append((nx, ny))
+    # Feather into soft gray fringe.
+    for _ in range(2):
+        add: list[tuple[int, int]] = []
+        for y in range(h):
+            for x in range(w):
+                if bg[idx(x, y)]:
+                    continue
+                if not _is_camp_gray_plate(*px[x, y]):
+                    continue
+                for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+                    if 0 <= nx < w and 0 <= ny < h and bg[idx(nx, ny)]:
+                        add.append((x, y))
+                        break
+        for x, y in add:
+            bg[idx(x, y)] = 1
+    for y in range(h):
+        for x in range(w):
+            if bg[idx(x, y)]:
+                r, g, b, _a = px[x, y]
+                px[x, y] = (r, g, b, 0)
+    return out
 
 
 def make_acid_drip_splash() -> None:
