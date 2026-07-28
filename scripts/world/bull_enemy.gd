@@ -26,6 +26,9 @@ const GROUND_PROBE_UP := 48.0
 const GROUND_PROBE_DOWN := 64.0
 ## Once the bull tumbles this far below its post it has cleared into the canyon.
 const FALL_DEATH_DEPTH := 1400.0
+## About 8 cm on a typical play window — reverse run after a pit/canyon lip.
+const EDGE_RETREAT_PX := 300.0
+const EDGE_LOOKAHEAD_PX := 32.0
 
 var _origin: Vector2
 var _facing: float = 1.0
@@ -41,6 +44,8 @@ var _vel_y: float = 0.0
 var _fallen: bool = false
 var _was_grounded: bool = false
 var _level_style: String = LevelStyle.DESERT
+var _retreat_remaining: float = 0.0
+var _retreat_dir: float = 0.0
 
 
 func apply_level_style(style: String) -> void:
@@ -120,30 +125,66 @@ func _physics_process(delta: float) -> void:
 	if _tied:
 		return
 	var player := _find_nearby_player(99999.0)
-	if player != null:
+	var retreating := _retreat_remaining > 0.0
+	if not retreating and player != null:
 		# Always turn to glare at the cowpoke, even before the charge begins.
 		_facing = 1.0 if player.global_position.x >= global_position.x else -1.0
 		_apply_facing(_facing)
 	var charging := (
-		player != null
+		not retreating
+		and player != null
 		and global_position.distance_to(player.global_position) <= CHARGE_RANGE
 		and absf(player.global_position.y - global_position.y) <= CHARGE_Y_BAND
 	)
 	# AnimatableBody2D defers transform writes — combine charge + gravity into one
 	# assignment so the X shove is not wiped by the floor snap.
 	var next := global_position
-	if charging:
-		_charge_bob += delta * 14.0
-		next.x += _facing * CHARGE_SPEED * delta
+	if retreating:
+		if _edge_ahead(_retreat_dir):
+			_retreat_remaining = 0.0
+		else:
+			var step := _retreat_dir * CHARGE_SPEED * delta
+			next.x += step
+			_retreat_remaining = maxf(_retreat_remaining - absf(step), 0.0)
+			_facing = _retreat_dir
+			_apply_facing(_facing)
+			_charge_bob += delta * 14.0
+	elif charging:
+		if _edge_ahead(_facing):
+			_begin_edge_retreat()
+		else:
+			_charge_bob += delta * 14.0
+			next.x += _facing * CHARGE_SPEED * delta
 	next = _integrate_gravity(next, delta)
 	global_position = next
 	if _sprite != null:
-		if charging and not _fallen:
+		if (charging or retreating) and not _fallen:
 			_sprite.offset.y = -float(_stand_tex().get_height()) * 0.5 + sin(_charge_bob) * 3.0
 			_sprite.rotation = sin(_charge_bob * 0.5) * 0.04 * _facing
 		else:
 			_sprite.offset.y = -float(_stand_tex().get_height()) * 0.5
 			_sprite.rotation = 0.0
+
+
+func _edge_ahead(direction: float) -> bool:
+	## True at a pit or canyon lip in the given facing.
+	var dir := signf(direction)
+	if is_zero_approx(dir):
+		return false
+	if not FloorProbe.has_floor_ahead(self, dir):
+		return true
+	var probe := global_position + Vector2(dir * EDGE_LOOKAHEAD_PX, 0.0)
+	return is_nan(_probe_floor_y_at(probe, GROUND_PROBE_DOWN))
+
+
+func _begin_edge_retreat() -> void:
+	## Spin away from the gap and run inland ~8 cm instead of tumbling in.
+	_retreat_dir = -_facing
+	if is_zero_approx(_retreat_dir):
+		_retreat_dir = -1.0
+	_facing = _retreat_dir
+	_apply_facing(_facing)
+	_retreat_remaining = EDGE_RETREAT_PX
 
 
 func _probe_floor_y_at(world_pos: Vector2, down_reach: float) -> float:
@@ -212,6 +253,8 @@ func restore_for_respawn() -> void:
 	_fallen = false
 	_vel_y = 0.0
 	_was_grounded = false
+	_retreat_remaining = 0.0
+	_retreat_dir = 0.0
 	global_position = _origin
 	_facing = 1.0
 	visible = true

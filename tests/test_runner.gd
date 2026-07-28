@@ -74,6 +74,7 @@ func _ready() -> void:
 	failures += await _run("Lasso cast ties bandits via HurtArea", _test_lasso_cast_hits_hurt_area)
 	failures += await _run("Jumping on a bandit head ties him", _test_stomp_ties_bandit)
 	failures += await _run("Trail bull charges toward the player", _test_bull_charges_player)
+	failures += await _run("Bulls turn back at pit and canyon edges", _test_bull_retreats_from_gap)
 	failures += await _run("Lasso ties trail bulls", _test_lasso_ties_bull)
 	failures += await _run("Jumping on a bull head ties it", _test_stomp_ties_bull)
 	failures += await _run("Side contact with a bull sends the cowboy to camp", _test_bull_side_contact_hurts)
@@ -2257,6 +2258,84 @@ func _test_bull_charges_player() -> Variant:
 	player.queue_free()
 	bull.queue_free()
 	floor.queue_free()
+	return error
+
+
+func _test_bull_retreats_from_gap() -> Variant:
+	## At a pit/canyon lip the bull turns inland and runs back ~8 cm.
+	var left := StaticBody2D.new()
+	left.collision_layer = 1
+	left.position = Vector2(200, 420)
+	var left_shape := CollisionShape2D.new()
+	var left_rect := RectangleShape2D.new()
+	left_rect.size = Vector2(400, 40)
+	left_shape.shape = left_rect
+	left.add_child(left_shape)
+	add_child(left)
+
+	var right := StaticBody2D.new()
+	right.collision_layer = 1
+	right.position = Vector2(700, 420)
+	var right_shape := CollisionShape2D.new()
+	var right_rect := RectangleShape2D.new()
+	right_rect.size = Vector2(200, 40)
+	right_shape.shape = right_rect
+	right.add_child(right_shape)
+	add_child(right)
+
+	var packed: PackedScene = load("res://scenes/world/bull_enemy.tscn")
+	if packed == null:
+		left.queue_free()
+		right.queue_free()
+		return "Missing bull enemy scene."
+	var bull := packed.instantiate() as BullEnemy
+	# Stand on the right lip of the left bank; player waits across the gap.
+	bull.position = Vector2(360, 400)
+	add_child(bull)
+	await get_tree().physics_frame
+	bull._was_grounded = true
+
+	var player := Player.new()
+	player.name = "Player"
+	player.position = Vector2(700, 400)
+	player.set_physics_process(false)
+	player.set_process(false)
+	if not player.is_in_group("player"):
+		player.add_to_group("player")
+	add_child(player)
+
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	var start_x := bull.global_position.x
+	var saw_retreat := false
+	var min_x := start_x
+	for _i in range(90):
+		await get_tree().physics_frame
+		min_x = minf(min_x, bull.global_position.x)
+		if bull._retreat_remaining > 0.0:
+			saw_retreat = true
+		# Must never cross into the open gap (left bank ends at x=400).
+		if bull.global_position.x > 400.0:
+			player.queue_free()
+			bull.queue_free()
+			left.queue_free()
+			right.queue_free()
+			return "Bull must not charge into the canyon gap (x=%.1f)." % bull.global_position.x
+
+	var error: Variant = null
+	if not saw_retreat:
+		error = "Bull should start an edge retreat at the canyon lip."
+	elif start_x - min_x < BullEnemy.EDGE_RETREAT_PX * 0.45:
+		error = "Bull should run back inland about 8 cm (moved %.1fpx, need >= %.1f)." % [
+			start_x - min_x, BullEnemy.EDGE_RETREAT_PX * 0.45
+		]
+	elif bull._fallen or bull.global_position.y > 480.0:
+		error = "Bull should stay on the bank instead of falling into the canyon."
+
+	player.queue_free()
+	bull.queue_free()
+	left.queue_free()
+	right.queue_free()
 	return error
 
 

@@ -2,7 +2,7 @@
 
 Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, nonviolent lasso. **Classic mode** has no lives or game over; **Advanced Mode** (chosen in **Settings** before starting or continuing a slot) adds a three-life limit, badge milestones, and a game-over return to the start screen. Pick **Cowboy** or **Cowgirl** in Settings — the choice applies across all save slots. **German is the default language**; English is fully supported.
 
-**Content version:** `1.8.40` (see `content_version.txt`). Launchers reimport when this stamp changes.
+**Content version:** `1.8.41` (see `content_version.txt`). Launchers reimport when this stamp changes.
 
 This README is the **binding source of truth** for gameplay, level design, art, i18n, and audio. Agents and contributors must follow it (see [Agent / contributor rules](#agent--contributor-rules)).
 
@@ -126,7 +126,7 @@ Agents **must** honor these when editing levels or trail systems:
 - User-facing copy: wide trail gaps = **canyon**; fixed 128×64 dirt holes = **pit** (legacy node names like `Pit3` on scaled canyon hazards may remain internally).
 - **Pits:** workshop **Hazards** stamp; exact `pit.png` size; dirt-only placement; same fall/respawn/life rules as canyons (Bubble Shield does not save pit falls).
 - Bandits: downward jump stomp from above / lasso tie; any other contact hurts; **turn at plank edges** (do not walk off).
-- **Trail bulls:** reuse stampede-bull art scaled to bandit height; charge the player when nearby (always face the cowboy); lasso or head stomp plays the full boss tying sequence (rope coils → legs bound → tip over → lying on the floor at the same on-screen size); side contact hurts; **charges off canyon rims and falls**.
+- **Trail bulls / cave lizards:** reuse stampede-bull / lizard art scaled to bandit height; charge the player when nearby (always face the cowboy); at a **pit or canyon lip** they **turn around and run back ~8 cm** instead of tumbling in; lasso or head stomp plays the full boss tying sequence (rope coils → legs bound → tip over → lying on the floor at the same on-screen size); side contact hurts.
 - **Ninjas:** handcrafted **chibi cel-shaded sprites** in the same big-head / thick-ink style as the bandit (`tools/build_ninja_frames.py`: hooded head, red headband + obi, navy gi, 64×80); workshop stamp marks an **ambush anchor** — when the cowboy enters range, the ninja **appears ~12 columns (480 px) in front** of him, runs in with a **sword slash** on reach, **jumps pits and canyons** toward the cowboy (crouch + airborne jump frames), and throws hand-drawn **shuriken** at winged flyers; lasso or head stomp ties with a unique bound rope pose.
 - **No cactus inside canyon mouths** or on hand-painted rim bands (keep clear of the rim body past the gap).
 - **No rattlesnake directly in front of** (approaching) a canyon mouth.
