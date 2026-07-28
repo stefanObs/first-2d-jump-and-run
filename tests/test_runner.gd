@@ -203,6 +203,10 @@ func _ready() -> void:
 		"Dragon Gate and Cave Dragon have no stalactites",
 		_test_dragon_levels_have_no_stalactites
 	)
+	failures += await _run(
+		"Cave canyons use cool-slate ridge art",
+		_test_cave_canyon_uses_cave_rim
+	)
 
 	if failures == 0:
 		print("All tests passed.")
@@ -3181,18 +3185,28 @@ func _test_slope_underfill_earth_color() -> Variant:
 	if underfill == null:
 		level.free()
 		return "Desert slopes need a solid FloorSlopeUnderfill wedge."
-	var expected := Color(0.22, 0.10, 0.12, 1.0)
-	if underfill.color.is_equal_approx(expected):
+	var expected := Color(0.42, 0.22, 0.14, 1.0)
+	if not underfill.color.is_equal_approx(expected):
+		if underfill.color.b > expected.b + 0.05:
+			level.free()
+			return "Slope underfill should use warm bank earth, not blue-tinted fill."
 		level.free()
-		return null
-	if underfill.color.b > expected.b + 0.03:
-		level.free()
-		return "Slope underfill should use warm bank earth, not blue-tinted fill."
+		return "Slope underfill should use warm bank earth (got %s)." % underfill.color
 	var abyss := trail_floor.get_node_or_null("FloorAbyss") as Polygon2D
 	if abyss != null and not abyss.color.is_equal_approx(expected):
 		level.free()
 		return "FloorAbyss should match warm bank earth under flat dirt."
+	# Far below the dune must stay packed with earth tiles (not a black void).
+	var deep_dirt := 0
+	var merged := WildWestTheme._merge_segments(WildWestTheme._collect_ground_segments(level))
+	var span := WildWestTheme._slope_span(merged[0], merged[1])
+	var surface_y := minf(float(span.get("y_start", 0.0)), float(span.get("y_end", 0.0)))
+	for node in trail_floor.find_children("FloorSlopeDirt*", "Sprite2D", false, false):
+		if (node as Sprite2D).position.y > surface_y + 400.0:
+			deep_dirt += 1
 	level.free()
+	if deep_dirt < 4:
+		return "Slope dirt tiles should continue far below the dune face (got %d deep)." % deep_dirt
 	return null
 
 
@@ -5917,6 +5931,7 @@ func _test_art_and_music() -> Variant:
 		"res://assets/world/transition_desert_skyline.png",
 		"res://assets/world/canyon_gap.png",
 		"res://assets/world/canyon_rim_left.png",
+		"res://assets/world/cave_canyon_rim_left.png",
 		"res://assets/world/canyon_depth_tile.png",
 		"res://assets/world/canyon_sky_wash.png",
 		"res://assets/world/canyon_inner_wall.png",
@@ -6685,6 +6700,43 @@ func _test_dragon_levels_have_no_stalactites() -> Variant:
 	boss.queue_free()
 	if not boss_teeth.is_empty():
 		return "Cave Dragon arena must not dress décor stalactites (found %d)." % boss_teeth.size()
+	return null
+
+
+func _test_cave_canyon_uses_cave_rim() -> Variant:
+	## Acid Veins cave gaps must use cool-slate canyon ridges, not desert sandstone.
+	var data := CaveCampaignLevels.level_data(13)
+	var level := LevelController.new()
+	add_child(level)
+	CustomLevelBuilder.build(level, data)
+	await get_tree().process_frame
+	WildWestTheme.apply_to_level(level)
+	await get_tree().process_frame
+	var found := 0
+	for node in level.find_children("*", "Area2D", true, false):
+		if not (node is Hazard):
+			continue
+		var hazard := node as Hazard
+		if not hazard.is_canyon():
+			continue
+		var art := hazard.get_node_or_null("CanyonMouth") as ScalableCanyonArt
+		if art == null:
+			level.queue_free()
+			return "Cave canyon is missing CanyonMouth art."
+		var left := art.get_node_or_null("LeftRim") as Sprite2D
+		if left == null or left.texture == null:
+			level.queue_free()
+			return "Cave canyon left rim sprite missing."
+		if left.texture.resource_path.find("cave_canyon_rim_left") < 0:
+			level.queue_free()
+			return "Cave canyon must use cave_canyon_rim_left.png (got %s)." % left.texture.resource_path
+		if not art.rim_bank_is_opaque_dirt():
+			level.queue_free()
+			return "Cave canyon rim bank must stay opaque slate."
+		found += 1
+	level.queue_free()
+	if found < 1:
+		return "Acid Veins should dress at least one canyon with cave rim art."
 	return null
 
 

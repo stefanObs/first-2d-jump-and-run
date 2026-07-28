@@ -2,7 +2,7 @@
 
 Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, nonviolent lasso. **Classic mode** has no lives or game over; **Advanced Mode** (chosen in **Settings** before starting or continuing a slot) adds a three-life limit, badge milestones, and a game-over return to the start screen. Pick **Cowboy** or **Cowgirl** in Settings — the choice applies across all save slots. **German is the default language**; English is fully supported.
 
-**Content version:** `1.8.28` (see `content_version.txt`). Launchers reimport when this stamp changes.
+**Content version:** `1.8.30` (see `content_version.txt`). Launchers reimport when this stamp changes.
 
 This README is the **binding source of truth** for gameplay, level design, art, i18n, and audio. Agents and contributors must follow it (see [Agent / contributor rules](#agent--contributor-rules)).
 
@@ -145,14 +145,14 @@ Agents **must** honor these when editing levels or trail systems:
 ### Canyon art
 
 - Hand-painted **rims sit outside** desert floor banks — never cover the brown desert surface span with rim sprites. When a bank beside the mouth is **raised**, each ridge top follows that bank’s desert height (no dark abyss band above the ridge).
-- Ridges are **full-height handcrafted cliff faces** (ink outlines, painted rock — same illustrative western style as cactus/mesas): a **thin canyon-facing edge** from the desert top down to the bottom of the trail dirt / view — not a short rim lip, not a wide orange slab over the bank, and not flat TrailFloor dirt-cut ends. The **bank/inland side is opaque packed dirt** (matching trail earth) so sky / FloorAbyss never peek beside the ridge. Ridge tops use the same warm sand crust as the trail and **align flush with the desert top** (no sky slits under the sand). The canyon-facing edge against open sky is a **natural jagged / irregular silhouette** (not a ruler-straight vertical cut). Rims draw **in front of** desert floor tiles so lips sit on the canyon edge. Desert surface tiles **inset by about one ridge width** at canyon lips so sand meets the ridge top instead of overlapping it; dirt runs nearly to the lip behind the face.
+- Ridges are **full-height handcrafted cliff faces** (ink outlines, painted rock — same illustrative western style as cactus/mesas): a **thin canyon-facing edge** from the desert top down to the bottom of the trail dirt / view — not a short rim lip, not a wide orange slab over the bank, and not flat TrailFloor dirt-cut ends. The **bank/inland side is opaque packed dirt** (matching trail earth) so sky / FloorAbyss never peek beside the ridge. Ridge tops use the same warm sand crust as the trail and **align flush with the desert top** (no sky slits under the sand). The canyon-facing edge against open sky is a **natural jagged / irregular silhouette** (not a ruler-straight vertical cut) with **no near-black ink fringe** framing the lip. **Cave** levels use cool-slate ridge art (`cave_canyon_rim_left.png`) matching the cave floor palette. Rims draw **in front of** desert floor tiles so lips sit on the canyon edge. Desert surface tiles **inset by about one ridge width** at canyon lips so sand meets the ridge top instead of overlapping it; dirt runs nearly to the lip behind the face.
 - Between the ridges: **open sky only** — punch horizon hills (Mesa backdrop) and FloorAbyss out of the gap column so trail SkyArt / Background shows through. Do **not** paint a stretched sky-fill column, depth shelves, floor wash, inner-wall fill, or mountain scenery inside the mouth; **never** a featureless black / flat near-black void or black outline framing the lips.
 - Horizon hills / Mesa backdrop must **not** silhouette over or through canyon openings (sky continues through the gap).
 - Widening a gap must not stretch handmade rim textures (width may shrink to fit; cliff height stays full).
 
 ### Floor height
 
-- Where desert banks sit at different heights **with continuous ground** (no canyon between), paint a **natural soft curved slope** (gentle dune) with trail desert/dirt art (not a flat cliff face or ColorRect step). Slopes must be **walkable without jumping** (carve away Ground cliff walls into the dune; long gentle run so peak grade stays walkable). Slope crust ends must **start and end on the flat desert tops** (same height/seam, no stepped lip). Under the curved crust, pack **dense earth fill** (smaller tiles in the upper wedge) plus a solid warm underfill wedge — **no black or sky gaps** below the dune face.
+- Where desert banks sit at different heights **with continuous ground** (no canyon between), paint a **natural soft curved slope** (gentle dune) with trail desert/dirt art (not a flat cliff face or ColorRect step). Slopes must be **walkable without jumping** (carve away Ground cliff walls into the dune; long gentle run so peak grade stays walkable). Slope crust ends must **start and end on the flat desert tops** (same height/seam, no stepped lip). Under the curved crust, pack **dense earth fill** (smaller tiles in the upper wedge) plus a solid warm underfill wedge that continues **far below** the dune — **no black or sky gaps** below the bank face.
 - If a **canyon** separates banks at different heights, the canyon is the transition — do **not** paint a slope (or slope collision) across the gap.
 - If the far bank after a canyon is **higher** than the near bank, there **must** be a spring on the approach (near) side so the jump is solvable. Without that spring, the far bank must be the same height or lower.
 - Levels **7–10** each need **2–10** continuous height differences (distinct walk-surface Y changes along continuous ground; canyon-only transitions do not count).
@@ -210,7 +210,7 @@ Safe stars, forward-only solvability, reachable platforms/stars, visible themed 
 8. Keep handmade western UI/art language; SFX via AudioManager; German default.
 9. Run the headless test runner (and obstruction test when touching movers) for layout/gameplay changes.
 10. If a change **requires** altering a documented rule, **update this README in the same change**.
-11. **Dune slopes:** dense earth under the crust; no black/sky holes below the curved bank face.
+11. **Dune slopes:** dense earth under the crust continuing far below the bank; no black/sky holes below the curved face.
 12. **Workshop editor:** placement ghosts and preview icons use **final in-game stamp size** (`CustomLevelStore.stamp_visual_world_rect`); right-click removes stamps; **▼ / ▶** chevron collapses the stamp grid for the session.
 13. **Treasure chests:** keep ~109% player-height gameplay scale unless this README and tests change together.
 14. **Player idle:** one idle frame only (gentle breathe); no alternating mismatched idle poses.

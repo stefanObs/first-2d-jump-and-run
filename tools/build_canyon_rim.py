@@ -398,12 +398,55 @@ def _postprocess_silhouette(im: Image.Image) -> dict:
 	for y in range(CRUST_ROWS):
 		clean_lip[y] = envelope
 
+	# Final pass: no near-black framing on the sky-facing side. Outer silhouette
+	# pixels must stay readable warm rock (ink outlines against sky read as black).
+	_strip_sky_side_black(im, clean_lip)
+
+	envelope = max((clean_lip[y] for y in range(h) if clean_lip[y] >= 0), default=envelope)
+	_seal_crust(im, envelope)
+	for y in range(CRUST_ROWS):
+		clean_lip[y] = envelope
+
 	return {
 		"envelope": envelope,
 		"clean_lip": clean_lip,
 		"lip_min": min(clean_lip[CRUST_ROWS:]) if h > CRUST_ROWS else envelope,
 		"lip_max": max(clean_lip[CRUST_ROWS:]) if h > CRUST_ROWS else envelope,
 	}
+
+
+def _strip_sky_side_black(im: Image.Image, clean_lip: list[int]) -> None:
+	"""Replace dark ink on the outer cliff silhouette with warm rock."""
+	w, h = im.size
+	px = im.load()
+	min_edge_bri = 78.0
+	for y in range(h):
+		lip = clean_lip[y] if y < len(clean_lip) else -1
+		if lip < 0:
+			continue
+		sample = _sample_row_earth(px, y, w, max(0, lip))
+		# Outer 5 columns of the face must not read as black against sky.
+		for x in range(max(0, lip - 4), lip + 1):
+			r, g, b, a = px[x, y]
+			if a < OPAQUE_A:
+				continue
+			bri = _brightness(r, g, b)
+			too_dark = bri < min_edge_bri or _is_near_black(r, g, b, a) or _is_magenta_residue(r, g, b)
+			if not too_dark and r > 70 and r > g + 5 and r > b + 12:
+				continue
+			# Blend toward warm rock; keep a soft darker edge without going black.
+			edge_t = (lip - x) / 4.0
+			shade = 0.72 + 0.22 * edge_t
+			jitter = ((x * 13 + y * 7) % 9) - 4
+			px[x, y] = (
+				max(88, min(255, int(sample[0] * shade) + jitter)),
+				max(42, min(255, int(sample[1] * shade * 0.92) + jitter // 2)),
+				max(22, min(255, int(sample[2] * shade * 0.75) + jitter // 3)),
+				255,
+			)
+		# Anything past the lip stays clear.
+		for x in range(lip + 1, w):
+			px[x, y] = (0, 0, 0, 0)
 
 
 def _stats(im: Image.Image, envelope: int, clean_lip: list[int]) -> dict:

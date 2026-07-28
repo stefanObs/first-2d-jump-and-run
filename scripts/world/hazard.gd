@@ -193,7 +193,14 @@ func align_canyon_to_gap(
 		add_child(canyon_art)
 	else:
 		canyon_art.name = "CanyonMouth"
-	canyon_art.configure(floor_top_y, gap_left, gap_right, left_floor_top_y, right_floor_top_y)
+	canyon_art.configure(
+		floor_top_y,
+		gap_left,
+		gap_right,
+		left_floor_top_y,
+		right_floor_top_y,
+		_level_style
+	)
 
 	# Widen the hurt box to cover the fall gap.
 	var shape := get_node_or_null("CollisionShape2D") as CollisionShape2D

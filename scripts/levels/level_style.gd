@@ -249,6 +249,13 @@ static func plank_path(style: String) -> String:
 static func pit_path(style: String) -> String:
 	return "res://assets/world/cave_pit.png" if is_cave(style) else "res://assets/world/pit.png"
 
+static func canyon_rim_path(style: String) -> String:
+	return (
+		"res://assets/world/cave_canyon_rim_left.png"
+		if is_cave(style)
+		else "res://assets/world/canyon_rim_left.png"
+	)
+
 static func sky_color(style: String) -> Color:
 	if is_cave(style):
 		return Color(0.12, 0.14, 0.22, 1.0)

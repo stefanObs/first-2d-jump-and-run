@@ -29,6 +29,7 @@ ENTRIES: list[tuple[str, str, str]] = [
     # Hazards & foes (desert)
     ("Cactus", "assets/world/cactus.png", "Hazard"),
     ("Canyon", "assets/world/canyon_rim_left.png", "Pit* → Canyon"),
+    ("Cave Canyon", "assets/world/cave_canyon_rim_left.png", "Cave gap ridges"),
     ("Carrion", "assets/world/carrion_bird.png", "Carrion"),
     ("Rattlesnake", "assets/world/rattlesnake_idle.png", ""),
     ("Opponent", "assets/world/bandit.png", "Bandit"),

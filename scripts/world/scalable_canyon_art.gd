@@ -1,20 +1,24 @@
 class_name ScalableCanyonArt
 extends Node2D
 
-## Slim hand-painted full-height cliff faces outside the desert floor, framing
-## an open canyon mouth. The bank/inland side is opaque packed dirt so sky and
+## Slim hand-painted full-height cliff faces outside the trail floor, framing
+## an open canyon mouth. The bank/inland side is opaque packed earth so sky and
 ## FloorAbyss never peek beside the ridge; the canyon-facing edge is jagged rock.
-## Sky shows through the mouth (no fill column).
+## Sky shows through the mouth (no fill column). Desert and cave each use their
+## own rim texture (warm sandstone vs cool slate).
 
-const RIM_TEXTURE: Texture2D = preload("res://assets/world/canyon_rim_left.png")
+const DESERT_RIM_TEXTURE: Texture2D = preload("res://assets/world/canyon_rim_left.png")
+const CAVE_RIM_TEXTURE: Texture2D = preload("res://assets/world/cave_canyon_rim_left.png")
+## Legacy alias — desert rim (tests / older callers).
+const RIM_TEXTURE: Texture2D = DESERT_RIM_TEXTURE
 
 ## World size of one ridge face: thin canyon lip, tall enough to reach the
 ## bottom of the trail dirt / view (not a short surface lip).
 const RIM_SIZE := Vector2(96.0, 900.0)
-## Pixel row of the painted desert sand crust on canyon_rim_left.png.
-## Top of the sealed sand cap — flush with the trail desert floor.
+## Pixel row of the painted desert/cave crust on the rim texture.
+## Top of the sealed sand/stone cap — flush with the trail floor.
 const RIM_SURFACE_TEX_Y := 0.0
-## Texture X of the outermost canyon-facing sand/lip.
+## Texture X of the outermost canyon-facing sand/lip (shared silhouette).
 const RIM_LIP_TEX_X := 366.0
 ## Sand-crust rows at the top of the rim texture that must stay sealed.
 const RIM_CRUST_TEX_ROWS := 14
@@ -29,6 +33,8 @@ var gap_right: float
 var floor_top: float
 var left_floor_top: float
 var right_floor_top: float
+var _style: String = LevelStyle.DESERT
+var _rim_texture: Texture2D = DESERT_RIM_TEXTURE
 
 var _left_rim: Sprite2D
 var _right_rim: Sprite2D
@@ -41,16 +47,29 @@ func _ready() -> void:
 	_ensure_parts()
 
 
+func apply_level_style(style: String) -> void:
+	_style = LevelStyle.normalize(style)
+	_rim_texture = CAVE_RIM_TEXTURE if LevelStyle.is_cave(_style) else DESERT_RIM_TEXTURE
+	_ensure_parts()
+	if _left_rim != null:
+		_left_rim.texture = _rim_texture
+		_right_rim.texture = _rim_texture
+		_layout_rims()
+
+
 func configure(
 	new_floor_top: float,
 	new_gap_left: float,
 	new_gap_right: float,
 	new_left_floor_top: float = NAN,
-	new_right_floor_top: float = NAN
+	new_right_floor_top: float = NAN,
+	style: String = LevelStyle.DESERT
 ) -> void:
 	top_level = true
 	z_index = CANYON_DRAW_Z
 	z_as_relative = false
+	_style = LevelStyle.normalize(style)
+	_rim_texture = CAVE_RIM_TEXTURE if LevelStyle.is_cave(_style) else DESERT_RIM_TEXTURE
 	left_floor_top = new_floor_top if is_nan(new_left_floor_top) else new_left_floor_top
 	right_floor_top = new_floor_top if is_nan(new_right_floor_top) else new_right_floor_top
 	# Interior starts at the higher bank lip so raised sides stay covered.
@@ -58,6 +77,8 @@ func configure(
 	gap_left = minf(new_gap_left, new_gap_right)
 	gap_right = maxf(new_gap_left, new_gap_right)
 	_ensure_parts()
+	_left_rim.texture = _rim_texture
+	_right_rim.texture = _rim_texture
 	global_position = Vector2.ZERO
 	_layout_rims()
 
@@ -78,7 +99,11 @@ func center_is_illustrated() -> bool:
 		return false
 	if get_node_or_null("LeftInnerWalls") != null:
 		return false
-	return _left_rim.texture == RIM_TEXTURE and _right_rim.texture == RIM_TEXTURE
+	return _is_known_rim(_left_rim.texture) and _is_known_rim(_right_rim.texture)
+
+
+func _is_known_rim(tex: Texture2D) -> bool:
+	return tex == DESERT_RIM_TEXTURE or tex == CAVE_RIM_TEXTURE
 
 
 func rims_outside_floor() -> bool:
@@ -139,9 +164,9 @@ func rims_are_thin_faces(tolerance: float = 8.0) -> bool:
 
 
 func _rim_source_image() -> Image:
-	if RIM_TEXTURE == null:
+	if _rim_texture == null:
 		return null
-	var img := RIM_TEXTURE.get_image()
+	var img := _rim_texture.get_image()
 	if img == null:
 		return null
 	if img.is_compressed():
@@ -151,7 +176,7 @@ func _rim_source_image() -> Image:
 
 
 func rim_bank_is_opaque_dirt() -> bool:
-	## Inland/bank side is packed dirt (opaque) so sky/abyss cannot show through.
+	## Inland/bank side is packed earth (opaque) so sky/abyss cannot show through.
 	var img := _rim_source_image()
 	if img == null:
 		return false
@@ -164,8 +189,9 @@ func rim_bank_is_opaque_dirt() -> bool:
 	var samples := mini(12, maxi(4, w / 4))
 	for i in range(samples):
 		var c := img.get_pixel(i, y)
-		# Opaque warm earth — not sky-blue, not near-black void.
-		if c.a >= 0.85 and c.r > 0.25 and c.b < c.r * 0.85:
+		# Opaque earth — warm desert or cool cave slate, not sky/near-black void.
+		var bri := (c.r + c.g + c.b) / 3.0
+		if c.a >= 0.85 and bri > 0.18:
 			solid += 1
 	return solid >= samples * 3 / 4
 
@@ -259,7 +285,7 @@ func _ensure_parts() -> void:
 func _make_rim(rim_name: String, flip: bool) -> Sprite2D:
 	var rim := Sprite2D.new()
 	rim.name = rim_name
-	rim.texture = RIM_TEXTURE
+	rim.texture = _rim_texture
 	rim.centered = true
 	rim.flip_h = flip
 	rim.z_as_relative = true
@@ -268,7 +294,9 @@ func _make_rim(rim_name: String, flip: bool) -> Sprite2D:
 
 
 func _layout_rims() -> void:
-	var tex_size := RIM_TEXTURE.get_size()
+	if _rim_texture == null or _left_rim == null:
+		return
+	var tex_size := _rim_texture.get_size()
 	var base_scale := RIM_SIZE / tex_size
 	# Narrow gaps shrink ridge WIDTH only — keep full cliff height.
 	var width := opening_width()

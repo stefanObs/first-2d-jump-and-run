@@ -645,7 +645,7 @@ static func _make_contiguous_floors(level: Node, style: String = LevelStyle.DESE
 		var top := float(strip["top"])
 		var bottom := float(strip["bottom"])
 		var height := bottom - top
-		var deep_bottom := top + 880.0
+		var deep_bottom := top + 1200.0
 		# Keep a thin desert crust on top; tall stacked banks stay dirt underneath.
 		var surface_thickness := minf(maxf(height, 36.0), 56.0)
 
@@ -688,7 +688,7 @@ static func _make_contiguous_floors(level: Node, style: String = LevelStyle.DESE
 				abyss_left,
 				top,
 				abyss_right - abyss_left,
-				900.0,
+				1200.0,
 				abyss_name,
 				style
 			)
@@ -721,7 +721,7 @@ static func _make_contiguous_floors(level: Node, style: String = LevelStyle.DESE
 
 		# Soft desert slopes only for continuous height steps (no canyon between).
 		if i + 1 < merged.size() and not _is_canyon_between(merged[i], merged[i + 1]):
-			_draw_bank_slope(floor_root, surface, dirt, bank_bounds[i], bank_bounds[i + 1], i)
+			_draw_bank_slope(floor_root, surface, dirt, bank_bounds[i], bank_bounds[i + 1], i, style)
 
 
 static func _is_canyon_between(left_strip: Dictionary, right_strip: Dictionary) -> bool:
@@ -740,10 +740,7 @@ static func _paint_abyss_rect(
 ) -> void:
 	var abyss := Polygon2D.new()
 	abyss.name = node_name
-	if LevelStyle.is_cave(style):
-		abyss.color = Color(0.14, 0.12, 0.2, 1.0)
-	else:
-		abyss.color = Color(0.22, 0.10, 0.12, 1.0)
+	abyss.color = _earth_underfill_color(style)
 	abyss.polygon = PackedVector2Array([
 		Vector2.ZERO,
 		Vector2(width, 0.0),
@@ -753,6 +750,13 @@ static func _paint_abyss_rect(
 	abyss.position = Vector2(left, top)
 	abyss.z_index = -2
 	parent.add_child(abyss)
+
+
+static func _earth_underfill_color(style: String = LevelStyle.DESERT) -> Color:
+	## Readable packed earth under banks/slopes — never near-black voids.
+	if LevelStyle.is_cave(style):
+		return Color(0.30, 0.24, 0.34, 1.0)
+	return Color(0.42, 0.22, 0.14, 1.0)
 
 
 static func walk_surface_at(level: Node, world_x: float) -> Dictionary:
@@ -846,7 +850,8 @@ static func _draw_bank_slope(
 	dirt: Texture2D,
 	left_strip: Dictionary,
 	right_strip: Dictionary,
-	index: int
+	index: int,
+	style: String = LevelStyle.DESERT
 ) -> void:
 	var span := _slope_span(left_strip, right_strip)
 	if span.is_empty():
@@ -857,8 +862,8 @@ static func _draw_bank_slope(
 	var y_end := float(span["y_end"])
 	var curved := bool(span.get("curved", true))
 
-	_paint_slope_underfill(parent, x_start, y_start, x_end, y_end, index, curved)
-	_paint_slope_fill(parent, dirt, x_start, y_start, x_end, y_end, index, curved)
+	_paint_slope_underfill(parent, x_start, y_start, x_end, y_end, index, curved, style)
+	_paint_slope_fill(parent, dirt, x_start, y_start, x_end, y_end, index, curved, style)
 	_paint_slope_crust(parent, surface, x_start, y_start, x_end, y_end, index, curved)
 	_add_slope_collision(parent, x_start, y_start, x_end, y_end, index, curved)
 	# Remove the vertical cliff faces of Ground* boxes so the dune is walkable.
@@ -1005,14 +1010,16 @@ static func _paint_slope_underfill(
 	x_end: float,
 	y_end: float,
 	index: int,
-	curved: bool = true
+	curved: bool = true,
+	style: String = LevelStyle.DESERT
 ) -> void:
 	## Solid earth wedge under the dune face — flat FloorAbyss is clipped away here and
 	## tiled dirt alone leaves sky gaps under the curved crust. Keep the top of this
-	## wedge tight under the crust (not inset by a large pad).
+	## wedge tight under the crust (not inset by a large pad). Extend far below so
+	## camera pans never show a black void under the bank.
 	const SAMPLES := 24
 	const CRUST_PAD := 3.0
-	const DEPTH := 880.0
+	const DEPTH := 1200.0
 	var bottom_y := maxf(y_start, y_end) + DEPTH
 	var poly: PackedVector2Array = []
 	for i in range(SAMPLES + 1):
@@ -1024,7 +1031,7 @@ static func _paint_slope_underfill(
 	poly.append(Vector2(x_start, bottom_y))
 	var underfill := Polygon2D.new()
 	underfill.name = "FloorSlopeUnderfill%d" % index
-	underfill.color = Color(0.22, 0.10, 0.12, 1.0)
+	underfill.color = _earth_underfill_color(style)
 	underfill.polygon = poly
 	underfill.z_index = 1
 	parent.add_child(underfill)
@@ -1038,14 +1045,19 @@ static func _paint_slope_fill(
 	x_end: float,
 	y_end: float,
 	index: int,
-	curved: bool = true
+	curved: bool = true,
+	style: String = LevelStyle.DESERT
 ) -> void:
 	## Dirt under the curved sand crust so the bank reads as one soft dune, not a cliff.
 	## Pack the upper wedge densely — empty bands under the crust read as sky/black gaps.
+	## Keep tiling deep so far-below views stay earth, not a flat black void.
 	var x0 := minf(x_start, x_end)
 	var x1 := maxf(x_start, x_end)
-	var deep := maxf(y_start, y_end) + 96.0
+	var deep := maxf(y_start, y_end) + 1200.0
 	var bank_top := minf(y_start, y_end)
+	var dirt_modulate := (
+		Color(0.92, 0.88, 0.96, 1.0) if LevelStyle.is_cave(style) else Color(0.96, 0.9, 0.82, 1.0)
+	)
 	if dirt != null:
 		var tex_size := dirt.get_size()
 		var row_h_full := 28.0
@@ -1082,7 +1094,7 @@ static func _paint_slope_fill(
 				sprite.position = Vector2(x, y)
 				sprite.scale = Vector2(use_w / tex_size.x, scale_y)
 				sprite.z_index = 2
-				sprite.modulate = Color(0.96, 0.9, 0.82, 1.0)
+				sprite.modulate = dirt_modulate
 				parent.add_child(sprite)
 				x += use_w * step_factor
 				tile_i += 1
@@ -1090,7 +1102,7 @@ static func _paint_slope_fill(
 					break
 			y += row_h * (0.72 if upper_wedge else (0.82 if near_crust else 0.9))
 			row += 1
-			if row > 60:
+			if row > 200:
 				break
 
 

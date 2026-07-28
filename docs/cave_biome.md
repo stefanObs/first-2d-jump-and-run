@@ -66,14 +66,14 @@ Stamp a **ladder**, run **one-way crystal ledges** along the climb top, then **d
 2. **Crystal ledge** — platform art: cool stone plank with crystal flecks (replaces wood plank look).
 3. **Glow shard** (optional future pickup) — brief silhouette of drip/stalactite danger columns; not required for v1 playability.
 4. **Cave wash backdrop** — no sun/mesas; deep opaque `cave_sky` wash that **tucks under** the trail floor crust (no Background gap above the dirt) + hanging rock ceiling. Cowboy-outlined panels (`cave_ceiling_{ll,lh,hl,hh}_*.png`, catalog `cave_ceiling_segments.json`) lock each side to a fixed **low** or **high** lip; 3 variants per combo (12 total). Adjacent panels only chain when heights match (`prev.end == next.start`). Solid `cave_ceiling_fill` closes the sky gap **only above** the segment tops. Sparse droppable stalactites sit on attach seats and **read as part of the rock** until the release animation (**Dragon Gate** / **Cave Dragon** keep a clean band). Rock band is solid (`FlightCeilingCave`); touching it while flying respawns at camp.
-5. **Mineral vein floor** — dense cool stone crust with pink crystal flecks; underfill dirt is a **fully opaque** slate tile (no transparent side margins / sky holes when tiled); deep `FloorAbyss` slate under the bank.
+5. **Mineral vein floor** — dense cool stone crust with pink crystal flecks; underfill dirt is a **fully opaque** readable slate tile (not near-black; no transparent side margins / sky holes when tiled); deep `FloorAbyss` slate under the bank. Cave canyon gaps use cool-slate ridge faces (`cave_canyon_rim_left.png`) matching this palette.
 ## Campaign note
 
 Builtin **Outlaw Cave** (level 5) and cave arc **levels 11–15** (`Crystal Mouth` → `Dragon Gate`) use `"style": "cave"`. After Dragon Gate the **Cave Dragon** boss flies left↔right below the ceiling (facing travel direction, wing-flap + landing poses), spits a few flameballs in a straight line toward the cowboy (2 rounds × 2 shots), lands for a lasso, then repeats; after three lassos his mouth is tied and the campaign victory plays. Workshop imports for 11–15 use the stamp catalog in `CaveCampaignLevels`. Custom trails can pick Cave style freely.
 
 ## Art checklist
 
-- Env: `cave_sky.png`, `cave_ceiling_fill.png`, `cave_ceiling_{ll,lh,hl,hh}_*.png` + `cave_ceiling_segments.json`, `cave_ceiling_tile.png` (legacy mid panel), `cave_floor_tile.png`, `cave_dirt_tile.png`, `cave_plank.png`, `cave_pit.png`
+- Env: `cave_sky.png`, `cave_ceiling_fill.png`, `cave_ceiling_{ll,lh,hl,hh}_*.png` + `cave_ceiling_segments.json`, `cave_ceiling_tile.png` (legacy mid panel), `cave_floor_tile.png`, `cave_dirt_tile.png`, `cave_canyon_rim_left.png`, `cave_plank.png`, `cave_pit.png`
 - Goal: `goal_crystal_gate.png`
 - Camp: `checkpoint_cave_active.png` / `_inactive` (transparent cutout)
 - Fungus: `poison_fungus.png`

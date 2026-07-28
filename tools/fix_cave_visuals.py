@@ -561,6 +561,41 @@ def solidify_cave_floor_tile(path: Path, size: tuple[int, int]) -> None:
     print(f"{path.name}: solidified, filled≈{filled}, clear%={clear:.1f}")
     if clear > 0.05:
         raise RuntimeError(f"{path.name} still has transparent pixels after solidify ({clear:.1f}%)")
+    if path.name == "cave_dirt_tile.png":
+        lift_cave_dirt_brightness(path)
+
+
+def lift_cave_dirt_brightness(path: Path) -> None:
+    """Cave underfill dirt must read as slate earth, not near-black voids under slopes."""
+    im = Image.open(path).convert("RGBA")
+    px = im.load()
+    w, h = im.size
+    for y in range(h):
+        for x in range(w):
+            r, g, b, a = px[x, y]
+            if a < 8:
+                continue
+            bri = (r + g + b) / 3.0
+            # Lift toward readable mauve slate matching cave floor midtones.
+            target = (78, 64, 86)
+            if bri < 58:
+                t = 0.55 if bri < 40 else 0.35
+                px[x, y] = (
+                    int(r * (1 - t) + target[0] * t),
+                    int(g * (1 - t) + target[1] * t),
+                    int(b * (1 - t) + target[2] * t),
+                    255,
+                )
+            else:
+                # Mild cool lift so deep stacks stay earthy.
+                px[x, y] = (
+                    min(140, r + 8),
+                    min(120, g + 6),
+                    min(150, b + 10),
+                    255,
+                )
+    _save(im, path)
+    print(f"{path.name}: lifted underfill brightness")
 
 
 def fix_bats() -> None:
