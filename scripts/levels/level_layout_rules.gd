@@ -51,6 +51,7 @@ static func validate_level_node(level: Node) -> PackedStringArray:
 	errors.append_array(_validate_late_level_height_differences(level))
 	errors.append_array(_validate_carrion_flight_paths(level))
 	errors.append_array(_validate_mode_item_spacing(level))
+	errors.append_array(_validate_ladder_tops(level))
 	errors.append_array(_validate_visuals(level))
 	return errors
 
@@ -859,6 +860,42 @@ static func _validate_mode_item_spacing(level: Node) -> PackedStringArray:
 			var right := items[right_index]
 			if left.global_position.distance_to(right.global_position) < 220.0:
 				errors.append("Mode items %s and %s are too close." % [left.name, right.name])
+	return errors
+
+
+static func _validate_ladder_tops(level: Node) -> PackedStringArray:
+	## Every ladder must have a standable plank near climb_top so the cowboy can step off.
+	var errors: PackedStringArray = []
+	var ladders: Array[Ladder] = []
+	for node in level.find_children("*", "Area2D", true, false):
+		if node is Ladder:
+			ladders.append(node as Ladder)
+	if ladders.is_empty():
+		return errors
+	var surfaces: Array[Dictionary] = []
+	for node in level.find_children("*", "PhysicsBody2D", true, false):
+		if not _is_platform(node):
+			continue
+		var surface := _surface_for(node as Node2D)
+		if not surface.is_empty():
+			surfaces.append(surface)
+	for ladder in ladders:
+		var top_y := ladder.climb_top_y()
+		var cx := ladder.center_x()
+		var found := false
+		for surface in surfaces:
+			# Plank top should sit at or slightly above climb_top (24px one-way plank).
+			if float(surface["top"]) < top_y - 28.0 or float(surface["top"]) > top_y + 4.0:
+				continue
+			if float(surface["right"]) < cx - 28.0 or float(surface["left"]) > cx + 28.0:
+				continue
+			found = true
+			break
+		if not found:
+			errors.append(
+				"Ladder %s has no standable ledge at the climb top (player cannot reach the upper path)."
+				% ladder.name
+			)
 	return errors
 
 

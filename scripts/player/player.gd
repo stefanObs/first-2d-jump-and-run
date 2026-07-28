@@ -254,11 +254,11 @@ func _apply_climb(delta: float) -> void:
 	var top := _active_ladder.climb_top_y()
 	var bottom := _active_ladder.climb_bottom_y()
 	if global_position.y <= top and climb_dir < 0.0:
-		global_position.y = top - 10.0
+		# Feet origin; land above the 24px one-way plank centered on climb_top.
+		global_position.y = top - 14.0
 		velocity.y = 0.0
-		# Step onto the upper ledge.
 		_end_climb()
-		velocity.y = -60.0
+		velocity.y = -80.0
 		return
 	if global_position.y >= bottom and climb_dir > 0.0:
 		global_position.y = bottom

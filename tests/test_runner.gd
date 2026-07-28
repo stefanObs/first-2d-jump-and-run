@@ -144,6 +144,7 @@ func _ready() -> void:
 	)
 	failures += await _run("Canyon rafts are one-way jump-through platforms", _test_one_way_moving_platforms)
 	failures += await _run("Custom level store and builder work", _test_custom_level_builder)
+	failures += await _run("Ladder branches land on the upper ledge", _test_ladder_branch_upper_ledge)
 	failures += await _run("Workshop default trail width matches built-ins", _test_workshop_default_width)
 	failures += await _run("Workshop trail length add and remove", _test_workshop_trail_length_resize)
 	failures += await _run("Trail workshop uses one trail row and stacked dirt", _test_trail_row_model)
@@ -4299,6 +4300,86 @@ func _test_custom_level_builder() -> Variant:
 		dusty_level.free()
 		return "Imported Dusty Trail cactus placement: %s" % layout_errors[0]
 	dusty_level.free()
+	return null
+
+
+func _test_ladder_branch_upper_ledge() -> Variant:
+	# Stamp math: ledge center must match climb_top so feet exit onto the plank.
+	var trail := 9
+	var objects: Array[Dictionary] = []
+	CustomLevelStore.append_ladder_branch(objects, trail, 20)
+	var ladder_obj: Dictionary = {}
+	var ledge_at_ladder: Dictionary = {}
+	for value in objects:
+		var object := value as Dictionary
+		var type_name := str(object.get("type", ""))
+		if type_name == "ladder":
+			ladder_obj = object
+		elif type_name == "ladder_ledge" and int(object.get("x", -1)) == 20:
+			ledge_at_ladder = object
+	if ladder_obj.is_empty() or ledge_at_ladder.is_empty():
+		return "Ladder branch must place a ladder and a ledge on the same column."
+	var expected_upper := trail - CustomLevelStore.LADDER_HEIGHT_CELLS
+	if int(ledge_at_ladder.get("y", -1)) != expected_upper:
+		return "Ladder ledge row should be trail - LADDER_HEIGHT_CELLS (got %d, expected %d)." % [
+			int(ledge_at_ladder.get("y", -1)), expected_upper
+		]
+	var grid := CustomLevelStore.GRID_SIZE
+	var ladder_pos := CustomLevelStore.object_world_position(ladder_obj, grid, trail)
+	var ledge_pos := CustomLevelStore.object_world_position(ledge_at_ladder, grid, trail)
+	var climb_top := ladder_pos.y - float(CustomLevelStore.LADDER_HEIGHT_CELLS) * grid
+	if absf(ledge_pos.y - climb_top) > 0.5:
+		return "Ledge center (%.1f) must align with climb_top (%.1f)." % [ledge_pos.y, climb_top]
+	var plank_top := ledge_pos.y - 12.0
+	var exit_y := climb_top - 14.0
+	if exit_y > plank_top + 0.5:
+		return "Climb exit (%.1f) must land at or above plank top (%.1f)." % [exit_y, plank_top]
+
+	# Legacy packs: one-cell-too-high ledges realign on sanitize.
+	var legacy: Array = [
+		{"type": "ground", "x": 0, "y": trail},
+		{"type": "ladder", "x": 10, "y": trail - 1},
+		{"type": "ladder_ledge", "x": 10, "y": trail - 1 - CustomLevelStore.LADDER_HEIGHT_CELLS},
+		{"type": "goal", "x": 20, "y": trail - 1},
+	]
+	var pack := {
+		"version": CustomLevelStore.VERSION,
+		"height": trail + 1,
+		"width": 24,
+		"objects": legacy,
+		"spawn": [2, trail],
+	}
+	var cleaned := CustomLevelStore.sanitize(pack, CustomLevelStore.EXTRA_SLOT_START)
+	var fixed_y := -1
+	for value in cleaned.get("objects", []):
+		var object := value as Dictionary
+		if str(object.get("type", "")) == "ladder_ledge" and int(object.get("x", -1)) == 10:
+			fixed_y = int(object.get("y", -1))
+	if fixed_y != expected_upper:
+		return "Sanitize should realign legacy ladder ledges to row %d (got %d)." % [expected_upper, fixed_y]
+
+	# Cave campaign levels and default trails must pass ladder-top layout rules.
+	for level_number in [11, 12, 13, 14, 15]:
+		var data := CaveCampaignLevels.level_data(level_number)
+		var level := LevelController.new()
+		add_child(level)
+		CustomLevelBuilder.build(level, data)
+		await get_tree().process_frame
+		var errors := LevelLayoutRules._validate_ladder_tops(level)
+		level.queue_free()
+		await get_tree().process_frame
+		if not errors.is_empty():
+			return "Cave level %d: %s" % [level_number, errors[0]]
+
+	var default_data := CustomLevelStore.default_level(CustomLevelStore.EXTRA_SLOT_START)
+	var default_level := LevelController.new()
+	add_child(default_level)
+	CustomLevelBuilder.build(default_level, default_data)
+	await get_tree().process_frame
+	var default_errors := LevelLayoutRules._validate_ladder_tops(default_level)
+	default_level.queue_free()
+	if not default_errors.is_empty():
+		return "Default workshop trail: %s" % default_errors[0]
 	return null
 
 

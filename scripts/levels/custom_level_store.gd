@@ -766,12 +766,44 @@ static func append_ladder_branch(
 	objects: Array[Dictionary], trail: int, start_x: int = 28
 ) -> void:
 	## Lower dirt path + ladder up to a ledge run; drop off the end back to dirt (no down ladder).
-	## Ledge row aligns with climb_top (trail - 1 - LADDER_HEIGHT_CELLS).
-	var upper := maxi(trail - 1 - LADDER_HEIGHT_CELLS, 0)
+	## Ledge cell Y equals climb_top row (trail - LADDER_HEIGHT_CELLS): ladder bottom sits on the
+	## trail surface, so climb_top world Y is that row's world Y; plank center matches climb_top.
+	var upper := maxi(trail - LADDER_HEIGHT_CELLS, 0)
 	_append_unique(objects, {"type": "ladder", "x": start_x, "y": maxi(trail - 1, 0)})
 	for x in range(start_x, start_x + 16, 2):
 		_append_unique(objects, {"type": "ladder_ledge", "x": x, "y": upper})
 	_append_unique(objects, {"type": "star", "x": start_x + 6, "y": maxi(upper - 1, 0)})
+
+
+static func realign_ladder_ledges(objects: Array, trail: int) -> void:
+	## Repair older stamp packs that put ledges one cell above climb_top.
+	var expected_upper := maxi(trail - LADDER_HEIGHT_CELLS, 0)
+	var legacy_upper := maxi(trail - 1 - LADDER_HEIGHT_CELLS, 0)
+	if expected_upper == legacy_upper:
+		return
+	var ladder_xs: Array[int] = []
+	for object in objects:
+		if str(object.get("type", "")) == "ladder":
+			ladder_xs.append(int(object.get("x", 0)))
+	if ladder_xs.is_empty():
+		return
+	for object in objects:
+		var type_name := str(object.get("type", ""))
+		if type_name != "ladder_ledge" and type_name != "star":
+			continue
+		var x := int(object.get("x", 0))
+		var y := int(object.get("y", 0))
+		var near_ladder := false
+		for lx in ladder_xs:
+			if x >= lx and x <= lx + 16:
+				near_ladder = true
+				break
+		if not near_ladder:
+			continue
+		if type_name == "ladder_ledge" and y == legacy_upper:
+			object["y"] = expected_upper
+		elif type_name == "star" and y == maxi(legacy_upper - 1, 0):
+			object["y"] = maxi(expected_upper - 1, 0)
 
 static func _append_unique(objects: Array[Dictionary], object: Dictionary) -> void:
 	for existing in objects:
@@ -812,6 +844,7 @@ static func sanitize(source: Dictionary, slot_index: int) -> Dictionary:
 				objects.append(object)
 				if objects.size() >= 900:
 					break
+		realign_ladder_ledges(objects, trail)
 		result["objects"] = objects
 	var spawn: Array = result["spawn"]
 	if spawn is Array and spawn.size() >= 2:
