@@ -151,17 +151,24 @@ def _draw_segment(start: str, end: str, seed: int) -> tuple[Image.Image, list[di
     draw = ImageDraw.Draw(im)
     for i in range(5):
         y0 = 18 + i * 22 + rng.randint(-4, 4)
-        pts = []
-        for x in range(0, W, 18):
-            if px[min(W - 1, x), min(H - 1, y0)][3] < 200:
-                continue
-            pts.append((x, y0 + int(3 * math.sin(x * 0.04 + i))))
-        if len(pts) >= 2:
-            # Soft mauve strata — not black ink strokes.
-            draw.line(pts, fill=(72, 48, 68, 120), width=2)
+        # Draw only inside contiguous solid rock — never connect across clear air
+        # (PIL lines would otherwise streak grey into the transparent background).
+        run: list[tuple[int, int]] = []
+        for x in range(0, W, 2):
+            yy = y0 + int(3 * math.sin(x * 0.04 + i))
+            yy = max(0, min(H - 1, yy))
+            if px[x, yy][3] >= 200 and yy < int(lip[x]) - 2:
+                run.append((x, yy))
+            else:
+                if len(run) >= 2:
+                    draw.line(run, fill=(72, 48, 68, 120), width=2)
+                run = []
+        if len(run) >= 2:
+            draw.line(run, fill=(72, 48, 68, 120), width=2)
     px = im.load()
 
     # Built-in fused tooth nubs at seats — short fake teeth matching ceiling rock.
+    tooth_mask = [[False] * H for _ in range(W)]
     for seat in seats:
         sx = int(seat["x"])
         sy = int(round(lip[sx]))
@@ -185,15 +192,26 @@ def _draw_segment(start: str, end: str, seed: int) -> tuple[Image.Image, list[di
                         255,
                     )
                 px[xx, yy] = col
+                tooth_mask[xx][yy] = True
         for fy in (sy + 4, sy + 10):
             fx = sx + ((fy + seed) % 3) - 1
             if 0 <= fx < W and 0 <= fy < H and px[fx, fy][3] >= 200:
                 px[fx, fy] = FLECK
+                tooth_mask[fx][fy] = True
         seat["y"] = round(lip[sx], 1)
 
     for seat in seats:
         sx = int(seat["x"])
         seat["y"] = round(lip[sx], 1)
+
+    # Wipe any strata/AA fringe that spilled into clear air below the lip.
+    for x in range(W):
+        edge = int(round(max(40.0, min(H - 4.0, lip[x]))))
+        for y in range(edge + 1, H):
+            if tooth_mask[x][y]:
+                continue
+            if px[x, y][3] > 0:
+                px[x, y] = (0, 0, 0, 0)
 
     # Final lift: no near-black border on the underside silhouette or panel sides.
     # Use the real opaque edge (includes fused tooth nubs), not only the lip curve.
@@ -228,6 +246,25 @@ def _draw_segment(start: str, end: str, seed: int) -> tuple[Image.Image, list[di
                     max(68, min(155, b + 24)),
                     255,
                 )
+
+    # Hard-clear any leftover low-alpha AA crumbs in open air.
+    for y in range(H):
+        for x in range(W):
+            r, g, b, a = px[x, y]
+            if a == 0:
+                continue
+            if a < 40:
+                px[x, y] = (0, 0, 0, 0)
+                continue
+            # Isolated fringe: opaque-ish but surrounded mostly by clear below lip.
+            if y > int(lip[min(W - 1, max(0, x))]) + 1 and not tooth_mask[x][y]:
+                clear_n = 0
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    nx, ny = x + dx, y + dy
+                    if not (0 <= nx < W and 0 <= ny < H) or px[nx, ny][3] < 40:
+                        clear_n += 1
+                if clear_n >= 3:
+                    px[x, y] = (0, 0, 0, 0)
 
     return im, seats
 
