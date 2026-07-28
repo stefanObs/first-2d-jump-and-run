@@ -58,8 +58,5 @@ func _physics_process(delta: float) -> void:
 
 
 func _on_body_entered(body: Node2D) -> void:
-	if body is Player:
-		var player := body as Player
-		if not player.is_invulnerable():
-			hurt_player.emit(player)
+	if HostileHit.try_hurt_player(self, body):
 		queue_free()

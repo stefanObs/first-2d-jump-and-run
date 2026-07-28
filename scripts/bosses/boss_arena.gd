@@ -117,11 +117,11 @@ func _run_countdown() -> void:
 
 
 func _handle_next_boss_tap() -> void:
-	var now := Time.get_ticks_msec()
-	if now - _next_boss_tap_time_msec <= 450:
+	var tap := DoubleTapConfirm.accept(_next_boss_tap_time_msec)
+	_next_boss_tap_time_msec = int(tap["stamp"])
+	if bool(tap["confirmed"]):
 		GameManager.load_next_boss(source_level)
 		return
-	_next_boss_tap_time_msec = now
 	if hud != null:
 		hud.show_toast("Press numpad - again for next boss", 1.0)
 

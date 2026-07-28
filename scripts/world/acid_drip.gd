@@ -47,21 +47,12 @@ func _ready() -> void:
 
 
 func _probe_floor() -> void:
-	var world := get_world_2d()
-	if world == null:
-		_floor_y = _origin.y + 280.0
-		return
-	var query := PhysicsRayQueryParameters2D.create(
+	_floor_y = FloorProbe.hit_y(
+		self,
 		_origin + Vector2(0, 12),
 		_origin + Vector2(0, MAX_FALL),
-		1
+		_origin.y + 280.0
 	)
-	query.collide_with_areas = false
-	var hit := world.direct_space_state.intersect_ray(query)
-	if hit.is_empty():
-		_floor_y = _origin.y + 280.0
-	else:
-		_floor_y = float(hit["position"].y)
 
 
 func _physics_process(delta: float) -> void:

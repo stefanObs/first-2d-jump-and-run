@@ -193,17 +193,7 @@ func _physics_process(delta: float) -> void:
 
 
 func _has_floor_ahead(direction: float) -> bool:
-	var world := get_world_2d()
-	if world == null:
-		return true
-	var ahead := global_position + Vector2(direction * 24.0, -4.0)
-	var query := PhysicsRayQueryParameters2D.create(
-		ahead,
-		ahead + Vector2(0.0, 72.0),
-		1
-	)
-	query.exclude = [get_rid()]
-	return not world.direct_space_state.intersect_ray(query).is_empty()
+	return FloorProbe.has_floor_ahead(self, direction)
 
 
 func _apply_facing(direction: float) -> void:

@@ -60,10 +60,7 @@ func _on_body_entered(body: Node2D) -> void:
 	# Pass through other bandits so a shot is not cancelled by its shooter.
 	if body is Opponent:
 		return
-	if body is Player:
-		var player := body as Player
-		if not player.is_invulnerable():
-			hurt_player.emit(player)
+	if HostileHit.try_hurt_player(self, body):
 		queue_free()
 		return
 	# Hit desert boards / platforms before the shot travels forever.

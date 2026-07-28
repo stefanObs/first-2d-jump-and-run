@@ -264,14 +264,14 @@ func _world_to_screen_scale() -> float:
 func _handle_next_level_tap() -> void:
 	if is_custom_level or is_final_level:
 		return
-	var now := Time.get_ticks_msec()
-	if now - _next_level_tap_time_msec <= 450:
+	var tap := DoubleTapConfirm.accept(_next_level_tap_time_msec)
+	_next_level_tap_time_msec = int(tap["stamp"])
+	if bool(tap["confirmed"]):
 		_is_completing = true
 		if player != null:
 			player.set_input_enabled(false)
 		GameManager.load_level(level_number + 1)
 		return
-	_next_level_tap_time_msec = now
 	if hud != null:
 		hud.show_toast("Press numpad + again for next trail", 1.0)
 
@@ -279,8 +279,9 @@ func _handle_next_level_tap() -> void:
 func _handle_next_boss_tap() -> void:
 	if is_custom_level:
 		return
-	var now := Time.get_ticks_msec()
-	if now - _next_boss_tap_time_msec <= 450:
+	var tap := DoubleTapConfirm.accept(_next_boss_tap_time_msec)
+	_next_boss_tap_time_msec = int(tap["stamp"])
+	if bool(tap["confirmed"]):
 		_is_completing = true
 		if player != null:
 			player.set_input_enabled(false)
@@ -290,7 +291,6 @@ func _handle_next_boss_tap() -> void:
 			campaign_source_level if campaign_source_level > 0 else level_number
 		)
 		return
-	_next_boss_tap_time_msec = now
 	if hud != null:
 		hud.show_toast("Press numpad - again for next boss", 1.0)
 

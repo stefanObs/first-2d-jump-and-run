@@ -54,10 +54,7 @@ func _physics_process(delta: float) -> void:
 func _on_body_entered(body: Node2D) -> void:
 	if body.has_method("is_tied") and body.has_method("tie_up"):
 		return
-	if body is Player:
-		var player := body as Player
-		if not player.is_invulnerable():
-			hurt_player.emit(player)
+	if HostileHit.try_hurt_player(self, body):
 		queue_free()
 		return
 	queue_free()

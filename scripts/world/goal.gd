@@ -110,17 +110,9 @@ func _find_player() -> Player:
 
 
 func _player_reached_saloon() -> bool:
-	var tree := get_tree()
-	if tree == null:
-		return false
 	# Same idea as camps: the trail place matters, not touching the doorway.
 	# Any cowboy who has crossed the saloon's X counts (including flyovers).
-	for node in tree.get_nodes_in_group("player"):
-		if node is Player:
-			var player := node as Player
-			if player.global_position.x >= global_position.x - 64.0:
-				return true
-	return false
+	return PlayerLookup.any_past_x(self, global_position.x - 64.0)
 
 
 func _on_body_entered(body: Node2D) -> void:

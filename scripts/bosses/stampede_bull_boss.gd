@@ -267,28 +267,16 @@ func _play_win_animation() -> void:
 
 	var face_left := _sprite.flip_h
 	# Rope coils whip around the standing bull's legs.
-	var ropes := Node2D.new()
-	ropes.name = "WinRopes"
-	ropes.z_index = 6
-	_bull.add_child(ropes)
-	for i in range(5):
-		var loop := Line2D.new()
-		loop.width = 6.0 - float(i) * 0.35
-		loop.default_color = Color(0.78, 0.58, 0.28, 1.0)
-		var radius := 18.0 + float(i) * 5.5
-		var points := PackedVector2Array()
-		for step in range(14):
-			var ang := TAU * float(step) / 13.0 + float(i) * 0.35
-			points.append(Vector2(
-				cos(ang) * radius * 0.7,
-				-8.0 - float(i) * 5.0 + sin(ang) * radius * 0.35
-			))
-		loop.points = points
-		loop.modulate.a = 0.0
-		ropes.add_child(loop)
-		var rt := create_tween()
-		rt.tween_property(loop, "modulate:a", 1.0, 0.12).set_delay(0.07 * float(i))
-		rt.parallel().tween_property(loop, "scale", Vector2(1.05, 1.05), 0.12).from(Vector2(0.4, 0.4)).set_delay(0.07 * float(i))
+	var ropes := BullTieFx.spawn_win_ropes(
+		_bull,
+		self,
+		6.0,
+		0.35,
+		18.0,
+		5.5,
+		-8.0,
+		5.0
+	)
 
 	var squash := create_tween()
 	squash.tween_property(_sprite, "scale", Vector2(1.12, 0.82), 0.12)
@@ -307,10 +295,7 @@ func _play_win_animation() -> void:
 	if _stars != null:
 		_stars.visible = true
 		_stars.position = Vector2(0, -130)
-	var wobble := create_tween()
-	wobble.tween_property(_sprite, "rotation", 0.12 if face_left else -0.12, 0.18)
-	wobble.tween_property(_sprite, "rotation", -0.1 if face_left else 0.1, 0.18)
-	wobble.tween_property(_sprite, "rotation", 0.0, 0.14)
+	var wobble := BullTieFx.wobble_sprite(_sprite, self, face_left)
 	await wobble.finished
 	await get_tree().create_timer(0.25).timeout
 
@@ -333,17 +318,14 @@ func _play_win_animation() -> void:
 	_sprite.position = Vector2(0, -59)
 	_sprite.scale = _sprite_scale_for(BULL_DOWN_TEX, DOWN_SPRITE_HEIGHT)
 	# Soft dust puff when he lands.
-	var dust := Polygon2D.new()
-	dust.color = Color(0.82, 0.62, 0.38, 0.55)
-	dust.polygon = PackedVector2Array([
-		Vector2(-50, 0), Vector2(-10, -18), Vector2(30, -8), Vector2(55, 6), Vector2(10, 14), Vector2(-35, 10)
-	])
-	dust.position = Vector2(0, 10)
-	_bull.add_child(dust)
-	var dt := create_tween()
-	dt.tween_property(dust, "modulate:a", 0.0, 0.55)
-	dt.parallel().tween_property(dust, "scale", Vector2(1.4, 0.7), 0.55)
-	dt.tween_callback(dust.queue_free)
+	BullTieFx.puff_dust(
+		_bull,
+		self,
+		PackedVector2Array([
+			Vector2(-50, 0), Vector2(-10, -18), Vector2(30, -8), Vector2(55, 6), Vector2(10, 14), Vector2(-35, 10)
+		]),
+		Vector2(0, 10)
+	)
 
 	var settle := create_tween()
 	settle.tween_property(_sprite, "scale", _sprite_scale_for(BULL_DOWN_TEX, DOWN_SPRITE_HEIGHT) * Vector2(1.08, 0.9), 0.1)

@@ -41,3 +41,13 @@ static func find_in_tree(from: Node, radius: float = -1.0) -> Player:
 
 static func any_in_radius(from: Node2D, radius: float) -> bool:
 	return find_in_tree(from, radius) != null
+
+
+static func any_past_x(from: Node, min_x: float) -> bool:
+	var tree := from.get_tree() if from != null else null
+	if tree == null:
+		return false
+	for node in tree.get_nodes_in_group("player"):
+		if node is Player and (node as Player).global_position.x >= min_x:
+			return true
+	return false
