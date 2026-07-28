@@ -2,7 +2,7 @@
 
 Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, nonviolent lasso. **Classic mode** has no lives or game over; **Advanced Mode** (chosen in **Settings** before starting or continuing a slot) adds a three-life limit, badge milestones, and a game-over return to the start screen. Pick **Cowboy** or **Cowgirl** in Settings — the choice applies across all save slots. **German is the default language**; English is fully supported.
 
-**Content version:** `1.8.49` (see `content_version.txt`). Launchers reimport when this stamp changes.
+**Content version:** `1.8.50` (see `content_version.txt`). Launchers reimport when this stamp changes.
 
 This README is the **binding source of truth** for gameplay, level design, art, i18n, and audio. Agents and contributors must follow it (see [Agent / contributor rules](#agent--contributor-rules)).
 
@@ -141,7 +141,7 @@ Agents **must** honor these when editing levels or trail systems:
 - Pink drips splash on the floor then respawn; falling stalactites pull free before dropping; **Bubble does not block** drips/spikes. Bats can bounce off Bubble.
 - Cave floors use dense cool stone + pink flecks; cowboy-style rock ceiling **panels** with fixed **low/high** side heights (3 variants of each start→end combo) chained only when adjacent edges match; solid fill stays **above** the panel tops; sparse décor stalactites fuse into seat nubs until release (none on Dragon Gate / Cave Dragon); deep cave wash **tucks under the floor** (no gap); no desert sun/mesa hills.
 - **Wings cannot pass the ceiling** (`FlightCeilingCave`); touching the rock while flying (`CaveCeilingHazard`) respawns at camp.
-- **Ladders** (workshop Trail stamp): 3-cell climb; Space/Up climbs up, S/Down climbs down. Upper one-way planks must sit on the climb-top row so the cowboy can step onto the higher path; drop off the ledge end back to dirt (no second “down” ladder required). Sample branches appear on new trails and on cave workshop imports. **Conveyor**, **Timed Gate**, and **Fence** Trail stamps work in desert and cave; cave campaign levels 11–15 place extra ladders/planks, fences, **springs**, and (from Bat Gallery on) belt+gate pairs on solid ground.
+- **Ladders** (workshop Trail stamp): 3-cell climb; Space/Up climbs up, S/Down climbs down. Upper one-way planks must sit on the climb-top row so the cowboy can step onto the higher path; drop off the ledge end back to dirt (no second “down” ladder required). Sample branches appear on new trails and on cave workshop imports. **Conveyor**, **Timed Gate**, and **Fence** Trail stamps work in desert and cave; cave campaign levels 11–15 place sheriff badges along the trail plus extra ladders/planks, fences, **springs**, and (from Bat Gallery on) belt+gate pairs on solid ground.
 
 ### Canyon art
 
