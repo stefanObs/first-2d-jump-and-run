@@ -63,7 +63,7 @@ color = Color(0.28, 0.26, 0.34, 1)
 shape = SubResource("Ground")
 
 [node name="Dragon" type="AnimatableBody2D" parent="."]
-position = Vector2(980, 220)
+position = Vector2(980, 320)
 z_index = 1
 collision_layer = 1
 collision_mask = 0

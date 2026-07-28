@@ -1,7 +1,8 @@
 extends BossArena
 
-## Cave Dragon: fly left↔right below the ceiling spitting flameballs, then land for a lasso.
-## After each lasso the dragon takes off again. Third lasso ties the mouth — win.
+## Cave Dragon: starts landed, takes off when the fight begins, flies left↔right
+## below the ceiling spitting flameballs, then lands for a lasso. After each lasso
+## the dragon takes off again. Third lasso ties the mouth — win.
 
 const DRAGON_TEX := [
 	preload("res://assets/world/boss_cave_dragon_0.png"),
@@ -79,7 +80,7 @@ func _ready() -> void:
 		_floor_y = FLOOR_Y
 	if _sprite != null:
 		_sprite.scale = Vector2(SPRITE_SCALE, SPRITE_SCALE)
-	_apply_stage_visual()
+	_place_waiting_on_floor()
 	if _lasso != null:
 		_lasso.set_lasso_active(false)
 		_lasso.lassoed.connect(_on_dragon_lassoed)
@@ -88,11 +89,32 @@ func _ready() -> void:
 	combat_started.connect(_on_combat_started)
 
 
+func _place_waiting_on_floor() -> void:
+	## Pre-fight pose: standing on the arena floor until countdown finishes.
+	if _dragon == null:
+		return
+	_state = State.LAND
+	_dragon.position = Vector2(_clamp_land_x(_dragon.position.x), _floor_y)
+	if _sprite != null:
+		_sprite.texture = LAND_TEX
+		_sprite.centered = true
+		_sprite.position.y = -90.0
+		_sprite.rotation = 0.0
+		_sprite.scale = Vector2(SPRITE_SCALE, SPRITE_SCALE)
+	_face_toward_player()
+	if _label != null:
+		_label.text = "READY!"
+		_label.modulate = Color(0.85, 0.75, 0.95, 1.0)
+	if _lasso != null:
+		_lasso.set_lasso_active(false)
+
+
 func _on_combat_started() -> void:
 	if _won:
 		return
 	AudioManager.play_sfx(&"dragon_roar")
-	_begin_fly_phase()
+	# Lift off from the floor straight into the first fly/spit phase.
+	_begin_takeoff()
 
 
 func get_heart_drop_position() -> Vector2:

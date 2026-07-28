@@ -614,7 +614,7 @@ func _test_boss_arenas() -> Variant:
 	if int(dragon.get("spits_per_round")) != 2:
 		dragon.queue_free()
 		return "Cave Dragon should spit 2 flameballs per round."
-	# Flameballs fly straight — no mid-flight homing.
+	# Flameballs fly straight — no mid-flight homing — and die on the arena floor.
 	var ball := DragonFlameball.new()
 	ball.setup(Vector2.ZERO, Vector2(-100, 40), null)
 	var aim := ball.direction
@@ -624,10 +624,11 @@ func _test_boss_arenas() -> Variant:
 		dragon.queue_free()
 		return "Dragon flameballs must keep a straight aim (no homing)."
 	ball.free()
-	# Flameballs must pass through the arena floor (player-only mask) and stay drawable above it.
+	# Floor stop: player-only collision mask, but ray-probed floor ends the shot.
 	var floor_ball := DragonFlameball.new()
-	floor_ball.setup(Vector2(0, 0), Vector2(0, 200), null)
-	add_child(floor_ball)
+	floor_ball.setup(Vector2(400, 100), Vector2(400, 400), null)
+	dragon.add_child(floor_ball)
+	await get_tree().process_frame
 	await get_tree().process_frame
 	if not is_instance_valid(floor_ball):
 		dragon.queue_free()
@@ -635,19 +636,35 @@ func _test_boss_arenas() -> Variant:
 	if floor_ball.get_collision_mask_value(1):
 		floor_ball.queue_free()
 		dragon.queue_free()
-		return "Dragon flameballs must not collide with the world/floor layer."
+		return "Dragon flameballs must not use world-layer collision (probe the floor instead)."
 	if floor_ball.z_index < 1:
 		floor_ball.queue_free()
 		dragon.queue_free()
 		return "Dragon flameballs must draw above the floor so they stay visible."
-	for _i in range(30):
+	var start_y := floor_ball.global_position.y
+	for _i in range(40):
+		if not is_instance_valid(floor_ball):
+			break
 		floor_ball._physics_process(0.05)
-	if not is_instance_valid(floor_ball) or floor_ball.global_position.y < 90.0:
-		if is_instance_valid(floor_ball):
+	# Either impacting/freed at the floor, or still above it — never deep under the crust.
+	if is_instance_valid(floor_ball):
+		if floor_ball.global_position.y > 360.0:
 			floor_ball.queue_free()
+			dragon.queue_free()
+			return "Dragon flameballs must end at the floor, not tunnel under it."
+		if floor_ball.global_position.y < start_y + 20.0 and not bool(floor_ball.get("_impacting")):
+			floor_ball.queue_free()
+			dragon.queue_free()
+			return "Dragon flameballs aimed at the floor should travel down to it."
+		floor_ball.queue_free()
+	# Pre-fight: dragon waits on the floor, then takes off when combat starts.
+	var waiting_y := float(dragon.get("_floor_y"))
+	if absf((dragon_body as Node2D).position.y - waiting_y) > 4.0:
 		dragon.queue_free()
-		return "Dragon flameballs must keep flying past the floor surface."
-	floor_ball.queue_free()
+		return "Cave Dragon should start waiting on the arena floor."
+	if int(dragon.get("_state")) != 2:
+		dragon.queue_free()
+		return "Cave Dragon should wait in the LAND pose before the fight (got state %s)." % str(dragon.get("_state"))
 	for stage_path in [
 		"res://assets/world/boss_cave_dragon_0.png",
 		"res://assets/world/boss_cave_dragon_1.png",
