@@ -20,6 +20,7 @@ This README is the **binding source of truth** for gameplay, level design, art, 
   - **Windows:** `update_to_newest.bat`
   - **macOS:** double-click **`Update to Newest Version.command`**
 - Extra args are forwarded to Godot (e.g. `--headless`).
+- **Display:** base layout stays **1280×720**; on large/4K screens it scales with **linear** texture filtering (smooth, not nearest-neighbor “pixels”) plus light 2D MSAA. Character/world size on screen is unchanged.
 
 ### Tests
 

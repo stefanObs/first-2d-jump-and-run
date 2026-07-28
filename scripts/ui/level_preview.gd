@@ -143,6 +143,7 @@ func _build_viewport() -> void:
 	_viewport.handle_input_locally = false
 	_viewport.gui_disable_input = true
 	_viewport.physics_object_picking = false
+	_viewport.canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_LINEAR
 	_container.add_child(_viewport)
 
 
