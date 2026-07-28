@@ -403,10 +403,10 @@ static func _make_contiguous_floors(level: Node, style: String = LevelStyle.DESE
 	# Painted per strip below with the same slope/canyon insets as FloorDirt.
 
 	# Lip inset: desert sand crust stops at the inland edge of the ridge face so
-	# FloorSurface never paints over the cliff. Dirt still runs nearly to the lip
-	# behind the opaque bank fill (no sky/abyss peeking beside the ridge).
+	# FloorSurface never paints over the cliff. Dirt/abyss stay under the opaque
+	# bank (not in the sky gap past the ridge lip).
 	const CANYON_SURFACE_INSET := 88.0
-	const CANYON_DIRT_INSET := 4.0
+	const CANYON_DIRT_INSET := 64.0
 
 	for i in range(merged.size()):
 		var strip: Dictionary = merged[i]
