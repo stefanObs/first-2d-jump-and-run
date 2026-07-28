@@ -764,9 +764,9 @@ static func _paint_slope_crust(
 		sprite.scale = Vector2(use / tex_size.x, scale_y)
 		sprite.z_index = 3
 		parent.add_child(sprite)
-		along += use * 0.78
+		along += use * 0.7
 		tile_i += 1
-		if tile_i > 50:
+		if tile_i > 60:
 			break
 
 
@@ -780,9 +780,10 @@ static func _paint_slope_underfill(
 	curved: bool = true
 ) -> void:
 	## Solid earth wedge under the dune face — flat FloorAbyss is clipped away here and
-	## tiled dirt alone leaves sky-blue gaps under the curved crust.
-	const SAMPLES := 16
-	const CRUST_PAD := 44.0
+	## tiled dirt alone leaves sky gaps under the curved crust. Keep the top of this
+	## wedge tight under the crust (not inset by a large pad).
+	const SAMPLES := 24
+	const CRUST_PAD := 3.0
 	const DEPTH := 880.0
 	var bottom_y := maxf(y_start, y_end) + DEPTH
 	var poly: PackedVector2Array = []
@@ -812,6 +813,7 @@ static func _paint_slope_fill(
 	curved: bool = true
 ) -> void:
 	## Dirt under the curved sand crust so the bank reads as one soft dune, not a cliff.
+	## Pack the upper wedge densely — empty bands under the crust read as sky/black gaps.
 	var x0 := minf(x_start, x_end)
 	var x1 := maxf(x_start, x_end)
 	var deep := maxf(y_start, y_end) + 96.0
@@ -820,21 +822,28 @@ static func _paint_slope_fill(
 		var tex_size := dirt.get_size()
 		var row_h_full := 28.0
 		var row_h_small := row_h_full / 3.0
-		var y := bank_top + 18.0
+		var row_h_micro := row_h_full / 5.0
+		var y := bank_top + 2.0
 		var row := 0
 		while y < deep:
-			var near_crust := y < bank_top + 72.0
-			var row_h := row_h_small if near_crust else row_h_full
+			var near_crust := y < bank_top + 90.0
+			var upper_wedge := y < bank_top + 48.0
+			var row_h := row_h_full
+			if upper_wedge:
+				row_h = row_h_micro
+			elif near_crust:
+				row_h = row_h_small
 			var scale_y := row_h / tex_size.y
 			var tile_w := tex_size.x * scale_y
-			var step_factor := 0.97 if near_crust else 0.92
+			var step_factor := 0.88 if upper_wedge else (0.95 if near_crust else 0.92)
 			var x := x0
 			var tile_i := 0
 			while x < x1 - 0.5:
 				var surface_y: float = _slope_y_at(
 					x + tile_w * 0.5, x_start, y_start, x_end, y_end, curved
 				)
-				if y < surface_y + 48.0:
+				# Stay just under the crust — do not leave a sky band.
+				if y < surface_y + 2.0:
 					x += tile_w * step_factor
 					continue
 				var use_w := minf(tile_w, x1 - x)
@@ -849,11 +858,11 @@ static func _paint_slope_fill(
 				parent.add_child(sprite)
 				x += use_w * step_factor
 				tile_i += 1
-				if tile_i > 80:
+				if tile_i > 120:
 					break
-			y += row_h - (1.0 if near_crust else 3.0)
+			y += row_h * (0.72 if upper_wedge else (0.82 if near_crust else 0.9))
 			row += 1
-			if row > 28:
+			if row > 60:
 				break
 
 

@@ -3020,12 +3020,27 @@ func _test_slope_underfill_covers_wedge() -> Variant:
 		level.free()
 		return "Desert slopes need a solid FloorSlopeUnderfill wedge."
 	var poly := underfill.polygon
+	var upper_dirt := 0
+	for node in trail_floor.find_children("FloorSlopeDirt*", "Sprite2D", false, false):
+		var dirt_sprite := node as Sprite2D
+		var sample_x := (
+			dirt_sprite.global_position.x
+			+ dirt_sprite.texture.get_size().x * dirt_sprite.scale.x * 0.5
+		)
+		var surface_y := WildWestTheme._slope_y_at(
+			sample_x, x_start, y_start, x_end, y_end, curved
+		)
+		if dirt_sprite.global_position.y < surface_y + 40.0:
+			upper_dirt += 1
+	if upper_dirt < 3:
+		level.free()
+		return "Slope dirt tiles must pack the upper wedge under the crust (found %d)." % upper_dirt
 	for sample_t in [0.2, 0.5, 0.8]:
 		var x := lerpf(x_start, x_end, sample_t)
 		var surface_y := WildWestTheme._slope_y_at(
 			x, x_start, y_start, x_end, y_end, curved
 		)
-		for depth in [48.0, 120.0, 220.0]:
+		for depth in [8.0, 20.0, 40.0, 80.0, 220.0]:
 			var pt := Vector2(x, surface_y + depth)
 			if not Geometry2D.is_point_in_polygon(pt, poly):
 				level.free()
