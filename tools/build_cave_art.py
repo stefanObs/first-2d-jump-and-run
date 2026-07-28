@@ -11,6 +11,9 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from tools.art_pipeline import cutout, frame_sprite, slice_strip  # noqa: E402
+from collections import deque
+
+from PIL import Image
 
 # Generated concepts land in the Cursor project assets folder.
 CONCEPT_DIR = Path(
@@ -64,6 +67,66 @@ def _feet(im, size: tuple[int, int], target_h: int | None = None, baseline: int 
     th = target_h if target_h is not None else int(ch * 0.92)
     bl = baseline if baseline is not None else ch - 1
     return frame_sprite(im, canvas=size, target_h=th, baseline=bl)
+
+
+def _force_split_halves(im: Image.Image, *, gap: int = 8) -> list[Image.Image]:
+    bbox = im.getbbox()
+    if bbox is None:
+        return []
+    x0, y0, x1, y1 = bbox
+    mid = (x0 + x1) // 2
+    half = max(1, gap // 2)
+    left = im.crop((x0, y0, max(x0 + 1, mid - half), y1))
+    right = im.crop((min(x1 - 1, mid + half), y0, x1, y1))
+    return [f for f in (left, right) if f.getbbox() is not None]
+
+
+def _keep_largest_component(im: Image.Image, *, alpha_thresh: int = 8) -> Image.Image:
+    out = im.copy()
+    w, h = out.size
+    px = out.load()
+    visited = [[False] * w for _ in range(h)]
+    comps: list[list[tuple[int, int]]] = []
+    for y in range(h):
+        for x in range(w):
+            if px[x, y][3] <= alpha_thresh or visited[y][x]:
+                continue
+            q: deque[tuple[int, int]] = deque([(x, y)])
+            visited[y][x] = True
+            pixels: list[tuple[int, int]] = []
+            while q:
+                cx, cy = q.popleft()
+                pixels.append((cx, cy))
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    nx, ny = cx + dx, cy + dy
+                    if (
+                        0 <= nx < w
+                        and 0 <= ny < h
+                        and not visited[ny][nx]
+                        and px[nx, ny][3] > alpha_thresh
+                    ):
+                        visited[ny][nx] = True
+                        q.append((nx, ny))
+            comps.append(pixels)
+    if len(comps) <= 1:
+        return out
+    comps.sort(key=len, reverse=True)
+    for pixels in comps[1:]:
+        for x, y in pixels:
+            r, g, b, _ = px[x, y]
+            px[x, y] = (r, g, b, 0)
+    return out
+
+
+def _clean_bat_figure(fig: Image.Image, *, index: int) -> Image.Image:
+    return _keep_largest_component(fig)
+
+
+def _slice_bat_figures(cut: Image.Image) -> list[Image.Image]:
+    figs = slice_strip(cut)
+    if len(figs) < 2:
+        figs = _force_split_halves(cut)
+    return [_clean_bat_figure(f, index=i) for i, f in enumerate(figs[:2])]
 
 
 def main() -> int:
@@ -131,7 +194,7 @@ def main() -> int:
     bat_src = CONCEPT_DIR / "cave_bat_strip_concept.png"
     if bat_src.is_file():
         shutil.copy2(bat_src, SOURCE_DIR / bat_src.name)
-        figures = slice_strip(cutout(bat_src))
+        figures = _slice_bat_figures(cutout(bat_src, level=185))
         for i, fig in enumerate(figures[:2]):
             framed = _fit(fig, (96, 64))
             path = OUT_DIR / f"cave_bat_{i}.png"

@@ -63,16 +63,121 @@ def _content_height(im: Image.Image) -> int:
     return bbox[3] - bbox[1]
 
 
-def _force_split_halves(im: Image.Image) -> list[Image.Image]:
-    """Split a strip into left/right halves by content bbox mid-x."""
+def _force_split_halves(im: Image.Image, *, gap: int = 8) -> list[Image.Image]:
+    """Split a strip into left/right halves by content bbox mid-x.
+
+    Leaves a few transparent columns at the cut so each figure does not keep
+    a sliver of the neighboring sprite when wings nearly touch.
+    """
     bbox = im.getbbox()
     if bbox is None:
         return []
     x0, y0, x1, y1 = bbox
     mid = (x0 + x1) // 2
-    left = im.crop((x0, y0, mid, y1))
-    right = im.crop((mid, y0, x1, y1))
+    half = max(1, gap // 2)
+    left = im.crop((x0, y0, max(x0 + 1, mid - half), y1))
+    right = im.crop((min(x1 - 1, mid + half), y0, x1, y1))
     return [f for f in (left, right) if f.getbbox() is not None]
+
+
+def _keep_largest_component(im: Image.Image, *, alpha_thresh: int = 8) -> Image.Image:
+    """Clear opaque pixels not 4-connected to the largest blob (edge bleed)."""
+    out = im.copy()
+    w, h = out.size
+    px = out.load()
+    visited = [[False] * w for _ in range(h)]
+    comps: list[list[tuple[int, int]]] = []
+    for y in range(h):
+        for x in range(w):
+            if px[x, y][3] <= alpha_thresh or visited[y][x]:
+                continue
+            q: deque[tuple[int, int]] = deque([(x, y)])
+            visited[y][x] = True
+            pixels: list[tuple[int, int]] = []
+            while q:
+                cx, cy = q.popleft()
+                pixels.append((cx, cy))
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    nx, ny = cx + dx, cy + dy
+                    if (
+                        0 <= nx < w
+                        and 0 <= ny < h
+                        and not visited[ny][nx]
+                        and px[nx, ny][3] > alpha_thresh
+                    ):
+                        visited[ny][nx] = True
+                        q.append((nx, ny))
+            comps.append(pixels)
+    if len(comps) <= 1:
+        return out
+    comps.sort(key=len, reverse=True)
+    for pixels in comps[1:]:
+        for x, y in pixels:
+            r, g, b, _ = px[x, y]
+            px[x, y] = (r, g, b, 0)
+    return out
+
+
+def _trim_far_edge_strip(im: Image.Image, *, side: str, max_cols: int = 4) -> Image.Image:
+    """Clear a thin right/left strip that is disconnected from the main body."""
+    out = im.copy()
+    w, h = out.size
+    if w < 8:
+        return out
+    px = out.load()
+    # Largest-component mask via flood from CoM of opaque pixels.
+    sx = sy = n = 0
+    for y in range(h):
+        for x in range(w):
+            if px[x, y][3] > 8:
+                sx += x
+                sy += y
+                n += 1
+    if n == 0:
+        return out
+    cx, cy = sx // n, sy // n
+    start = None
+    for r in range(max(w, h)):
+        for dy in range(-r, r + 1):
+            for dx in range(-r, r + 1):
+                x, y = cx + dx, cy + dy
+                if 0 <= x < w and 0 <= y < h and px[x, y][3] > 8:
+                    start = (x, y)
+                    break
+            if start is not None:
+                break
+        if start is not None:
+            break
+    if start is None:
+        return out
+    connected: set[tuple[int, int]] = {start}
+    q: deque[tuple[int, int]] = deque([start])
+    while q:
+        x, y = q.popleft()
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            nx, ny = x + dx, y + dy
+            if (
+                0 <= nx < w
+                and 0 <= ny < h
+                and (nx, ny) not in connected
+                and px[nx, ny][3] > 8
+            ):
+                connected.add((nx, ny))
+                q.append((nx, ny))
+    xs = range(w - max_cols, w) if side == "right" else range(0, max_cols)
+    for x in xs:
+        for y in range(h):
+            if px[x, y][3] > 8 and (x, y) not in connected:
+                r, g, b, _ = px[x, y]
+                px[x, y] = (r, g, b, 0)
+    return out
+
+
+def _clean_bat_figure(fig: Image.Image, *, index: int) -> Image.Image:
+    """Drop neighboring-bat bleed after a half-slice."""
+    cleaned = _keep_largest_component(fig)
+    side = "right" if index == 0 else "left"
+    return _trim_far_edge_strip(cleaned, side=side, max_cols=4)
 
 
 def _slice_or_halves(im: Image.Image) -> list[Image.Image]:
@@ -248,6 +353,7 @@ def fix_bats() -> None:
     if len(figs) < 2:
         raise RuntimeError(f"bat strip: expected 2 figures, got {len(figs)}")
     for i, fig in enumerate(figs[:2]):
+        fig = _clean_bat_figure(fig, index=i)
         framed = _fit(fig, (96, 64))
         _save(framed, OUT / f"cave_bat_{i}.png")
         print(f"cave_bat_{i}: clear%={_clear_pct(framed):.1f}")
