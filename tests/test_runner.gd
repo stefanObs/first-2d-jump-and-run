@@ -5019,11 +5019,11 @@ func _test_ladder_branch_upper_ledge() -> Variant:
 func _test_cave_levels_belts_fences_ladders() -> Variant:
 	## Cave arc should keep extra climb routes and ranch props kids already know.
 	var expected := {
-		11: {"ladders": 2, "platforms": 3, "fences": 3, "conveyors": 0, "doors": 0, "drips": 3},
-		12: {"ladders": 2, "platforms": 3, "fences": 2, "conveyors": 1, "doors": 1, "drips": 5},
-		13: {"ladders": 1, "platforms": 7, "fences": 2, "conveyors": 1, "doors": 1, "drips": 6},
-		14: {"ladders": 3, "platforms": 6, "fences": 3, "conveyors": 1, "doors": 1, "drips": 5},
-		15: {"ladders": 2, "platforms": 6, "fences": 3, "conveyors": 1, "doors": 1, "drips": 5},
+		11: {"ladders": 2, "platforms": 3, "fences": 3, "conveyors": 0, "doors": 0, "drips": 3, "springs": 2},
+		12: {"ladders": 2, "platforms": 3, "fences": 2, "conveyors": 1, "doors": 1, "drips": 5, "springs": 3},
+		13: {"ladders": 1, "platforms": 7, "fences": 2, "conveyors": 1, "doors": 1, "drips": 6, "springs": 3},
+		14: {"ladders": 3, "platforms": 6, "fences": 3, "conveyors": 1, "doors": 1, "drips": 5, "springs": 4},
+		15: {"ladders": 2, "platforms": 6, "fences": 3, "conveyors": 1, "doors": 1, "drips": 5, "springs": 4},
 	}
 	for level_number in expected.keys():
 		var data := CaveCampaignLevels.level_data(int(level_number))
@@ -5034,6 +5034,7 @@ func _test_cave_levels_belts_fences_ladders() -> Variant:
 			"conveyors": 0,
 			"doors": 0,
 			"drips": 0,
+			"springs": 0,
 		}
 		for value in data.get("objects", []):
 			var type_name := str((value as Dictionary).get("type", ""))
@@ -5050,6 +5051,8 @@ func _test_cave_levels_belts_fences_ladders() -> Variant:
 					counts["doors"] += 1
 				"acid_drip":
 					counts["drips"] += 1
+				"spring":
+					counts["springs"] += 1
 		var want: Dictionary = expected[level_number]
 		for key in want.keys():
 			if int(counts[key]) < int(want[key]):
@@ -5071,6 +5074,8 @@ func _test_cave_levels_belts_fences_ladders() -> Variant:
 		layout_errors.append_array(LevelLayoutRules._validate_ladder_tops(level))
 		layout_errors.append_array(LevelLayoutRules._validate_timed_doors_clear_of_canyons(level))
 		layout_errors.append_array(LevelLayoutRules._validate_conveyors_not_pushing_into_canyons(level))
+		layout_errors.append_array(LevelLayoutRules._validate_cactus_clear_of_springs(level))
+		layout_errors.append_array(LevelLayoutRules._validate_canyon_up_needs_spring(level))
 		level.queue_free()
 		await get_tree().process_frame
 		if not layout_errors.is_empty():
