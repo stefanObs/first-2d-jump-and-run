@@ -2,7 +2,7 @@
 
 Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, nonviolent lasso. **Classic mode** has no lives or game over; **Advanced Mode** (chosen in **Settings** before starting or continuing a slot) adds a three-life limit, badge milestones, and a game-over return to the start screen. Pick **Cowboy** or **Cowgirl** in Settings — the choice applies across all save slots. **German is the default language**; English is fully supported.
 
-**Content version:** `1.7.0` (see `content_version.txt`). Launchers reimport when this stamp changes.
+**Content version:** `1.7.1` (see `content_version.txt`). Launchers reimport when this stamp changes.
 
 This README is the **binding source of truth** for gameplay, level design, art, i18n, and audio. Agents and contributors must follow it (see [Agent / contributor rules](#agent--contributor-rules)).
 
@@ -63,13 +63,13 @@ After Kingpin: horizon victory ride, fade, dedication **VOM PAPI FÜR FINN**, th
 
 ## Core gameplay
 
-- **Move:** arrows or A/D; **jump:** Space (coyote ~0.16s, buffer ~0.15s, variable height). Xbox: stick/D-pad, A jump, X lasso, B back, Menu pause.
+- **Move:** arrows or A/D; **jump:** Space (coyote ~0.16s, buffer ~0.15s, variable height). On a **ladder**, Space / W / Up climbs up and S / Down climbs down (left/right steps off). Xbox: stick/D-pad, A jump/climb-up, X lasso, B back, Menu pause.
 - **Horse (Level 1):** `start_mounted` — faster run (~1.45×), jumps ~20% farther. Midnight Coach chase is mounted at that pace.
 - **Lasso:** Alt / F / L (Xbox X) — ties bandits, trail bulls, and ninjas (pass-through, seated rope pose). A downward jump stomp from above also ties + small bounce; side/upward/standing contact hurts. Trail bulls **charge the cowboy** when he is nearby. **Ninjas ambush** ~6 grid cells ahead of the cowboy, then slash with a sword; while the cowboy **flies with Wings**, they throw handcrafted **shuriken**. Bandits placed in mid-air (workshop or level layout) **fall to the walkable surface below** before patrolling.
 - **Modes** (one at a time; badge pickup adds ~5s): Wings / Magic Boots / Speed Star **30s**; Bubble Shield **7.5s** (blocks bandits, bounces cacti; **does not** save canyon falls).
 - **Camps:** checkpoints; respawn there after canyon/cactus hurt. Classic mode has no life limit; **Advanced Mode** costs one life per respawn (three lives at start; every **30 badges** collected across the save grants +1 life; at zero lives a western game-over plays and returns to save select). Camps snapshot badges, opened chests, tied bandits/bulls/ninjas, and the active mode; respawn restores that snapshot and resets untied foes to their posts. **Bullets and shuriken are cleared** on respawn and never restored.
 - **Treasure chests:** optional mid-trail rewards — touch to open once; a random power-up (Wings, Magic Boots, Speed Star, Bubble Shield) or one sheriff badge is rolled at open time, revealed with a pop-out animation, and activated immediately on the player (same effect as collecting that pickup); chest stays open and cannot be re-triggered; Advanced Mode badge milestones count only badge loot (+1), not power-ups. Chest collision scales to **~109% of player height** (scaled prop, not a flat grid stamp).
-- **Player characters:** **Cowboy** or **Cowgirl** in Settings (all slots). Both share the same animation set (idle, run, jump, celebrate, Magic Boots variants). **Idle uses a single pose frame** with a gentle scale breathe — do not alternate mismatched idle frames (causes flicker).
+- **Player characters:** **Cowboy** or **Cowgirl** in Settings (all slots). Both share the same animation set (idle, run, jump, climb, celebrate, Magic Boots variants). **Idle uses a single pose frame** with a gentle scale breathe — do not alternate mismatched idle frames (causes flicker).
 - **Canyons vs cactus vs pits:** **Canyons** are wide trail gaps (merged stamps, hand-painted rims, sky mouth). **Pits** are fixed **128×64 px** holes (`assets/world/pit.png`, no scaling) stamped only on trail **dirt** cells. Falling into a pit or canyon → spin recovery → camp. Cactus/bandit/carrion/snake hurt → camp (Bubble can block some damage). User-facing copy: call wide gaps **canyons**; call fixed holes **pits** (never use “pit” for a canyon).
 - **Stars:** optional; goals are saloon doorways (flying over counts). Level clear → horse ride-in/mount/ride-out → next level: ride in, dismount, and **leave the horse at the level start**. Handmade desert skyline behind transitions.
 
@@ -99,6 +99,7 @@ Agents **must** honor these when editing levels or trail systems:
 - Cave remaps stamp **presentation** (same type ids): fungus/lizard/scorpion/bow skeleton/lantern camp/**Crystal Gate** (saloon replacement). Cave-only stamps: `acid_drip`, `stalactite`, `bat`.
 - Pink drips and falling stalactites hurt → camp respawn; **Bubble does not block** them. Bats can bounce off Bubble.
 - Cave floors/sky use cool slate + pink mineral accents; no desert sun/mesa hills.
+- **Ladders** (workshop Trail stamp): 3-cell climb; Space/Up climbs up, S/Down climbs down. Use ladder + elevated platforms so trails can split into an **upper and lower path that rejoin** later (sample branches appear on new trails and on Outlaw Cave workshop imports).
 
 ### Canyon art
 

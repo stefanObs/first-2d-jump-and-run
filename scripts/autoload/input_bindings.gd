@@ -33,6 +33,15 @@ func _ready() -> void:
 		]
 	)
 	_ensure_action(
+		&"move_down",
+		[
+			_key(KEY_S),
+			_key(KEY_DOWN),
+			_joy_button(JOY_BUTTON_DPAD_DOWN),
+			_joy_axis(JOY_AXIS_LEFT_Y, 1.0),
+		]
+	)
+	_ensure_action(
 		&"lasso",
 		[
 			_key(KEY_L),

@@ -38,6 +38,8 @@ static func stamp_icon_path(type_name: String, style: String = DESERT) -> String
 			return "res://assets/ui/editor_canyon_stamp_icon.png"
 		"platform":
 			return "res://assets/world/cave_plank.png" if cave else "res://assets/world/wood_plank.png"
+		"ladder":
+			return "res://assets/world/ladder.png"
 		"cactus":
 			return "res://assets/world/poison_fungus.png" if cave else "res://assets/world/cactus.png"
 		"pit":
@@ -95,6 +97,8 @@ static func stamp_label(type_name: String, style: String = DESERT) -> String:
 			return "Cave Gap" if cave else "Canyon"
 		"platform":
 			return "Crystal Ledge" if cave else "Plank"
+		"ladder":
+			return "Ladder"
 		"cactus":
 			return "Poison Fungus" if cave else "Cactus"
 		"pit":
@@ -169,6 +173,7 @@ static func tool_categories(style: String = DESERT) -> Array:
 				_tool("ground", style),
 				_tool("canyon", style),
 				_tool("platform", style),
+				_tool("ladder", style),
 			],
 		},
 		{

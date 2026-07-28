@@ -34,6 +34,7 @@ const PLAYER_DISPLAY_SCALE := 1.5
 const RUN_SPEED_ENTER := 34.0
 const RUN_SPEED_EXIT := 14.0
 const JUMP_ANIM_AIR_TIME := 0.07
+const CLIMB_SPEED := 160.0
 
 var input_enabled: bool = true
 var stars_collected: int = 0
@@ -64,6 +65,10 @@ var _air_time: float = 0.0
 var _ground_time: float = 0.0
 var _showing_run: bool = false
 var _showing_jump: bool = false
+var _nearby_ladders: Array[Ladder] = []
+var _active_ladder: Ladder = null
+var _climbing: bool = false
+var _climb_anim_phase: float = 0.0
 
 
 func _ready() -> void:
@@ -112,7 +117,9 @@ func _physics_process(delta: float) -> void:
 	if input_enabled and Input.is_action_just_pressed(&"lasso"):
 		throw_lasso()
 
-	if _modes.is_flying() and input_enabled:
+	if _climbing or _try_begin_climb():
+		_apply_climb(delta)
+	elif _modes.is_flying() and input_enabled:
 		_apply_flight(delta)
 	else:
 		_apply_gravity(delta, on_floor)
@@ -140,6 +147,130 @@ func _physics_process(delta: float) -> void:
 	_was_on_floor = on_floor
 	_update_animation(on_floor)
 	_update_mode_visual()
+
+
+func register_ladder(ladder: Ladder) -> void:
+	if ladder == null:
+		return
+	if ladder not in _nearby_ladders:
+		_nearby_ladders.append(ladder)
+
+
+func unregister_ladder(ladder: Ladder) -> void:
+	_nearby_ladders.erase(ladder)
+	if _active_ladder == ladder:
+		_end_climb()
+
+
+func is_climbing() -> bool:
+	return _climbing
+
+
+func _best_ladder() -> Ladder:
+	var best: Ladder = null
+	var best_dx := INF
+	for ladder in _nearby_ladders:
+		if ladder == null or not is_instance_valid(ladder):
+			continue
+		if not ladder.contains_player_y(global_position.y, 20.0):
+			continue
+		var dx := absf(ladder.center_x() - global_position.x)
+		if dx < best_dx:
+			best_dx = dx
+			best = ladder
+	return best
+
+
+func _try_begin_climb() -> bool:
+	if not input_enabled or _mounted or _modes.is_flying():
+		return false
+	if _climbing:
+		return true
+	var want_up := Input.is_action_pressed(&"jump")
+	var want_down := Input.is_action_pressed(&"move_down")
+	if not want_up and not want_down:
+		return false
+	var ladder := _best_ladder()
+	if ladder == null:
+		return false
+	# From the floor, only Space/Up starts a climb. Down grabs a ladder when
+	# standing near the top (drop onto the upper path's ladder mouth).
+	if want_down and not want_up and is_on_floor():
+		if global_position.y < ladder.climb_top_y() + 28.0:
+			_start_climb(ladder)
+			return true
+		return false
+	if want_up:
+		_start_climb(ladder)
+		return true
+	return false
+
+
+func _start_climb(ladder: Ladder) -> void:
+	_climbing = true
+	_active_ladder = ladder
+	_jump_assist.reset()
+	_jump_cut_applied = true
+	global_position.x = ladder.center_x()
+	velocity = Vector2.ZERO
+	_showing_jump = false
+	_showing_run = false
+
+
+func _end_climb() -> void:
+	_climbing = false
+	_active_ladder = null
+	_climb_anim_phase = 0.0
+
+
+func _apply_climb(delta: float) -> void:
+	if not _climbing:
+		return
+	if _active_ladder == null or not is_instance_valid(_active_ladder):
+		_end_climb()
+		return
+	if not input_enabled:
+		velocity = Vector2.ZERO
+		return
+
+	var climb_dir := 0.0
+	if Input.is_action_pressed(&"jump"):
+		climb_dir -= 1.0
+	if Input.is_action_pressed(&"move_down"):
+		climb_dir += 1.0
+
+	# Left/right while climbing detaches (drop or step off).
+	var side := Input.get_axis(&"move_left", &"move_right")
+	if absf(side) > 0.55 and absf(climb_dir) < 0.1:
+		_end_climb()
+		velocity.x = side * move_speed * 0.45
+		velocity.y = 40.0
+		return
+
+	global_position.x = _active_ladder.center_x()
+	velocity.x = 0.0
+	velocity.y = climb_dir * CLIMB_SPEED
+
+	var top := _active_ladder.climb_top_y()
+	var bottom := _active_ladder.climb_bottom_y()
+	if global_position.y <= top and climb_dir < 0.0:
+		global_position.y = top - 10.0
+		velocity.y = 0.0
+		# Step onto the upper ledge.
+		_end_climb()
+		velocity.y = -60.0
+		return
+	if global_position.y >= bottom and climb_dir > 0.0:
+		global_position.y = bottom
+		velocity.y = 0.0
+		_end_climb()
+		return
+
+	if absf(climb_dir) > 0.1:
+		_climb_anim_phase += delta * 8.0
+	_jump_assist.reset()
+	_jump_cut_applied = true
+
 
 
 func set_input_enabled(enabled: bool) -> void:
@@ -254,6 +385,8 @@ func respawn_at(world_position: Vector2) -> void:
 	_ground_time = 0.0
 	_showing_run = false
 	_showing_jump = false
+	_end_climb()
+	_nearby_ladders.clear()
 	_invulnerable_remaining = respawn_invulnerability_time
 	respawned.emit(world_position)
 
@@ -421,6 +554,14 @@ func _setup_sprite_frames(use_magic_boots: bool) -> void:
 		folder
 	)
 	_add_anim(frames, &"jump", ["jump%s.png" % suffix], 5.0, false, folder)
+	_add_anim(
+		frames,
+		&"climb",
+		["climb_0%s.png" % suffix, "climb_1%s.png" % suffix],
+		8.0,
+		true,
+		folder
+	)
 	_add_anim(frames, &"celebrate", ["celebrate%s.png" % suffix], 5.0, true, folder)
 	var previous := _sprite.animation
 	_sprite.sprite_frames = frames
@@ -521,6 +662,10 @@ func _update_animation(on_floor: bool) -> void:
 func _resolve_body_animation(on_floor: bool) -> StringName:
 	if _celebrating:
 		return &"celebrate"
+	if _climbing:
+		_showing_jump = false
+		_showing_run = false
+		return &"climb"
 	if _modes.is_flying():
 		_showing_jump = true
 		_showing_run = false

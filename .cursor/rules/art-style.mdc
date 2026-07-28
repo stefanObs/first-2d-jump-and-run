@@ -58,9 +58,11 @@ Shared finishing (both tiers):
      `jump` 336×268 (hooves at bottom).
 4. Generate a **run cycle as one horizontal 4-frame strip** (keeps the character
    consistent), then split with `art_pipeline.slice_strip`.
-5. **`_boots` (Magic Boots) variants are identical copies** of the base frame —
+5. **Climb** is a **2-frame strip** (`climb_0` / `climb_1`) for cowboy and cowgirl;
+   rebuild with `python tools/build_ladder_art.py`.
+6. **`_boots` (Magic Boots) variants are identical copies** of the base frame —
    the boots glow is a separate in-engine overlay, not baked into the sprite.
-6. After changing shipped art, bump `content_version.txt`.
+7. After changing shipped art, bump `content_version.txt`.
 
 Cowgirl on-foot frames live in `assets/player/cowgirl/`; mounted in
 `assets/world/cowgirl_horse_*.png`. Cowboy frames in `assets/player/` are the

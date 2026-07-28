@@ -38,11 +38,12 @@ static func trail_row(height: int) -> int:
 
 const GROUND_STANDING_TYPES: PackedStringArray = [
 	"cactus", "checkpoint", "spring", "bandit", "bounty_bandit", "bull", "ninja",
-	"rattlesnake", "goal", "chest", "wings", "boots", "speed", "shield",
+	"rattlesnake", "goal", "chest", "wings", "boots", "speed", "shield", "ladder",
 ]
 const CEILING_HANGING_TYPES: PackedStringArray = ["acid_drip", "stalactite"]
 const STYLE_DESERT := "desert"
 const STYLE_CAVE := "cave"
+const LADDER_HEIGHT_CELLS := 3
 
 
 static func is_ground_standing(type_name: String) -> bool:
@@ -71,6 +72,8 @@ static func stamp_footprint(type_name: String) -> Vector2:
 			return Vector2(2.0, 1.0)
 		"pit":
 			return Vector2(PIT_PIXEL_SIZE.x / GRID_SIZE, 1.0)
+		"ladder":
+			return Vector2(1.0, float(LADDER_HEIGHT_CELLS))
 		_:
 			return Vector2(1.0, 1.0)
 
@@ -102,6 +105,8 @@ static func stamp_world_size(type_name: String, style: String = STYLE_DESERT) ->
 			return _texture_pixel_size("res://assets/world/acid_drip.png")
 		"stalactite":
 			return _texture_pixel_size("res://assets/world/stalactite.png")
+		"ladder":
+			return Vector2(48.0, float(LADDER_HEIGHT_CELLS) * GRID_SIZE)
 		"wings", "boots", "speed", "shield":
 			return _texture_pixel_size(_mode_item_icon_path(type_name))
 		_:
@@ -163,7 +168,13 @@ static func stamp_hover_cells(
 	start_col = clampi(start_col, 0, width - int(footprint.x))
 	for dx in range(int(footprint.x)):
 		for dy in range(int(footprint.y)):
-			cells.append(Vector2i(start_col + dx, place_row + dy))
+			var row := place_row + dy
+			if type_name == "ladder":
+				# Ladder grows upward from the standing row.
+				row = place_row - dy
+			if row < 0 or row > trail:
+				continue
+			cells.append(Vector2i(start_col + dx, row))
 	return cells
 
 
@@ -232,6 +243,8 @@ static func stamp_visual_world_rect(
 	var anchor := object_world_position(object, grid, trail)
 	if is_ceiling_hanging(type_name):
 		return Rect2(anchor.x - size.x * 0.5, anchor.y, size.x, size.y)
+	if type_name == "ladder":
+		return Rect2(anchor.x - size.x * 0.5, anchor.y - size.y, size.x, size.y)
 	if is_ground_standing(type_name):
 		return Rect2(anchor.x - size.x * 0.5, anchor.y - size.y, size.x, size.y)
 	if type_name == "carrion" or type_name == "bat":
@@ -337,6 +350,7 @@ static func default_level(slot_index: int) -> Dictionary:
 	objects.append({"type": "star", "x": 7, "y": trail - 2})
 	objects.append({"type": "cactus", "x": 11, "y": trail - 1})
 	objects.append({"type": "pit", "x": 18, "y": trail})
+	append_ladder_branch(objects, trail, 28)
 	objects.append({"type": "checkpoint", "x": width / 2, "y": trail - 1})
 	objects.append({"type": "goal", "x": width - 3, "y": trail - 1})
 	return {
@@ -786,6 +800,15 @@ static func import_builtin(level_number: int) -> Dictionary:
 		result["objects"] = objects
 	if number == 1:
 		result["start_mounted"] = true
+	if number == 5:
+		var cave_objects: Array = result.get("objects", [])
+		if cave_objects is Array:
+			var typed: Array[Dictionary] = []
+			for value in cave_objects:
+				if value is Dictionary:
+					typed.append(value as Dictionary)
+			append_ladder_branch(typed, trail, 42)
+			result["objects"] = typed
 	var spawn_marker := level.get_node_or_null("SpawnPoint") as Node2D
 	var player := level.get_node_or_null("Player") as Node2D
 	var spawn_node: Node2D = spawn_marker if spawn_marker != null else player
@@ -825,6 +848,18 @@ static func _import_type_for(node: Node) -> String:
 			return "pit"
 		return "canyon" if maxf(absf(body.scale.x), absf(body.scale.y)) > 1.35 else "cactus"
 	return ""
+
+
+static func append_ladder_branch(
+	objects: Array[Dictionary], trail: int, start_x: int = 28
+) -> void:
+	## Lower dirt path + ladder up to a ledge run + ladder back down (paths rejoin).
+	var upper := maxi(trail - LADDER_HEIGHT_CELLS, 0)
+	_append_unique(objects, {"type": "ladder", "x": start_x, "y": maxi(trail - 1, 0)})
+	for x in range(start_x, start_x + 14, 2):
+		_append_unique(objects, {"type": "platform", "x": x, "y": upper})
+	_append_unique(objects, {"type": "star", "x": start_x + 6, "y": maxi(upper - 1, 0)})
+	_append_unique(objects, {"type": "ladder", "x": start_x + 14, "y": maxi(trail - 1, 0)})
 
 
 static func _append_unique(objects: Array[Dictionary], object: Dictionary) -> void:
@@ -878,7 +913,7 @@ static func _valid_object(object: Dictionary, trail: int) -> bool:
 	var valid_types := [
 		"ground", "platform", "star", "chest", "cactus", "canyon", "pit",
 		"checkpoint", "spring", "goal", "bandit", "bounty_bandit", "bull", "ninja",
-		"rattlesnake", "carrion", "bat", "acid_drip", "stalactite",
+		"rattlesnake", "carrion", "bat", "acid_drip", "stalactite", "ladder",
 		"wings", "boots", "speed", "shield",
 	]
 	var type_name := str(object.get("type", ""))

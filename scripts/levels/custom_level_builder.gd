@@ -54,6 +54,13 @@ static func build(level: LevelController, data: Dictionary, preview: bool = fals
 		match type_name:
 			"platform":
 				_add_block(level, "Platform%d" % index, position, Vector2(grid * 2.0, 24), Color(0.55, 0.32, 0.14))
+			"ladder":
+				var ladder := Ladder.new()
+				ladder.name = "Ladder%d" % index
+				ladder.height_cells = CustomLevelStore.LADDER_HEIGHT_CELLS
+				# Anchor at standing feet (bottom of climb).
+				ladder.position = position
+				level.add_child(ladder)
 			"star":
 				_add_scene(level, STAR, "CustomStar%d" % index, position)
 			"chest":

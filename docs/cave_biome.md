@@ -40,8 +40,13 @@ Stamp **type ids stay the same** for remapped foes/hazards so packs stay simple:
 | `acid_drip` | Pink mineral drops fall from the ceiling on a timer; hit → camp respawn (Bubble does **not** block) |
 | `stalactite` | Hangs dormant; when the cowboy nears, it drops; contact hurts; floor impact plays a shatter/settle animation |
 | `bat` | Flies a smooth curve through the cavern; contact hurts (Bubble can block) |
+| `ladder` | Climb with Space/Up (up) and S/Down (down); used for upper/lower path splits that rejoin |
 
-Ceiling stamps place on the top rows; ground props still sit one row above dirt.
+Ceiling stamps place on the top rows; ground props still sit one row above dirt. Ladders stand on the trail and rise three cells.
+
+## Path splits (ladders)
+
+Stamp a **ladder**, run **platforms** along the upper row at the ladder top, then a second **ladder** back to the dirt trail. Lower dirt stays walkable the whole time — kids can take the high ledge or stay low; both ways meet again after the second ladder. Workshop defaults and Outlaw Cave imports include a sample split.
 
 ## Hazards & enemies
 
