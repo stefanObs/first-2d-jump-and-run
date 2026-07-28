@@ -40,7 +40,7 @@ static func stamp_icon_path(type_name: String, style: String = DESERT) -> String
 		"bounty_bandit":
 			return "res://assets/world/skeleton_crystal.png" if cave else "res://assets/world/bandit_red.png"
 		"bull":
-			return "res://assets/world/cave_lizard.png" if cave else "res://assets/world/boss_stampede_bull.png"
+			return "res://assets/world/cave_lizard.png" if cave else "res://assets/world/trail_bull.png"
 		"rattlesnake":
 			return "res://assets/world/scorpion_idle.png" if cave else "res://assets/world/rattlesnake_idle.png"
 		"scorpion":

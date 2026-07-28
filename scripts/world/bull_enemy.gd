@@ -6,9 +6,15 @@ extends AnimatableBody2D
 signal hurt_player(player: Player)
 signal captured(bull: BullEnemy)
 
-const BULL_TEX := preload("res://assets/world/boss_stampede_bull.png")
+const BULL_TEX := preload("res://assets/world/trail_bull.png")
 const BULL_TIED_TEX := preload("res://assets/world/boss_stampede_bull_tied_legs.png")
 const BULL_DOWN_TEX := preload("res://assets/world/boss_stampede_bull_down.png")
+const BULL_RUN_TEX: Array[Texture2D] = [
+	preload("res://assets/world/trail_bull_run_0.png"),
+	preload("res://assets/world/trail_bull_run_1.png"),
+	preload("res://assets/world/trail_bull_run_2.png"),
+	preload("res://assets/world/trail_bull_run_3.png"),
+]
 const LIZARD_TEX := preload("res://assets/world/cave_lizard.png")
 const LIZARD_TIED_TEX := preload("res://assets/world/cave_lizard_tied_legs.png")
 const LIZARD_DOWN_TEX := preload("res://assets/world/cave_lizard_down.png")
@@ -29,6 +35,7 @@ const FALL_DEATH_DEPTH := 1400.0
 ## About 8 cm on a typical play window — reverse run after a pit/canyon lip.
 const EDGE_RETREAT_PX := 300.0
 const EDGE_LOOKAHEAD_PX := 32.0
+const RUN_FPS := 10.0
 
 var _origin: Vector2
 var _facing: float = 1.0
@@ -38,6 +45,7 @@ var _sprite: Sprite2D
 var _hint_phase: float = 0.0
 var _tied: bool = false
 var _charge_bob: float = 0.0
+var _run_phase: float = 0.0
 var _pose_tween: Tween
 var _stand_scale: float = 1.0
 var _vel_y: float = 0.0
@@ -64,6 +72,32 @@ func _tied_tex() -> Texture2D:
 
 func _down_tex() -> Texture2D:
 	return LIZARD_DOWN_TEX if LevelStyle.is_cave(_level_style) else BULL_DOWN_TEX
+
+
+func _has_run_cycle() -> bool:
+	return not LevelStyle.is_cave(_level_style) and not BULL_RUN_TEX.is_empty()
+
+
+func _play_move_visual(moving: bool, delta: float) -> void:
+	if _sprite == null or _tied or _fallen:
+		return
+	var base_offset := -float(_stand_tex().get_height()) * 0.5
+	if moving and _has_run_cycle():
+		_run_phase += delta * RUN_FPS
+		var idx := int(floor(_run_phase)) % BULL_RUN_TEX.size()
+		_sprite.texture = BULL_RUN_TEX[idx]
+		_sprite.offset.y = base_offset
+		_sprite.rotation = 0.0
+	elif moving:
+		_charge_bob += delta * 14.0
+		_sprite.texture = _stand_tex()
+		_sprite.offset.y = base_offset + sin(_charge_bob) * 3.0
+		_sprite.rotation = sin(_charge_bob * 0.5) * 0.04 * _facing
+	else:
+		_run_phase = 0.0
+		_sprite.texture = _stand_tex()
+		_sprite.offset.y = base_offset
+		_sprite.rotation = 0.0
 
 
 func _ready() -> void:
@@ -148,22 +182,14 @@ func _physics_process(delta: float) -> void:
 			_retreat_remaining = maxf(_retreat_remaining - absf(step), 0.0)
 			_facing = _retreat_dir
 			_apply_facing(_facing)
-			_charge_bob += delta * 14.0
 	elif charging:
 		if _edge_ahead(_facing):
 			_begin_edge_retreat()
 		else:
-			_charge_bob += delta * 14.0
 			next.x += _facing * CHARGE_SPEED * delta
 	next = _integrate_gravity(next, delta)
 	global_position = next
-	if _sprite != null:
-		if (charging or retreating) and not _fallen:
-			_sprite.offset.y = -float(_stand_tex().get_height()) * 0.5 + sin(_charge_bob) * 3.0
-			_sprite.rotation = sin(_charge_bob * 0.5) * 0.04 * _facing
-		else:
-			_sprite.offset.y = -float(_stand_tex().get_height()) * 0.5
-			_sprite.rotation = 0.0
+	_play_move_visual((charging or retreating) and not _fallen, delta)
 
 
 func _edge_ahead(direction: float) -> bool:

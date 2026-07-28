@@ -399,6 +399,15 @@ func _test_boss_arenas() -> Variant:
 		"res://assets/world/boss_stampede_bull.png",
 		"res://assets/world/boss_stampede_bull_tied_legs.png",
 		"res://assets/world/boss_stampede_bull_down.png",
+		"res://assets/world/boss_stampede_bull_run_0.png",
+		"res://assets/world/boss_stampede_bull_run_1.png",
+		"res://assets/world/boss_stampede_bull_run_2.png",
+		"res://assets/world/boss_stampede_bull_run_3.png",
+		"res://assets/world/trail_bull.png",
+		"res://assets/world/trail_bull_run_0.png",
+		"res://assets/world/trail_bull_run_1.png",
+		"res://assets/world/trail_bull_run_2.png",
+		"res://assets/world/trail_bull_run_3.png",
 	]:
 		if load(art_path) == null:
 			bull.queue_free()
@@ -2318,11 +2327,22 @@ func _test_bull_charges_player() -> Variant:
 	await get_tree().physics_frame
 	await get_tree().physics_frame
 	var start_x := bull.global_position.x
+	if BullEnemy.BULL_TEX.resource_path != "res://assets/world/trail_bull.png":
+		player.queue_free()
+		bull.queue_free()
+		floor.queue_free()
+		return "Trail bull idle art should use trail_bull.png (no painted lasso ring)."
+	var sprite := bull.get_node_or_null("BullSprite") as Sprite2D
+	var saw_run := false
 	for _i in range(30):
 		await get_tree().physics_frame
+		if sprite != null and sprite.texture in BullEnemy.BULL_RUN_TEX:
+			saw_run = true
 	var error: Variant = null
 	if bull.global_position.x <= start_x + 8.0:
 		error = "Trail bull should charge toward the nearby player."
+	elif not saw_run:
+		error = "Trail bull should play its run cycle while charging."
 	player.queue_free()
 	bull.queue_free()
 	floor.queue_free()

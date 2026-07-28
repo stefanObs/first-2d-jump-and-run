@@ -1,7 +1,7 @@
 [gd_scene load_steps=4 format=3 uid="uid://cbullenemy01"]
 
 [ext_resource type="Script" path="res://scripts/world/bull_enemy.gd" id="1"]
-[ext_resource type="Texture2D" path="res://assets/world/boss_stampede_bull.png" id="2"]
+[ext_resource type="Texture2D" path="res://assets/world/trail_bull.png" id="2"]
 
 [sub_resource type="RectangleShape2D" id="BodyShape"]
 size = Vector2(52, 36)

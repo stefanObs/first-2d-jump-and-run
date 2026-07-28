@@ -33,7 +33,7 @@ ENTRIES: list[tuple[str, str, str]] = [
     ("Carrion", "assets/world/carrion_bird.png", "Carrion"),
     ("Rattlesnake", "assets/world/rattlesnake_idle.png", ""),
     ("Opponent", "assets/world/bandit.png", "Bandit"),
-    ("Trail Bull", "assets/world/boss_stampede_bull.png", "BullEnemy"),
+    ("Trail Bull", "assets/world/trail_bull.png", "BullEnemy"),
     ("Ninja", "assets/world/ninja_idle.png", "NinjaEnemy"),
     ("SpringPad", "assets/world/spring.png", "Spring*"),
     # Platforms & world

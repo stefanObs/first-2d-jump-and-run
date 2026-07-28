@@ -5,11 +5,18 @@ extends BossArena
 const BULL_TEX := preload("res://assets/world/boss_stampede_bull.png")
 const BULL_TIED_TEX := preload("res://assets/world/boss_stampede_bull_tied_legs.png")
 const BULL_DOWN_TEX := preload("res://assets/world/boss_stampede_bull_down.png")
+const BULL_RUN_TEX: Array[Texture2D] = [
+	preload("res://assets/world/boss_stampede_bull_run_0.png"),
+	preload("res://assets/world/boss_stampede_bull_run_1.png"),
+	preload("res://assets/world/boss_stampede_bull_run_2.png"),
+	preload("res://assets/world/boss_stampede_bull_run_3.png"),
+]
 ## Keep the bull body clear of the solid arena walls.
 const WALL_CLEAR := 90.0
 const BULL_FOOT_Y := -78.0
 const TIED_SPRITE_HEIGHT := 190.0
 const DOWN_SPRITE_HEIGHT := 118.0
+const RUN_FPS := 10.0
 
 enum State { CHARGE, STUN, HIT }
 
@@ -27,6 +34,7 @@ var _state: State = State.CHARGE
 var _left_x: float = 460.0
 var _right_x: float = 1140.0
 var _charge_bob: float = 0.0
+var _run_phase: float = 0.0
 var _stun_token: int = 0
 var _charge_grace: float = 0.0
 
@@ -87,11 +95,8 @@ func _physics_process(delta: float) -> void:
 		_charge_grace = maxf(_charge_grace - delta, 0.0)
 	match _state:
 		State.CHARGE:
-			_charge_bob += delta * 14.0
 			_bull.position.x += _dir * charge_speed * delta
-			if _sprite != null:
-				_sprite.position.y = BULL_FOOT_Y + sin(_charge_bob) * 4.0
-				_sprite.rotation = sin(_charge_bob * 0.5) * 0.04 * _dir
+			_play_charge_run(delta)
 			_apply_facing()
 			if _charge_grace > 0.0:
 				_bull.position.x = clampf(
@@ -109,6 +114,22 @@ func _physics_process(delta: float) -> void:
 			_animate_stun_idle(delta)
 		State.HIT:
 			pass
+
+
+func _play_charge_run(delta: float) -> void:
+	if _sprite == null:
+		return
+	if BULL_RUN_TEX.is_empty():
+		_charge_bob += delta * 14.0
+		_sprite.texture = BULL_TEX
+		_sprite.position.y = BULL_FOOT_Y + sin(_charge_bob) * 4.0
+		_sprite.rotation = sin(_charge_bob * 0.5) * 0.04 * _dir
+		return
+	_run_phase += delta * RUN_FPS
+	var idx := int(floor(_run_phase)) % BULL_RUN_TEX.size()
+	_sprite.texture = BULL_RUN_TEX[idx]
+	_sprite.position.y = BULL_FOOT_Y
+	_sprite.rotation = 0.0
 
 
 func _apply_facing() -> void:
@@ -169,6 +190,8 @@ func _begin_stun() -> void:
 func _animate_stun_idle(delta: float) -> void:
 	if _sprite == null:
 		return
+	_run_phase = 0.0
+	_sprite.texture = BULL_TEX
 	_charge_bob += delta * 8.0
 	_sprite.position.y = BULL_FOOT_Y + sin(_charge_bob) * 2.0
 	_sprite.rotation = sin(_charge_bob) * 0.08
@@ -225,6 +248,9 @@ func _end_stun(from_lasso: bool) -> void:
 	if _sprite != null:
 		_sprite.modulate = Color.WHITE
 		_sprite.rotation = 0.0
+		_sprite.texture = BULL_TEX
+		_sprite.position.y = BULL_FOOT_Y
+	_run_phase = 0.0
 
 
 func _on_ring_lasso() -> void:
