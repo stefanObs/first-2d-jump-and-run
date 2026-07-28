@@ -15,7 +15,7 @@ const RIM_SIZE := Vector2(96.0, 900.0)
 ## Top of the sealed sand cap — flush with the trail desert floor.
 const RIM_SURFACE_TEX_Y := 0.0
 ## Texture X of the outermost canyon-facing sand/lip.
-const RIM_LIP_TEX_X := 368.0
+const RIM_LIP_TEX_X := 366.0
 ## Sand-crust rows at the top of the rim texture that must stay sealed.
 const RIM_CRUST_TEX_ROWS := 14
 ## Draw above TrailFloor surface tiles (z 1) so ridge lips sit on the desert edge.
