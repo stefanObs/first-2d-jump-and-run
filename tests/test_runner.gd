@@ -4709,6 +4709,13 @@ func _test_trail_row_model() -> Variant:
 		if pit6_art != null and not pit6_art.rims_match_desert_height():
 			level2_controller.queue_free()
 			return "Level 2 Pit6 canyon rims must match adjacent desert bank heights."
+		# Raised left plateau (~280) must lift the left ridge — no abyss band above it.
+		if pit6_art != null and float(pit6_art.left_floor_top) > 300.0:
+			level2_controller.queue_free()
+			return (
+				"Level 2 Pit6 left ridge should start at the raised bank top (got y=%.1f)."
+				% float(pit6_art.left_floor_top)
+			)
 	# Height steps should use trail tiles, not flat polygon fills.
 	for node in level2_controller.find_children("FloorSlopeFill*", "Polygon2D", true, false):
 		level2_controller.queue_free()

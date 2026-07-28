@@ -2,7 +2,7 @@
 
 Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, nonviolent lasso. **Classic mode** has no lives or game over; **Advanced Mode** (chosen in **Settings** before starting or continuing a slot) adds a three-life limit, badge milestones, and a game-over return to the start screen. Pick **Cowboy** or **Cowgirl** in Settings — the choice applies across all save slots. **German is the default language**; English is fully supported.
 
-**Content version:** `1.8.13` (see `content_version.txt`). Launchers reimport when this stamp changes.
+**Content version:** `1.8.14` (see `content_version.txt`). Launchers reimport when this stamp changes.
 
 This README is the **binding source of truth** for gameplay, level design, art, i18n, and audio. Agents and contributors must follow it (see [Agent / contributor rules](#agent--contributor-rules)).
 
@@ -111,7 +111,7 @@ Agents **must** honor these when editing levels or trail systems:
 
 ### Canyon art
 
-- Hand-painted **rims sit outside** desert floor banks — never cover the brown desert surface span with rim sprites.
+- Hand-painted **rims sit outside** desert floor banks — never cover the brown desert surface span with rim sprites. When a bank beside the mouth is **raised**, each ridge top follows that bank’s desert height (no dark abyss band above the ridge).
 - Ridges are **full-height handcrafted cliff faces** (ink outlines, painted rock — same illustrative western style as cactus/mesas): a **thin canyon-facing edge** from the desert top down to the bottom of the trail dirt / view — not a short rim lip, not a wide orange slab over the bank, and not flat TrailFloor dirt-cut ends. The **bank/inland side is opaque packed dirt** (matching trail earth) so sky / FloorAbyss never peek beside the ridge. Ridge tops use the same warm sand crust as the trail and **align flush with the desert top** (no sky slits under the sand). The canyon-facing edge against open sky is a **natural jagged / irregular silhouette** (not a ruler-straight vertical cut). Rims draw **in front of** desert floor tiles so lips sit on the canyon edge. Desert surface tiles **inset by about one ridge width** at canyon lips so sand meets the ridge top instead of overlapping it; dirt runs nearly to the lip behind the face.
 - Between the ridges: **open sky only** — punch horizon hills (Mesa backdrop) and FloorAbyss out of the gap column so trail SkyArt / Background shows through. Do **not** paint a stretched sky-fill column, depth shelves, floor wash, inner-wall fill, or mountain scenery inside the mouth; **never** a featureless black / flat near-black void or black outline framing the lips.
 - Horizon hills / Mesa backdrop must **not** silhouette over or through canyon openings (sky continues through the gap).

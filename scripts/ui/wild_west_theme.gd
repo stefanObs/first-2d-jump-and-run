@@ -36,8 +36,10 @@ static func apply_to_level(level: Node) -> void:
 	_make_contiguous_floors(level, style)
 	_align_cacti(level)
 	_align_chests(level)
-	_align_pits(level)
 	_apply_actor_styles(level, style)
+	# After actor styles: Hazard.apply_level_style would otherwise overwrite
+	# per-bank ridge tops with a temporary single-height canyon align.
+	_align_pits(level)
 
 
 static func _apply_actor_styles(level: Node, style: String) -> void:
@@ -987,7 +989,7 @@ static func _align_pits(level: Node) -> void:
 		if maxf(absf(hazard.scale.x), absf(hazard.scale.y)) <= 1.35:
 			continue
 		var gap := _gap_around(hazard.global_position.x, merged)
-		var edge_tops := _gap_edge_tops(gap, merged)
+		var edge_tops := _gap_edge_tops(gap, merged, level)
 		hazard.align_canyon_to_gap(
 			minf(float(edge_tops["left"]), float(edge_tops["right"])),
 			float(gap["left"]),
@@ -997,36 +999,61 @@ static func _align_pits(level: Node) -> void:
 		)
 
 
-static func _gap_edge_tops(gap: Dictionary, merged: Array[Dictionary]) -> Dictionary:
+static func _gap_edge_tops(
+	gap: Dictionary, merged: Array[Dictionary], level: Node = null
+) -> Dictionary:
+	## Per-bank desert tops at the canyon lips. Prefer the highest nearby crust
+	## (smallest Y) so a raised plateau beside the mouth is not left with abyss
+	## showing above a rim that was snapped to a lower lip shelf.
 	var gap_left := float(gap["left"])
 	var gap_right := float(gap["right"])
-	var left_top := 320.0
-	var right_top := 320.0
-	var found_left := false
-	var found_right := false
-	for strip in merged:
-		if absf(float(strip["right"]) - gap_left) <= 2.0:
-			left_top = float(strip["top"])
-			found_left = true
-		if absf(float(strip["left"]) - gap_right) <= 2.0:
-			right_top = float(strip["top"])
-			found_right = true
-	if not found_left:
-		for strip in merged:
-			if float(strip["right"]) <= gap_left + 2.0:
-				left_top = float(strip["top"])
-				found_left = true
-	if not found_right:
-		for strip in merged:
-			if float(strip["left"]) >= gap_right - 2.0:
-				right_top = float(strip["top"])
-				found_right = true
-				break
-	if not found_left and not merged.is_empty():
-		left_top = float(merged[0]["top"])
-	if not found_right and not merged.is_empty():
-		right_top = float(merged[merged.size() - 1]["top"])
+	var left_top := _bank_top_near_lip(level, merged, gap_left, true)
+	var right_top := _bank_top_near_lip(level, merged, gap_right, false)
 	return {"left": left_top, "right": right_top}
+
+
+static func _bank_top_near_lip(
+	level: Node, merged: Array[Dictionary], lip_x: float, left_bank: bool
+) -> float:
+	var samples: Array[float] = []
+	# Sample just inland of the lip and further back across the ridge band.
+	var offsets: Array[float] = [8.0, 24.0, 48.0, 88.0, 120.0]
+	for offset in offsets:
+		var x := lip_x - offset if left_bank else lip_x + offset
+		if level != null:
+			samples.append(float(walk_surface_at(level, x)["y"]))
+		else:
+			samples.append(_strip_top_at_x(merged, x))
+	# Exact strip that meets the gap edge (legacy match).
+	for strip in merged:
+		if left_bank and absf(float(strip["right"]) - lip_x) <= 3.0:
+			samples.append(float(strip["top"]))
+		elif not left_bank and absf(float(strip["left"]) - lip_x) <= 3.0:
+			samples.append(float(strip["top"]))
+	if samples.is_empty():
+		return 320.0
+	# Highest desert bank = smallest world Y.
+	var best := samples[0]
+	for y in samples:
+		best = minf(best, y)
+	return best
+
+
+static func _strip_top_at_x(merged: Array[Dictionary], world_x: float) -> float:
+	for strip in merged:
+		if world_x >= float(strip["left"]) - 0.5 and world_x <= float(strip["right"]) + 0.5:
+			return float(strip["top"])
+	if merged.is_empty():
+		return 320.0
+	var best_dist := INF
+	var best_y := float(merged[0]["top"])
+	for strip in merged:
+		var mid := (float(strip["left"]) + float(strip["right"])) * 0.5
+		var dist := absf(mid - world_x)
+		if dist < best_dist:
+			best_dist = dist
+			best_y = float(strip["top"])
+	return best_y
 
 
 static func _gap_around(x: float, merged: Array[Dictionary]) -> Dictionary:

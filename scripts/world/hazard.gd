@@ -103,8 +103,15 @@ func _configure_visual() -> void:
 			else:
 				label.add_theme_color_override(&"font_color", Color(0.15, 0.5, 0.18, 1.0))
 	if wide:
-		# Temporary until WildWestTheme supplies the real floor gap.
-		align_canyon_to_gap(global_position.y - 80.0, global_position.x - 80.0, global_position.x + 80.0)
+		# Temporary placeholder only — WildWestTheme._align_pits sets real gap
+		# and per-bank tops. Do not overwrite an already-configured mouth.
+		var existing := get_node_or_null("CanyonMouth")
+		if existing == null:
+			existing = get_node_or_null("PitMouth")
+		if existing == null:
+			align_canyon_to_gap(
+				global_position.y - 80.0, global_position.x - 80.0, global_position.x + 80.0
+			)
 
 
 func _configure_fixed_pit() -> void:
