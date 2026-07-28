@@ -35,12 +35,17 @@ var _activated: bool = false
 var _attack_token: int = 0
 var _throw_token: int = 0
 var _jump_token: int = 0
+var _appear_token: int = 0
 var _throw_timer: float = 0.0
 var _pose_tween: Tween
 var _jump_tween: Tween
+var _appear_tween: Tween
 
 
 func _ready() -> void:
+	# Drive ambush/chase/jump teleports from script; sync_to_physics would keep the
+	# old physics transform for a frame (or snap back after a brief sync toggle).
+	sync_to_physics = false
 	_anchor = global_position
 	_area = get_node_or_null("HurtArea") as Area2D
 	_label = get_node_or_null("Label") as Label
@@ -167,6 +172,8 @@ func _try_activate() -> void:
 
 func _appear_in_front_of(player: Player) -> void:
 	_state = State.APPEAR
+	_appear_token += 1
+	var token := _appear_token
 	var facing := _player_facing(player)
 	var spawn_x := player.global_position.x + facing * SPAWN_AHEAD
 	var spawn_y := _walk_surface_y(spawn_x, player.global_position.y)
@@ -175,12 +182,14 @@ func _appear_in_front_of(player: Player) -> void:
 	_apply_facing(_facing)
 	_set_dormant(false)
 	modulate.a = 0.0
-	var tween := create_tween()
-	tween.tween_property(self, "modulate:a", 1.0, 0.16)
-	tween.tween_callback(func() -> void:
-		if not _tied:
-			_state = State.CHASE
-			_set_move_animation(true)
+	_kill_appear_tween()
+	_appear_tween = create_tween()
+	_appear_tween.tween_property(self, "modulate:a", 1.0, 0.16)
+	_appear_tween.tween_callback(func() -> void:
+		if token != _appear_token or _tied or _state != State.APPEAR:
+			return
+		_state = State.CHASE
+		_set_move_animation(true)
 	)
 
 
@@ -295,7 +304,7 @@ func _begin_gap_jump(landing: Dictionary) -> void:
 
 
 func _jump_arc(t: float, token: int, start: Vector2, land: Vector2) -> void:
-	if token != _jump_token or _tied:
+	if token != _jump_token or _tied or _state != State.JUMP:
 		return
 	var x := lerpf(start.x, land.x, t)
 	var base_y := lerpf(start.y, land.y, t)
@@ -304,7 +313,7 @@ func _jump_arc(t: float, token: int, start: Vector2, land: Vector2) -> void:
 
 
 func _finish_gap_jump(token: int, land: Vector2) -> void:
-	if token != _jump_token or _tied:
+	if token != _jump_token or _tied or _state != State.JUMP:
 		return
 	global_position = land
 	_state = State.CHASE
@@ -338,13 +347,13 @@ func _begin_sword_attack(player: Player) -> void:
 		_label.text = "SLASH!"
 		_label.modulate = Color(0.95, 0.2, 0.12, 1.0)
 	await get_tree().create_timer(0.12).timeout
-	if token != _attack_token or _tied:
+	if token != _attack_token or _tied or _state != State.ATTACK:
 		return
 	if player != null and global_position.distance_to(player.global_position) <= MELEE_RANGE + 8.0:
 		if not player.is_invulnerable():
 			hurt_player.emit(player)
 	await get_tree().create_timer(0.18).timeout
-	if token != _attack_token or _tied:
+	if token != _attack_token or _tied or _state != State.ATTACK:
 		return
 	_state = State.CHASE
 	if _label != null:
@@ -366,12 +375,12 @@ func _begin_throw(player: Player) -> void:
 		_label.text = "STARS!"
 		_label.modulate = Color(0.85, 0.9, 1.0, 1.0)
 	await get_tree().create_timer(0.14).timeout
-	if token != _throw_token or _tied:
+	if token != _throw_token or _tied or _state != State.THROW:
 		return
 	_spawn_shuriken(player)
 	_throw_timer = SHURIKEN_COOLDOWN
 	await get_tree().create_timer(0.16).timeout
-	if token != _throw_token or _tied:
+	if token != _throw_token or _tied or _state != State.THROW:
 		return
 	_state = State.CHASE
 	if _label != null:
@@ -469,17 +478,35 @@ func untie_for_respawn() -> void:
 	if not _tied:
 		return
 	_tied = false
-	_state = State.DORMANT
-	_activated = false
+	TiedBanditOverlay.remove_from(self)
+	_return_to_dormant_anchor()
+
+
+func restore_for_respawn() -> void:
+	## Untied ninjas that already ambushed (or are mid jump/slash) return to dormancy.
+	## Shuriken are cleared separately by the level controller.
+	if _tied:
+		return
+	_return_to_dormant_anchor()
+
+
+func _return_to_dormant_anchor() -> void:
+	## Cancel appear/chase/jump/slash work and hide back at the stamp post.
+	_appear_token += 1
 	_attack_token += 1
 	_throw_token += 1
 	_jump_token += 1
 	_throw_timer = 0.0
+	_activated = false
 	_kill_pose_tween()
 	_kill_jump_tween()
+	_kill_appear_tween()
+	_state = State.DORMANT
 	collision_layer = 0
 	z_index = 0
+	visible = true
 	global_position = _anchor
+	_facing = 1.0
 	_set_dormant(true)
 	var body_shape := get_node_or_null("CollisionShape2D") as CollisionShape2D
 	if body_shape != null:
@@ -490,30 +517,8 @@ func untie_for_respawn() -> void:
 	var hurt_shape := get_node_or_null("HurtArea/CollisionShape2D") as CollisionShape2D
 	if hurt_shape != null:
 		hurt_shape.set_deferred("disabled", false)
-	TiedBanditOverlay.remove_from(self)
 	_setup_sprite()
-	if _label != null:
-		_label.position.y = 0.0
-		_label.text = "NINJA"
-		_label.modulate = Color.WHITE
-
-
-func restore_for_respawn() -> void:
-	## Untied ninjas that already ambushed return to their dormant anchor.
-	## Shuriken are cleared separately by the level controller.
-	if _tied:
-		return
-	_state = State.DORMANT
-	_activated = false
-	_attack_token += 1
-	_throw_token += 1
-	_jump_token += 1
-	_throw_timer = 0.0
-	_kill_pose_tween()
-	_kill_jump_tween()
-	global_position = _anchor
-	_set_dormant(true)
-	_setup_sprite()
+	_apply_facing(_facing)
 	if _label != null:
 		_label.position.y = 0.0
 		_label.text = "NINJA"
@@ -528,6 +533,11 @@ func _kill_pose_tween() -> void:
 func _kill_jump_tween() -> void:
 	EnemyContact.kill_tween(_jump_tween)
 	_jump_tween = null
+
+
+func _kill_appear_tween() -> void:
+	EnemyContact.kill_tween(_appear_tween)
+	_appear_tween = null
 
 
 func _update_nearby_hint() -> void:

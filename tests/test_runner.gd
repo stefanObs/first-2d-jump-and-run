@@ -85,6 +85,7 @@ func _ready() -> void:
 	failures += await _run("Jumping on a ninja head ties him", _test_stomp_ties_ninja)
 	failures += await _run("Ninja throws shuriken at flying player", _test_ninja_shuriken_vs_wings)
 	failures += await _run("Ninja jumps pits and canyons", _test_ninja_jumps_gaps)
+	failures += await _run("Ninja resets to dormancy on respawn", _test_ninja_respawn_restore)
 	failures += await _run("Shuriken sprite is handcrafted art", _test_shuriken_art)
 	failures += await _run("Side contact with a bandit sends the cowboy to camp", _test_side_contact_hurts)
 	failures += await _run("Upward contact with a bandit sends the cowboy to camp", _test_upward_contact_hurts)
@@ -2710,6 +2711,119 @@ func _test_ninja_jumps_gaps() -> Variant:
 	ninja.queue_free()
 	left.queue_free()
 	right.queue_free()
+	return error
+
+
+func _test_ninja_respawn_restore() -> Variant:
+	## Camp respawn must cancel ambush/jump work and hide the ninja at his stamp post.
+	# Prior ninja tests queue_free players; purge leftovers so dormancy is not re-armed.
+	for node in get_tree().get_nodes_in_group("player"):
+		if is_instance_valid(node):
+			node.free()
+
+	var packed: PackedScene = load("res://scenes/world/ninja_enemy.tscn")
+	if packed == null:
+		return "Missing ninja enemy scene."
+	var ninja := packed.instantiate() as NinjaEnemy
+	ninja.position = Vector2(200, 400)
+	ninja.set_physics_process(false)
+	add_child(ninja)
+	await get_tree().process_frame
+	var anchor: Vector2 = ninja._anchor
+	if anchor.distance_to(Vector2(200, 400)) > 1.0:
+		ninja.queue_free()
+		return "Ninja stamp post should match the spawn position (got %s)." % str(anchor)
+
+	var player := Player.new()
+	player.name = "Player"
+	player.position = Vector2(260, 400)
+	player.velocity = Vector2(120.0, 0.0)
+	player.set_physics_process(false)
+	if not player.is_in_group("player"):
+		player.add_to_group("player")
+	add_child(player)
+
+	# Force an ambush appear in front of the cowboy.
+	ninja._activated = true
+	ninja._appear_in_front_of(player)
+	if ninja._state != NinjaEnemy.State.APPEAR and ninja._state != NinjaEnemy.State.CHASE:
+		player.queue_free()
+		ninja.queue_free()
+		return "Ninja should be appearing or chasing before the respawn restore."
+	if ninja.global_position.distance_to(anchor) < 40.0:
+		player.queue_free()
+		ninja.queue_free()
+		return "Ambush should move the ninja off his stamp post before restore (got %s)." % str(
+			ninja.global_position
+		)
+
+	# Keep the cowboy out of ambush range so restore is not immediately re-triggered.
+	player.global_position = Vector2(5000, 400)
+	ninja.restore_for_respawn()
+	ninja.set_physics_process(true)
+	# Let the old appear tween finish if it was not cancelled.
+	await get_tree().create_timer(0.35).timeout
+
+	var error: Variant = null
+	if ninja._state != NinjaEnemy.State.DORMANT:
+		error = "Ninja should be dormant after respawn restore (state=%s)." % str(ninja._state)
+	elif ninja._activated:
+		error = "Ninja ambush flag should clear on respawn restore."
+	elif ninja.global_position.distance_to(anchor) > 1.0:
+		error = "Ninja should return to his stamp post (got %s, want %s)." % [
+			str(ninja.global_position), str(anchor)
+		]
+	elif ninja.modulate.a > 0.05:
+		error = "Dormant ninja should be hidden after respawn (a=%.2f)." % ninja.modulate.a
+	elif ninja._area != null and ninja._area.monitoring:
+		error = "Dormant ninja hurt area should not monitor after respawn."
+
+	# Mid-jump restore also snaps home and ignores a finishing jump tween.
+	if error == null:
+		ninja.set_physics_process(false)
+		ninja._activated = true
+		ninja._state = NinjaEnemy.State.JUMP
+		ninja._set_dormant(false)
+		ninja.global_position = Vector2(520, 360)
+		ninja._jump_token += 1
+		var jump_token := ninja._jump_token
+		ninja._kill_jump_tween()
+		ninja._jump_tween = ninja.create_tween()
+		ninja._jump_tween.tween_interval(0.05)
+		ninja._jump_tween.tween_callback(func() -> void:
+			if jump_token != ninja._jump_token:
+				return
+			ninja.global_position = Vector2(560, 400)
+			ninja._state = NinjaEnemy.State.CHASE
+		)
+		ninja.restore_for_respawn()
+		await get_tree().create_timer(0.12).timeout
+		if ninja._state != NinjaEnemy.State.DORMANT:
+			error = "Jumping ninja should be dormant after respawn restore."
+		elif ninja.global_position.distance_to(anchor) > 1.0:
+			error = "Jumping ninja should return to his stamp post on respawn."
+		elif ninja.modulate.a > 0.05:
+			error = "Jumping ninja should hide after respawn restore."
+
+	# Tied path also returns to the post.
+	if error == null:
+		ninja._set_dormant(false)
+		ninja._state = NinjaEnemy.State.CHASE
+		ninja.global_position = Vector2(500, 400)
+		ninja.tie_up(false)
+		ninja.untie_for_respawn()
+		await get_tree().process_frame
+		if ninja.is_tied():
+			error = "Untie-for-respawn should clear the tied flag."
+		elif ninja._state != NinjaEnemy.State.DORMANT:
+			error = "Untied ninja should be dormant at camp respawn."
+		elif ninja.global_position.distance_to(anchor) > 1.0:
+			error = "Untied ninja should return to his stamp post."
+		elif ninja.modulate.a > 0.05:
+			error = "Untied dormant ninja should be hidden."
+
+	player.queue_free()
+	ninja.queue_free()
 	return error
 
 
