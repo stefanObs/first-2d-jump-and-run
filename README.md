@@ -2,7 +2,7 @@
 
 Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, nonviolent lasso. **Classic mode** has no lives or game over; **Advanced Mode** (chosen in **Settings** before starting or continuing a slot) adds a three-life limit, badge milestones, and a game-over return to the start screen. Pick **Cowboy** or **Cowgirl** in Settings — the choice applies across all save slots. **German is the default language**; English is fully supported.
 
-**Content version:** `1.8.22` (see `content_version.txt`). Launchers reimport when this stamp changes.
+**Content version:** `1.8.23` (see `content_version.txt`). Launchers reimport when this stamp changes.
 
 This README is the **binding source of truth** for gameplay, level design, art, i18n, and audio. Agents and contributors must follow it (see [Agent / contributor rules](#agent--contributor-rules)).
 
@@ -10,32 +10,34 @@ This README is the **binding source of truth** for gameplay, level design, art, 
 
 ## See the game
 
-All stills and loops below are built from **real in-game art** (`tools/build_readme_showcase.py` → `docs/showcase/`). Refresh with:
+Stills and loops below are **screenshots from the running game** (Godot viewport capture → `docs/showcase/`). Refresh with:
 
 ```bash
 python3 tools/build_readme_showcase.py
 ```
 
-### Title & trail look
+Needs a real display (not `--headless`). Capture-only scene: `godot --path . res://tools/capture_readme_screenshots.tscn`.
 
-![Cowboy Trail title card](docs/showcase/title_card.png)
+### Title & trails
 
-![Desert trail collage](docs/showcase/desert_trail.png)
+![Cowboy Trail title screen](docs/showcase/title_card.png)
 
-![Cave arc collage](docs/showcase/cave_trail.png)
+![Desert trail gameplay](docs/showcase/desert_trail.png)
 
-### Motion (GIF loops)
+![Cave trail gameplay](docs/showcase/cave_trail.png)
 
-| Cowboy run | Cowgirl run | Horse ride | Cave Dragon | Cave bat |
-|:---:|:---:|:---:|:---:|:---:|
-| ![Cowboy run](docs/showcase/cowboy_run.gif) | ![Cowgirl run](docs/showcase/cowgirl_run.gif) | ![Horse ride](docs/showcase/horse_ride.gif) | ![Cave Dragon fly](docs/showcase/dragon_fly.gif) | ![Cave bat](docs/showcase/cave_bat.gif) |
+### Motion (in-game GIF loops)
+
+| Horse on the desert trail | Cave Dragon fight |
+|:---:|:---:|
+| ![Gameplay run](docs/showcase/gameplay_run.gif) | ![Cave Dragon](docs/showcase/dragon_fly.gif) |
 
 ### Bosses
 
 ![Boss roster](docs/showcase/bosses.png)
 
 > Full labeled prop sheet (debug Element Names): [`docs/element_name_reference.png`](docs/element_name_reference.png).  
-> A playthrough video isn’t bundled in the repo (keeps clones small) — GIFs above show the motion style; a hosted clip can be linked here later if you publish one.
+> A playthrough video isn’t bundled in the repo (keeps clones small) — the GIFs above are short in-game captures; a hosted clip can be linked here later if you publish one.
 
 ---
 
