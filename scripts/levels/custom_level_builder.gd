@@ -16,6 +16,9 @@ const NINJA := preload("res://scenes/world/ninja_enemy.tscn")
 const RATTLESNAKE := preload("res://scenes/world/rattlesnake.tscn")
 const CARRION := preload("res://scenes/world/carrion.tscn")
 const MODE_ITEM := preload("res://scenes/world/mode_item.tscn")
+const CONVEYOR := preload("res://scenes/world/conveyor_belt.tscn")
+const TIMED_DOOR := preload("res://scenes/world/timed_door.tscn")
+const FENCE_TEX := preload("res://assets/world/fence.png")
 const HUD := preload("res://scenes/ui/hud.tscn")
 const PAUSE := preload("res://scenes/ui/pause_menu.tscn")
 const TRANSITION := preload("res://scenes/ui/level_transition.tscn")
@@ -162,10 +165,31 @@ static func _spawn_object(
 			var mode_item := _add_scene(level, MODE_ITEM, "ModeItem%d" % index, position) as ModeItem
 			if mode_item != null:
 				mode_item.mode = ModeController.mode_from_stamp(type_name)
+		"conveyor":
+			var belt := CONVEYOR.instantiate() as ConveyorBelt
+			if belt != null:
+				belt.name = "Conveyor%d" % index
+				belt.position = position
+				belt.push_right = bool(object.get("push_right", true))
+				level.add_child(belt)
+		"timed_door":
+			_add_scene(level, TIMED_DOOR, "Door%d" % index, position)
+		"fence":
+			_add_fence_decor(level, "FenceDecor%d" % index, position)
 		"goal":
 			_add_styled(level, GOAL, "Goal", position, style)
 			return true
 	return false
+
+
+static func _add_fence_decor(level: Node, node_name: String, feet_position: Vector2) -> void:
+	var sprite := Sprite2D.new()
+	sprite.name = node_name
+	sprite.texture = FENCE_TEX
+	sprite.centered = true
+	sprite.position = feet_position + Vector2(0.0, -float(FENCE_TEX.get_height()) * 0.5)
+	sprite.z_index = 2
+	level.add_child(sprite)
 
 
 static func _finalize_player_and_ui(

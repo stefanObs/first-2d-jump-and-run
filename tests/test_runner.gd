@@ -148,6 +148,7 @@ func _ready() -> void:
 	failures += await _run("Canyon rafts are one-way jump-through platforms", _test_one_way_moving_platforms)
 	failures += await _run("Custom level store and builder work", _test_custom_level_builder)
 	failures += await _run("Ladder branches land on the upper ledge", _test_ladder_branch_upper_ledge)
+	failures += await _run("Cave levels place belts fences and ladders", _test_cave_levels_belts_fences_ladders)
 	failures += await _run("Workshop default trail width matches built-ins", _test_workshop_default_width)
 	failures += await _run("Workshop trail length add and remove", _test_workshop_trail_length_resize)
 	failures += await _run("Trail workshop uses one trail row and stacked dirt", _test_trail_row_model)
@@ -4672,6 +4673,65 @@ func _test_ladder_branch_upper_ledge() -> Variant:
 	return null
 
 
+func _test_cave_levels_belts_fences_ladders() -> Variant:
+	## Cave arc should keep extra climb routes and ranch props kids already know.
+	var expected := {
+		11: {"ladders": 2, "platforms": 3, "fences": 3, "conveyors": 0, "doors": 0},
+		12: {"ladders": 2, "platforms": 3, "fences": 2, "conveyors": 1, "doors": 1},
+		13: {"ladders": 1, "platforms": 7, "fences": 2, "conveyors": 1, "doors": 1},
+		14: {"ladders": 3, "platforms": 6, "fences": 3, "conveyors": 1, "doors": 1},
+		15: {"ladders": 2, "platforms": 6, "fences": 3, "conveyors": 1, "doors": 1},
+	}
+	for level_number in expected.keys():
+		var data := CaveCampaignLevels.level_data(int(level_number))
+		var counts := {
+			"ladders": 0,
+			"platforms": 0,
+			"fences": 0,
+			"conveyors": 0,
+			"doors": 0,
+		}
+		for value in data.get("objects", []):
+			var type_name := str((value as Dictionary).get("type", ""))
+			match type_name:
+				"ladder":
+					counts["ladders"] += 1
+				"platform", "ladder_ledge":
+					counts["platforms"] += 1
+				"fence":
+					counts["fences"] += 1
+				"conveyor":
+					counts["conveyors"] += 1
+				"timed_door":
+					counts["doors"] += 1
+		var want: Dictionary = expected[level_number]
+		for key in want.keys():
+			if int(counts[key]) < int(want[key]):
+				return "Cave level %d expected >= %d %s (got %d)." % [
+					int(level_number), int(want[key]), key, int(counts[key])
+				]
+		var level := LevelController.new()
+		add_child(level)
+		CustomLevelBuilder.build(level, data)
+		await get_tree().process_frame
+		WildWestTheme.apply_to_level(level)
+		await get_tree().process_frame
+		var fence := level.find_child("FenceDecor0", true, false) as CanvasItem
+		if fence == null or not fence.visible:
+			level.queue_free()
+			await get_tree().process_frame
+			return "Cave level %d should keep stamped fence décor visible." % int(level_number)
+		var layout_errors: PackedStringArray = []
+		layout_errors.append_array(LevelLayoutRules._validate_ladder_tops(level))
+		layout_errors.append_array(LevelLayoutRules._validate_timed_doors_clear_of_canyons(level))
+		layout_errors.append_array(LevelLayoutRules._validate_conveyors_not_pushing_into_canyons(level))
+		level.queue_free()
+		await get_tree().process_frame
+		if not layout_errors.is_empty():
+			return "Cave level %d layout: %s" % [int(level_number), layout_errors[0]]
+	return null
+
+
 func _test_workshop_default_width() -> Variant:
 	var builtin := CustomLevelStore.import_builtin(1)
 	var draft := CustomLevelStore.default_level(CustomLevelStore.EXTRA_SLOT_START)
@@ -5035,15 +5095,21 @@ func _test_workshop_stamp_catalog() -> Variant:
 	for type_name in ["bounty_bandit", "carrion", "pit", "chest", "bull", "ninja"]:
 		if type_name not in palette_types:
 			return "Workshop palette missing %s stamp." % type_name
+	for type_name in ["conveyor", "timed_door", "fence"]:
+		if type_name not in palette_types:
+			return "Workshop palette missing %s stamp." % type_name
 	var cave_palette: PackedStringArray = []
 	for category in LevelStyle.tool_categories(LevelStyle.CAVE):
 		for tool in (category as Dictionary).get("tools", []) as Array:
 			cave_palette.append(str((tool as Array)[0]))
-	for type_name in ["acid_drip", "stalactite", "bat"]:
+	for type_name in ["acid_drip", "stalactite", "bat", "conveyor", "timed_door", "fence"]:
 		if type_name not in cave_palette:
 			return "Cave style palette missing %s stamp." % type_name
 	var trail := CustomLevelStore.trail_row(8)
-	for type_name in ["bounty_bandit", "carrion", "chest", "bull", "ninja", "acid_drip", "stalactite", "bat"]:
+	for type_name in [
+		"bounty_bandit", "carrion", "chest", "bull", "ninja", "acid_drip", "stalactite", "bat",
+		"conveyor", "timed_door", "fence",
+	]:
 		if not CustomLevelStore._valid_object({"type": type_name, "x": 1, "y": trail - 1}, trail):
 			return "%s should be accepted by CustomLevelStore." % type_name
 	var data := CustomLevelStore.default_level(0)
@@ -5054,6 +5120,9 @@ func _test_workshop_stamp_catalog() -> Variant:
 		{"type": "chest", "x": 10, "y": trail - 1},
 		{"type": "bull", "x": 12, "y": trail - 1},
 		{"type": "ninja", "x": 14, "y": trail - 1},
+		{"type": "conveyor", "x": 18, "y": trail - 1, "push_right": true},
+		{"type": "timed_door", "x": 22, "y": trail - 1},
+		{"type": "fence", "x": 26, "y": trail - 1},
 	]
 	var level := LevelController.new()
 	CustomLevelBuilder.build(level, data)
@@ -5064,6 +5133,15 @@ func _test_workshop_stamp_catalog() -> Variant:
 	if level.find_child("Carrion0", true, false) == null:
 		level.free()
 		return "Builder should spawn carrion birds from the carrion stamp."
+	if level.find_child("Conveyor0", true, false) == null:
+		level.free()
+		return "Builder should spawn a conveyor from the belt stamp."
+	if level.find_child("Door0", true, false) == null:
+		level.free()
+		return "Builder should spawn a timed door from the gate stamp."
+	if level.find_child("FenceDecor0", true, false) == null:
+		level.free()
+		return "Builder should spawn fence décor from the fence stamp."
 	var chest := level.find_child("CustomChest0", true, false) as TreasureChest
 	if chest == null:
 		level.free()

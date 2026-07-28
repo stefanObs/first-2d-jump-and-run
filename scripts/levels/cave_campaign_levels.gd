@@ -47,31 +47,36 @@ static func _add(objects: Array[Dictionary], type_name: String, x: int, y: int) 
 
 
 static func _level_11() -> Dictionary:
-	## Crystal Mouth — introduce cave remaps + first ladder split.
+	## Crystal Mouth — introduce cave remaps + ladder splits + ranch fence décor.
 	var data := _base("Crystal Mouth", 100, 10)
 	var trail: int = CustomLevelStore.trail_row(int(data["height"]))
 	var objects: Array[Dictionary] = data["objects"]
+	CustomLevelStore.append_fence_run(objects, trail, 6, 2)
 	_add(objects, "cactus", 10, trail - 1)
 	_add(objects, "star", 14, trail - 2)
 	_add(objects, "bandit", 20, trail - 1)
 	_add(objects, "pit", 26, trail)
 	CustomLevelStore.append_ladder_branch(objects, trail, 32)
-	_add(objects, "rattlesnake", 55, trail - 1)
+	CustomLevelStore.append_platform_run(objects, trail, 50, 3, 2)
 	_add(objects, "checkpoint", 60, trail - 1)
-	_add(objects, "ninja", 70, trail - 1)
-	_add(objects, "chest", 78, trail - 1)
-	_add(objects, "spring", 85, trail - 1)
-	_add(objects, "star", 90, trail - 3)
+	CustomLevelStore.append_fence_run(objects, trail, 64, 1)
+	_add(objects, "rattlesnake", 68, trail - 1)
+	_add(objects, "ninja", 72, trail - 1)
+	CustomLevelStore.append_ladder_branch(objects, trail, 76)
+	_add(objects, "spring", 90, trail - 1)
+	_add(objects, "chest", 92, trail - 1)
+	_add(objects, "star", 94, trail - 3)
 	_add(objects, "goal", 96, trail - 1)
 	data["objects"] = objects
 	return data
 
 
 static func _level_12() -> Dictionary:
-	## Bat Gallery — bats, drips, upper ledge route.
+	## Bat Gallery — bats, drips, ledges + first cave conveyor gate.
 	var data := _base("Bat Gallery", 110, 10)
 	var trail: int = CustomLevelStore.trail_row(int(data["height"]))
 	var objects: Array[Dictionary] = data["objects"]
+	CustomLevelStore.append_fence_run(objects, trail, 4, 1)
 	_add(objects, "bat", 12, trail - 4)
 	_add(objects, "bat", 22, trail - 5)
 	_add(objects, "acid_drip", 16, 0)
@@ -79,20 +84,24 @@ static func _level_12() -> Dictionary:
 	_add(objects, "cactus", 18, trail - 1)
 	_add(objects, "star", 24, trail - 2)
 	CustomLevelStore.append_ladder_branch(objects, trail, 34)
+	CustomLevelStore.append_platform_run(objects, trail, 52, 3, 2)
 	_add(objects, "bat", 42, trail - 5)
-	_add(objects, "bull", 58, trail - 1)
+	_add(objects, "bull", 60, trail - 1)
 	_add(objects, "checkpoint", 64, trail - 1)
-	_add(objects, "stalactite", 72, 0)
-	_add(objects, "stalactite", 78, 1)
-	_add(objects, "bandit", 84, trail - 1)
-	_add(objects, "chest", 92, trail - 1)
-	_add(objects, "goal", 104, trail - 1)
+	CustomLevelStore.append_conveyor_gate(objects, trail, 68, 74, true)
+	_add(objects, "stalactite", 80, 0)
+	_add(objects, "stalactite", 84, 1)
+	_add(objects, "bandit", 86, trail - 1)
+	CustomLevelStore.append_ladder_branch(objects, trail, 90)
+	_add(objects, "chest", 100, trail - 1)
+	CustomLevelStore.append_fence_run(objects, trail, 102, 1)
+	_add(objects, "goal", 106, trail - 1)
 	data["objects"] = objects
 	return data
 
 
 static func _level_13() -> Dictionary:
-	## Acid Veins — drips + fungus gauntlet + canyon hop.
+	## Acid Veins — drips + fungus gauntlet + canyon hop + belt gate.
 	var data := _base("Acid Veins", 120, 10)
 	var trail: int = CustomLevelStore.trail_row(int(data["height"]))
 	var objects: Array[Dictionary] = []
@@ -101,9 +110,11 @@ static func _level_13() -> Dictionary:
 			objects.append({"type": "canyon", "x": x, "y": trail})
 		else:
 			objects.append({"type": "ground", "x": x, "y": trail})
+	CustomLevelStore.append_fence_run(objects, trail, 6, 1)
 	_add(objects, "platform", 18, trail - 2)
 	_add(objects, "platform", 20, trail - 2)
 	_add(objects, "platform", 22, trail - 2)
+	_add(objects, "platform", 24, trail - 2)
 	_add(objects, "acid_drip", 12, 0)
 	_add(objects, "acid_drip", 30, 0)
 	_add(objects, "acid_drip", 36, 0)
@@ -113,31 +124,40 @@ static func _level_13() -> Dictionary:
 	_add(objects, "rattlesnake", 48, trail - 1)
 	_add(objects, "checkpoint", 55, trail - 1)
 	CustomLevelStore.append_ladder_branch(objects, trail, 62)
-	_add(objects, "ninja", 85, trail - 1)
-	_add(objects, "bat", 90, trail - 4)
-	_add(objects, "chest", 96, trail - 1)
+	CustomLevelStore.append_platform_run(objects, trail, 82, 3, 2)
+	_add(objects, "ninja", 88, trail - 1)
+	_add(objects, "bat", 92, trail - 4)
+	CustomLevelStore.append_conveyor_gate(objects, trail, 98, 104, true)
+	_add(objects, "chest", 110, trail - 1)
+	CustomLevelStore.append_fence_run(objects, trail, 112, 1)
 	_add(objects, "goal", 114, trail - 1)
 	data["objects"] = objects
 	return data
 
 
 static func _level_14() -> Dictionary:
-	## Ladder Grotto — double branch + lizards.
+	## Ladder Grotto — triple branch + lizards + reverse belt.
 	var data := _base("Ladder Grotto", 130, 10)
 	var trail: int = CustomLevelStore.trail_row(int(data["height"]))
 	var objects: Array[Dictionary] = data["objects"]
+	CustomLevelStore.append_fence_run(objects, trail, 6, 2)
 	CustomLevelStore.append_ladder_branch(objects, trail, 16)
-	_add(objects, "bull", 40, trail - 1)
-	_add(objects, "star", 44, trail - 2)
+	CustomLevelStore.append_platform_run(objects, trail, 36, 3, 2)
+	_add(objects, "bull", 44, trail - 1)
+	_add(objects, "star", 46, trail - 2)
 	_add(objects, "pit", 50, trail)
 	CustomLevelStore.append_ladder_branch(objects, trail, 58)
-	_add(objects, "checkpoint", 80, trail - 1)
-	_add(objects, "bandit", 88, trail - 1)
-	_add(objects, "bounty_bandit", 96, trail - 1)
-	_add(objects, "stalactite", 100, 0)
-	_add(objects, "ninja", 108, trail - 1)
-	_add(objects, "chest", 116, trail - 1)
-	_add(objects, "goal", 124, trail - 1)
+	CustomLevelStore.append_platform_run(objects, trail, 76, 3, 2)
+	_add(objects, "checkpoint", 84, trail - 1)
+	CustomLevelStore.append_conveyor_gate(objects, trail, 92, 88, false)
+	_add(objects, "bandit", 100, trail - 1)
+	_add(objects, "bounty_bandit", 106, trail - 1)
+	_add(objects, "stalactite", 110, 0)
+	CustomLevelStore.append_ladder_branch(objects, trail, 112)
+	_add(objects, "ninja", 122, trail - 1)
+	_add(objects, "chest", 124, trail - 1)
+	CustomLevelStore.append_fence_run(objects, trail, 126, 1)
+	_add(objects, "goal", 128, trail - 1)
 	data["objects"] = objects
 	return data
 
@@ -147,20 +167,26 @@ static func _level_15() -> Dictionary:
 	var data := _base("Dragon Gate", 140, 10)
 	var trail: int = CustomLevelStore.trail_row(int(data["height"]))
 	var objects: Array[Dictionary] = data["objects"]
+	CustomLevelStore.append_fence_run(objects, trail, 4, 2)
 	_add(objects, "star", 8, trail - 2)
 	_add(objects, "cactus", 12, trail - 1)
 	_add(objects, "bat", 18, trail - 5)
 	_add(objects, "acid_drip", 22, 0)
 	CustomLevelStore.append_ladder_branch(objects, trail, 28)
-	_add(objects, "bull", 52, trail - 1)
+	CustomLevelStore.append_platform_run(objects, trail, 48, 3, 2)
+	_add(objects, "bull", 56, trail - 1)
 	_add(objects, "checkpoint", 60, trail - 1)
-	_add(objects, "ninja", 80, trail - 1)
-	_add(objects, "bandit", 90, trail - 1)
-	_add(objects, "rattlesnake", 98, trail - 1)
-	_add(objects, "chest", 108, trail - 1)
-	_add(objects, "spring", 116, trail - 1)
-	_add(objects, "bat", 120, trail - 4)
-	_add(objects, "star", 124, trail - 3)
+	CustomLevelStore.append_conveyor_gate(objects, trail, 66, 72, true)
+	CustomLevelStore.append_ladder_branch(objects, trail, 78)
+	CustomLevelStore.append_platform_run(objects, trail, 96, 3, 2)
+	_add(objects, "ninja", 104, trail - 1)
+	_add(objects, "bandit", 110, trail - 1)
+	_add(objects, "rattlesnake", 116, trail - 1)
+	_add(objects, "chest", 122, trail - 1)
+	_add(objects, "spring", 128, trail - 1)
+	_add(objects, "bat", 124, trail - 4)
+	_add(objects, "star", 130, trail - 3)
+	CustomLevelStore.append_fence_run(objects, trail, 132, 1)
 	_add(objects, "goal", 134, trail - 1)
 	data["objects"] = objects
 	return data

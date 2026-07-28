@@ -41,6 +41,7 @@ static func trail_row(height: int) -> int:
 const GROUND_STANDING_TYPES: PackedStringArray = [
 	"cactus", "checkpoint", "spring", "bandit", "bounty_bandit", "bull", "ninja",
 	"rattlesnake", "goal", "chest", "wings", "boots", "speed", "shield", "ladder",
+	"conveyor", "timed_door", "fence",
 ]
 const CEILING_HANGING_TYPES: PackedStringArray = ["acid_drip", "stalactite", "stalactite_static"]
 const STYLE_DESERT := "desert"
@@ -71,6 +72,10 @@ static func stamp_footprint(type_name: String) -> Vector2:
 			return Vector2(PIT_PIXEL_SIZE.x / GRID_SIZE, 1.0)
 		"ladder":
 			return Vector2(1.0, float(LADDER_HEIGHT_CELLS))
+		"conveyor", "fence":
+			return Vector2(4.0, 1.0)
+		"timed_door":
+			return Vector2(2.0, 1.0)
 		_:
 			return Vector2(1.0, 1.0)
 
@@ -102,6 +107,12 @@ static func stamp_world_size(type_name: String, style: String = STYLE_DESERT) ->
 			return _texture_pixel_size("res://assets/world/stalactite_static.png")
 		"ladder":
 			return Vector2(48.0, float(LADDER_HEIGHT_CELLS) * GRID_SIZE)
+		"conveyor":
+			return _texture_pixel_size("res://assets/world/conveyor.png", 0.95)
+		"timed_door":
+			return Vector2(56.0, 100.0)
+		"fence":
+			return _texture_pixel_size("res://assets/world/fence.png")
 		"wings", "boots", "speed", "shield":
 			return _texture_pixel_size(LevelStyle.stamp_icon_path(type_name))
 		_:
@@ -759,6 +770,43 @@ static func append_ladder_branch(
 	_append_unique(objects, {"type": "star", "x": start_x + 6, "y": maxi(upper - 1, 0)})
 
 
+static func append_platform_run(
+	objects: Array[Dictionary],
+	trail: int,
+	start_x: int,
+	count: int = 3,
+	height_cells: int = 2
+) -> void:
+	## Floating plank/crystal-ledge run for hop routes (not tied to a ladder).
+	var y := maxi(trail - height_cells, 0)
+	for i in range(maxi(count, 1)):
+		_append_unique(objects, {"type": "platform", "x": start_x + i * 2, "y": y})
+
+
+static func append_conveyor_gate(
+	objects: Array[Dictionary],
+	trail: int,
+	belt_x: int,
+	door_x: int,
+	push_right: bool = true
+) -> void:
+	## Belt + timed ranch gate on solid trail (never over a canyon mouth).
+	var y := maxi(trail - 1, 0)
+	_append_unique(
+		objects,
+		{"type": "conveyor", "x": belt_x, "y": y, "push_right": push_right}
+	)
+	_append_unique(objects, {"type": "timed_door", "x": door_x, "y": y})
+
+
+static func append_fence_run(
+	objects: Array[Dictionary], trail: int, start_x: int, count: int = 2
+) -> void:
+	var y := maxi(trail - 1, 0)
+	for i in range(maxi(count, 1)):
+		_append_unique(objects, {"type": "fence", "x": start_x + i * 4, "y": y})
+
+
 static func realign_ladder_ledges(objects: Array, trail: int) -> void:
 	## Repair older stamp packs that put ledges one cell above climb_top.
 	var expected_upper := maxi(trail - LADDER_HEIGHT_CELLS, 0)
@@ -840,6 +888,7 @@ static func _valid_object(object: Dictionary, trail: int) -> bool:
 		"ground", "platform", "ladder_ledge", "star", "chest", "cactus", "canyon", "pit",
 		"checkpoint", "spring", "goal", "bandit", "bounty_bandit", "bull", "ninja",
 		"rattlesnake", "carrion", "bat", "acid_drip", "stalactite", "stalactite_static", "ladder",
+		"conveyor", "timed_door", "fence",
 		"wings", "boots", "speed", "shield",
 	]
 	var type_name := str(object.get("type", ""))

@@ -33,6 +33,14 @@ Stamp **type ids stay the same** for remapped foes/hazards so packs stay simple:
 | Saloon | Crystal Gate |
 | Ninja | Ninja (unchanged) |
 
+### Shared trail stamps (desert + cave)
+
+| Stamp id | Behavior |
+|---|---|
+| `conveyor` | Moving belt; optional `"push_right": false` for left push. Must not push into an open canyon. |
+| `timed_door` | Ranch gate that opens/closes on a timer (same Rail Yard rules). Keep clear of canyon mouths. |
+| `fence` | Decorative ranch fence segment (no collision). |
+
 ### Cave-only stamps
 
 | Stamp id | Behavior |
@@ -46,7 +54,7 @@ Ceiling stamps place on the top rows; ground props still sit one row above dirt.
 
 ## Path splits (ladders)
 
-Stamp a **ladder**, run **one-way crystal ledges** along the climb top, then **drop off the end** back to the dirt trail. Lower dirt stays walkable the whole time — kids can take the high ledge or stay low. Workshop defaults and cave imports include a sample up-ladder branch (no down ladder).
+Stamp a **ladder**, run **one-way crystal ledges** along the climb top, then **drop off the end** back to the dirt trail. Lower dirt stays walkable the whole time — kids can take the high ledge or stay low. Workshop defaults and cave imports include sample up-ladder branches (no down ladder). Cave arc levels also place floating crystal plank runs, ranch fences, and conveyor + timed-gate pairs on solid ground.
 
 ## Hazards & enemies
 
@@ -69,7 +77,7 @@ Stamp a **ladder**, run **one-way crystal ledges** along the climb top, then **d
 5. **Mineral vein floor** — dense cool stone crust with pink crystal flecks; underfill dirt is a **fully opaque** readable slate tile (not near-black; no transparent side margins / sky holes when tiled); deep `FloorAbyss` slate under the bank. Cave canyon gaps use cool-slate ridge faces (`cave_canyon_rim_left.png`) matching this palette.
 ## Campaign note
 
-Builtin **Outlaw Cave** (level 5) and cave arc **levels 11–15** (`Crystal Mouth` → `Dragon Gate`) use `"style": "cave"`. After Dragon Gate the **Cave Dragon** boss starts on the floor, takes off when the fight begins, flies left↔right below the ceiling (facing travel direction, wing-flap + landing poses), spits a few flameballs in a straight line toward the cowboy (2 rounds × 2 shots; shots end on the floor), lands for a lasso, then repeats; after three lassos his mouth is tied and the campaign victory plays. Workshop imports for 11–15 use the stamp catalog in `CaveCampaignLevels`. Custom trails can pick Cave style freely.
+Builtin **Outlaw Cave** (level 5) and cave arc **levels 11–15** (`Crystal Mouth` → `Dragon Gate`) use `"style": "cave"`. Levels 12–15 include conveyor belts and timed gates; all five place extra ladders/planks and decorative fences. After Dragon Gate the **Cave Dragon** boss starts on the floor, takes off when the fight begins, flies left↔right below the ceiling (facing travel direction, wing-flap + landing poses), spits a few flameballs in a straight line toward the cowboy (2 rounds × 2 shots; shots end on the floor), lands for a lasso, then repeats; after three lassos his mouth is tied and the campaign victory plays. Workshop imports for 11–15 use the stamp catalog in `CaveCampaignLevels`. Custom trails can pick Cave style freely.
 
 ## Art checklist
 

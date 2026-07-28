@@ -408,7 +408,9 @@ static func _dress_sun(level: Node, style: String = LevelStyle.DESERT) -> void:
 
 
 static func _hide_fences(level: Node) -> void:
-	for node in level.find_children("*", "CanvasItem", true, false):
+	## Hide legacy ColorRect fence placeholders from desert scene templates.
+	## Keep stamped FenceDecor sprites (and any Sprite2D FenceArt) visible.
+	for node in level.find_children("*", "ColorRect", true, false):
 		var name_text := String(node.name)
 		if name_text.begins_with("Fence") or name_text.begins_with("FenceArt"):
 			(node as CanvasItem).visible = false

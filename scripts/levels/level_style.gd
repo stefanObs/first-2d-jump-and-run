@@ -77,6 +77,12 @@ static func stamp_icon_path(type_name: String, style: String = DESERT) -> String
 			return "res://assets/world/modes/speed_badge.png"
 		"shield":
 			return "res://assets/world/modes/bubble_shield.png"
+		"conveyor":
+			return "res://assets/world/conveyor.png"
+		"timed_door":
+			return "res://assets/world/fence_gate.png"
+		"fence":
+			return "res://assets/world/fence.png"
 		_:
 			return ""
 
@@ -133,6 +139,12 @@ static func stamp_label(type_name: String, style: String = DESERT) -> String:
 			return "Speed Star"
 		"shield":
 			return "Bubble Shield"
+		"conveyor":
+			return "Conveyor"
+		"timed_door":
+			return "Timed Gate"
+		"fence":
+			return "Fence"
 		"erase":
 			return "Erase"
 		_:
@@ -171,6 +183,9 @@ static func tool_categories(style: String = DESERT) -> Array:
 				_tool("canyon", style),
 				_tool("platform", style),
 				_tool("ladder", style),
+				_tool("conveyor", style),
+				_tool("timed_door", style),
+				_tool("fence", style),
 			],
 		},
 		{
