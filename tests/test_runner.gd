@@ -6539,7 +6539,7 @@ func _test_wings_carrion_variety() -> Variant:
 
 
 func _test_cave_ceiling_sparse_flight_guard() -> Variant:
-	## Crystal Mouth (100-wide cave) must dress a flight-blocking ceiling with sparse décor teeth.
+	## Crystal Mouth dresses multi-height cowboy rock segments with seat-attached teeth.
 	var data := CaveCampaignLevels.level_data(11)
 	var level := LevelController.new()
 	add_child(level)
@@ -6561,30 +6561,68 @@ func _test_cave_ceiling_sparse_flight_guard() -> Variant:
 	if ceiling.get_node_or_null("CeilingFill_0") == null:
 		level.queue_free()
 		return "CaveCeiling should fill the sky gap above the lip with CeilingFill art."
-	var underside := float(ceiling.get_meta("underside_y", 999.0))
-	# ~2cm below a grounded view top (−128 + 76 ≈ −52).
-	if underside < -70.0 or underside > -30.0:
+	var segment_top := float(ceiling.get_meta("segment_top_y", 999.0))
+	if segment_top > -100.0:
 		level.queue_free()
-		return "Cave ceiling underside should sit near the top of the screen (got y=%.1f)." % underside
+		return "Ceiling segments should start near the camera top (got y=%.1f)." % segment_top
+	# Fill sprites must end at/above the segment tops (no fill below the painted lip).
+	for child in ceiling.get_children():
+		if child is Sprite2D and String(child.name).begins_with("CeilingFill"):
+			var fill := child as Sprite2D
+			var fill_bottom := fill.position.y + fill.texture.get_height() * fill.scale.y
+			if fill_bottom > segment_top + 1.0:
+				level.queue_free()
+				return "Ceiling fill must not extend below the ceiling segment art."
+	var rock_count := 0
+	for child in ceiling.get_children():
+		if child is Sprite2D and String(child.name).begins_with("CeilingRock"):
+			rock_count += 1
+	if rock_count < 3:
+		level.queue_free()
+		return "Cave ceiling should place multiple rock segment arts (got %d)." % rock_count
+	var attach_points: Array = ceiling.get_meta("attach_points", [])
+	if attach_points.size() < 4:
+		level.queue_free()
+		return "Ceiling segments should expose several stalactite attach seats."
+	var seat_ys: Array[float] = []
+	for seat_v in attach_points:
+		if seat_v is Dictionary:
+			seat_ys.append(float((seat_v as Dictionary).get("y", 0.0)))
+	seat_ys.sort()
+	if seat_ys[seat_ys.size() - 1] - seat_ys[0] < 20.0:
+		level.queue_free()
+		return "Ceiling attach seats should vary in height across segments."
 
 	var decor_count := 0
+	var tooth_ys: Array[float] = []
 	for child in ceiling.get_children():
 		if child is StalactiteHazard and String(child.name).begins_with("CeilingStalactite"):
 			decor_count += 1
 			var tooth := child as Node2D
-			if absf(tooth.position.y - (underside - 10.0)) > 12.0:
+			tooth_ys.append(tooth.position.y)
+			var near_seat := false
+			for seat_v in attach_points:
+				if not (seat_v is Dictionary):
+					continue
+				var seat := seat_v as Dictionary
+				if absf(tooth.position.x - float(seat.get("x", 0.0))) < 8.0 \
+						and absf(tooth.position.y - (float(seat.get("y", 0.0)) - 6.0)) < 10.0:
+					near_seat = true
+					break
+			if not near_seat:
 				level.queue_free()
-				return "Ceiling stalactites must attach at the rock underside (y=%.1f vs lip %.1f)." % [
-					tooth.position.y, underside
-				]
-	# Stamped hangings must snap onto the lip (not float at grid row 0).
+				return "Ceiling stalactites must attach on a segment seat."
+	# Stamped hangings snap onto nearest seat.
 	for node in level.find_children("*", "StalactiteHazard", true, false):
 		var spike := node as Node2D
 		if spike.get_parent() == ceiling:
 			continue
-		if absf(spike.global_position.y - (underside - 8.0)) > 1.5:
+		var expected := WildWestTheme._nearest_ceiling_attach_y(
+			attach_points, spike.global_position.x, float(ceiling.get_meta("underside_y", 0.0))
+		) - 6.0
+		if absf(spike.global_position.y - expected) > 2.0:
 			level.queue_free()
-			return "Stamped stalactites must snap onto the ceiling underside."
+			return "Stamped stalactites must snap onto the nearest ceiling seat."
 	level.queue_free()
 	if decor_count >= 20:
 		return (
@@ -6593,6 +6631,10 @@ func _test_cave_ceiling_sparse_flight_guard() -> Variant:
 		)
 	if decor_count < 1:
 		return "Cave ceiling should place at least one décor stalactite."
+	if tooth_ys.size() >= 2:
+		tooth_ys.sort()
+		if tooth_ys[tooth_ys.size() - 1] - tooth_ys[0] < 8.0:
+			return "Decor stalactites should hang at more than one ceiling height."
 	return null
 
 

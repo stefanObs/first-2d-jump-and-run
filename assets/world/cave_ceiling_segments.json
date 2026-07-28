@@ -1,0 +1,98 @@
+{
+  "tile_width": 320,
+  "tile_height": 200,
+  "segments": [
+    {
+      "file": "cave_ceiling_seg_a.png",
+      "kind": "shallow",
+      "attach": [
+        {
+          "x": 70,
+          "y": 108.1
+        },
+        {
+          "x": 250,
+          "y": 99.1
+        }
+      ]
+    },
+    {
+      "file": "cave_ceiling_seg_b.png",
+      "kind": "mid",
+      "attach": [
+        {
+          "x": 55,
+          "y": 139.4
+        },
+        {
+          "x": 160,
+          "y": 128.3
+        },
+        {
+          "x": 275,
+          "y": 134.1
+        }
+      ]
+    },
+    {
+      "file": "cave_ceiling_seg_c.png",
+      "kind": "deep",
+      "attach": [
+        {
+          "x": 90,
+          "y": 164.6
+        },
+        {
+          "x": 230,
+          "y": 129.6
+        }
+      ]
+    },
+    {
+      "file": "cave_ceiling_seg_d.png",
+      "kind": "mixed",
+      "attach": [
+        {
+          "x": 100,
+          "y": 120.4
+        },
+        {
+          "x": 220,
+          "y": 121.9
+        }
+      ]
+    },
+    {
+      "file": "cave_ceiling_seg_e.png",
+      "kind": "mid",
+      "attach": [
+        {
+          "x": 55,
+          "y": 139.4
+        },
+        {
+          "x": 160,
+          "y": 128.3
+        },
+        {
+          "x": 275,
+          "y": 134.1
+        }
+      ]
+    },
+    {
+      "file": "cave_ceiling_seg_f.png",
+      "kind": "shallow",
+      "attach": [
+        {
+          "x": 70,
+          "y": 108.1
+        },
+        {
+          "x": 250,
+          "y": 99.1
+        }
+      ]
+    }
+  ]
+}

@@ -1332,6 +1332,7 @@ def verify() -> None:
         "stalactite.png",
         "cave_ceiling_tile.png",
         "cave_ceiling_fill.png",
+        "cave_ceiling_seg_a.png",
         "cave_sky.png",
     ):
         p = OUT / name
@@ -1354,8 +1355,10 @@ def main() -> int:
     make_acid_drip_splash()
     make_stalactite_hang()
     make_stalactite_static()
-    make_cave_ceiling_fill()
-    make_cave_ceiling_tile()
+    # Multi-height cowboy ceiling segments (also refreshes fill + legacy tile).
+    import subprocess
+
+    subprocess.check_call([sys.executable, str(ROOT / "tools" / "build_cave_ceiling_segments.py")])
     solidify_cave_sky_edges()
     verify()
     print("\n=== files written ===")

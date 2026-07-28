@@ -156,19 +156,20 @@ static func _retuck_cave_sky_to_floor(level: Node, style: String) -> void:
 
 
 static func _dress_cave_ceiling(level: Node, style: String = LevelStyle.DESERT) -> void:
-	## Rock ceiling near the top of the view: solid fill closes the sky gap, wavy
-	## lip hangs ~2cm below the camera top, and stalactite crowns fuse into it.
+	## Cowboy-style rock segments with varied lip heights. Fill stays above the
+	## segment tops so sky/fill never shows through below the painted underside.
+	## Stalactites only attach at per-segment seat positions.
 	if not LevelStyle.is_cave(style):
 		return
 	if level.get_node_or_null("CaveCeiling") != null:
 		return
-	var lip_path := LevelStyle.ceiling_path(style)
+	var catalog := _load_ceiling_segment_catalog(style)
+	if catalog.is_empty():
+		return
+	var segments: Array = catalog.get("segments", [])
+	if segments.is_empty():
+		return
 	var fill_path := LevelStyle.ceiling_fill_path(style)
-	if lip_path.is_empty() or not ResourceLoader.exists(lip_path):
-		return
-	var lip_tex: Texture2D = load(lip_path)
-	if lip_tex == null:
-		return
 	var fill_tex: Texture2D = null
 	if not fill_path.is_empty() and ResourceLoader.exists(fill_path):
 		fill_tex = load(fill_path)
@@ -178,69 +179,156 @@ static func _dress_cave_ceiling(level: Node, style: String = LevelStyle.DESERT) 
 	root.z_index = -17
 	level.add_child(root)
 
-	# Match configure_player_camera.limit_top. ~2cm ≈ 76px at the 720p base.
-	# Grounded play keeps the camera near y≈300 (view top ≈ -128 with zoom 0.84);
-	# hang the lip ~2cm below that so the ceiling reads at the top of the screen.
+	# Segment tops sit near the camera top; lips hang to varied world Ys.
 	const CAMERA_TOP := -280.0
-	const SCREEN_PAD := 76.0
-	const TYPICAL_VIEW_TOP := -128.0
-	var underside := TYPICAL_VIEW_TOP + SCREEN_PAD
+	const SEGMENT_TOP := -168.0
 	var fill_top := CAMERA_TOP - 100.0
-	var lip_h := 72.0
-	var lip_y := underside - lip_h
-	root.set_meta("underside_y", underside)
 
-	# Dense fill from above the camera top down to the lip (no sky strip).
+	# Fill ONLY above the segment art — never into transparent lip air.
 	if fill_tex != null:
-		_tile_strip_row(root, fill_tex, -200.0, width + 200.0, fill_top, underside - fill_top, 0, "CeilingFill")
-	_tile_strip_row(root, lip_tex, -200.0, width + 200.0, lip_y, lip_h, 1, "CeilingRock")
-	_add_cave_flight_ceiling(root, width, fill_top, underside)
+		_tile_strip_row(
+			root,
+			fill_tex,
+			-200.0,
+			width + 200.0,
+			fill_top,
+			maxf(8.0, SEGMENT_TOP - fill_top),
+			0,
+			"CeilingFill"
+		)
 
-	# Snap workshop / layout hangings onto the painted underside.
-	_snap_ceiling_hangings(level, underside)
+	var attach_points: Array = []
+	var min_underside := INF
+	var max_underside := SEGMENT_TOP
+	var x := -200.0
+	var seg_i := 0
+	var overlap := 10.0
+	while x < width + 200.0:
+		var entry: Dictionary = segments[seg_i % segments.size()]
+		var file_name := str(entry.get("file", ""))
+		var path := "res://assets/world/%s" % file_name
+		if file_name.is_empty() or not ResourceLoader.exists(path):
+			seg_i += 1
+			if seg_i > 64:
+				break
+			continue
+		var tex: Texture2D = load(path)
+		if tex == null:
+			seg_i += 1
+			continue
+		var sprite := Sprite2D.new()
+		sprite.name = "CeilingRock_%d" % seg_i
+		sprite.texture = tex
+		sprite.centered = false
+		sprite.position = Vector2(x, SEGMENT_TOP)
+		sprite.z_index = 1
+		root.add_child(sprite)
+		var seats: Array = entry.get("attach", [])
+		for seat_v in seats:
+			if not (seat_v is Dictionary):
+				continue
+			var seat := seat_v as Dictionary
+			var ax := x + float(seat.get("x", 0.0))
+			var ay := SEGMENT_TOP + float(seat.get("y", 120.0))
+			attach_points.append({"x": ax, "y": ay})
+			min_underside = minf(min_underside, ay)
+			max_underside = maxf(max_underside, ay)
+		x += float(tex.get_width()) - overlap
+		seg_i += 1
+		if seg_i > 400:
+			break
+
+	if attach_points.is_empty():
+		min_underside = SEGMENT_TOP + 120.0
+		max_underside = SEGMENT_TOP + 140.0
+	var mid_underside := (min_underside + max_underside) * 0.5
+	root.set_meta("underside_y", mid_underside)
+	root.set_meta("attach_points", attach_points)
+	root.set_meta("segment_top_y", SEGMENT_TOP)
+	_add_cave_flight_ceiling(root, width, fill_top, max_underside + 6.0)
+	_snap_ceiling_hangings(level, attach_points, mid_underside)
 
 	# Dragon Gate / Cave Dragon keep a clean rock band (no hanging teeth).
 	if _is_dragon_cave_level(level):
 		return
 
 	var existing: Array = level.find_children("*", "StalactiteHazard", true, false)
-	var x := 180.0
 	var index := 0
-	while x < width - 80.0:
+	var last_x := -9999.0
+	# Place décor teeth only on attach seats, keeping wide gaps for readability.
+	for i in range(attach_points.size()):
+		var seat: Dictionary = attach_points[i]
+		var sx := float(seat.get("x", 0.0))
+		var sy := float(seat.get("y", mid_underside))
+		if sx < 120.0 or sx > width - 80.0:
+			continue
+		if sx - last_x < 280.0:
+			continue
 		var too_close := false
 		for node in existing:
-			if absf((node as Node2D).global_position.x - x) < 120.0:
+			if absf((node as Node2D).global_position.x - sx) < 120.0:
 				too_close = true
 				break
-		if not too_close:
-			var spike := StalactiteHazard.new()
-			spike.name = "CeilingStalactite%d" % index
-			spike.drops = true
-			# Flat crown sits slightly inside the rock so the tooth reads fused on.
-			spike.position = Vector2(x, underside - 10.0 + randf_range(-3.0, 4.0))
-			spike.z_index = 2
-			root.add_child(spike)
-			var scale := randf_range(0.9, 1.15)
-			var spr := spike.get_node_or_null("Sprite2D") as Sprite2D
-			if spr != null:
-				spr.scale = Vector2(scale, scale)
-			existing.append(spike)
-		x += randf_range(340.0, 520.0)
+		if too_close:
+			continue
+		var spike := StalactiteHazard.new()
+		spike.name = "CeilingStalactite%d" % index
+		spike.drops = true
+		# Crown tucks just into the rock shelf.
+		spike.position = Vector2(sx, sy - 6.0)
+		spike.z_index = 2
+		root.add_child(spike)
+		var scale := randf_range(0.92, 1.12)
+		var spr := spike.get_node_or_null("Sprite2D") as Sprite2D
+		if spr != null:
+			spr.scale = Vector2(scale, scale)
+		existing.append(spike)
+		last_x = sx
 		index += 1
-		if index > 28:
+		if index > 16:
 			break
 
 
-static func _snap_ceiling_hangings(level: Node, underside: float) -> void:
-	## Stamps use grid row 0 (near y=0); pull them up onto the real rock lip.
+static func _load_ceiling_segment_catalog(style: String) -> Dictionary:
+	var path := LevelStyle.ceiling_segments_catalog_path(style)
+	if path.is_empty() or not ResourceLoader.exists(path):
+		return {}
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return {}
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	file.close()
+	if parsed is Dictionary:
+		return parsed as Dictionary
+	return {}
+
+
+static func _snap_ceiling_hangings(level: Node, attach_points: Array, fallback_y: float) -> void:
+	## Snap stamped hangings onto the nearest ceiling attach seat.
 	for node in level.find_children("*", "StalactiteHazard", true, false):
 		var spike := node as Node2D
 		if spike.get_parent() != null and String(spike.get_parent().name) == "CaveCeiling":
 			continue
-		spike.global_position.y = underside - 8.0
+		spike.global_position.y = _nearest_ceiling_attach_y(attach_points, spike.global_position.x, fallback_y) - 6.0
 	for node in level.find_children("*", "AcidDrip", true, false):
 		var drip := node as Node2D
-		drip.global_position.y = underside + 2.0
+		drip.global_position.y = _nearest_ceiling_attach_y(attach_points, drip.global_position.x, fallback_y) + 2.0
+
+
+static func _nearest_ceiling_attach_y(attach_points: Array, world_x: float, fallback_y: float) -> float:
+	if attach_points.is_empty():
+		return fallback_y
+	var best_y := fallback_y
+	var best_d := INF
+	for seat_v in attach_points:
+		if not (seat_v is Dictionary):
+			continue
+		var seat := seat_v as Dictionary
+		var d := absf(float(seat.get("x", 0.0)) - world_x)
+		if d < best_d:
+			best_d = d
+			best_y = float(seat.get("y", fallback_y))
+	return best_y
 
 
 static func _is_dragon_cave_level(level: Node) -> bool:
