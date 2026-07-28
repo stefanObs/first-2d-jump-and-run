@@ -9,8 +9,15 @@ signal hurt(player: Player)
 const CANYON_ART := preload("res://scripts/world/scalable_canyon_art.gd")
 const PIT_TEXTURE := preload("res://assets/world/pit.png")
 const PIT_PIXEL_SIZE := Vector2(128.0, 64.0)
+const FUNGUS_FRAME_PATHS: PackedStringArray = [
+	"res://assets/world/poison_fungus_0.png",
+	"res://assets/world/poison_fungus_1.png",
+	"res://assets/world/poison_fungus_2.png",
+	"res://assets/world/poison_fungus_3.png",
+]
 
 var _level_style: String = LevelStyle.DESERT
+var _fungus_anim: AnimatedSprite2D
 
 
 func apply_level_style(style: String) -> void:
@@ -38,9 +45,18 @@ func is_fatal_fall() -> bool:
 
 
 func ground_contact_y() -> float:
-	## World Y of the painted cactus base for desert-surface checks.
+	## World Y of the painted cactus/fungus base for desert-surface checks.
 	if is_canyon() or is_pit():
 		return global_position.y
+	var anim := get_node_or_null("FungusAnim") as AnimatedSprite2D
+	if anim != null and anim.visible and anim.sprite_frames != null:
+		var tex := anim.sprite_frames.get_frame_texture(anim.animation, anim.frame)
+		if tex != null:
+			var tex_h := float(tex.get_height())
+			var scale_y := absf(anim.scale.y)
+			if anim.centered:
+				return global_position.y + anim.position.y + tex_h * 0.5 * scale_y
+			return global_position.y + anim.position.y + tex_h * scale_y
 	var sprite := get_node_or_null("Sprite2D") as Sprite2D
 	if sprite == null or not sprite.visible or sprite.texture == null:
 		return global_position.y
@@ -83,12 +99,16 @@ func _configure_visual() -> void:
 		# Never leave a scaled cactus (or legacy pit art) floating in the mouth.
 		_strip_cactus_visuals()
 	elif sprite != null:
-		sprite.visible = true
-		if sprite is Sprite2D:
-			var path := LevelStyle.stamp_icon_path("cactus", _level_style)
-			var tex: Texture2D = load(path)
-			if tex != null:
-				(sprite as Sprite2D).texture = tex
+		if LevelStyle.is_cave(_level_style) and is_cactus():
+			_setup_fungus_spore_anim()
+		else:
+			_clear_fungus_spore_anim()
+			sprite.visible = true
+			if sprite is Sprite2D:
+				var path := LevelStyle.stamp_icon_path("cactus", _level_style)
+				var tex: Texture2D = load(path)
+				if tex != null:
+					(sprite as Sprite2D).texture = tex
 	if pit != null:
 		pit.visible = false
 	if rim != null:
@@ -103,6 +123,7 @@ func _configure_visual() -> void:
 			else:
 				label.add_theme_color_override(&"font_color", Color(0.15, 0.5, 0.18, 1.0))
 	if wide:
+		_clear_fungus_spore_anim()
 		# Temporary placeholder only — WildWestTheme._align_pits sets real gap
 		# and per-bank tops. Do not overwrite an already-configured mouth.
 		var existing := get_node_or_null("CanyonMouth")
@@ -114,8 +135,59 @@ func _configure_visual() -> void:
 			)
 
 
+func _setup_fungus_spore_anim() -> void:
+	## Cave poison fungus loops a handmade spore-puff cycle.
+	var sprite := get_node_or_null("Sprite2D") as Sprite2D
+	if sprite != null:
+		sprite.visible = false
+	_fungus_anim = get_node_or_null("FungusAnim") as AnimatedSprite2D
+	if _fungus_anim == null:
+		_fungus_anim = AnimatedSprite2D.new()
+		_fungus_anim.name = "FungusAnim"
+		add_child(_fungus_anim)
+	var frames := SpriteFrames.new()
+	frames.add_animation(&"spore")
+	frames.set_animation_speed(&"spore", 5.0)
+	frames.set_animation_loop(&"spore", true)
+	var added := 0
+	for path in FUNGUS_FRAME_PATHS:
+		if not ResourceLoader.exists(path):
+			continue
+		var tex: Texture2D = load(path)
+		if tex != null:
+			frames.add_frame(&"spore", tex)
+			added += 1
+	if added == 0:
+		# Fallback to static stamp art.
+		_clear_fungus_spore_anim()
+		if sprite != null:
+			sprite.visible = true
+			var idle: Texture2D = load("res://assets/world/poison_fungus.png")
+			if idle != null:
+				sprite.texture = idle
+		return
+	_fungus_anim.sprite_frames = frames
+	_fungus_anim.position = Vector2(0, -46)
+	_fungus_anim.scale = Vector2(1.15, 1.15)
+	_fungus_anim.centered = true
+	_fungus_anim.visible = true
+	_fungus_anim.z_index = 1
+	if _fungus_anim.animation != &"spore" or not _fungus_anim.is_playing():
+		_fungus_anim.play(&"spore")
+
+
+func _clear_fungus_spore_anim() -> void:
+	var anim := get_node_or_null("FungusAnim") as AnimatedSprite2D
+	if anim != null:
+		anim.stop()
+		anim.visible = false
+		anim.sprite_frames = null
+	_fungus_anim = null
+
+
 func _configure_fixed_pit() -> void:
 	scale = Vector2.ONE
+	_clear_fungus_spore_anim()
 	var sprite := get_node_or_null("Sprite2D") as Sprite2D
 	if sprite != null:
 		sprite.visible = false
@@ -155,7 +227,8 @@ func _strip_cactus_visuals() -> void:
 	## Canyon hazards reuse the cactus scene — remove every cactus/pit sprite so a
 	## huge scaled saguaro can never float in the gap (hide alone is not enough if
 	## debug overlays or late theme passes re-show children).
-	for child_name in ["Sprite2D", "PitVisual", "PitRim"]:
+	_clear_fungus_spore_anim()
+	for child_name in ["Sprite2D", "PitVisual", "PitRim", "FungusAnim"]:
 		var node := get_node_or_null(child_name)
 		if node == null:
 			continue
@@ -163,6 +236,9 @@ func _strip_cactus_visuals() -> void:
 			(node as CanvasItem).visible = false
 		if node is Sprite2D:
 			(node as Sprite2D).texture = null
+		if node is AnimatedSprite2D:
+			(node as AnimatedSprite2D).stop()
+			(node as AnimatedSprite2D).sprite_frames = null
 		node.modulate = Color(1, 1, 1, 0)
 
 

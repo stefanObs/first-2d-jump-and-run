@@ -62,6 +62,7 @@ ENTRIES: list[tuple[str, str, str]] = [
     ("Acid Drip", "assets/world/acid_drip.png", "AcidDrip"),
     ("Cave Ceiling", "assets/world/cave_ceiling_tile.png", "CaveCeiling / FlightCeilingCave"),
     ("Poison Fungus", "assets/world/poison_fungus.png", "Hazard cave"),
+    ("Fungus Spores", "assets/world/poison_fungus_2.png", "spore-puff burst"),
     ("Crystal Gate", "assets/world/goal_crystal_gate.png", "Goal cave"),
     ("Lantern Camp", "assets/world/checkpoint_cave_active.png", "Checkpoint cave"),
     ("Cave Dragon", "assets/world/boss_cave_dragon_0.png", "boss"),

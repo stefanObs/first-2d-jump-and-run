@@ -54,7 +54,7 @@ Stamp a **ladder**, run **one-way crystal ledges** along the climb top, then **d
 - **Stalactites:** cowboy-style rock spikes hanging from the ceiling band. Theme décor spawns a **sparse** row of dropping teeth along the trail (skips cells that already have a stamped hazard nearby), with tops embedded in the rock so they read as part of the ceiling before they fall. **Falling** ones wiggle, pull free, fall, then shatter with a transparent impact puff. **Ceiling Spike** stamps can stay put as static rock.
 - **Bats:** two-frame wing flap on a sine/arc path (transparent cutouts).
 - **Lizards:** reuse bull AI (charge, face player, canyon falls, full tie sequence) with a single lizard sprite.
-- **Poison fungus:** cactus rules (hurt / Bubble bounce) with mushroom art and a soft toxic tint.
+- **Poison fungus:** cactus rules (hurt / Bubble bounce) with mushroom art; loops a short **spore-puff** animation (idle → gather → burst → drift) so toxic spores visibly spread under the cap.
 - **Scorpions:** rattlesnake raise/strike timing with a tail sting pose.
 - **Bow skeletons:** bandit patrol + shoot cadence, but spawn **arrows** instead of revolver bullets; lasso/stomp still ties. Idle/walk/tied frames share one body height on a transparent canvas; tied pose keeps stand scale and sits on the dirt.
 - **Ninjas:** ambush appears ~12 columns ahead of the cowboy.
@@ -76,7 +76,7 @@ Builtin **Outlaw Cave** (level 5) and cave arc **levels 11–15** (`Crystal Mout
 - Env: `cave_sky.png`, `cave_ceiling_fill.png`, `cave_ceiling_{ll,lh,hl,hh}_*.png` + `cave_ceiling_segments.json`, `cave_ceiling_tile.png` (legacy mid panel), `cave_floor_tile.png`, `cave_dirt_tile.png`, `cave_canyon_rim_left.png`, `cave_plank.png`, `cave_pit.png`
 - Goal: `goal_crystal_gate.png`
 - Camp: `checkpoint_cave_active.png` / `_inactive` (transparent cutout)
-- Fungus: `poison_fungus.png`
+- Fungus: `poison_fungus.png` + spore-puff frames `poison_fungus_0`…`_3`
 - Lizard: stand / tied_legs / down (bull-sized aspect)
 - Skeleton: idle + walk strip + tied (+ crystal/red bounty set) — walk frames same height as idle
 - Scorpion: idle + sting

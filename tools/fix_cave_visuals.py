@@ -1402,9 +1402,10 @@ def main() -> int:
     make_acid_drip_splash()
     make_stalactite_hang()
     make_stalactite_static()
-    # Multi-height cowboy ceiling segments (also refreshes fill + legacy tile).
     import subprocess
 
+    subprocess.check_call([sys.executable, str(ROOT / "tools" / "build_poison_fungus_frames.py")])
+    # Multi-height cowboy ceiling segments (also refreshes fill + legacy tile).
     subprocess.check_call([sys.executable, str(ROOT / "tools" / "build_cave_ceiling_segments.py")])
     solidify_cave_sky_edges()
     verify()

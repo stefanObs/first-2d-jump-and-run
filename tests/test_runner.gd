@@ -207,6 +207,10 @@ func _ready() -> void:
 		"Cave canyons use cool-slate ridge art",
 		_test_cave_canyon_uses_cave_rim
 	)
+	failures += await _run(
+		"Poison fungus plays a spore-puff animation",
+		_test_poison_fungus_spore_animation
+	)
 
 	if failures == 0:
 		print("All tests passed.")
@@ -6750,6 +6754,52 @@ func _test_cave_canyon_uses_cave_rim() -> Variant:
 	level.queue_free()
 	if found < 1:
 		return "Acid Veins should dress at least one canyon with cave rim art."
+	return null
+
+
+func _test_poison_fungus_spore_animation() -> Variant:
+	## Cave cactus stamps become poison fungus with a looping spore-puff cycle.
+	for path in [
+		"res://assets/world/poison_fungus_0.png",
+		"res://assets/world/poison_fungus_1.png",
+		"res://assets/world/poison_fungus_2.png",
+		"res://assets/world/poison_fungus_3.png",
+	]:
+		if load(path) == null:
+			return "Missing fungus spore frame: %s" % path
+	var data := CaveCampaignLevels.level_data(13)
+	var level := LevelController.new()
+	add_child(level)
+	CustomLevelBuilder.build(level, data)
+	await get_tree().process_frame
+	WildWestTheme.apply_to_level(level)
+	await get_tree().process_frame
+	var fungus: Hazard = null
+	for node in level.find_children("*", "Area2D", true, false):
+		if node is Hazard and (node as Hazard).is_cactus():
+			fungus = node as Hazard
+			break
+	if fungus == null:
+		level.queue_free()
+		return "Acid Veins should place at least one poison fungus."
+	var anim := fungus.get_node_or_null("FungusAnim") as AnimatedSprite2D
+	if anim == null or not anim.visible:
+		level.queue_free()
+		return "Cave fungus should show FungusAnim spore cycle."
+	if anim.sprite_frames == null or not anim.sprite_frames.has_animation(&"spore"):
+		level.queue_free()
+		return "FungusAnim needs a looping spore animation."
+	if anim.sprite_frames.get_frame_count(&"spore") < 4:
+		level.queue_free()
+		return "Spore animation should include idle/gather/burst/drift frames."
+	if not anim.is_playing() or anim.animation != &"spore":
+		level.queue_free()
+		return "Poison fungus should be playing the spore animation."
+	var sprite := fungus.get_node_or_null("Sprite2D") as Sprite2D
+	if sprite != null and sprite.visible:
+		level.queue_free()
+		return "Static fungus Sprite2D should hide while the spore anim plays."
+	level.queue_free()
 	return null
 
 
