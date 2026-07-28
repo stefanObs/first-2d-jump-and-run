@@ -66,7 +66,7 @@ Stamp a **ladder**, run **one-way crystal ledges** along the climb top, then **d
 2. **Crystal ledge** — platform art: cool stone plank with crystal flecks (replaces wood plank look).
 3. **Glow shard** (optional future pickup) — brief silhouette of drip/stalactite danger columns; not required for v1 playability.
 4. **Cave wash backdrop** — no sun/mesas; deep `cave_sky` wash that meets the trail floor + hanging rock ceiling. Solid `cave_ceiling_fill` closes the sky gap above the camera; the wavy lip (`cave_ceiling_tile`) sits about **2cm (~76px)** below the top of a normal grounded view with sparse droppable stalactite teeth fused under it (**Dragon Gate** and the **Cave Dragon** arena keep a clean rock band with no teeth). Rock band is solid (`FlightCeilingCave`); touching it while flying respawns at camp.
-5. **Mineral vein floor** — dense cool stone crust with pink crystal flecks; underfill is deep slate (no tile holes showing sky).
+5. **Mineral vein floor** — dense cool stone crust with pink crystal flecks; underfill dirt is a **fully opaque** slate tile (no transparent side margins / sky holes when tiled); deep `FloorAbyss` slate under the bank.
 ## Campaign note
 
 Builtin **Outlaw Cave** (level 5) and cave arc **levels 11–15** (`Crystal Mouth` → `Dragon Gate`) use `"style": "cave"`. After Dragon Gate the **Cave Dragon** boss flies left↔right below the ceiling (facing travel direction, wing-flap + landing poses), spits a few flameballs in a straight line toward the cowboy (2 rounds × 2 shots), lands for a lasso, then repeats; after three lassos his mouth is tied and the campaign victory plays. Workshop imports for 11–15 use the stamp catalog in `CaveCampaignLevels`. Custom trails can pick Cave style freely.

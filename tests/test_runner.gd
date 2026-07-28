@@ -106,6 +106,7 @@ func _ready() -> void:
 	failures += await _run("Slope earth fill stays below crust line", _test_slope_dirt_below_crust)
 	failures += await _run("Slope underfill covers dune wedge", _test_slope_underfill_covers_wedge)
 	failures += await _run("Slope underfill uses warm bank earth", _test_slope_underfill_earth_color)
+	failures += await _run("Cave floor tiles are solid without holes", _test_cave_floor_tiles_solid)
 	failures += await _run("Filled save can pick Advanced Mode", _test_filled_slot_advanced_mode_select)
 	failures += await _run("Bandits play walk animation while moving", _test_bandit_walk_animation)
 	failures += await _run("Campaign hazards are no longer blocked by plank highways", _test_no_plank_highways)
@@ -3166,6 +3167,74 @@ func _test_slope_underfill_earth_color() -> Variant:
 		level.free()
 		return "FloorAbyss should match warm bank earth under flat dirt."
 	level.free()
+	return null
+
+
+func _test_cave_floor_tiles_solid() -> Variant:
+	## Cave crust + dirt must be fully opaque so tiled banks never show sky holes.
+	for path in [
+		"res://assets/world/cave_floor_tile.png",
+		"res://assets/world/cave_dirt_tile.png",
+	]:
+		var tex := load(path) as Texture2D
+		if tex == null:
+			return "Missing cave floor asset: %s" % path
+		var img := tex.get_image()
+		if img == null:
+			return "Could not read pixels for %s" % path
+		if img.get_format() != Image.FORMAT_RGBA8:
+			img.convert(Image.FORMAT_RGBA8)
+		var clear := 0
+		var empty_cols := 0
+		for x in range(img.get_width()):
+			var col_opaque := 0
+			for y in range(img.get_height()):
+				if img.get_pixel(x, y).a < 0.98:
+					clear += 1
+				else:
+					col_opaque += 1
+			if col_opaque == 0:
+				empty_cols += 1
+		var total := img.get_width() * img.get_height()
+		if clear > 0:
+			return (
+				"%s must be fully opaque (clear pixels=%d / %d)."
+				% [path.get_file(), clear, total]
+			)
+		if empty_cols > 0:
+			return "%s has empty columns that open sky holes when tiled." % path.get_file()
+
+	# Built cave trail must stack crust + dirt + abyss underfill.
+	var data := CaveCampaignLevels.level_data(11)
+	var level := LevelController.new()
+	add_child(level)
+	CustomLevelBuilder.build(level, data)
+	await get_tree().process_frame
+	WildWestTheme.apply_to_level(level)
+	await get_tree().process_frame
+	var trail_floor := level.get_node_or_null("TrailFloor") as Node2D
+	if trail_floor == null:
+		level.queue_free()
+		return "Cave level should dress a TrailFloor."
+	var has_surface := false
+	var has_dirt := false
+	for child in trail_floor.get_children():
+		var child_name := String(child.name)
+		if child_name.begins_with("FloorSurface"):
+			has_surface = true
+		if child_name.begins_with("FloorDirt"):
+			has_dirt = true
+	if not has_surface:
+		level.queue_free()
+		return "Cave TrailFloor needs FloorSurface crust."
+	if not has_dirt:
+		level.queue_free()
+		return "Cave TrailFloor needs FloorDirt underfill tiles."
+	var abyss := trail_floor.get_node_or_null("FloorAbyss") as Polygon2D
+	if abyss == null:
+		level.queue_free()
+		return "Cave TrailFloor needs FloorAbyss underfill."
+	level.queue_free()
 	return null
 
 

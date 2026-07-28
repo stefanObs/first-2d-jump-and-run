@@ -478,6 +478,91 @@ def densify_tile(path: Path, size: tuple[int, int]) -> None:
     print(f"{path.name}: densified, filled≈{filled}, clear%={_clear_pct(canvas):.1f}")
 
 
+def solidify_cave_floor_tile(path: Path, size: tuple[int, int]) -> None:
+    """Force a fully opaque cave floor/dirt tile (no side margins / sky holes when tiled)."""
+    import math
+    import random
+
+    im = Image.open(path).convert("RGBA")
+    bbox = im.getbbox()
+    if bbox is None:
+        return
+    fig = im.crop(bbox)
+    tw, th = size
+    fw, fh = fig.size
+    # Cover-scale so rock spans the full tile, then crop center.
+    scale = max(tw / fw, th / fh) * 1.02
+    nw, nh = max(1, round(fw * scale)), max(1, round(fh * scale))
+    fig = fig.resize((nw, nh), Image.LANCZOS)
+    ox = (nw - tw) // 2
+    oy = (nh - th) // 2
+    canvas = fig.crop((ox, oy, ox + tw, oy + th)).convert("RGBA")
+    px = canvas.load()
+    w, h = canvas.size
+
+    samples: list[tuple[int, int, int]] = []
+    for y in range(0, h, 2):
+        for x in range(0, w, 2):
+            r, g, b, a = px[x, y]
+            if a >= 180:
+                samples.append((r, g, b))
+    if samples:
+        base = (
+            sum(c[0] for c in samples) // len(samples),
+            sum(c[1] for c in samples) // len(samples),
+            sum(c[2] for c in samples) // len(samples),
+        )
+    else:
+        base = (58, 48, 68)
+
+    rng = random.Random(91 + tw + th)
+
+    def rock_at(x: int, y: int) -> tuple[int, int, int, int]:
+        for radius in range(1, 12):
+            found: list[tuple[int, int, int]] = []
+            for dx in range(-radius, radius + 1):
+                for dy in range(-radius, radius + 1):
+                    nx, ny = x + dx, y + dy
+                    if 0 <= nx < w and 0 <= ny < h:
+                        rr, gg, bb, aa = px[nx, ny]
+                        if aa >= 180:
+                            found.append((rr, gg, bb))
+            if found:
+                sr = sum(c[0] for c in found) // len(found)
+                sg = sum(c[1] for c in found) // len(found)
+                sb = sum(c[2] for c in found) // len(found)
+                return (sr, sg, sb, 255)
+        n = int(math.sin(x * 0.11) * 6 + math.cos(y * 0.17) * 5)
+        return (
+            max(20, min(120, base[0] + n + rng.randint(-4, 4))),
+            max(16, min(100, base[1] + n + rng.randint(-4, 4))),
+            max(28, min(130, base[2] + n + rng.randint(-4, 4))),
+            255,
+        )
+
+    filled = 0
+    for y in range(h):
+        for x in range(w):
+            if px[x, y][3] >= 250:
+                continue
+            px[x, y] = rock_at(x, y)
+            filled += 1
+
+    for _ in range(max(12, (w * h) // 700)):
+        x = rng.randint(1, w - 2)
+        y = rng.randint(1, h - 2)
+        pr = 170 + rng.randint(-20, 30)
+        pg = 95 + rng.randint(-15, 25)
+        pb = 135 + rng.randint(-20, 25)
+        px[x, y] = (pr, pg, pb, 255)
+
+    _save(canvas, path)
+    clear = _clear_pct(canvas)
+    print(f"{path.name}: solidified, filled≈{filled}, clear%={clear:.1f}")
+    if clear > 0.05:
+        raise RuntimeError(f"{path.name} still has transparent pixels after solidify ({clear:.1f}%)")
+
+
 def fix_bats() -> None:
     src = SOURCE / "cave_bat_strip_concept.png"
     cut = cutout(src, level=185)
@@ -1007,20 +1092,20 @@ def make_cave_ceiling_tile() -> None:
 def fix_floors() -> None:
     floor = OUT / "cave_floor_tile.png"
     dirt = OUT / "cave_dirt_tile.png"
-    # Prefer re-cut from source then densify to full tile size.
+    # Prefer re-cut from source then solidify edge-to-edge (no sky holes when tiled).
     floor_src = SOURCE / "cave_floor_concept.png"
     if floor_src.is_file():
         cut = cutout(floor_src, level=185)
         framed = _fit(cut, (200, 84))
         _save(framed, floor)
-    densify_tile(floor, (200, 84))
+    solidify_cave_floor_tile(floor, (200, 84))
 
     dirt_src = SOURCE / "cave_dirt_concept.png"
     if dirt_src.is_file():
         cut = cutout(dirt_src, level=185)
         framed = _fit(cut, (200, 38))
         _save(framed, dirt)
-    densify_tile(dirt, (200, 38))
+    solidify_cave_floor_tile(dirt, (200, 38))
 
 
 def _rightmost_opaque_x(im: Image.Image, *, alpha_thresh: int = 8) -> int | None:
@@ -1089,6 +1174,8 @@ def verify() -> None:
         if p.is_file():
             im = Image.open(p).convert("RGBA")
             print(f"{name}: size={im.size} clear%={_clear_pct(im):.1f}")
+            if name in ("cave_floor_tile.png", "cave_dirt_tile.png") and _clear_pct(im) > 0.05:
+                raise RuntimeError(f"{name} must be fully opaque (got clear%={_clear_pct(im):.1f})")
 
 
 def main() -> int:

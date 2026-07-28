@@ -217,6 +217,14 @@ def main() -> int:
         out.save(dest)
         print(f"wrote {dest.relative_to(ROOT)}")
 
+    # Floor/dirt must be fully opaque after framing (tiling shows sky through margins).
+    from tools.fix_cave_visuals import solidify_cave_floor_tile
+
+    for name, size in (("cave_floor_tile.png", (200, 84)), ("cave_dirt_tile.png", (200, 38))):
+        path = OUT_DIR / name
+        if path.is_file():
+            solidify_cave_floor_tile(path, size)
+
     # Clear opaque bow-triangle fill, then crystal bounty = magenta tint of bases.
     from PIL import Image
 
