@@ -232,6 +232,52 @@ static func _has_ground_at(objects: Array, x: int, y: int) -> bool:
 				return true
 	return false
 
+
+static func has_canyon_at(objects: Array, x: int, trail: int) -> bool:
+	for value in objects:
+		if not (value is Dictionary):
+			continue
+		var object := value as Dictionary
+		if (
+			int(object.get("x", -1)) == x
+			and int(object.get("y", -1)) == trail
+			and str(object.get("type", "")) == "canyon"
+		):
+			return true
+	return false
+
+
+static func trail_column_is_solid_dirt(objects: Array, x: int, trail: int) -> bool:
+	## Walkable trail crust — not a canyon stamp and not inside a pit mouth.
+	if not _has_ground_at(objects, x, trail):
+		return false
+	if has_canyon_at(objects, x, trail):
+		return false
+	var hole := pit_hole_columns({"objects": objects}, trail)
+	return not hole.has(x)
+
+
+static func bull_stamp_allowed(objects: Array, x: int, trail: int) -> bool:
+	## Trail bulls / cave lizards never stand on pits or canyon mouths.
+	return trail_column_is_solid_dirt(objects, x, trail)
+
+
+static func remove_bulls_at_columns(objects: Array, columns: Array, trail: int) -> void:
+	var blocked := {}
+	for col in columns:
+		blocked[int(col)] = true
+	if blocked.is_empty():
+		return
+	for i in range(objects.size() - 1, -1, -1):
+		var object := objects[i] as Dictionary
+		if str(object.get("type", "")) != "bull":
+			continue
+		if int(object.get("y", -1)) != maxi(trail - 1, 0):
+			continue
+		if blocked.has(int(object.get("x", -1))):
+			objects.remove_at(i)
+
+
 ## Trail columns whose crust the cowboy actually drops through — the ones whose
 ## cell centre sits inside the painted pit mouth. The dirt bank stays solid on
 ## the shoulders so the hole reads as dug into the trail, not floating in air.
@@ -877,11 +923,23 @@ static func sanitize(source: Dictionary, slot_index: int) -> Dictionary:
 				if objects.size() >= 900:
 					break
 		realign_ladder_ledges(objects, trail)
+		_strip_bulls_off_gaps(objects, trail)
 		result["objects"] = objects
 	var spawn: Array = result["spawn"]
 	if spawn is Array and spawn.size() >= 2:
 		result["spawn"] = [int(spawn[0]), clampi(int(spawn[1]), 0, trail)]
 	return result
+
+
+static func _strip_bulls_off_gaps(objects: Array, trail: int) -> void:
+	## Drop trail-bull / cave-lizard stamps that landed on a pit mouth or canyon.
+	for i in range(objects.size() - 1, -1, -1):
+		var object := objects[i] as Dictionary
+		if str(object.get("type", "")) != "bull":
+			continue
+		if not bull_stamp_allowed(objects, int(object.get("x", 0)), trail):
+			objects.remove_at(i)
+
 
 static func _valid_object(object: Dictionary, trail: int) -> bool:
 	var valid_types := [

@@ -44,6 +44,7 @@ static func validate_level_node(level: Node) -> PackedStringArray:
 	errors.append_array(_validate_cactus_clear_of_springs(level))
 	errors.append_array(_validate_cactus_clear_of_canyons(level))
 	errors.append_array(_validate_rattlesnakes_clear_of_canyons(level))
+	errors.append_array(_validate_bulls_clear_of_pits_and_canyons(level))
 	errors.append_array(_validate_canyon_up_needs_spring(level))
 	errors.append_array(_validate_timed_doors_clear_of_canyons(level))
 	errors.append_array(_validate_conveyors_not_pushing_into_canyons(level))
@@ -571,6 +572,56 @@ static func _validate_rattlesnakes_clear_of_canyons(level: Node) -> PackedString
 				% [snake.name, gap_left, gap_right]
 			)
 			break
+	return errors
+
+
+static func _validate_bulls_clear_of_pits_and_canyons(level: Node) -> PackedStringArray:
+	## Trail bulls / cave lizards must stand on solid dirt — never over a pit or canyon mouth.
+	var errors: PackedStringArray = []
+	var bulls: Array[Node2D] = []
+	for node in level.find_children("*", "AnimatableBody2D", true, false):
+		if node is BullEnemy:
+			bulls.append(node as Node2D)
+	if bulls.is_empty():
+		return errors
+
+	var gaps := _ground_canyon_gaps(level)
+	var pit_spans: Array[Dictionary] = []
+	for node in level.find_children("*", "Area2D", true, false):
+		if not (node is Hazard):
+			continue
+		var hazard := node as Hazard
+		if not hazard.is_pit():
+			continue
+		var center := (node as Node2D).global_position.x
+		pit_spans.append({
+			"left": center - CustomLevelStore.PIT_PIXEL_SIZE.x * 0.5,
+			"right": center + CustomLevelStore.PIT_PIXEL_SIZE.x * 0.5,
+			"name": node.name,
+		})
+
+	for bull in bulls:
+		var bull_rect := _approx_rect(bull, Vector2(72, 64))
+		var bull_left := bull_rect.position.x
+		var bull_right := bull_rect.end.x
+		for gap in gaps:
+			var gap_left := float(gap["left"])
+			var gap_right := float(gap["right"])
+			if bull_right > gap_left and bull_left < gap_right:
+				errors.append(
+					"Bull %s sits inside canyon gap %.0f..%.0f; move it onto solid dirt."
+					% [bull.name, gap_left, gap_right]
+				)
+				break
+		for pit in pit_spans:
+			var pit_left := float(pit["left"])
+			var pit_right := float(pit["right"])
+			if bull_right > pit_left and bull_left < pit_right:
+				errors.append(
+					"Bull %s sits over pit %s; move it onto solid dirt."
+					% [bull.name, str(pit["name"])]
+				)
+				break
 	return errors
 
 

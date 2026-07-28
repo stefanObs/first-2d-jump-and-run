@@ -61,7 +61,7 @@ Stamp a **ladder**, run **one-way crystal ledges** along the climb top, then **d
 - **Pink drips:** soft glowing droplets; telegraph with a small sparkle before falling; **splash on the floor** then respawn.
 - **Stalactites:** cowboy-style rock spikes hanging from the ceiling band. Theme décor spawns a **sparse** row of dropping teeth along the trail (skips cells that already have a stamped hazard nearby), with tops embedded in the rock so they read as part of the ceiling before they fall. **Falling** ones wiggle, pull free, fall, then shatter with a transparent impact puff. **Ceiling Spike** stamps can stay put as static rock.
 - **Bats:** two-frame wing flap on a sine/arc path (transparent cutouts).
-- **Lizards:** reuse bull AI (charge, face player, turn back ~8 cm at pit/canyon lips, full tie sequence) with a single lizard sprite.
+- **Lizards:** reuse bull AI (charge, face player, turn back ~8 cm at pit/canyon lips, full tie sequence) with a single lizard sprite; never stamped on pit mouths or canyon columns.
 - **Poison fungus:** cactus rules (hurt / Bubble bounce) with mushroom art; loops a short **spore-puff** animation (idle → gather → burst → drift) so toxic spores visibly spread under the cap.
 - **Scorpions:** rattlesnake raise/strike timing with a tail sting pose.
 - **Bow skeletons:** bandit patrol + shoot cadence, but spawn **arrows** instead of revolver bullets; lasso/stomp still ties. Idle/walk/tied frames share one body height on a transparent canvas; tied pose keeps stand scale and sits on the dirt.

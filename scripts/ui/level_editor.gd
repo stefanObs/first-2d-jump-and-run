@@ -1018,11 +1018,14 @@ func _place(x: int, y: int) -> void:
 	elif _selected_type == "canyon":
 		_erase_at(objects, x, trail, true)
 		objects.append({"type": "canyon", "x": x, "y": trail})
+		CustomLevelStore.remove_bulls_at_columns(objects, [x], trail)
 	elif _selected_type == "pit":
 		if y != trail or not CustomLevelStore.pit_fits_on_dirt(objects, x, trail):
 			return
 		_remove_pit_footprint(objects, x, trail)
 		objects.append({"type": "pit", "x": x, "y": trail})
+		var hole := CustomLevelStore.pit_hole_columns({"objects": objects}, trail)
+		CustomLevelStore.remove_bulls_at_columns(objects, hole.keys(), trail)
 	elif _selected_type == "ground":
 		var target_y := y if y <= trail else trail
 		if not _has_type_at(objects, x, target_y, "ground"):
@@ -1040,6 +1043,8 @@ func _place(x: int, y: int) -> void:
 				):
 					objects.remove_at(i)
 	else:
+		if _selected_type == "bull" and not CustomLevelStore.bull_stamp_allowed(objects, x, trail):
+			return
 		_remove_foreground_at(objects, x, place_y)
 		if _selected_type == "goal":
 			for i in range(objects.size() - 1, -1, -1):

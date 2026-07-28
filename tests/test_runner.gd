@@ -75,6 +75,7 @@ func _ready() -> void:
 	failures += await _run("Jumping on a bandit head ties him", _test_stomp_ties_bandit)
 	failures += await _run("Trail bull charges toward the player", _test_bull_charges_player)
 	failures += await _run("Bulls turn back at pit and canyon edges", _test_bull_retreats_from_gap)
+	failures += await _run("Bulls never stamp on pits or canyons", _test_bull_stamp_avoids_gaps)
 	failures += await _run("Lasso ties trail bulls", _test_lasso_ties_bull)
 	failures += await _run("Jumping on a bull head ties it", _test_stomp_ties_bull)
 	failures += await _run("Side contact with a bull sends the cowboy to camp", _test_bull_side_contact_hurts)
@@ -2337,6 +2338,56 @@ func _test_bull_retreats_from_gap() -> Variant:
 	left.queue_free()
 	right.queue_free()
 	return error
+
+
+func _test_bull_stamp_avoids_gaps() -> Variant:
+	## Workshop bulls/lizards must stay on solid dirt, not pit mouths or canyons.
+	var trail := CustomLevelStore.trail_row(8)
+	var objects: Array = []
+	for x in range(24):
+		if x >= 10 and x <= 12:
+			objects.append({"type": "canyon", "x": x, "y": trail})
+		else:
+			objects.append({"type": "ground", "x": x, "y": trail})
+	objects.append({"type": "pit", "x": 18, "y": trail})
+	if CustomLevelStore.bull_stamp_allowed(objects, 11, trail):
+		return "Bull stamp must be rejected on a canyon column."
+	if CustomLevelStore.bull_stamp_allowed(objects, 18, trail):
+		return "Bull stamp must be rejected on a pit mouth column."
+	if not CustomLevelStore.bull_stamp_allowed(objects, 6, trail):
+		return "Bull stamp should be allowed on solid dirt."
+
+	objects.append({"type": "bull", "x": 11, "y": trail - 1})
+	objects.append({"type": "bull", "x": 18, "y": trail - 1})
+	objects.append({"type": "bull", "x": 6, "y": trail - 1})
+	var cleaned := CustomLevelStore.sanitize(
+		{"objects": objects, "height": 8, "width": 24, "title": "Bull Gap"},
+		CustomLevelStore.EXTRA_SLOT_START
+	)
+	var kept := 0
+	var bad := 0
+	for value in cleaned.get("objects", []):
+		var object := value as Dictionary
+		if str(object.get("type", "")) != "bull":
+			continue
+		kept += 1
+		var x := int(object.get("x", -1))
+		if x == 11 or x == 18:
+			bad += 1
+	if kept != 1 or bad != 0:
+		return "Sanitize should keep only the solid-dirt bull (kept=%d bad=%d)." % [kept, bad]
+
+	var data := cleaned
+	var level := LevelController.new()
+	add_child(level)
+	CustomLevelBuilder.build(level, data)
+	await get_tree().process_frame
+	var layout_errors := LevelLayoutRules._validate_bulls_clear_of_pits_and_canyons(level)
+	level.queue_free()
+	await get_tree().process_frame
+	if not layout_errors.is_empty():
+		return "Sanitized bull trail failed layout: %s" % layout_errors[0]
+	return null
 
 
 func _test_lasso_ties_bull() -> Variant:
@@ -5296,6 +5347,12 @@ func _test_workshop_stamp_catalog() -> Variant:
 	var data := CustomLevelStore.default_level(0)
 	data["objects"] = [
 		{"type": "ground", "x": 2, "y": trail},
+		{"type": "ground", "x": 10, "y": trail},
+		{"type": "ground", "x": 12, "y": trail},
+		{"type": "ground", "x": 14, "y": trail},
+		{"type": "ground", "x": 18, "y": trail},
+		{"type": "ground", "x": 22, "y": trail},
+		{"type": "ground", "x": 26, "y": trail},
 		{"type": "bounty_bandit", "x": 2, "y": trail - 1},
 		{"type": "carrion", "x": 6, "y": trail - 3},
 		{"type": "chest", "x": 10, "y": trail - 1},

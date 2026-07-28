@@ -53,6 +53,13 @@ static func build(level: LevelController, data: Dictionary, preview: bool = fals
 			continue
 		if type_name == "goal" and has_goal:
 			continue
+		if (
+			type_name == "bull"
+			and not CustomLevelStore.bull_stamp_allowed(
+				data.get("objects", []) as Array, int(object.get("x", 0)), trail
+			)
+		):
+			continue
 		var index := int(counters.get(type_name, 0))
 		counters[type_name] = index + 1
 		var position := CustomLevelStore.object_world_position(object, grid, trail)
