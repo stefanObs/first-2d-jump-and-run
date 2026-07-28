@@ -20,7 +20,6 @@ from PIL import Image, ImageDraw
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "assets" / "world"
 
-INK = (42, 24, 18, 255)
 ROCK_MID = (78, 58, 82, 255)
 FLECK = (210, 130, 165, 255)
 CRYSTAL = (190, 160, 210, 255)
@@ -115,32 +114,15 @@ def _draw_segment(start: str, end: str, seed: int) -> tuple[Image.Image, list[di
         for y in range(0, edge + 1):
             depth = y / max(1, edge)
             shade = 0.78 + 0.28 * (1.0 - abs(depth - 0.35))
-            if y >= edge - 3:
-                shade *= 0.72
+            # Soft underside only — no ink/black outline framing the lip.
+            if y >= edge - 2:
+                shade *= 0.88
             px[x, y] = _rock(x, y, rng, shade)
-
-    for x in range(W):
-        edge = int(round(max(40.0, min(H - 4.0, lip[x]))))
-        for t in range(0, 3):
-            yy = edge - t
-            if 0 <= yy < H and px[x, yy][3] > 0:
-                fade = 1.0 - t * 0.28
-                px[x, yy] = (
-                    int(INK[0] * fade + px[x, yy][0] * (1 - fade)),
-                    int(INK[1] * fade + px[x, yy][1] * (1 - fade)),
-                    int(INK[2] * fade + px[x, yy][2] * (1 - fade)),
-                    255,
-                )
-        hi = edge - 4
+        # Gentle highlight just above the lip (reads as rock, not a black border).
+        hi = edge - 3
         if hi >= 0 and px[x, hi][3] > 0:
             r, g, b, _a = px[x, hi]
-            px[x, hi] = (min(255, r + 28), min(255, g + 18), min(255, b + 22), 255)
-
-    for y in range(H):
-        for x in (0, 1, W - 2, W - 1):
-            if px[x, y][3] > 0:
-                r, g, b, a = px[x, y]
-                px[x, y] = (max(20, r - 18), max(16, g - 18), max(24, b - 14), a)
+            px[x, hi] = (min(255, r + 22), min(255, g + 14), min(255, b + 18), 255)
 
     for _ in range(90):
         x = rng.randint(4, W - 5)
@@ -174,7 +156,8 @@ def _draw_segment(start: str, end: str, seed: int) -> tuple[Image.Image, list[di
                 continue
             pts.append((x, y0 + int(3 * math.sin(x * 0.04 + i))))
         if len(pts) >= 2:
-            draw.line(pts, fill=(55, 32, 28, 160), width=2)
+            # Soft mauve strata — not black ink strokes.
+            draw.line(pts, fill=(72, 48, 68, 120), width=2)
 
     # Built-in fused tooth nubs at seats (blend with rock until gameplay tooth releases).
     for seat in seats:
@@ -189,16 +172,49 @@ def _draw_segment(start: str, end: str, seed: int) -> tuple[Image.Image, list[di
                 if abs(dx) > half:
                     continue
                 edge = half - abs(dx)
-                shade = 0.7 + 0.2 * (edge / max(1.0, half))
+                shade = 0.78 + 0.18 * (edge / max(1.0, half))
                 col = _rock(xx, yy, rng, shade)
-                if edge <= 1.2 or dy >= 20:
-                    col = (max(18, col[0] - 24), max(14, col[1] - 24), max(22, col[2] - 18), 255)
+                if edge <= 1.0 or dy >= 20:
+                    # Soften tip only — keep readable rock, never black outline.
+                    col = (
+                        max(48, col[0] - 10),
+                        max(36, col[1] - 10),
+                        max(52, col[2] - 8),
+                        255,
+                    )
                 px[xx, yy] = col
         seat["y"] = round(lip[sx], 1)
 
     for seat in seats:
         sx = int(seat["x"])
         seat["y"] = round(lip[sx], 1)
+
+    # Final lift: no near-black border on the underside lip or panel sides.
+    for x in range(W):
+        edge = int(round(max(40.0, min(H - 4.0, lip[x]))))
+        for yy in range(max(0, edge - 3), edge + 1):
+            r, g, b, a = px[x, yy]
+            if a < 20:
+                continue
+            if (r + g + b) / 3.0 < 58:
+                px[x, yy] = (
+                    max(58, min(140, r + 28)),
+                    max(44, min(120, g + 22)),
+                    max(62, min(150, b + 26)),
+                    255,
+                )
+    for y in range(H):
+        for x in (0, 1, W - 2, W - 1):
+            r, g, b, a = px[x, y]
+            if a < 20:
+                continue
+            if (r + g + b) / 3.0 < 58:
+                px[x, y] = (
+                    max(58, min(140, r + 24)),
+                    max(44, min(120, g + 18)),
+                    max(62, min(150, b + 22)),
+                    255,
+                )
 
     return im, seats
 
