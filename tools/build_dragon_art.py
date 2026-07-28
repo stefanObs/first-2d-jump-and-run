@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Frame dragon boss + flameball art."""
+"""Frame dragon boss + fly/land + flameball art."""
 
 from __future__ import annotations
 
@@ -29,6 +29,26 @@ def main() -> int:
         shutil.copy2(src, SOURCE / name)
         framed = frame_sprite(cutout(src), canvas=(320, 200), target_h=180, baseline=199)
         dest = OUT / f"boss_cave_dragon_{i}.png"
+        framed.save(dest)
+        print("wrote", dest.relative_to(ROOT), framed.size)
+
+    for src_name, dest_name in (
+        ("dragon_fly_0_concept.png", "boss_cave_dragon_fly_0.png"),
+        ("dragon_fly_1_concept.png", "boss_cave_dragon_fly_1.png"),
+        ("dragon_land_concept.png", "boss_cave_dragon_land.png"),
+    ):
+        src = CONCEPT / src_name
+        if not src.is_file():
+            print("MISSING", src)
+            continue
+        shutil.copy2(src, SOURCE / src_name)
+        framed = frame_sprite(
+            cutout(src, level=185),
+            canvas=(320, 200),
+            target_h=180,
+            baseline=199,
+        )
+        dest = OUT / dest_name
         framed.save(dest)
         print("wrote", dest.relative_to(ROOT), framed.size)
 
