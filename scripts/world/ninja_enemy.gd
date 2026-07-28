@@ -194,7 +194,7 @@ func _handle_ground_player(player: Player, delta: float) -> void:
 	if dist <= MELEE_RANGE:
 		_begin_sword_attack(player)
 		return
-	if _has_floor_ahead(_facing):
+	if FloorProbe.has_floor_ahead(self, _facing):
 		_apply_facing(_facing)
 		global_position.x += _facing * CHASE_SPEED * delta
 		_set_move_animation(true)
@@ -285,10 +285,6 @@ func _spawn_shuriken(player: Player) -> void:
 	star.setup(player.global_position + lead, from)
 
 
-func _has_floor_ahead(direction: float) -> bool:
-	return FloorProbe.has_floor_ahead(self, direction)
-
-
 func _apply_facing(direction: float) -> void:
 	if _sprite == null:
 		return
@@ -327,12 +323,7 @@ func tie_up(_award_bounty: bool = true) -> void:
 	if hurt_shape != null:
 		hurt_shape.set_deferred("disabled", true)
 	_show_tied_pose()
-	if get_node_or_null("TiedRopes") == null:
-		var ropes := TiedBanditOverlay.new()
-		ropes.name = "TiedRopes"
-		ropes.z_index = 0
-		add_child(ropes)
-		_animate_rope_coils(ropes)
+	TiedBanditOverlay.ensure_attached(self, self)
 	z_index = -1
 	if _label != null:
 		_label.text = "TIED!"
@@ -361,26 +352,6 @@ func _play_tying_flourish() -> void:
 	_pose_tween.tween_property(_sprite, "scale", Vector2(STAND_SCALE, STAND_SCALE), 0.14)
 
 
-func _animate_rope_coils(ropes: Node2D) -> void:
-	for i in range(3):
-		var loop := Line2D.new()
-		loop.width = 4.0
-		loop.default_color = Color(0.72, 0.5, 0.22, 1.0)
-		loop.z_index = 2
-		var radius := 28.0 + float(i) * 8.0
-		var points := PackedVector2Array()
-		for step in range(10):
-			var ang := TAU * float(step) / 9.0
-			points.append(Vector2(cos(ang) * radius * 0.55, -38.0 - float(i) * 10.0 + sin(ang) * radius * 0.28))
-		loop.points = points
-		loop.modulate.a = 0.0
-		ropes.add_child(loop)
-		var tween := create_tween()
-		tween.tween_property(loop, "modulate:a", 1.0, 0.08).set_delay(0.05 * float(i))
-		tween.tween_property(loop, "modulate:a", 0.0, 0.35).set_delay(0.22)
-		tween.tween_callback(loop.queue_free)
-
-
 func untie_for_respawn() -> void:
 	if not _tied:
 		return
@@ -404,9 +375,7 @@ func untie_for_respawn() -> void:
 	var hurt_shape := get_node_or_null("HurtArea/CollisionShape2D") as CollisionShape2D
 	if hurt_shape != null:
 		hurt_shape.set_deferred("disabled", false)
-	var ropes := get_node_or_null("TiedRopes")
-	if ropes != null:
-		ropes.queue_free()
+	TiedBanditOverlay.remove_from(self)
 	_setup_sprite()
 	if _label != null:
 		_label.position.y = 0.0
@@ -435,9 +404,8 @@ func restore_for_respawn() -> void:
 
 
 func _kill_pose_tween() -> void:
-	if _pose_tween != null:
-		_pose_tween.kill()
-		_pose_tween = null
+	EnemyContact.kill_tween(_pose_tween)
+	_pose_tween = null
 
 
 func _update_nearby_hint() -> void:

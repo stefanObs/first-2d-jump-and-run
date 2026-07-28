@@ -21,3 +21,8 @@ static func bounce_after_stomp(player: Player) -> void:
 	player.velocity.y = STOMP_BOUNCE
 	if absf(player.velocity.x) < 40.0:
 		player.velocity.x = 0.0
+
+
+static func kill_tween(tween: Tween) -> void:
+	if tween != null:
+		tween.kill()

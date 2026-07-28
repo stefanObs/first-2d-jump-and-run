@@ -380,10 +380,10 @@ func untie_for_respawn() -> void:
 	var hurt_shape := get_node_or_null("HurtArea/CollisionShape2D") as CollisionShape2D
 	if hurt_shape != null:
 		hurt_shape.set_deferred("disabled", false)
-	for node_name in ["TiedRopes", "WinRopes"]:
-		var leftover := get_node_or_null(node_name)
-		if leftover != null:
-			leftover.queue_free()
+	TiedBanditOverlay.remove_from(self)
+	var win_ropes := get_node_or_null("WinRopes")
+	if win_ropes != null:
+		win_ropes.queue_free()
 	_setup_sprite()
 	if _label != null:
 		_label.position.y = 0.0
@@ -392,9 +392,8 @@ func untie_for_respawn() -> void:
 
 
 func _kill_pose_tween() -> void:
-	if _pose_tween != null:
-		_pose_tween.kill()
-		_pose_tween = null
+	EnemyContact.kill_tween(_pose_tween)
+	_pose_tween = null
 
 
 func _update_nearby_hint() -> void:

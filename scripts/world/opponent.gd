@@ -170,7 +170,7 @@ func _physics_process(delta: float) -> void:
 	if (
 		not vertical_patrol
 		and absf(travel_x) > 0.5
-		and not _has_floor_ahead(signf(travel_x))
+		and not FloorProbe.has_floor_ahead(self, signf(travel_x))
 	):
 		_going_to_b = not _going_to_b
 		_apply_facing(1.0 if _going_to_b else -1.0)
@@ -190,10 +190,6 @@ func _physics_process(delta: float) -> void:
 	if next.distance_to(target) < 2.0:
 		_going_to_b = not _going_to_b
 		_apply_facing(1.0 if _going_to_b else -1.0)
-
-
-func _has_floor_ahead(direction: float) -> bool:
-	return FloorProbe.has_floor_ahead(self, direction)
 
 
 func _apply_facing(direction: float) -> void:
@@ -247,12 +243,7 @@ func tie_up(award_bounty: bool = true) -> void:
 		hurt_shape.set_deferred("disabled", true)
 	# Instantly safe/pass-through, then play a short rope flourish.
 	_show_floor_bound_pose()
-	if get_node_or_null("TiedRopes") == null:
-		var ropes := TiedBanditOverlay.new()
-		ropes.name = "TiedRopes"
-		ropes.z_index = 0
-		add_child(ropes)
-		_animate_rope_coils(ropes)
+	TiedBanditOverlay.ensure_attached(self, self)
 	z_index = -1
 	if _label != null:
 		_label.text = "TIED!"
@@ -284,27 +275,6 @@ func _play_tying_flourish() -> void:
 		)
 
 
-func _animate_rope_coils(ropes: Node2D) -> void:
-	# Draw temporary rope loops that settle onto the tied bandit.
-	for i in range(3):
-		var loop := Line2D.new()
-		loop.width = 4.0
-		loop.default_color = Color(0.72, 0.5, 0.22, 1.0)
-		loop.z_index = 2
-		var radius := 28.0 + float(i) * 8.0
-		var points := PackedVector2Array()
-		for step in range(10):
-			var ang := TAU * float(step) / 9.0
-			points.append(Vector2(cos(ang) * radius * 0.55, -38.0 - float(i) * 10.0 + sin(ang) * radius * 0.28))
-		loop.points = points
-		loop.modulate.a = 0.0
-		ropes.add_child(loop)
-		var tween := create_tween()
-		tween.tween_property(loop, "modulate:a", 1.0, 0.08).set_delay(0.05 * float(i))
-		tween.tween_property(loop, "modulate:a", 0.0, 0.35).set_delay(0.22)
-		tween.tween_callback(loop.queue_free)
-
-
 func untie_for_respawn() -> void:
 	if not _tied:
 		return
@@ -325,9 +295,7 @@ func untie_for_respawn() -> void:
 	var hurt_shape := get_node_or_null("HurtArea/CollisionShape2D") as CollisionShape2D
 	if hurt_shape != null:
 		hurt_shape.set_deferred("disabled", false)
-	var ropes := get_node_or_null("TiedRopes")
-	if ropes != null:
-		ropes.queue_free()
+	TiedBanditOverlay.remove_from(self)
 	if _revolver != null:
 		_revolver.hide_gun()
 	if _sprite != null:
@@ -366,9 +334,8 @@ func restore_for_respawn() -> void:
 
 
 func _kill_pose_tween() -> void:
-	if _pose_tween != null:
-		_pose_tween.kill()
-		_pose_tween = null
+	EnemyContact.kill_tween(_pose_tween)
+	_pose_tween = null
 
 
 func _show_floor_bound_pose() -> void:
