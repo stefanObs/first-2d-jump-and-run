@@ -1,24 +1,26 @@
 class_name DragonFlameball
 extends Area2D
 
-## Slow glowing flame orb the cave dragon spits; kids have time to dodge.
+## Flame orb the cave dragon spits straight toward the cowboy (light home, no drop).
 
 signal hurt_player(player: Player)
 
 const TEX := preload("res://assets/world/dragon_flameball.png")
 
 var direction: Vector2 = Vector2(-1, 0.2)
-var speed: float = 190.0
+var speed: float = 220.0
 var _life: float = 0.0
 var _sprite: Sprite2D
+var _target: WeakRef
 
 
-func setup(from: Vector2, toward: Vector2) -> void:
+func setup(from: Vector2, toward: Vector2, target: Player = null) -> void:
 	global_position = from
 	var delta := toward - from
 	if delta.length() < 4.0:
-		delta = Vector2(-1, 0.25)
+		delta = Vector2(-1, 0.15)
 	direction = delta.normalized()
+	_target = weakref(target) if target != null else null
 
 
 func _ready() -> void:
@@ -40,13 +42,26 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	var player := _resolve_target()
+	if player != null:
+		var desired := (player.global_position + Vector2(0, -24.0) - global_position).normalized()
+		# Gentle steer so kids can still dodge, but always toward the cowboy.
+		direction = direction.lerp(desired, clampf(delta * 2.4, 0.0, 1.0)).normalized()
 	global_position += direction * speed * delta
-	direction.y = move_toward(direction.y, 0.55, delta * 0.35)
 	_life += delta
 	if _sprite != null:
-		_sprite.rotation += delta * 6.0
+		_sprite.rotation = direction.angle()
 	if _life >= 5.0:
 		queue_free()
+
+
+func _resolve_target() -> Player:
+	if _target == null:
+		return null
+	var node: Variant = _target.get_ref()
+	if node is Player and is_instance_valid(node):
+		return node as Player
+	return null
 
 
 func _on_body_entered(body: Node2D) -> void:

@@ -10,13 +10,13 @@
 size = Vector2(1600, 64)
 
 [sub_resource type="RectangleShape2D" id="DragonBody"]
-size = Vector2(160, 120)
+size = Vector2(184, 138)
 
 [sub_resource type="RectangleShape2D" id="DragonHurt"]
-size = Vector2(140, 110)
+size = Vector2(161, 126)
 
 [sub_resource type="RectangleShape2D" id="DragonLasso"]
-size = Vector2(100, 100)
+size = Vector2(115, 115)
 
 [node name="BossCaveDragon" type="Node2D"]
 script = ExtResource("1")
@@ -70,12 +70,12 @@ collision_mask = 0
 
 [node name="Sprite2D" type="Sprite2D" parent="Dragon"]
 position = Vector2(0, -70)
-scale = Vector2(0.85, 0.85)
+scale = Vector2(0.9775, 0.9775)
 texture = ExtResource("4")
 flip_h = true
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Dragon"]
-position = Vector2(0, -60)
+position = Vector2(0, -69)
 shape = SubResource("DragonBody")
 
 [node name="HurtArea" type="Area2D" parent="Dragon"]
@@ -84,11 +84,11 @@ collision_mask = 2
 monitorable = false
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Dragon/HurtArea"]
-position = Vector2(0, -60)
+position = Vector2(0, -69)
 shape = SubResource("DragonHurt")
 
 [node name="LassoTarget" type="Area2D" parent="Dragon"]
-position = Vector2(-20, -80)
+position = Vector2(-23, -92)
 script = ExtResource("5")
 active = false
 

@@ -596,6 +596,9 @@ func _test_boss_arenas() -> Variant:
 		"res://assets/world/boss_cave_dragon_1.png",
 		"res://assets/world/boss_cave_dragon_2.png",
 		"res://assets/world/boss_cave_dragon_3.png",
+		"res://assets/world/boss_cave_dragon_fly_0.png",
+		"res://assets/world/boss_cave_dragon_fly_1.png",
+		"res://assets/world/boss_cave_dragon_land.png",
 		"res://assets/world/dragon_flameball.png",
 	]:
 		if load(stage_path) == null:
@@ -604,6 +607,10 @@ func _test_boss_arenas() -> Variant:
 	if dragon_sprite == null or dragon_sprite.texture == null:
 		dragon.queue_free()
 		return "Cave Dragon needs a stage sprite."
+	var fly_scale: float = absf(float(dragon_sprite.scale.x))
+	if fly_scale < 0.95 or fly_scale > 1.05:
+		dragon.queue_free()
+		return "Cave Dragon should be ~15%% larger (scale≈0.98, got %.3f)." % fly_scale
 	dragon.set("_lassos", 3)
 	dragon.call("_apply_stage_visual")
 	if (

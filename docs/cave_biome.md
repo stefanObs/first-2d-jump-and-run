@@ -70,7 +70,7 @@ Stamp a **ladder**, run **one-way crystal ledges** along the climb top, then **d
 
 ## Campaign note
 
-Builtin **Outlaw Cave** (level 5) and cave arc **levels 11–15** (`Crystal Mouth` → `Dragon Gate`) use `"style": "cave"`. After Dragon Gate the **Cave Dragon** boss flies and spits dodgeable flameballs for three rounds, lands for a lasso, then repeats; after three lassos his mouth is tied and the campaign victory plays. Workshop imports for 11–15 use the stamp catalog in `CaveCampaignLevels`. Custom trails can pick Cave style freely.
+Builtin **Outlaw Cave** (level 5) and cave arc **levels 11–15** (`Crystal Mouth` → `Dragon Gate`) use `"style": "cave"`. After Dragon Gate the **Cave Dragon** boss flies left↔right below the ceiling (facing travel direction, wing-flap + landing poses), spits flameballs that steer toward the cowboy for three rounds, lands for a lasso, then repeats; after three lassos his mouth is tied and the campaign victory plays. Workshop imports for 11–15 use the stamp catalog in `CaveCampaignLevels`. Custom trails can pick Cave style freely.
 
 ## Art checklist
 
