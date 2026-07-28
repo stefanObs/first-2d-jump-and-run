@@ -2,7 +2,7 @@
 
 Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, nonviolent lasso. **Classic mode** has no lives or game over; **Advanced Mode** (chosen in **Settings** before starting or continuing a slot) adds a three-life limit, badge milestones, and a game-over return to the start screen. Pick **Cowboy** or **Cowgirl** in Settings — the choice applies across all save slots. **German is the default language**; English is fully supported.
 
-**Content version:** `1.8.38` (see `content_version.txt`). Launchers reimport when this stamp changes.
+**Content version:** `1.8.39` (see `content_version.txt`). Launchers reimport when this stamp changes.
 
 This README is the **binding source of truth** for gameplay, level design, art, i18n, and audio. Agents and contributors must follow it (see [Agent / contributor rules](#agent--contributor-rules)).
 
@@ -78,11 +78,11 @@ godot --headless --path . res://tests/test_moving_platform_obstruction.tscn
 8. Rail Yard — Bubble Shields, conveyors, timed gates  
 9. Moonlight Gulch — Speed Stars + earlier tricks  
 10. Rainbow Saloon — desert finale before the cavern arc  
-11. Crystal Mouth — cave remaps, ladder path splits, ranch fences  
+11. Crystal Mouth — cave remaps, ladder path splits, ranch fences, first pink drops  
 12. Bat Gallery — bats, drips, ledges, first cave conveyor gate  
-13. Acid Veins — pink drips, fungus, canyon hop, conveyor gate  
-14. Ladder Grotto — ladder branches, lizards, reverse belt  
-15. Dragon Gate — cave finale with belts, ladders, and fences before the Cave Dragon  
+13. Acid Veins — pink drip gauntlet, fungus, canyon hop, conveyor gate  
+14. Ladder Grotto — ladder branches, lizards, reverse belt, ceiling drips  
+15. Dragon Gate — cave finale with belts, ladders, drips, and fences before the Cave Dragon  
 
 **Bosses** (after clearing the listed level; same tools as the trail; classic mode uses **5 hearts** per fight; Advanced Mode uses campaign lives instead; nonviolent win):
 
