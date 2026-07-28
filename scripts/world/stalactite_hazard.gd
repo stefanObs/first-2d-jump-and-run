@@ -21,12 +21,15 @@ const RELEASE_TIME := 0.42
 
 var _origin: Vector2
 var _sprite: Sprite2D
+var _shape: CollisionShape2D
 var _state: String = "hanging"
 var _vel_y: float = 0.0
 var _timer: float = 0.0
 var _wiggle: float = 0.0
 var _release: float = 0.0
 var _floor_y: float = NAN
+var _hang_h: float = 96.0
+var _hang_w: float = 48.0
 
 
 func _ready() -> void:
@@ -34,18 +37,24 @@ func _ready() -> void:
 	collision_layer = 0
 	collision_mask = 2
 	monitorable = false
+	# Hang art for dropping teeth; distinct (shorter) static frame when not dropping.
+	var tex: Texture2D = HANG_TEX if drops else STATIC_TEX
+	_hang_w = float(tex.get_width())
+	_hang_h = float(tex.get_height())
 	_sprite = Sprite2D.new()
 	_sprite.name = "Sprite2D"
-	_sprite.texture = HANG_TEX if drops else STATIC_TEX
-	_sprite.centered = true
-	_sprite.position = Vector2(0, 40)
+	_sprite.texture = tex
+	# Flat top of the texture attaches at local y=0 (ceiling joint).
+	_sprite.centered = false
+	_sprite.position = Vector2(-_hang_w * 0.5, 0.0)
 	add_child(_sprite)
-	var shape := CollisionShape2D.new()
+	_shape = CollisionShape2D.new()
 	var rect := RectangleShape2D.new()
-	rect.size = Vector2(28, 70)
-	shape.shape = rect
-	shape.position = Vector2(0, 40)
-	add_child(shape)
+	rect.size = Vector2(_hang_w * 0.55, _hang_h * 0.78)
+	_shape.shape = rect
+	# Body hangs below the ceiling joint.
+	_shape.position = Vector2(0.0, _hang_h * 0.52)
+	add_child(_shape)
 	body_entered.connect(_on_body_entered)
 	if drops:
 		call_deferred("_probe_floor")
@@ -88,7 +97,7 @@ func _physics_process(delta: float) -> void:
 		"wiggle":
 			_wiggle -= delta
 			_sprite.rotation = sin(Time.get_ticks_msec() * 0.04) * 0.18
-			_sprite.position.y = 40.0 + sin(Time.get_ticks_msec() * 0.05) * 2.0
+			_sprite.position.y = sin(Time.get_ticks_msec() * 0.05) * 2.0
 			if _wiggle <= 0.0:
 				_state = "releasing"
 				_release = RELEASE_TIME
@@ -97,7 +106,7 @@ func _physics_process(delta: float) -> void:
 			# Pull free from the ceiling rock before the drop.
 			_release -= delta
 			var t := 1.0 - clampf(_release / RELEASE_TIME, 0.0, 1.0)
-			_sprite.position.y = 40.0 + t * 18.0
+			_sprite.position.y = t * 18.0
 			_sprite.scale = Vector2(1.0 + t * 0.08, 1.0 - t * 0.12)
 			_sprite.modulate = Color(1.15, 1.05, 0.95, 1.0)
 			_sprite.rotation = sin(t * TAU * 2.0) * 0.12
@@ -107,17 +116,20 @@ func _physics_process(delta: float) -> void:
 				_sprite.scale = Vector2.ONE
 				_sprite.modulate = Color.WHITE
 				_sprite.rotation = 0.0
-				_sprite.position = Vector2(0, 40)
+				_sprite.position = Vector2(-_hang_w * 0.5, 0.0)
 		"falling":
 			_vel_y += FALL_GRAVITY * delta
 			global_position.y += _vel_y * delta
-			var tip_y := global_position.y + 70.0
+			var tip_y := global_position.y + _hang_h
 			if tip_y >= _floor_y:
-				global_position.y = _floor_y - 36.0
+				global_position.y = _floor_y - _hang_h * 0.35
 				_state = "impact"
 				_timer = IMPACT_TIME
 				_sprite.texture = IMPACT_TEX
-				_sprite.position = Vector2(0, 20)
+				var iw := float(IMPACT_TEX.get_width())
+				var ih := float(IMPACT_TEX.get_height())
+				_sprite.centered = false
+				_sprite.position = Vector2(-iw * 0.5, _hang_h - ih)
 				_sprite.modulate = Color.WHITE
 		"impact":
 			_timer -= delta
@@ -138,7 +150,10 @@ func _respawn() -> void:
 	_state = "hanging"
 	_sprite.visible = true
 	_sprite.texture = HANG_TEX
-	_sprite.position = Vector2(0, 40)
+	_hang_w = float(HANG_TEX.get_width())
+	_hang_h = float(HANG_TEX.get_height())
+	_sprite.centered = false
+	_sprite.position = Vector2(-_hang_w * 0.5, 0.0)
 	_sprite.scale = Vector2.ONE
 	_sprite.modulate = Color.WHITE
 	_sprite.rotation = 0.0

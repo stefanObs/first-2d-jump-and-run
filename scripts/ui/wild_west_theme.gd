@@ -72,7 +72,7 @@ static func _dress_sky(level: Node, style: String = LevelStyle.DESERT) -> void:
 
 
 static func _dress_cave_ceiling(level: Node, style: String = LevelStyle.DESERT) -> void:
-	## Curved rock ceiling band with integrated teeth; cave_sky stays as deep wash behind it.
+	## Cowboy-style rock ceiling band with droppable teeth hanging from the underside.
 	if not LevelStyle.is_cave(style):
 		return
 	if level.get_node_or_null("CaveCeiling") != null:
@@ -88,24 +88,31 @@ static func _dress_cave_ceiling(level: Node, style: String = LevelStyle.DESERT) 
 	root.name = "CaveCeiling"
 	root.z_index = -17
 	level.add_child(root)
-	# Hang a thicker, more curved rock band near the top of the play view.
-	_tile_strip_row(root, tex, -200.0, width + 200.0, -120.0, 150.0, 0, "CeilingRock")
-	var static_tex: Texture2D = load("res://assets/world/stalactite_static.png")
-	if static_tex == null:
-		return
-	var x := 80.0
+	# Rock band near the top of the play view (flush hanging underside ~y 40–70 for teeth).
+	_tile_strip_row(root, tex, -200.0, width + 200.0, -50.0, 130.0, 0, "CeilingRock")
+	var existing: Array = level.find_children("*", "StalactiteHazard", true, false)
+	var x := 100.0
 	var index := 0
-	while x < width:
-		var spike := Sprite2D.new()
-		spike.name = "CeilingSpike%d" % index
-		spike.texture = static_tex
-		spike.centered = true
-		var scale := randf_range(0.55, 0.95)
-		spike.scale = Vector2(scale, scale)
-		spike.position = Vector2(x, -20.0 + randf_range(-8.0, 12.0))
-		spike.z_index = 1
-		root.add_child(spike)
-		x += randf_range(90.0, 160.0)
+	while x < width - 40.0:
+		var too_close := false
+		for node in existing:
+			if absf((node as Node2D).global_position.x - x) < 60.0:
+				too_close = true
+				break
+		if not too_close:
+			var spike := StalactiteHazard.new()
+			spike.name = "CeilingStalactite%d" % index
+			spike.drops = true
+			# Spike top sits just under the ceiling rock underside.
+			spike.position = Vector2(x, 50.0 + randf_range(-6.0, 12.0))
+			spike.z_index = 1
+			root.add_child(spike)
+			var scale := randf_range(0.85, 1.1)
+			var spr := spike.get_node_or_null("Sprite2D") as Sprite2D
+			if spr != null:
+				spr.scale = Vector2(scale, scale)
+			existing.append(spike)
+		x += randf_range(140.0, 200.0)
 		index += 1
 		if index > 80:
 			break

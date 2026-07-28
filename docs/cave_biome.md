@@ -51,7 +51,7 @@ Stamp a **ladder**, run **one-way crystal ledges** along the climb top, then **d
 ## Hazards & enemies
 
 - **Pink drips:** soft glowing droplets; telegraph with a small sparkle before falling; **splash on the floor** then respawn.
-- **Stalactites:** thick ink rock spikes integrated with the curved ceiling. **Falling** ones wiggle, pull free, fall, then shatter with a transparent impact puff. **Ceiling Spike** stamps (and theme décor) stay put as part of the rock.
+- **Stalactites:** cowboy-style rock spikes hanging from the ceiling band. Theme décor spawns **dropping** teeth along the trail (skips cells that already have a stamped hazard nearby). **Falling** ones wiggle, pull free, fall, then shatter with a transparent impact puff. **Ceiling Spike** stamps can stay put as static rock.
 - **Bats:** two-frame wing flap on a sine/arc path (transparent cutouts).
 - **Lizards:** reuse bull AI (charge, face player, canyon falls, full tie sequence) with a single lizard sprite.
 - **Poison fungus:** cactus rules (hurt / Bubble bounce) with mushroom art and a soft toxic tint.
@@ -65,7 +65,7 @@ Stamp a **ladder**, run **one-way crystal ledges** along the climb top, then **d
 1. **Lantern camp** — checkpoint with a warm lantern instead of desert bedrolls.
 2. **Crystal ledge** — platform art: cool stone plank with crystal flecks (replaces wood plank look).
 3. **Glow shard** (optional future pickup) — brief silhouette of drip/stalactite danger columns; not required for v1 playability.
-4. **Cave wash backdrop** — no sun/mesas; deep cave_sky wash + curved rock ceiling band with decorative teeth.
+4. **Cave wash backdrop** — no sun/mesas; deep cave_sky wash + cowboy-style hanging rock ceiling (`cave_ceiling_tile`) with droppable stalactite teeth integrated under the band.
 5. **Mineral vein floor** — dense cool stone crust with pink crystal flecks; underfill is deep slate (no tile holes showing sky).
 
 ## Campaign note
