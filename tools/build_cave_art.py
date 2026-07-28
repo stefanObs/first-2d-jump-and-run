@@ -10,7 +10,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from tools.art_pipeline import cutout, frame_sprite, slice_strip  # noqa: E402
+from tools.art_pipeline import cutout, frame_sprite, slice_strip
+from tools.fix_cave_visuals import clear_skeleton_bow_gaps, _magenta_tint  # noqa: E402
 from collections import deque
 
 from PIL import Image
@@ -213,7 +214,7 @@ def main() -> int:
         out.save(dest)
         print(f"wrote {dest.relative_to(ROOT)}")
 
-    # Crystal bounty skeleton: soft magenta tint of base frames.
+    # Clear opaque bow-triangle fill, then crystal bounty = magenta tint of bases.
     from PIL import Image
 
     for base in ["skeleton.png", "skeleton_walk_0.png", "skeleton_walk_1.png", "skeleton_tied.png"]:
@@ -221,21 +222,13 @@ def main() -> int:
         if not src.is_file():
             continue
         im = Image.open(src).convert("RGBA")
-        px = im.load()
-        w, h = im.size
-        for y in range(h):
-            for x in range(w):
-                r, g, b, a = px[x, y]
-                if a < 8:
-                    continue
-                px[x, y] = (
-                    min(255, int(r * 0.85 + 40)),
-                    min(255, int(g * 0.7)),
-                    min(255, int(b * 0.95 + 30)),
-                    a,
-                )
-        dest = OUT_DIR / base.replace("skeleton", "skeleton_crystal")
-        im.save(dest)
+        im, cleared = clear_skeleton_bow_gaps(im)
+        im.save(src)
+        if cleared:
+            print(f"cleared {cleared} bow-gap pixels in {src.relative_to(ROOT)}")
+        tinted = _magenta_tint(im)
+        dest = OUT_DIR / base.replace("skeleton", "skeleton_crystal", 1)
+        tinted.save(dest)
         print(f"wrote {dest.relative_to(ROOT)}")
 
     return 0

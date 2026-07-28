@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fix cave biome cutouts, strip slicing, ladder matte, and procedural fillers."""
+"""Fix cave biome cutouts, strip slicing, ladder matte, bow gaps, and procedural fillers."""
 
 from __future__ import annotations
 
@@ -501,6 +501,207 @@ def fix_bats() -> None:
         print(f"cave_bat_{i}: clear%={_clear_pct(framed):.1f}")
 
 
+
+def _is_bow_fill_candidate(r: int, g: int, b: int, a: int) -> bool:
+    """Light gray/white or crystal-lavender opaque fill between bow and string."""
+    if a < 180:
+        return False
+    lo, hi = min(r, g, b), max(r, g, b)
+    # Gray / near-white plate left by cutout inside the bow triangle.
+    if lo >= 165 and (hi - lo) <= 45:
+        return True
+    # Magenta-tinted crystal fill (g dropped by tint; not warm ivory bone).
+    if (
+        r >= 150
+        and b >= 150
+        and 100 <= g <= 180
+        and (r - g) >= 25
+        and (b - g) >= 25
+        and (hi - lo) <= 95
+    ):
+        return True
+    return False
+
+
+def _is_bow_wood_pixel(r: int, g: int, b: int, a: int) -> bool:
+    if a < 100:
+        return False
+    return r > g and r > b and 80 <= r <= 180 and 40 <= g <= 120
+
+
+def _is_bowstring_pixel(r: int, g: int, b: int, a: int) -> bool:
+    if a < 100:
+        return False
+    return min(r, g, b) >= 200 and (max(r, g, b) - min(r, g, b)) <= 35
+
+
+def _region_near_bow(px, w: int, h: int, cells: list[tuple[int, int]], *, radius: int = 3) -> bool:
+    for x, y in cells:
+        for dy in range(-radius, radius + 1):
+            for dx in range(-radius, radius + 1):
+                nx, ny = x + dx, y + dy
+                if not (0 <= nx < w and 0 <= ny < h):
+                    continue
+                r, g, b, a = px[nx, ny]
+                if _is_bow_wood_pixel(r, g, b, a) or _is_bowstring_pixel(r, g, b, a):
+                    return True
+    return False
+
+
+def count_skeleton_bow_fill_candidates(
+    im: Image.Image,
+    *,
+    right_half_only: bool = True,
+    bow_band_only: bool = False,
+) -> int:
+    """Count opaque light fill candidates (optionally right half / mid-body bow band)."""
+    rgba = im.convert("RGBA")
+    px = rgba.load()
+    w, h = rgba.size
+    x0 = w // 2 if right_half_only else 0
+    y0, y1 = (int(h * 0.30), int(h * 0.72)) if bow_band_only else (0, h)
+    n = 0
+    for y in range(y0, y1):
+        for x in range(x0, w):
+            if _is_bow_fill_candidate(*px[x, y]):
+                n += 1
+    return n
+
+
+def clear_skeleton_bow_gaps(im: Image.Image) -> tuple[Image.Image, int]:
+    """Clear small enclosed light fill between wooden bow limbs and bowstring.
+
+    Cutout leaves gray/white (or crystal-lavender) plates that are not
+    border-connected. Only clears compact regions next to bow wood/string,
+    never skull/eye interiors or foot bone blobs.
+    Returns (image, cleared_pixel_count).
+    """
+    out = im.convert("RGBA").copy()
+    px = out.load()
+    w, h = out.size
+    visited: set[tuple[int, int]] = set()
+    to_clear: list[tuple[int, int]] = []
+    cleared_bbox: list[int] | None = None  # x0,y0,x1,y1
+
+    for y in range(h):
+        for x in range(w):
+            if (x, y) in visited:
+                continue
+            if not _is_bow_fill_candidate(*px[x, y]):
+                continue
+            q = deque([(x, y)])
+            visited.add((x, y))
+            cells: list[tuple[int, int]] = []
+            while q:
+                cx, cy = q.popleft()
+                cells.append((cx, cy))
+                for nx, ny in ((cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)):
+                    if not (0 <= nx < w and 0 <= ny < h) or (nx, ny) in visited:
+                        continue
+                    if _is_bow_fill_candidate(*px[nx, ny]):
+                        visited.add((nx, ny))
+                        q.append((nx, ny))
+            area = len(cells)
+            if area < 2 or area > 200:
+                continue
+            cx = sum(p[0] for p in cells) / area
+            cy = sum(p[1] for p in cells) / area
+            # Head / eye sockets (upper-left).
+            if cx < w * 0.55 and cy < h * 0.28:
+                continue
+            # Foot / ground bone blobs.
+            if cy > h * 0.72:
+                continue
+            # Bow sits on the facing-right side; require that or wood contact.
+            rightish = cx >= w * 0.45
+            near_bow = _region_near_bow(px, w, h, cells)
+            if not near_bow:
+                continue
+            if not rightish:
+                continue
+            # Tiny speckles (2..7): only in the mid-body bow band.
+            if area < 8 and not (h * 0.35 <= cy <= h * 0.70):
+                continue
+            # Reject cream bone patches that only graze wood: average should be
+            # low-chroma gray/lavender, not warm ivory (high r+g, lower b chroma).
+            ar = sum(px[p][0] for p in cells) / area
+            ag = sum(px[p][1] for p in cells) / area
+            ab = sum(px[p][2] for p in cells) / area
+            # Warm ivory highlight (bone glint) — skip unless near-neutral gray.
+            if ab + 25 < ar and ab + 25 < ag and (max(ar, ag, ab) - min(ar, ag, ab)) > 35:
+                continue
+            to_clear.extend(cells)
+            xs = [p[0] for p in cells]
+            ys = [p[1] for p in cells]
+            box = [min(xs), min(ys), max(xs) + 1, max(ys) + 1]
+            if cleared_bbox is None:
+                cleared_bbox = box
+            else:
+                cleared_bbox[0] = min(cleared_bbox[0], box[0])
+                cleared_bbox[1] = min(cleared_bbox[1], box[1])
+                cleared_bbox[2] = max(cleared_bbox[2], box[2])
+                cleared_bbox[3] = max(cleared_bbox[3], box[3])
+
+    for x, y in to_clear:
+        r, g, b, _a = px[x, y]
+        px[x, y] = (r, g, b, 0)
+
+    # Near-white / gray fringe speckles inside/near cleared bbox (touch a hole).
+    fringe = 0
+    if cleared_bbox is not None:
+        x0, y0, x1, y1 = cleared_bbox
+        x0, y0 = max(0, x0 - 2), max(0, y0 - 2)
+        x1, y1 = min(w, x1 + 2), min(h, y1 + 2)
+        for _pass in range(2):
+            for y in range(y0, y1):
+                for x in range(x0, x1):
+                    r, g, b, a = px[x, y]
+                    if a < 40:
+                        continue
+                    if not _is_bow_fill_candidate(r, g, b, a) and not (
+                        min(r, g, b) >= 190 and (max(r, g, b) - min(r, g, b)) <= 40
+                    ):
+                        continue
+                    touch_clear = False
+                    for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+                        if 0 <= nx < w and 0 <= ny < h and px[nx, ny][3] < 8:
+                            touch_clear = True
+                            break
+                    if touch_clear:
+                        px[x, y] = (r, g, b, 0)
+                        fringe += 1
+
+    return out, len(to_clear) + fringe
+
+
+def fix_skeleton_bow_gaps() -> None:
+    """Clear bow-triangle fill on base skeletons, then re-tint crystal set."""
+    bases = [
+        "skeleton.png",
+        "skeleton_walk_0.png",
+        "skeleton_walk_1.png",
+        "skeleton_tied.png",
+    ]
+    print("\n=== skeleton bow gap clear ===")
+    for name in bases:
+        path = OUT / name
+        if not path.is_file():
+            print(f"{name}: missing, skip")
+            continue
+        im = Image.open(path).convert("RGBA")
+        before = count_skeleton_bow_fill_candidates(im, right_half_only=True, bow_band_only=True)
+        fixed, cleared = clear_skeleton_bow_gaps(im)
+        after = count_skeleton_bow_fill_candidates(fixed, right_half_only=True, bow_band_only=True)
+        _save(fixed, path)
+        print(f"{name}: right_half_fill before={before} cleared={cleared} after={after}")
+
+        crystal_name = name.replace("skeleton", "skeleton_crystal", 1)
+        tinted = _magenta_tint(fixed)
+        cpath = OUT / crystal_name
+        _save(tinted, cpath)
+        print(f"{crystal_name}: re-tint from fixed base (cleared={cleared})")
+
+
 def fix_skeleton_walk() -> None:
     src = SOURCE / "cave_skeleton_walk_strip_concept.png"
     cut = cutout(src, level=185)
@@ -516,11 +717,12 @@ def fix_skeleton_walk() -> None:
         raise RuntimeError(f"skeleton walk: expected 2 figures, got {len(figs)}")
     for i, fig in enumerate(figs[:2]):
         framed = _feet(fig, (64, 80), target_h=67, baseline=76)
+        framed, bow_cleared = clear_skeleton_bow_gaps(framed)
         path = OUT / f"skeleton_walk_{i}.png"
         _save(framed, path)
         print(
             f"skeleton_walk_{i}: clear%={_clear_pct(framed):.1f} "
-            f"content_h={_content_height(framed)}"
+            f"content_h={_content_height(framed)} bow_gap_cleared={bow_cleared}"
         )
         tinted = _magenta_tint(framed)
         cpath = OUT / f"skeleton_crystal_walk_{i}.png"
@@ -779,6 +981,7 @@ def verify() -> None:
 def main() -> int:
     fix_bats()
     fix_skeleton_walk()
+    fix_skeleton_bow_gaps()
     fix_ladder()
     fix_camp_and_impact()
     fix_floors()
