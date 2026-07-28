@@ -1413,6 +1413,17 @@ func _test_handmade_progress_and_sfx() -> Variant:
 	var effect := AudioManager._make_effect(&"collect")
 	if effect == null or effect.data.is_empty():
 		return "Collect effect should produce playable sound data."
+	for dragon_sfx in [
+		&"dragon_roar",
+		&"dragon_spit",
+		&"dragon_land",
+		&"dragon_takeoff",
+		&"dragon_tied",
+		&"dragon_win",
+	]:
+		var dragon_effect := AudioManager._make_effect(dragon_sfx)
+		if dragon_effect == null or dragon_effect.data.is_empty():
+			return "Dragon effect %s should produce playable sound data." % String(dragon_sfx)
 	return null
 
 

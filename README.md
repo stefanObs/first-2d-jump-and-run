@@ -2,7 +2,7 @@
 
 Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, nonviolent lasso. **Classic mode** has no lives or game over; **Advanced Mode** (chosen in **Settings** before starting or continuing a slot) adds a three-life limit, badge milestones, and a game-over return to the start screen. Pick **Cowboy** or **Cowgirl** in Settings — the choice applies across all save slots. **German is the default language**; English is fully supported.
 
-**Content version:** `1.8.8` (see `content_version.txt`). Launchers reimport when this stamp changes.
+**Content version:** `1.8.9` (see `content_version.txt`). Launchers reimport when this stamp changes.
 
 This README is the **binding source of truth** for gameplay, level design, art, i18n, and audio. Agents and contributors must follow it (see [Agent / contributor rules](#agent--contributor-rules)).
 
@@ -157,7 +157,7 @@ Safe stars, forward-only solvability, reachable platforms/stars, visible themed 
 
 ## Audio
 
-- **SFX / music:** `AudioManager` (`play_sfx`, trail/boot/finale music, volume settings).
+- **SFX / music:** `AudioManager` (`play_sfx`, trail/boot/finale music, volume settings). Procedural cues include jump/lasso/collect/hurt/goal plus Cave Dragon `dragon_roar`, `dragon_spit`, `dragon_land`, `dragon_takeoff`, `dragon_tied`, `dragon_win`.
 - Default settings language: **`de`**; `internationalization/locale/fallback="de"`.
 
 ---

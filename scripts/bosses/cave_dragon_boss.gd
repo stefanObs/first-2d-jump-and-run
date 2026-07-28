@@ -91,6 +91,7 @@ func _ready() -> void:
 func _on_combat_started() -> void:
 	if _won:
 		return
+	AudioManager.play_sfx(&"dragon_roar")
 	_begin_fly_phase()
 
 
@@ -166,6 +167,7 @@ func _begin_land_phase() -> void:
 	if _label != null:
 		_label.text = "LASSO!"
 		_label.modulate = Color(1.0, 0.85, 0.2, 1.0)
+	AudioManager.play_sfx(&"dragon_land")
 	report_progress(tr("Lasso the dragon! (%d / %d)") % [_lassos, lassos_needed])
 
 
@@ -179,6 +181,7 @@ func _begin_takeoff() -> void:
 	_face_flight_direction()
 	if _label != null:
 		_label.text = "TAKE OFF!"
+	AudioManager.play_sfx(&"dragon_takeoff")
 
 
 func _update_fly(delta: float) -> void:
@@ -280,6 +283,7 @@ func _spit_flameball() -> void:
 	ball.hurt_player.connect(_on_flame_hurt)
 	add_child(ball)
 	ball.global_position = mouth
+	AudioManager.play_sfx(&"dragon_spit")
 
 
 func _mouth_global() -> Vector2:
@@ -345,6 +349,7 @@ func _on_dragon_lassoed() -> void:
 		return
 	_lassos += 1
 	_apply_stage_visual()
+	AudioManager.play_sfx(&"dragon_tied")
 	if _lasso != null:
 		_lasso.set_lasso_active(false)
 	if _lassos >= lassos_needed:
@@ -375,6 +380,7 @@ func _finish_capture() -> void:
 	if _label != null:
 		_label.text = "MOUTH TIED!"
 		_label.modulate = Color(0.55, 0.85, 0.35, 1.0)
+	AudioManager.play_sfx(&"dragon_win")
 	report_progress(tr("Dragon's mouth is tied — you win!"))
 	if _dragon != null:
 		var tween := create_tween()

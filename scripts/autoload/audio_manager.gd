@@ -141,19 +141,58 @@ func _make_effect(effect: StringName) -> AudioStreamWAV:
 			frequency = 520.0
 			end_frequency = 1040.0
 			duration = 0.55
+		&"dragon_roar":
+			frequency = 110.0
+			end_frequency = 55.0
+			duration = 0.62
+			noise_amount = 0.55
+		&"dragon_spit":
+			frequency = 480.0
+			end_frequency = 160.0
+			duration = 0.2
+			noise_amount = 0.42
+		&"dragon_land":
+			frequency = 95.0
+			end_frequency = 38.0
+			duration = 0.34
+			noise_amount = 0.48
+		&"dragon_takeoff":
+			frequency = 150.0
+			end_frequency = 340.0
+			duration = 0.3
+			noise_amount = 0.28
+		&"dragon_tied":
+			frequency = 340.0
+			end_frequency = 140.0
+			duration = 0.28
+			noise_amount = 0.22
+		&"dragon_win":
+			frequency = 300.0
+			end_frequency = 720.0
+			duration = 0.58
+			noise_amount = 0.12
 	var rate := 22050
 	var frame_count := maxi(1, int(duration * rate))
 	var bytes := PackedByteArray()
 	bytes.resize(frame_count * 2)
 	var phase := 0.0
+	var growl_phase := 0.0
 	var random := RandomNumberGenerator.new()
 	random.seed = int(effect.hash())
+	var dragon_growl := (
+		effect == &"dragon_roar"
+		or effect == &"dragon_land"
+		or effect == &"dragon_spit"
+	)
 	for frame in range(frame_count):
 		var progress := float(frame) / float(frame_count)
 		var hz := lerpf(frequency, end_frequency, progress)
 		phase += TAU * hz / float(rate)
+		growl_phase += TAU * (hz * 0.45) / float(rate)
 		var envelope := pow(1.0 - progress, 1.7) * minf(progress * 18.0, 1.0)
 		var tone := sin(phase) * (1.0 - noise_amount)
+		if dragon_growl:
+			tone = tone * 0.7 + sin(growl_phase) * 0.3 * (1.0 - noise_amount)
 		tone += random.randf_range(-1.0, 1.0) * noise_amount
 		bytes.encode_s16(frame * 2, int(clampf(tone * envelope, -1.0, 1.0) * 15000.0))
 	var stream := AudioStreamWAV.new()
