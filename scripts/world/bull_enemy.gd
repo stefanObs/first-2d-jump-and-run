@@ -79,10 +79,10 @@ func _ready() -> void:
 
 
 func _setup_sprite() -> void:
-	var existing := get_node_or_null("BullSprite") as Sprite2D
-	if existing != null:
-		existing.queue_free()
-	var old := get_node_or_null("Sprite2D") as Node
+	# Free every leftover sprite so cave lizards never stack on the desert bull art.
+	for child in get_children():
+		if child is Sprite2D:
+			child.queue_free()
 	_sprite = Sprite2D.new()
 	_sprite.name = "BullSprite"
 	_sprite.texture = _stand_tex()
@@ -92,8 +92,6 @@ func _setup_sprite() -> void:
 	_sprite.offset = Vector2(0.0, -float(_stand_tex().get_height()) * 0.5)
 	_apply_facing(_facing)
 	add_child(_sprite)
-	if old != null:
-		old.visible = false
 
 
 func _scale_for(texture: Texture2D, target_height: float) -> float:

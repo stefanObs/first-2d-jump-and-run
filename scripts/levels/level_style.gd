@@ -66,6 +66,8 @@ static func stamp_icon_path(type_name: String, style: String = DESERT) -> String
 			return "res://assets/world/acid_drip.png"
 		"stalactite":
 			return "res://assets/world/stalactite.png"
+		"stalactite_static":
+			return "res://assets/world/stalactite_static.png"
 		"bat":
 			return "res://assets/world/cave_bat_0.png"
 		"star":
@@ -120,7 +122,9 @@ static func stamp_label(type_name: String, style: String = DESERT) -> String:
 		"acid_drip":
 			return "Pink Drop"
 		"stalactite":
-			return "Stalactite"
+			return "Falling Spike"
+		"stalactite_static":
+			return "Ceiling Spike"
 		"bat":
 			return "Cave Bat"
 		"star":
@@ -153,7 +157,11 @@ static func tool_categories(style: String = DESERT) -> Array:
 		_tool("spring", style),
 	]
 	if cave:
-		hazards.append_array([_tool("acid_drip", style), _tool("stalactite", style)])
+		hazards.append_array([
+			_tool("acid_drip", style),
+			_tool("stalactite", style),
+			_tool("stalactite_static", style),
+		])
 	var enemies: Array = [
 		_tool("bandit", style),
 		_tool("bounty_bandit", style),
@@ -224,6 +232,10 @@ static func _tool(type_name: String, style: String) -> Array:
 
 static func sky_path(style: String) -> String:
 	return "res://assets/world/cave_sky.png" if is_cave(style) else "res://assets/world/sky_handdrawn.png"
+
+
+static func ceiling_path(style: String) -> String:
+	return "res://assets/world/cave_ceiling_tile.png" if is_cave(style) else ""
 
 
 static func floor_path(style: String) -> String:

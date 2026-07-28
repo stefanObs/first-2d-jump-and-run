@@ -2,7 +2,7 @@
 
 Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, nonviolent lasso. **Classic mode** has no lives or game over; **Advanced Mode** (chosen in **Settings** before starting or continuing a slot) adds a three-life limit, badge milestones, and a game-over return to the start screen. Pick **Cowboy** or **Cowgirl** in Settings — the choice applies across all save slots. **German is the default language**; English is fully supported.
 
-**Content version:** `1.8.0` (see `content_version.txt`). Launchers reimport when this stamp changes.
+**Content version:** `1.8.1` (see `content_version.txt`). Launchers reimport when this stamp changes.
 
 This README is the **binding source of truth** for gameplay, level design, art, i18n, and audio. Agents and contributors must follow it (see [Agent / contributor rules](#agent--contributor-rules)).
 
@@ -47,7 +47,7 @@ godot --headless --path . res://tests/test_moving_platform_obstruction.tscn
 11. Crystal Mouth — cave remaps, first ladder path split  
 12. Bat Gallery — bats, ceiling drips, upper ledge route  
 13. Acid Veins — pink drips, fungus, canyon hop  
-14. Ladder Grotto — double ladder branches + cave lizards  
+14. Ladder Grotto — ladder branches + cave lizards  
 15. Dragon Gate — cave finale trail before the Cave Dragon  
 
 **Bosses** (after clearing the listed level; same tools as the trail; classic mode uses **5 hearts** per fight; Advanced Mode uses campaign lives instead; nonviolent win):
@@ -93,7 +93,7 @@ Agents **must** honor these when editing levels or trail systems:
 - **Pits:** workshop **Hazards** stamp; exact `pit.png` size; dirt-only placement; same fall/respawn/life rules as canyons (Bubble Shield does not save pit falls).
 - Bandits: downward jump stomp from above / lasso tie; any other contact hurts; **turn at plank edges** (do not walk off).
 - **Trail bulls:** reuse stampede-bull art scaled to bandit height; charge the player when nearby (always face the cowboy); lasso or head stomp plays the full boss tying sequence (rope coils → legs bound → tip over → lying on the floor at the same on-screen size); side contact hurts; **charges off canyon rims and falls**.
-- **Ninjas:** handcrafted **chibi cel-shaded sprites** in the same big-head / thick-ink style as the bandit (`tools/generate_ninja_art.py`: hooded head, red headband + obi, navy gi, 4× supersample → 64×80); workshop stamp marks an **ambush anchor** — when the cowboy enters range, the ninja **appears ~6 columns (240 px) in front** of him, runs in with a **sword slash** on reach, and throws hand-drawn **shuriken** at winged flyers; lasso or head stomp ties with a unique bound rope pose.
+- **Ninjas:** handcrafted **chibi cel-shaded sprites** in the same big-head / thick-ink style as the bandit (`tools/generate_ninja_art.py`: hooded head, red headband + obi, navy gi, 4× supersample → 64×80); workshop stamp marks an **ambush anchor** — when the cowboy enters range, the ninja **appears ~12 columns (480 px) in front** of him, runs in with a **sword slash** on reach, and throws hand-drawn **shuriken** at winged flyers; lasso or head stomp ties with a unique bound rope pose.
 - **No cactus inside canyon mouths** or on hand-painted rim bands (keep clear of the rim body past the gap).
 - **No rattlesnake directly in front of** (approaching) a canyon mouth.
 - **No timed doors** (`TimedDoor`) over ground canyon gaps or on rim bands (tall gates must not sit above canyon mouths).
@@ -105,7 +105,7 @@ Agents **must** honor these when editing levels or trail systems:
 - Cave remaps stamp **presentation** (same type ids): fungus/lizard/scorpion/bow skeleton/lantern camp/**Crystal Gate** (saloon replacement). Cave-only stamps: `acid_drip`, `stalactite`, `bat`.
 - Pink drips and falling stalactites hurt → camp respawn; **Bubble does not block** them. Bats can bounce off Bubble.
 - Cave floors/sky use cool slate + pink mineral accents; no desert sun/mesa hills.
-- **Ladders** (workshop Trail stamp): 3-cell climb; Space/Up climbs up, S/Down climbs down. Use ladder + elevated platforms so trails can split into an **upper and lower path that rejoin** later (sample branches appear on new trails and on Outlaw Cave workshop imports).
+- **Ladders** (workshop Trail stamp): 3-cell climb; Space/Up climbs up, S/Down climbs down. Use ladder + elevated one-way planks for an upper path; drop off the ledge end back to dirt (no second “down” ladder required). Sample branches appear on new trails and on cave workshop imports.
 
 ### Canyon art
 

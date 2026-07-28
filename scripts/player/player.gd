@@ -215,12 +215,15 @@ func _start_climb(ladder: Ladder) -> void:
 	velocity = Vector2.ZERO
 	_showing_jump = false
 	_showing_run = false
+	# Pass through solid ledges while climbing; one-way planks catch the exit step.
+	collision_mask = 0
 
 
 func _end_climb() -> void:
 	_climbing = false
 	_active_ladder = null
 	_climb_anim_phase = 0.0
+	collision_mask = 1
 
 
 func _apply_climb(delta: float) -> void:

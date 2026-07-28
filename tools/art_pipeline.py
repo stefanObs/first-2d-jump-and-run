@@ -31,12 +31,21 @@ def _is_bg(r: int, g: int, b: int, *, level: int = 208, sat: int = 22) -> bool:
     return min(r, g, b) >= level and (max(r, g, b) - min(r, g, b)) <= sat
 
 
-def cutout(src: str | Path, *, feather: int = 3) -> Image.Image:
+def cutout(
+    src: str | Path,
+    *,
+    feather: int = 3,
+    level: int = 208,
+    sat: int = 22,
+) -> Image.Image:
     """Remove a painted checkerboard / flat white background via border flood fill.
 
     Only background-connected light pixels are cleared, so the character's own
     interior whites (eye highlights, teeth) are preserved. A few feather passes
     grow transparency into the anti-aliased halo to avoid a bright fringe.
+
+    Lower ``level`` (e.g. 185) keys stubborner painted mattes that sit below the
+    default light-gray threshold; default 208 matches existing call sites.
     """
     im = Image.open(src).convert("RGBA")
     w, h = im.size
@@ -51,7 +60,7 @@ def cutout(src: str | Path, *, feather: int = 3) -> Image.Image:
     seeds += [(x, y) for y in range(h) for x in (0, w - 1)]
     for x, y in seeds:
         r, g, b, _ = px[x, y]
-        if _is_bg(r, g, b) and not bg[idx(x, y)]:
+        if _is_bg(r, g, b, level=level, sat=sat) and not bg[idx(x, y)]:
             bg[idx(x, y)] = 1
             dq.append((x, y))
 
@@ -60,7 +69,7 @@ def cutout(src: str | Path, *, feather: int = 3) -> Image.Image:
         for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
             if 0 <= nx < w and 0 <= ny < h and not bg[idx(nx, ny)]:
                 r, g, b, _ = px[nx, ny]
-                if _is_bg(r, g, b):
+                if _is_bg(r, g, b, level=level, sat=sat):
                     bg[idx(nx, ny)] = 1
                     dq.append((nx, ny))
 

@@ -46,18 +46,18 @@ Ceiling stamps place on the top rows; ground props still sit one row above dirt.
 
 ## Path splits (ladders)
 
-Stamp a **ladder**, run **platforms** along the upper row at the ladder top, then a second **ladder** back to the dirt trail. Lower dirt stays walkable the whole time — kids can take the high ledge or stay low; both ways meet again after the second ladder. Workshop defaults and Outlaw Cave imports include a sample split.
+Stamp a **ladder**, run **one-way crystal ledges** along the climb top, then **drop off the end** back to the dirt trail. Lower dirt stays walkable the whole time — kids can take the high ledge or stay low. Workshop defaults and cave imports include a sample up-ladder branch (no down ladder).
 
 ## Hazards & enemies
 
-- **Pink drips:** soft glowing droplets; telegraph with a small sparkle before falling.
-- **Stalactites:** thick ink rock spikes; wiggle briefly, fall, then crack into a short-lived rubble puff on the floor.
-- **Bats:** wing flaps on a sine/arc path (not a straight patrol).
-- **Lizards:** reuse bull AI (charge, face player, canyon falls, full tie sequence) with lizard frames.
+- **Pink drips:** soft glowing droplets; telegraph with a small sparkle before falling; **splash on the floor** then respawn.
+- **Stalactites:** thick ink rock spikes integrated with the curved ceiling. **Falling** ones wiggle, pull free, fall, then shatter with a transparent impact puff. **Ceiling Spike** stamps (and theme décor) stay put as part of the rock.
+- **Bats:** two-frame wing flap on a sine/arc path (transparent cutouts).
+- **Lizards:** reuse bull AI (charge, face player, canyon falls, full tie sequence) with a single lizard sprite.
 - **Poison fungus:** cactus rules (hurt / Bubble bounce) with mushroom art and a soft toxic tint.
 - **Scorpions:** rattlesnake raise/strike timing with a tail sting pose.
-- **Bow skeletons:** bandit patrol + shoot cadence, but spawn **arrows** instead of revolver bullets; lasso/stomp still ties.
-- **Ninjas:** unchanged ambush/sword/shuriken kit.
+- **Bow skeletons:** bandit patrol + shoot cadence, but spawn **arrows** instead of revolver bullets; lasso/stomp still ties. Idle/walk frames share one body height.
+- **Ninjas:** ambush appears ~12 columns ahead of the cowboy.
 - **Floor holes:** same pit rules (128×64), cave mouth art.
 
 ## Own extras (shipped with the style)
@@ -65,8 +65,8 @@ Stamp a **ladder**, run **platforms** along the upper row at the ladder top, the
 1. **Lantern camp** — checkpoint with a warm lantern instead of desert bedrolls.
 2. **Crystal ledge** — platform art: cool stone plank with crystal flecks (replaces wood plank look).
 3. **Glow shard** (optional future pickup) — brief silhouette of drip/stalactite danger columns; not required for v1 playability.
-4. **Cave wash backdrop** — no sun/mesas; dark rock ceiling band + soft depth fog instead of desert sky/hills.
-5. **Mineral vein floor** — sand crust becomes cool stone with pink crystal flecks; underfill is deep slate.
+4. **Cave wash backdrop** — no sun/mesas; deep cave_sky wash + curved rock ceiling band with decorative teeth.
+5. **Mineral vein floor** — dense cool stone crust with pink crystal flecks; underfill is deep slate (no tile holes showing sky).
 
 ## Campaign note
 
@@ -74,13 +74,14 @@ Builtin **Outlaw Cave** (level 5) and cave arc **levels 11–15** (`Crystal Mout
 
 ## Art checklist
 
-- Env: `cave_sky.png`, `cave_floor_tile.png`, `cave_dirt_tile.png`, `cave_plank.png`, `cave_pit.png`, `cave_rim_left.png` (optional remap)
+- Env: `cave_sky.png`, `cave_ceiling_tile.png`, `cave_floor_tile.png`, `cave_dirt_tile.png`, `cave_plank.png`, `cave_pit.png`
 - Goal: `goal_crystal_gate.png`
-- Camp: `checkpoint_cave_active.png` (+ inactive if needed)
+- Camp: `checkpoint_cave_active.png` / `_inactive` (transparent cutout)
 - Fungus: `poison_fungus.png`
 - Lizard: stand / tied_legs / down (bull-sized aspect)
-- Skeleton: idle + walk strip + tied (+ crystal/red bounty set)
+- Skeleton: idle + walk strip + tied (+ crystal/red bounty set) — walk frames same height as idle
 - Scorpion: idle + sting
-- Bat: 2-frame flap
-- Stalactite: hang + impact rubble
-- Acid drip: droplet (+ optional sparkle)
+- Bat: 2 distinct flap frames (`cave_bat_0` / `_1`)
+- Stalactite: hang + static décor + transparent impact rubble
+- Acid drip: droplet + floor splash
+- Ladder: transparent between rungs

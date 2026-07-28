@@ -27,6 +27,7 @@ static func sand_color() -> Color:
 static func apply_to_level(level: Node) -> void:
 	var style := LevelStyle.from_level(level)
 	_dress_sky(level, style)
+	_dress_cave_ceiling(level, style)
 	_dress_sun(level, style)
 	_hide_fences(level)
 	_make_endless_hills(level, style)
@@ -68,6 +69,46 @@ static func _dress_sky(level: Node, style: String = LevelStyle.DESERT) -> void:
 	# Continuous trail sky — punch only Mesa hills out of canyon columns so the
 	# opening does not get a mismatched Background-blue sky seam.
 	_tile_backdrop(root, tex, "SkyTile", width, -520.0, 700.0, 8.0, Color.WHITE)
+
+
+static func _dress_cave_ceiling(level: Node, style: String = LevelStyle.DESERT) -> void:
+	## Curved rock ceiling band with integrated teeth; cave_sky stays as deep wash behind it.
+	if not LevelStyle.is_cave(style):
+		return
+	if level.get_node_or_null("CaveCeiling") != null:
+		return
+	var ceiling_path := LevelStyle.ceiling_path(style)
+	if ceiling_path.is_empty() or not ResourceLoader.exists(ceiling_path):
+		return
+	var tex: Texture2D = load(ceiling_path)
+	if tex == null:
+		return
+	var width := _level_width(level)
+	var root := Node2D.new()
+	root.name = "CaveCeiling"
+	root.z_index = -17
+	level.add_child(root)
+	# Hang a thicker, more curved rock band near the top of the play view.
+	_tile_strip_row(root, tex, -200.0, width + 200.0, -120.0, 150.0, 0, "CeilingRock")
+	var static_tex: Texture2D = load("res://assets/world/stalactite_static.png")
+	if static_tex == null:
+		return
+	var x := 80.0
+	var index := 0
+	while x < width:
+		var spike := Sprite2D.new()
+		spike.name = "CeilingSpike%d" % index
+		spike.texture = static_tex
+		spike.centered = true
+		var scale := randf_range(0.55, 0.95)
+		spike.scale = Vector2(scale, scale)
+		spike.position = Vector2(x, -20.0 + randf_range(-8.0, 12.0))
+		spike.z_index = 1
+		root.add_child(spike)
+		x += randf_range(90.0, 160.0)
+		index += 1
+		if index > 80:
+			break
 
 
 static func _dress_sun(level: Node, style: String = LevelStyle.DESERT) -> void:
@@ -373,7 +414,8 @@ static func _make_contiguous_floors(level: Node, style: String = LevelStyle.DESE
 				top,
 				abyss_right - abyss_left,
 				900.0,
-				abyss_name
+				abyss_name,
+				style
 			)
 
 		# Surface row only — never overhang into canyon gaps.
@@ -418,11 +460,15 @@ static func _paint_abyss_rect(
 	top: float,
 	width: float,
 	height: float,
-	node_name: String
+	node_name: String,
+	style: String = LevelStyle.DESERT
 ) -> void:
 	var abyss := Polygon2D.new()
 	abyss.name = node_name
-	abyss.color = Color(0.22, 0.10, 0.12, 1.0)
+	if LevelStyle.is_cave(style):
+		abyss.color = Color(0.14, 0.12, 0.2, 1.0)
+	else:
+		abyss.color = Color(0.22, 0.10, 0.12, 1.0)
 	abyss.polygon = PackedVector2Array([
 		Vector2.ZERO,
 		Vector2(width, 0.0),

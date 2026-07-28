@@ -53,9 +53,25 @@ static func build(level: LevelController, data: Dictionary, preview: bool = fals
 		var position := CustomLevelStore.object_world_position(object, grid, trail)
 		match type_name:
 			"platform":
-				_add_block(level, "Platform%d" % index, position, Vector2(grid * 2.0, 24), Color(0.55, 0.32, 0.14))
+				_add_block(
+					level,
+					"Platform%d" % index,
+					position,
+					Vector2(grid * 2.0, 24),
+					Color(0.55, 0.32, 0.14),
+					false,
+					true
+				)
 			"ladder_ledge":
-				_add_block(level, "LadderLedge%d" % index, position, Vector2(grid * 2.0, 24), Color(0.55, 0.32, 0.14))
+				_add_block(
+					level,
+					"LadderLedge%d" % index,
+					position,
+					Vector2(grid * 2.0, 24),
+					Color(0.55, 0.32, 0.14),
+					false,
+					true
+				)
 			"ladder":
 				var ladder := Ladder.new()
 				ladder.name = "Ladder%d" % index
@@ -131,8 +147,15 @@ static func build(level: LevelController, data: Dictionary, preview: bool = fals
 			"stalactite":
 				var spike := StalactiteHazard.new()
 				spike.name = "Stalactite%d" % index
+				spike.drops = true
 				spike.position = position
 				level.add_child(spike)
+			"stalactite_static":
+				var decor := StalactiteHazard.new()
+				decor.name = "StalactiteStatic%d" % index
+				decor.drops = false
+				decor.position = position
+				level.add_child(decor)
 			"wings", "boots", "speed", "shield":
 				var mode_item := _add_scene(level, MODE_ITEM, "ModeItem%d" % index, position) as ModeItem
 				if mode_item != null:
@@ -291,7 +314,8 @@ static func _add_block(
 	position: Vector2,
 	size: Vector2,
 	color: Color,
-	with_grass: bool = false
+	with_grass: bool = false,
+	one_way: bool = false
 ) -> StaticBody2D:
 	var body := StaticBody2D.new()
 	body.name = node_name
@@ -323,6 +347,7 @@ static func _add_block(
 	var shape := RectangleShape2D.new()
 	shape.size = size
 	collision.shape = shape
+	collision.one_way_collision = one_way
 	body.add_child(collision)
 	level.add_child(body)
 	return body

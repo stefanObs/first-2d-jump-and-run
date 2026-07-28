@@ -3,19 +3,24 @@ extends Area2D
 
 ## Pink mineral drops from the cave ceiling. Hitting the player sends them to camp.
 ## Bubble Shield does not block these (same idea as canyon/pit falls).
+## Drops splash on the floor, then respawn after a short cooldown.
 
 signal hurt(player: Player)
 
 const DRIP_TEX := preload("res://assets/world/acid_drip.png")
+const SPLASH_TEX := preload("res://assets/world/acid_drip_splash.png")
 const FALL_SPEED := 220.0
 const RESPAWN_DELAY := 1.35
 const TELEGRAPH := 0.35
+const SPLASH_TIME := 0.45
+const MAX_FALL := 900.0
 
 var _origin: Vector2
 var _sprite: Sprite2D
 var _state: String = "idle"
 var _timer: float = 0.0
 var _phase: float = 0.0
+var _floor_y: float = NAN
 
 
 func _ready() -> void:
@@ -37,7 +42,26 @@ func _ready() -> void:
 	add_child(shape)
 	body_entered.connect(_on_body_entered)
 	_timer = randf_range(0.4, 1.6)
+	call_deferred("_probe_floor")
 	set_physics_process(true)
+
+
+func _probe_floor() -> void:
+	var world := get_world_2d()
+	if world == null:
+		_floor_y = _origin.y + 280.0
+		return
+	var query := PhysicsRayQueryParameters2D.create(
+		_origin + Vector2(0, 12),
+		_origin + Vector2(0, MAX_FALL),
+		1
+	)
+	query.collide_with_areas = false
+	var hit := world.direct_space_state.intersect_ray(query)
+	if hit.is_empty():
+		_floor_y = _origin.y + 280.0
+	else:
+		_floor_y = float(hit["position"].y)
 
 
 func _physics_process(delta: float) -> void:
@@ -57,15 +81,38 @@ func _physics_process(delta: float) -> void:
 				_state = "falling"
 				_sprite.scale = Vector2.ONE
 				_sprite.modulate = Color.WHITE
+				_sprite.texture = DRIP_TEX
+				_sprite.position = Vector2(0, 10)
 		"falling":
 			global_position.y += FALL_SPEED * delta
 			_sprite.rotation = sin(_phase * 10.0) * 0.15
-			if global_position.y >= _origin.y + 520.0:
-				_reset_drop()
+			var tip_y := global_position.y + 14.0
+			if tip_y >= _floor_y:
+				_begin_splash()
+		"splash":
+			_timer -= delta
+			_sprite.modulate.a = clampf(_timer / SPLASH_TIME, 0.0, 1.0)
+			_sprite.scale = Vector2.ONE * (1.0 + (1.0 - _sprite.modulate.a) * 0.35)
+			if _timer <= 0.0:
+				_state = "cooldown"
+				_timer = RESPAWN_DELAY
+				_sprite.visible = false
 		"cooldown":
 			_sprite.visible = false
 			if _timer <= 0.0:
 				_reset_drop()
+
+
+func _begin_splash() -> void:
+	global_position.y = _floor_y - 8.0
+	_state = "splash"
+	_timer = SPLASH_TIME
+	_sprite.texture = SPLASH_TEX
+	_sprite.position = Vector2(0, 0)
+	_sprite.rotation = 0.0
+	_sprite.scale = Vector2.ONE
+	_sprite.modulate = Color.WHITE
+	_sprite.visible = true
 
 
 func _reset_drop() -> void:
@@ -73,8 +120,10 @@ func _reset_drop() -> void:
 	_state = "idle"
 	_timer = RESPAWN_DELAY + randf_range(0.0, 0.8)
 	_sprite.visible = true
+	_sprite.texture = DRIP_TEX
 	_sprite.rotation = 0.0
 	_sprite.scale = Vector2.ONE
+	_sprite.position = Vector2(0, 10)
 	_sprite.modulate = Color(1, 1, 1, 0.55)
 
 

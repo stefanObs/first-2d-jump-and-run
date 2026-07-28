@@ -44,7 +44,7 @@ const GROUND_STANDING_TYPES: PackedStringArray = [
 	"cactus", "checkpoint", "spring", "bandit", "bounty_bandit", "bull", "ninja",
 	"rattlesnake", "goal", "chest", "wings", "boots", "speed", "shield", "ladder",
 ]
-const CEILING_HANGING_TYPES: PackedStringArray = ["acid_drip", "stalactite"]
+const CEILING_HANGING_TYPES: PackedStringArray = ["acid_drip", "stalactite", "stalactite_static"]
 const STYLE_DESERT := "desert"
 const STYLE_CAVE := "cave"
 const LADDER_HEIGHT_CELLS := 3
@@ -109,6 +109,8 @@ static func stamp_world_size(type_name: String, style: String = STYLE_DESERT) ->
 			return _texture_pixel_size("res://assets/world/acid_drip.png")
 		"stalactite":
 			return _texture_pixel_size("res://assets/world/stalactite.png")
+		"stalactite_static":
+			return _texture_pixel_size("res://assets/world/stalactite_static.png")
 		"ladder":
 			return Vector2(48.0, float(LADDER_HEIGHT_CELLS) * GRID_SIZE)
 		"wings", "boots", "speed", "shield":
@@ -864,13 +866,13 @@ static func _import_type_for(node: Node) -> String:
 static func append_ladder_branch(
 	objects: Array[Dictionary], trail: int, start_x: int = 28
 ) -> void:
-	## Lower dirt path + ladder up to a ledge run + ladder back down (paths rejoin).
-	var upper := maxi(trail - LADDER_HEIGHT_CELLS, 0)
+	## Lower dirt path + ladder up to a ledge run; drop off the end back to dirt (no down ladder).
+	## Ledge row aligns with climb_top (trail - 1 - LADDER_HEIGHT_CELLS).
+	var upper := maxi(trail - 1 - LADDER_HEIGHT_CELLS, 0)
 	_append_unique(objects, {"type": "ladder", "x": start_x, "y": maxi(trail - 1, 0)})
-	for x in range(start_x, start_x + 14, 2):
+	for x in range(start_x, start_x + 16, 2):
 		_append_unique(objects, {"type": "ladder_ledge", "x": x, "y": upper})
 	_append_unique(objects, {"type": "star", "x": start_x + 6, "y": maxi(upper - 1, 0)})
-	_append_unique(objects, {"type": "ladder", "x": start_x + 14, "y": maxi(trail - 1, 0)})
 
 
 static func _append_unique(objects: Array[Dictionary], object: Dictionary) -> void:
@@ -924,7 +926,7 @@ static func _valid_object(object: Dictionary, trail: int) -> bool:
 	var valid_types := [
 		"ground", "platform", "ladder_ledge", "star", "chest", "cactus", "canyon", "pit",
 		"checkpoint", "spring", "goal", "bandit", "bounty_bandit", "bull", "ninja",
-		"rattlesnake", "carrion", "bat", "acid_drip", "stalactite", "ladder",
+		"rattlesnake", "carrion", "bat", "acid_drip", "stalactite", "stalactite_static", "ladder",
 		"wings", "boots", "speed", "shield",
 	]
 	var type_name := str(object.get("type", ""))

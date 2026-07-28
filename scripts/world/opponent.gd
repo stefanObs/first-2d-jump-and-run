@@ -66,7 +66,10 @@ func _ready() -> void:
 
 
 func _setup_sprite() -> void:
-	var old := get_node_or_null("Sprite2D") as Node
+	for child in get_children():
+		if child is Sprite2D or child is AnimatedSprite2D:
+			if String(child.name) in ["WalkSprite", "Sprite2D"]:
+				child.queue_free()
 	var frames := _make_sprite_frames()
 	_sprite = AnimatedSprite2D.new()
 	_sprite.name = "WalkSprite"
@@ -78,8 +81,6 @@ func _setup_sprite() -> void:
 	_apply_facing(1.0)
 	_sprite.play(&"idle")
 	add_child(_sprite)
-	if old != null:
-		old.visible = false
 	if _label != null and bounty_bandit:
 		_label.text = "BOUNTY!"
 		_label.add_theme_color_override(&"font_color", Color(0.75, 0.08, 0.05, 1.0))
