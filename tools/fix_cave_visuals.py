@@ -971,21 +971,22 @@ def make_acid_drip_splash() -> None:
 
 
 def make_stalactite_hang() -> None:
-    """48x96 dropping tooth — flat rocky crown for ceiling join, taper to tip."""
+    """48x96 dropping tooth — same mauve rock as cave ceiling panels."""
     import math
-    import random
 
-    rng = random.Random(17)
     w, h = 48, 96
     im = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     px = im.load()
 
     def rock(x: int, y: int, shade: float = 1.0) -> tuple[int, int, int, int]:
+        # Match cave ceiling panel avg (~81,60,84).
         n = math.sin(x * 0.21) * 6 + math.cos(y * 0.17) * 5
-        base = 72 + int(n)
-        r = int(max(28, min(130, (base + 8) * shade)))
-        g = int(max(24, min(110, (base - 6) * shade)))
-        b = int(max(40, min(140, (base + 18) * shade)))
+        base_r = 81 + int(n)
+        base_g = 60 + int(n * 0.7)
+        base_b = 84 + int(n * 0.9)
+        r = int(max(48, min(140, base_r * shade)))
+        g = int(max(36, min(120, base_g * shade)))
+        b = int(max(52, min(150, base_b * shade)))
         return (r, g, b, 255)
 
     # Width envelope: wide flat crown, then taper.
@@ -995,61 +996,62 @@ def make_stalactite_hang() -> None:
             half = 21.0 - y * 0.15
         else:
             half = 20.0 * (1.0 - ((t - 0.08) / 0.92) ** 1.35) + 1.2
-        # Mild irregular silhouette.
         half += 1.4 * math.sin(y * 0.33 + 0.4) + 0.8 * math.sin(y * 0.11)
         cx = (w - 1) * 0.5
         x0 = int(round(cx - half))
         x1 = int(round(cx + half))
         for x in range(max(0, x0), min(w, x1 + 1)):
             edge = min(x - x0, x1 - x)
-            shade = 0.78 + 0.22 * (edge / max(1.0, half))
+            shade = 0.86 + 0.18 * (edge / max(1.0, half))
             if y < 8:
-                shade *= 0.92  # slightly darker join into ceiling rock
+                shade *= 0.96
             col = rock(x, y, shade)
-            # Warm outline
+            # Soft mauve edge — never near-black ink outline.
             if edge <= 1 or y >= h - 2:
-                col = (max(18, col[0] - 28), max(14, col[1] - 28), max(24, col[2] - 22), 255)
+                col = (
+                    max(52, col[0] - 12),
+                    max(40, col[1] - 12),
+                    max(58, col[2] - 10),
+                    255,
+                )
             px[x, y] = col
 
-    # Segment ridges for cowboy-style rock layers.
     d = ImageDraw.Draw(im)
     for y in (14, 28, 44, 60, 74):
         span = 10 + int((1.0 - y / h) * 10)
-        d.arc((24 - span, y - 3, 24 + span, y + 5), 200, 340, fill=(48, 36, 54, 200), width=1)
+        d.arc((24 - span, y - 3, 24 + span, y + 5), 200, 340, fill=(72, 52, 78, 140), width=1)
 
-    # Pink crystal flecks
     for x, y in ((18, 16), (28, 24), (22, 38), (26, 52), (23, 68)):
         if px[x, y][3] < 200:
             continue
-        d.ellipse((x, y, x + 3, y + 4), fill=(210, 120, 165, 230))
+        d.ellipse((x, y, x + 3, y + 4), fill=(210, 130, 165, 230))
 
-    # Ensure top row is fully opaque across the crown for ceiling attach.
     for x in range(6, 42):
         if px[x, 0][3] < 8:
-            px[x, 0] = rock(x, 0, 0.85)
+            px[x, 0] = rock(x, 0, 0.92)
         if px[x, 1][3] < 8:
-            px[x, 1] = rock(x, 1, 0.88)
+            px[x, 1] = rock(x, 1, 0.94)
 
     _save(im, OUT / "stalactite.png")
     print(f"stalactite: clear%={_clear_pct(im):.1f}")
 
 
 def make_stalactite_static() -> None:
-    """40x80 decorative hanging spike — shorter cousin of the droppable tooth."""
+    """40x80 decorative hanging spike — shorter cousin, same ceiling rock palette."""
     import math
-    import random
 
-    rng = random.Random(23)
     w, h = 40, 80
     im = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     px = im.load()
 
     def rock(x: int, y: int, shade: float = 1.0) -> tuple[int, int, int, int]:
         n = math.sin(x * 0.25) * 5 + math.cos(y * 0.19) * 4
-        base = 68 + int(n)
-        r = int(max(26, min(120, (base + 6) * shade)))
-        g = int(max(22, min(100, (base - 8) * shade)))
-        b = int(max(36, min(130, (base + 16) * shade)))
+        base_r = 81 + int(n)
+        base_g = 60 + int(n * 0.7)
+        base_b = 84 + int(n * 0.9)
+        r = int(max(48, min(140, base_r * shade)))
+        g = int(max(36, min(120, base_g * shade)))
+        b = int(max(52, min(150, base_b * shade)))
         return (r, g, b, 255)
 
     for y in range(h):
@@ -1061,22 +1063,29 @@ def make_stalactite_static() -> None:
         x1 = int(round(cx + half))
         for x in range(max(0, x0), min(w, x1 + 1)):
             edge = min(x - x0, x1 - x)
-            shade = 0.8 + 0.2 * (edge / max(1.0, half))
+            shade = 0.88 + 0.16 * (edge / max(1.0, half))
+            if y < 6:
+                shade *= 0.97
             col = rock(x, y, shade)
             if edge <= 1 or y >= h - 2:
-                col = (max(16, col[0] - 26), max(12, col[1] - 26), max(22, col[2] - 20), 255)
+                col = (
+                    max(52, col[0] - 10),
+                    max(40, col[1] - 10),
+                    max(58, col[2] - 8),
+                    255,
+                )
             px[x, y] = col
 
     d = ImageDraw.Draw(im)
     for y in (12, 26, 42, 56):
         span = 7 + int((1.0 - y / h) * 8)
-        d.arc((20 - span, y - 2, 20 + span, y + 4), 200, 340, fill=(44, 32, 50, 190), width=1)
+        d.arc((20 - span, y - 2, 20 + span, y + 4), 200, 340, fill=(72, 52, 78, 130), width=1)
     for x, y in ((14, 14), (24, 22), (18, 36), (22, 50)):
         if px[x, y][3] > 200:
-            d.ellipse((x, y, x + 2, y + 3), fill=(200, 115, 160, 220))
+            d.ellipse((x, y, x + 2, y + 3), fill=(210, 130, 165, 220))
     for x in range(5, 35):
         if px[x, 0][3] < 8:
-            px[x, 0] = rock(x, 0, 0.85)
+            px[x, 0] = rock(x, 0, 0.92)
 
     _save(im, OUT / "stalactite_static.png")
     print(f"stalactite_static: clear%={_clear_pct(im):.1f}")

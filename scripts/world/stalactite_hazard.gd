@@ -32,8 +32,8 @@ var _release: float = 0.0
 var _floor_y: float = NAN
 var _hang_h: float = 96.0
 var _hang_w: float = 48.0
-const FUSED_MODULATE := Color(0.72, 0.62, 0.78, 1.0)
-const LIVE_MODULATE := Color(1.0, 1.0, 1.0, 1.0)
+const FUSED_MODULATE := Color(1.0, 1.0, 1.0, 1.0)
+const LIVE_MODULATE := Color(1.06, 1.02, 1.08, 1.0)
 
 
 func _ready() -> void:
@@ -72,8 +72,8 @@ func _ready() -> void:
 func _apply_hang_look(fused: bool) -> void:
 	if _sprite == null:
 		return
-	if fuse_with_ceiling and fused:
-		# Same purple rock cast as the ceiling slab — reads as part of the lip.
+	# Static décor always reads as ceiling rock; dropping teeth stay fused until release.
+	if fuse_with_ceiling and (fused or not drops):
 		_sprite.modulate = FUSED_MODULATE
 		_sprite.z_index = -1
 	else:

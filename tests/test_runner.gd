@@ -6643,6 +6643,15 @@ func _test_cave_ceiling_sparse_flight_guard() -> Variant:
 				level.queue_free()
 				return "Ceiling stalactites must attach on a segment seat."
 	# Stamped hangings snap onto nearest seat.
+	var static_count := 0
+	var drop_count := 0
+	for child in ceiling.get_children():
+		if child is StalactiteHazard and String(child.name).begins_with("CeilingStalactite"):
+			var tooth := child as StalactiteHazard
+			if tooth.drops:
+				drop_count += 1
+			else:
+				static_count += 1
 	for node in level.find_children("*", "StalactiteHazard", true, false):
 		var spike := node as Node2D
 		if spike.get_parent() == ceiling:
@@ -6661,6 +6670,10 @@ func _test_cave_ceiling_sparse_flight_guard() -> Variant:
 		)
 	if decor_count < 1:
 		return "Cave ceiling should place at least one décor stalactite."
+	if drop_count < 1:
+		return "Cave ceiling should place at least one droppable stalactite."
+	if static_count < 1:
+		return "Cave ceiling should place at least one fake static stalactite."
 	if tooth_ys.size() >= 2:
 		tooth_ys.sort()
 		if tooth_ys[tooth_ys.size() - 1] - tooth_ys[0] < 8.0:

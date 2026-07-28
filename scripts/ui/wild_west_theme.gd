@@ -275,13 +275,14 @@ static func _dress_cave_ceiling(level: Node, style: String = LevelStyle.DESERT) 
 			continue
 		var spike := StalactiteHazard.new()
 		spike.name = "CeilingStalactite%d" % index
-		spike.drops = true
+		# Mix droppable teeth with shorter fake décor so the lip stays varied.
+		spike.drops = (index % 3) != 1
 		spike.fuse_with_ceiling = true
 		# Sit on the shelf; fused look covers the painted nub until release.
 		spike.position = Vector2(sx, sy - 2.0)
 		spike.z_index = 1
 		root.add_child(spike)
-		var scale := randf_range(0.95, 1.08)
+		var scale := randf_range(0.92, 1.06) if spike.drops else randf_range(0.78, 0.92)
 		var spr := spike.get_node_or_null("Sprite2D") as Sprite2D
 		if spr != null:
 			spr.scale = Vector2(scale, scale)
@@ -326,10 +327,12 @@ static func _load_ceiling_segment_catalog(style: String) -> Dictionary:
 static func _snap_ceiling_hangings(level: Node, attach_points: Array, fallback_y: float) -> void:
 	## Snap stamped hangings onto the nearest ceiling attach seat.
 	for node in level.find_children("*", "StalactiteHazard", true, false):
-		var spike := node as Node2D
+		var spike := node as StalactiteHazard
 		if spike.get_parent() != null and String(spike.get_parent().name) == "CaveCeiling":
 			continue
+		spike.fuse_with_ceiling = true
 		spike.global_position.y = _nearest_ceiling_attach_y(attach_points, spike.global_position.x, fallback_y) - 6.0
+		spike.call("_apply_hang_look", true)
 	for node in level.find_children("*", "AcidDrip", true, false):
 		var drip := node as Node2D
 		drip.global_position.y = _nearest_ceiling_attach_y(attach_points, drip.global_position.x, fallback_y) + 2.0

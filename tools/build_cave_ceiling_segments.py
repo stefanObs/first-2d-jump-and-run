@@ -161,12 +161,13 @@ def _draw_segment(start: str, end: str, seed: int) -> tuple[Image.Image, list[di
             draw.line(pts, fill=(72, 48, 68, 120), width=2)
     px = im.load()
 
-    # Built-in fused tooth nubs at seats (blend with rock until gameplay tooth releases).
+    # Built-in fused tooth nubs at seats — short fake teeth matching ceiling rock.
     for seat in seats:
         sx = int(seat["x"])
         sy = int(round(lip[sx]))
-        for dy in range(0, 22):
-            half = max(1.0, 9.0 * (1.0 - dy / 22.0) ** 0.85)
+        tip = 18 + (seed % 5)
+        for dy in range(0, tip):
+            half = max(1.0, 8.5 * (1.0 - dy / float(tip)) ** 0.9)
             for dx in range(-int(half) - 1, int(half) + 2):
                 xx, yy = sx + dx, sy + dy
                 if not (0 <= xx < W and 0 <= yy < H):
@@ -174,17 +175,20 @@ def _draw_segment(start: str, end: str, seed: int) -> tuple[Image.Image, list[di
                 if abs(dx) > half:
                     continue
                 edge = half - abs(dx)
-                shade = 0.78 + 0.18 * (edge / max(1.0, half))
+                shade = 0.88 + 0.14 * (edge / max(1.0, half))
                 col = _rock(xx, yy, rng, shade)
-                if edge <= 1.0 or dy >= 20:
-                    # Soften tip only — keep readable rock, never black outline.
+                if edge <= 1.0 or dy >= tip - 2:
                     col = (
-                        max(48, col[0] - 10),
-                        max(36, col[1] - 10),
-                        max(52, col[2] - 8),
+                        max(58, col[0] - 8),
+                        max(44, col[1] - 8),
+                        max(62, col[2] - 6),
                         255,
                     )
                 px[xx, yy] = col
+        for fy in (sy + 4, sy + 10):
+            fx = sx + ((fy + seed) % 3) - 1
+            if 0 <= fx < W and 0 <= fy < H and px[fx, fy][3] >= 200:
+                px[fx, fy] = FLECK
         seat["y"] = round(lip[sx], 1)
 
     for seat in seats:
