@@ -65,7 +65,7 @@ Stamp a **ladder**, run **one-way crystal ledges** along the climb top, then **d
 1. **Lantern camp** — checkpoint with a warm lantern instead of desert bedrolls.
 2. **Crystal ledge** — platform art: cool stone plank with crystal flecks (replaces wood plank look).
 3. **Glow shard** (optional future pickup) — brief silhouette of drip/stalactite danger columns; not required for v1 playability.
-4. **Cave wash backdrop** — no sun/mesas; deep `cave_sky` wash that meets the trail floor + hanging rock ceiling. Solid `cave_ceiling_fill` closes the sky gap above the camera; the wavy lip (`cave_ceiling_tile`) sits about **2cm (~76px)** below the top of a normal grounded view with sparse droppable stalactite teeth fused under it (**Dragon Gate** and the **Cave Dragon** arena keep a clean rock band with no teeth). Rock band is solid (`FlightCeilingCave`); touching it while flying respawns at camp.
+4. **Cave wash backdrop** — no sun/mesas; deep opaque `cave_sky` wash that **tucks under** the trail floor crust (no Background gap above the dirt) + hanging rock ceiling. Solid `cave_ceiling_fill` closes the sky gap above the camera; the wavy lip (`cave_ceiling_tile`) sits about **2cm (~76px)** below the top of a normal grounded view with sparse droppable stalactite teeth fused under it (**Dragon Gate** and the **Cave Dragon** arena keep a clean rock band with no teeth). Rock band is solid (`FlightCeilingCave`); touching it while flying respawns at camp.
 5. **Mineral vein floor** — dense cool stone crust with pink crystal flecks; underfill dirt is a **fully opaque** slate tile (no transparent side margins / sky holes when tiled); deep `FloorAbyss` slate under the bank.
 ## Campaign note
 

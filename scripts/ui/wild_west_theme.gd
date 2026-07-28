@@ -34,6 +34,8 @@ static func apply_to_level(level: Node) -> void:
 	_dress_platforms(level, style)
 	_disable_ground_fill_collision(level)
 	_make_contiguous_floors(level, style)
+	# Floor tops are final after TrailFloor — pull the cave wash under the crust.
+	_retuck_cave_sky_to_floor(level, style)
 	_align_cacti(level)
 	_align_chests(level)
 	_apply_actor_styles(level, style)
@@ -56,7 +58,10 @@ static func _dress_sky(level: Node, style: String = LevelStyle.DESERT) -> void:
 	if sky_band != null:
 		sky_band.visible = false
 
-	if level.get_node_or_null("SkyArt") != null:
+	var existing := level.get_node_or_null("SkyArt") as Node2D
+	if existing != null:
+		if LevelStyle.is_cave(style):
+			_stamp_cave_sky_floor_meta(existing, level)
 		return
 
 	var width := _level_width(level)
@@ -67,17 +72,87 @@ static func _dress_sky(level: Node, style: String = LevelStyle.DESERT) -> void:
 
 	var tex: Texture2D = load(LevelStyle.sky_path(style))
 	if tex == null:
+		root.queue_free()
 		return
 	# Continuous trail sky — punch only Mesa hills out of canyon columns so the
 	# opening does not get a mismatched Background-blue sky seam.
 	var sky_y := -520.0
 	var sky_h := 700.0
 	if LevelStyle.is_cave(style):
-		# Drop the cave wash so its bottom meets the trail floor crust.
+		# Drop the cave wash so its bottom tucks under the trail crust — no gap.
 		var floor_top := _typical_floor_top(level)
 		sky_y = -620.0
-		sky_h = maxf(floor_top - sky_y, 400.0)
+		const FLOOR_OVERLAP := 72.0
+		sky_h = maxf(floor_top + FLOOR_OVERLAP - sky_y, 400.0)
+		# Stretch the solid Background behind the wash so a soft edge can't open a seam.
+		if background != null:
+			var bg_bottom := background.position.y + background.size.y
+			var need_bottom := floor_top + FLOOR_OVERLAP + 40.0
+			if bg_bottom < need_bottom:
+				background.size.y = need_bottom - background.position.y
 	_tile_backdrop(root, tex, "SkyTile", width, sky_y, sky_h, 8.0, Color.WHITE)
+	if LevelStyle.is_cave(style):
+		_stamp_cave_sky_floor_meta(root, level, sky_y + sky_h)
+
+
+static func _stamp_cave_sky_floor_meta(
+	sky_root: Node2D, level: Node, sky_bottom_override: float = NAN
+) -> void:
+	var floor_top := _typical_floor_top(level)
+	var sky_bottom := sky_bottom_override
+	if is_nan(sky_bottom):
+		sky_bottom = -INF
+		for child in sky_root.get_children():
+			if not (child is Sprite2D):
+				continue
+			if not String(child.name).begins_with("SkyTile"):
+				continue
+			var spr := child as Sprite2D
+			var tex := spr.texture
+			if tex == null:
+				continue
+			sky_bottom = maxf(sky_bottom, spr.position.y + tex.get_size().y * spr.scale.y)
+	sky_root.set_meta("sky_bottom_y", sky_bottom)
+	sky_root.set_meta("floor_top_y", floor_top)
+
+
+static func _retuck_cave_sky_to_floor(level: Node, style: String) -> void:
+	## After TrailFloor exists, stretch cave wash so it always overlaps the crust.
+	if not LevelStyle.is_cave(style):
+		return
+	var sky := level.get_node_or_null("SkyArt") as Node2D
+	if sky == null:
+		return
+	var floor_top := _typical_floor_top(level)
+	const FLOOR_OVERLAP := 96.0
+	var want_bottom := floor_top + FLOOR_OVERLAP
+	var sky_y := INF
+	for child in sky.get_children():
+		if child is Sprite2D and String(child.name).begins_with("SkyTile"):
+			sky_y = minf(sky_y, (child as Sprite2D).position.y)
+	if sky_y == INF:
+		sky_y = -620.0
+	var want_h := maxf(want_bottom - sky_y, 400.0)
+	for child in sky.get_children():
+		if not (child is Sprite2D):
+			continue
+		if not String(child.name).begins_with("SkyTile"):
+			continue
+		var spr := child as Sprite2D
+		var tex := spr.texture
+		if tex == null:
+			continue
+		var tex_h := tex.get_size().y
+		if tex_h <= 0.0:
+			continue
+		spr.position.y = sky_y
+		spr.scale.y = want_h / tex_h
+	var background := level.get_node_or_null("Background") as ColorRect
+	if background != null:
+		var need_bottom := want_bottom + 40.0
+		if background.position.y + background.size.y < need_bottom:
+			background.size.y = need_bottom - background.position.y
+	_stamp_cave_sky_floor_meta(sky, level, want_bottom)
 
 
 static func _dress_cave_ceiling(level: Node, style: String = LevelStyle.DESERT) -> void:

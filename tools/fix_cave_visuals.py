@@ -1108,6 +1108,91 @@ def fix_floors() -> None:
     solidify_cave_floor_tile(dirt, (200, 38))
 
 
+def solidify_cave_sky_edges() -> None:
+    """Fill transparent top/bottom margins so the wash can meet the trail floor."""
+    import math
+    import random
+
+    path = OUT / "cave_sky.png"
+    if not path.is_file():
+        return
+    im = Image.open(path).convert("RGBA")
+    px = im.load()
+    w, h = im.size
+    rng = random.Random(44)
+
+    def sample_row(y: int) -> tuple[int, int, int]:
+        samples: list[tuple[int, int, int]] = []
+        for x in range(0, w, 4):
+            r, g, b, a = px[x, y]
+            if a >= 200:
+                samples.append((r, g, b))
+        if not samples:
+            return (48, 44, 72)
+        return (
+            sum(c[0] for c in samples) // len(samples),
+            sum(c[1] for c in samples) // len(samples),
+            sum(c[2] for c in samples) // len(samples),
+        )
+
+    # Nearest opaque rows for top/bottom extension.
+    top_opaque = 0
+    for y in range(h):
+        if sum(1 for x in range(w) if px[x, y][3] >= 200) > w * 0.4:
+            top_opaque = y
+            break
+    bottom_opaque = h - 1
+    for y in range(h - 1, -1, -1):
+        if sum(1 for x in range(w) if px[x, y][3] >= 200) > w * 0.4:
+            bottom_opaque = y
+            break
+
+    top_col = sample_row(top_opaque)
+    bot_col = sample_row(bottom_opaque)
+    filled = 0
+    for y in range(0, top_opaque):
+        for x in range(w):
+            if px[x, y][3] >= 250:
+                continue
+            n = int(math.sin(x * 0.05 + y * 0.02) * 4)
+            px[x, y] = (
+                max(20, min(100, top_col[0] + n + rng.randint(-3, 3))),
+                max(18, min(90, top_col[1] + n + rng.randint(-3, 3))),
+                max(30, min(120, top_col[2] + n + rng.randint(-3, 3))),
+                255,
+            )
+            filled += 1
+    for y in range(bottom_opaque + 1, h):
+        for x in range(w):
+            if px[x, y][3] >= 250:
+                continue
+            n = int(math.sin(x * 0.07 + y * 0.03) * 3)
+            px[x, y] = (
+                max(18, min(90, bot_col[0] + n + rng.randint(-3, 3))),
+                max(16, min(80, bot_col[1] + n + rng.randint(-3, 3))),
+                max(28, min(110, bot_col[2] + n + rng.randint(-3, 3))),
+                255,
+            )
+            filled += 1
+
+    # Also close any soft fringe near the bottom so stretch doesn't open a seam.
+    for y in range(max(0, bottom_opaque - 4), h):
+        for x in range(w):
+            if px[x, y][3] >= 250:
+                continue
+            n = int(math.sin(x * 0.07) * 3)
+            px[x, y] = (
+                max(18, min(90, bot_col[0] + n)),
+                max(16, min(80, bot_col[1] + n)),
+                max(28, min(110, bot_col[2] + n)),
+                255,
+            )
+            filled += 1
+
+    _save(im, path)
+    print(f"cave_sky: solidified edges, filled≈{filled}, clear%={_clear_pct(im):.1f}")
+
+
 def _rightmost_opaque_x(im: Image.Image, *, alpha_thresh: int = 8) -> int | None:
     w, h = im.size
     px = im.load()
@@ -1169,6 +1254,7 @@ def verify() -> None:
         "stalactite.png",
         "cave_ceiling_tile.png",
         "cave_ceiling_fill.png",
+        "cave_sky.png",
     ):
         p = OUT / name
         if p.is_file():
@@ -1176,6 +1262,8 @@ def verify() -> None:
             print(f"{name}: size={im.size} clear%={_clear_pct(im):.1f}")
             if name in ("cave_floor_tile.png", "cave_dirt_tile.png") and _clear_pct(im) > 0.05:
                 raise RuntimeError(f"{name} must be fully opaque (got clear%={_clear_pct(im):.1f})")
+            if name == "cave_sky.png" and _clear_pct(im) > 0.05:
+                raise RuntimeError(f"cave_sky must be opaque edge-to-edge (clear%={_clear_pct(im):.1f})")
 
 
 def main() -> int:
@@ -1190,6 +1278,7 @@ def main() -> int:
     make_stalactite_static()
     make_cave_ceiling_fill()
     make_cave_ceiling_tile()
+    solidify_cave_sky_edges()
     verify()
     print("\n=== files written ===")
     # Unique preserve order

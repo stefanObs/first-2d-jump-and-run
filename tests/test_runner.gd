@@ -107,6 +107,7 @@ func _ready() -> void:
 	failures += await _run("Slope underfill covers dune wedge", _test_slope_underfill_covers_wedge)
 	failures += await _run("Slope underfill uses warm bank earth", _test_slope_underfill_earth_color)
 	failures += await _run("Cave floor tiles are solid without holes", _test_cave_floor_tiles_solid)
+	failures += await _run("Cave sky wash tucks under the floor", _test_cave_sky_meets_floor)
 	failures += await _run("Filled save can pick Advanced Mode", _test_filled_slot_advanced_mode_select)
 	failures += await _run("Bandits play walk animation while moving", _test_bandit_walk_animation)
 	failures += await _run("Campaign hazards are no longer blocked by plank highways", _test_no_plank_highways)
@@ -3234,6 +3235,61 @@ func _test_cave_floor_tiles_solid() -> Variant:
 	if abyss == null:
 		level.queue_free()
 		return "Cave TrailFloor needs FloorAbyss underfill."
+	level.queue_free()
+	return null
+
+
+func _test_cave_sky_meets_floor() -> Variant:
+	## Cave wash must reach past the trail crust so no Background gap shows above dirt.
+	var tex := load("res://assets/world/cave_sky.png") as Texture2D
+	if tex == null:
+		return "Missing cave_sky.png."
+	var img := tex.get_image()
+	if img == null:
+		return "Could not read cave_sky pixels."
+	if img.get_format() != Image.FORMAT_RGBA8:
+		img.convert(Image.FORMAT_RGBA8)
+	var clear := 0
+	for y in range(img.get_height()):
+		for x in range(img.get_width()):
+			if img.get_pixel(x, y).a < 0.98:
+				clear += 1
+	if clear > 0:
+		return "cave_sky.png must be opaque edge-to-edge (clear=%d)." % clear
+
+	var data := CaveCampaignLevels.level_data(11)
+	var level := LevelController.new()
+	level.set_meta("level_style", LevelStyle.CAVE)
+	add_child(level)
+	CustomLevelBuilder.build(level, data)
+	await get_tree().process_frame
+	WildWestTheme.apply_to_level(level)
+	await get_tree().process_frame
+	var sky := level.get_node_or_null("SkyArt") as Node2D
+	if sky == null:
+		level.queue_free()
+		return "Cave level should dress SkyArt."
+	if str(level.get_meta("level_style", "")) != LevelStyle.CAVE:
+		level.queue_free()
+		return "Cave sky test level must keep cave style meta."
+	var sky_bottom := -INF
+	for child in sky.get_children():
+		if not (child is Sprite2D):
+			continue
+		if not String(child.name).begins_with("SkyTile"):
+			continue
+		var spr := child as Sprite2D
+		var spr_tex := spr.texture
+		if spr_tex == null:
+			continue
+		sky_bottom = maxf(sky_bottom, spr.position.y + spr_tex.get_size().y * spr.scale.y)
+	var floor_top := float(sky.get_meta("floor_top_y", WildWestTheme._typical_floor_top(level)))
+	if sky_bottom < floor_top + 60.0:
+		level.queue_free()
+		return (
+			"Cave sky wash must tuck under the floor (bottom=%.1f, floor=%.1f, tiles=%d)."
+			% [sky_bottom, floor_top, sky.get_child_count()]
+		)
 	level.queue_free()
 	return null
 
