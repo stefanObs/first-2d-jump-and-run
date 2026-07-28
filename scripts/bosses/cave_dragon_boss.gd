@@ -40,8 +40,8 @@ const TAKEOFF_TIME := 0.7
 enum State { FLY, LANDING, LAND, TAKEOFF, WIN }
 
 @export var lassos_needed: int = 3
-@export var spit_rounds: int = 3
-@export var spits_per_round: int = 3
+@export var spit_rounds: int = 2
+@export var spits_per_round: int = 2
 
 var _dragon: AnimatableBody2D
 var _sprite: Sprite2D

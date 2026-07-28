@@ -593,9 +593,22 @@ func _test_boss_arenas() -> Variant:
 	if dragon_target == null or not dragon_target.has_method("lasso_hit") or not (dragon_target is Area2D):
 		dragon.queue_free()
 		return "Cave Dragon needs an Area2D lasso target."
-	if int(dragon.get("lassos_needed")) != 3 or int(dragon.get("spit_rounds")) != 3:
+	if int(dragon.get("lassos_needed")) != 3 or int(dragon.get("spit_rounds")) != 2:
 		dragon.queue_free()
-		return "Cave Dragon should require 3 spit rounds then 3 lassos."
+		return "Cave Dragon should require 2 spit rounds then 3 lassos."
+	if int(dragon.get("spits_per_round")) != 2:
+		dragon.queue_free()
+		return "Cave Dragon should spit 2 flameballs per round."
+	# Flameballs fly straight — no mid-flight homing.
+	var ball := DragonFlameball.new()
+	ball.setup(Vector2.ZERO, Vector2(-100, 40), null)
+	var aim := ball.direction
+	ball._physics_process(0.2)
+	if ball.direction.distance_to(aim) > 0.01:
+		ball.free()
+		dragon.queue_free()
+		return "Dragon flameballs must keep a straight aim (no homing)."
+	ball.free()
 	for stage_path in [
 		"res://assets/world/boss_cave_dragon_0.png",
 		"res://assets/world/boss_cave_dragon_1.png",
