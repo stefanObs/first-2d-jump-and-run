@@ -74,6 +74,10 @@ throw_0/1, jump_0/1, tied on a **64×80** canvas — body ~67 px, feet on y=76 �
 `python tools/build_ninja_frames.py`. Enemy action animations are authored as
 **2-frame horizontal strips** (run / sword / throw / jump).
 
+Outlaw Kingpin walk frames live in `assets/world/boss_outlaw_kingpin_walk_*.png`
+(130×180, matching standing `boss_outlaw_kingpin.png`). Rebuild from
+`assets/source/kingpin/walk_strip.png` with `python tools/build_kingpin_frames.py`.
+
 The treasure chest uses full-frame closed/open sprites (`treasure_chest_closed`
 ~66×48, `treasure_chest_open` same width / taller, `treasure_chest_stamp` 64×64).
 Rebuild from `assets/source/chest/` (`closed.png` / `open.png`) with

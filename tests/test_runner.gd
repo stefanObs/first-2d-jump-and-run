@@ -605,6 +605,32 @@ func _test_boss_arenas() -> Variant:
 	if float(king.get("_walk_speed")) < 90.0:
 		king.queue_free()
 		return "Kingpin should move more during the fight."
+	for walk_path in [
+		"res://assets/world/boss_outlaw_kingpin_walk_0.png",
+		"res://assets/world/boss_outlaw_kingpin_walk_1.png",
+		"res://assets/world/boss_outlaw_kingpin_walk_2.png",
+		"res://assets/world/boss_outlaw_kingpin_walk_3.png",
+	]:
+		if load(walk_path) == null:
+			king.queue_free()
+			return "Missing kingpin walk art: %s" % walk_path
+	var king_sprite := king.get_node_or_null("Kingpin/Sprite2D") as Sprite2D
+	if king_sprite == null:
+		king.queue_free()
+		return "Kingpin needs a Sprite2D for walk frames."
+	king.set("combat_ready", true)
+	king.set("_shooting", false)
+	king.set("_shot_timer", 99.0)
+	var start_tex: Texture2D = king_sprite.texture
+	var saw_walk := false
+	for _i in range(20):
+		await get_tree().physics_frame
+		if king_sprite.texture != start_tex and king_sprite.texture in king.WALK_TEX:
+			saw_walk = true
+			break
+	if not saw_walk:
+		king.queue_free()
+		return "Kingpin should play walk frames while patrolling."
 	if target == null or not target.has_method("lasso_hit") or not (target is Area2D):
 		king.queue_free()
 		return "Kingpin needs an Area2D lasso target."

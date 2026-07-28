@@ -4,7 +4,14 @@ extends BossArena
 
 const KING_TEX := preload("res://assets/world/boss_outlaw_kingpin.png")
 const TIED_TEX := preload("res://assets/world/bandit_tied_red.png")
+const WALK_TEX: Array[Texture2D] = [
+	preload("res://assets/world/boss_outlaw_kingpin_walk_0.png"),
+	preload("res://assets/world/boss_outlaw_kingpin_walk_1.png"),
+	preload("res://assets/world/boss_outlaw_kingpin_walk_2.png"),
+	preload("res://assets/world/boss_outlaw_kingpin_walk_3.png"),
+]
 const STOMP_BOUNCE := -420.0
+const WALK_FPS := 8.0
 
 var _king: Node2D
 var _king_sprite: Sprite2D
@@ -16,6 +23,7 @@ var _guards_left: int = 2
 var _vulnerable: bool = false
 var _walk_dir: float = -1.0
 var _walk_speed: float = 105.0
+var _walk_phase: float = 0.0
 var _left_x: float = 720.0
 var _right_x: float = 1280.0
 var _shot_timer: float = 1.2
@@ -83,8 +91,10 @@ func _physics_process(delta: float) -> void:
 		return
 	_stomp_cooldown = maxf(_stomp_cooldown - delta, 0.0)
 	_resolve_kingpin_contact()
+	var walking := false
 	if not _shooting:
 		_king.position.x += _walk_dir * _walk_speed * delta
+		walking = true
 		if _king.position.x <= _left_x:
 			_king.position.x = _left_x
 			_walk_dir = 1.0
@@ -95,9 +105,22 @@ func _physics_process(delta: float) -> void:
 			_apply_facing()
 		elif absf(_walk_dir) > 0.01:
 			_apply_facing()
+	_play_walk_visual(walking, delta)
 	_shot_timer -= delta
 	if _shot_timer <= 0.0 and not _shooting:
 		_shoot_at_player()
+
+
+func _play_walk_visual(moving: bool, delta: float) -> void:
+	if _king_sprite == null or _capturing:
+		return
+	if moving and not WALK_TEX.is_empty():
+		_walk_phase += delta * WALK_FPS
+		var idx := int(floor(_walk_phase)) % WALK_TEX.size()
+		_king_sprite.texture = WALK_TEX[idx]
+	else:
+		_walk_phase = 0.0
+		_king_sprite.texture = KING_TEX
 
 
 func _resolve_kingpin_contact() -> void:
@@ -176,6 +199,7 @@ func _shoot_at_player() -> void:
 	var shot_id := _shot_generation
 	_walk_dir = 1.0 if player.global_position.x >= _king.global_position.x else -1.0
 	_apply_facing()
+	_play_walk_visual(false, 0.0)
 	# Raise the gun into his hands before the shot (hip height for standing hits).
 	if _revolver != null:
 		_revolver.position = Vector2(10.0 * _walk_dir, -14.0)
