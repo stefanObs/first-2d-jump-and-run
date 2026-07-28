@@ -8,7 +8,7 @@ and framed into game-ready sprites via ``art_pipeline``. Source concepts live in
 
 See ``.cursor/rules/art-style.mdc`` for the shared style + pipeline conventions.
 Enemy character frames use a 64x80 canvas, body ~67 px tall, feet on y=76.
-Idle/run/sword/throw are 3/4 view facing right (the engine flips for the other
+Idle/run/sword/throw/jump are 3/4 view facing right (the engine flips for the other
 direction); action frames keep the katana compact so the body scale stays
 consistent across the animation.
 """
@@ -33,12 +33,18 @@ def _fig(path: str, target_h: int = BODY_H, baseline: int = BASELINE) -> Image.I
     return frame_sprite(cutout(str(SRC / path)), canvas=CANVAS, target_h=target_h, baseline=baseline)
 
 
-def _strip(path: str) -> list[Image.Image]:
-    """Cut a horizontal strip, keeping only the two largest figures (drops any
-    stray detached prop such as a thrown shuriken) in left-to-right order."""
-    segs = slice_strip(cutout(str(SRC / path)))
-    segs = sorted(segs, key=lambda im: im.size[0] * im.size[1], reverse=True)[:2]
-    return sorted(segs, key=lambda im: im.getbbox()[0])
+def _strip(path: str, *, level: int = 208, sat: int = 22) -> list[Image.Image]:
+    """Cut a horizontal strip into left-to-right figures (two largest if extras)."""
+    keyed = cutout(str(SRC / path), level=level, sat=sat)
+    segs = slice_strip(keyed, min_gap_frac=0.02)
+    if len(segs) <= 2:
+        return segs
+    ranked = sorted(
+        range(len(segs)),
+        key=lambda i: segs[i].size[0] * segs[i].size[1],
+        reverse=True,
+    )[:2]
+    return [segs[i] for i in sorted(ranked)]
 
 
 def build() -> None:
@@ -61,6 +67,13 @@ def build() -> None:
     frames["throw_0"], frames["throw_1"] = (
         frame_sprite(throw[0], canvas=CANVAS, target_h=BODY_H, baseline=BASELINE),
         frame_sprite(throw[1], canvas=CANVAS, target_h=BODY_H, baseline=BASELINE),
+    )
+
+    # Jump concept uses a flatter gray matte (~197) — lower cutout threshold.
+    jump = _strip("jump_strip.png", level=185, sat=30)
+    frames["jump_0"], frames["jump_1"] = (
+        frame_sprite(jump[0], canvas=CANVAS, target_h=BODY_H, baseline=BASELINE),
+        frame_sprite(jump[1], canvas=CANVAS, target_h=BODY_H, baseline=BASELINE),
     )
 
     # Seated captured pose sits a touch lower/shorter than the standing frames.

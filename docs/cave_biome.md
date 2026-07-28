@@ -65,7 +65,7 @@ Stamp a **ladder**, run **one-way crystal ledges** along the climb top, then **d
 - **Poison fungus:** cactus rules (hurt / Bubble bounce) with mushroom art; loops a short **spore-puff** animation (idle → gather → burst → drift) so toxic spores visibly spread under the cap.
 - **Scorpions:** rattlesnake raise/strike timing with a tail sting pose.
 - **Bow skeletons:** bandit patrol + shoot cadence, but spawn **arrows** instead of revolver bullets; lasso/stomp still ties. Idle/walk/tied frames share one body height on a transparent canvas; tied pose keeps stand scale and sits on the dirt.
-- **Ninjas:** ambush appears ~12 columns ahead of the cowboy.
+- **Ninjas:** ambush appears ~12 columns ahead of the cowboy; chase leaps pits/canyons with a crouch→airborne jump anim.
 - **Floor holes:** same pit rules (128×64), cave mouth art.
 
 ## Own extras (shipped with the style)

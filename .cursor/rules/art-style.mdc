@@ -69,10 +69,10 @@ Cowgirl on-foot frames live in `assets/player/cowgirl/`; mounted in
 Tier-A reference for pose, scale, and in-frame registration.
 
 Ninja enemy frames live in `assets/world/ninja_*.png` (idle, run_0/1, sword_0/1,
-throw_0/1, tied on a **64×80** canvas — body ~67 px, feet on y=76 — plus the
+throw_0/1, jump_0/1, tied on a **64×80** canvas — body ~67 px, feet on y=76 — plus the
 28×28 `ninja_shuriken` projectile). Rebuild them from `assets/source/ninja/` with
 `python tools/build_ninja_frames.py`. Enemy action animations are authored as
-**2-frame horizontal strips** (run / sword / throw).
+**2-frame horizontal strips** (run / sword / throw / jump).
 
 The treasure chest uses full-frame closed/open sprites (`treasure_chest_closed`
 ~66×48, `treasure_chest_open` same width / taller, `treasure_chest_stamp` 64×64).

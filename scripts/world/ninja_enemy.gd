@@ -6,7 +6,7 @@ extends AnimatableBody2D
 signal hurt_player(player: Player)
 signal captured(ninja: NinjaEnemy)
 
-enum State { DORMANT, APPEAR, CHASE, ATTACK, THROW, TIED }
+enum State { DORMANT, APPEAR, CHASE, JUMP, ATTACK, THROW, TIED }
 
 const STAND_SCALE := 1.15
 ## Tied art is the same 64×80 frame as idle — keep standing size so he does not shrink.
@@ -17,6 +17,11 @@ const CHASE_SPEED := 170.0
 const MELEE_RANGE := 34.0
 const SHURIKEN_RANGE := 640.0
 const SHURIKEN_COOLDOWN := 1.35
+## Clear pits (~128px) and typical canyon mouths (~320px) toward the cowboy.
+const JUMP_MAX_GAP := 360.0
+const JUMP_PROBE_STEP := 16.0
+const JUMP_SPEED_X := 260.0
+const JUMP_HEIGHT := 108.0
 
 var _anchor: Vector2
 var _facing: float = 1.0
@@ -29,8 +34,10 @@ var _state: State = State.DORMANT
 var _activated: bool = false
 var _attack_token: int = 0
 var _throw_token: int = 0
+var _jump_token: int = 0
 var _throw_timer: float = 0.0
 var _pose_tween: Tween
+var _jump_tween: Tween
 
 
 func _ready() -> void:
@@ -81,6 +88,11 @@ func _make_sprite_frames() -> SpriteFrames:
 			"res://assets/world/ninja_throw_0.png",
 			"res://assets/world/ninja_throw_1.png",
 		]],
+		[&"jump", 10.0, true, [
+			"res://assets/world/ninja_jump_0.png",
+			"res://assets/world/ninja_jump_1.png",
+			"res://assets/world/ninja_jump_1.png",
+		]],
 		[&"tied", 1.0, false, ["res://assets/world/ninja_tied.png"]],
 	]:
 		var anim: StringName = anim_data[0]
@@ -125,6 +137,8 @@ func _physics_process(delta: float) -> void:
 		return
 	_resolve_player_overlap()
 	if _tied:
+		return
+	if _state == State.JUMP:
 		return
 	var player := _find_player()
 	if player == null:
@@ -194,12 +208,107 @@ func _handle_ground_player(player: Player, delta: float) -> void:
 	if dist <= MELEE_RANGE:
 		_begin_sword_attack(player)
 		return
+	var landing := _find_gap_landing(_facing)
+	if (
+		not landing.is_empty()
+		and signf(player.global_position.x - global_position.x) == _facing
+		and _gap_is_imminent(_facing)
+	):
+		_begin_gap_jump(landing)
+		return
 	if FloorProbe.has_floor_ahead(self, _facing):
 		_apply_facing(_facing)
 		global_position.x += _facing * CHASE_SPEED * delta
 		_set_move_animation(true)
-	else:
-		_set_move_animation(false)
+		return
+	_set_move_animation(false)
+
+
+func _gap_is_imminent(direction: float) -> bool:
+	## True when open air starts within about one chase stride (lip of pit/canyon).
+	if not FloorProbe.has_floor_ahead(self, direction):
+		return true
+	var dir := signf(direction)
+	var stride_x := global_position.x + dir * 32.0
+	return is_inf(_floor_hit_y(stride_x, global_position.y))
+
+
+func _floor_hit_y(world_x: float, from_y: float) -> float:
+	var world := get_world_2d()
+	if world == null:
+		return INF
+	var from := Vector2(world_x, from_y - 4.0)
+	var to := Vector2(world_x, from_y + 96.0)
+	var query := PhysicsRayQueryParameters2D.create(from, to, 1)
+	query.exclude = [get_rid()]
+	var hit := world.direct_space_state.intersect_ray(query)
+	if hit.is_empty():
+		return INF
+	return float(hit["position"].y)
+
+
+func _find_gap_landing(direction: float) -> Dictionary:
+	## Scan ahead for open air, then the first solid bank within jump reach.
+	var dir := signf(direction)
+	if is_zero_approx(dir):
+		return {}
+	var start_x := global_position.x
+	var start_y := global_position.y
+	var found_gap := false
+	var x := start_x + dir * JUMP_PROBE_STEP
+	var end_x := start_x + dir * JUMP_MAX_GAP
+	while (dir > 0.0 and x <= end_x) or (dir < 0.0 and x >= end_x):
+		var hit_y := _floor_hit_y(x, start_y)
+		if is_inf(hit_y):
+			found_gap = true
+		elif found_gap:
+			# Prefer the physics hit — theme walk_surface needs trail art strips and
+			# falls back to a desert default that rejects synthetic test floors.
+			var land_y := hit_y
+			var theme_y := _walk_surface_y(x, hit_y)
+			if absf(theme_y - hit_y) <= 28.0:
+				land_y = theme_y
+			if absf(land_y - start_y) <= 72.0:
+				return {"x": x, "y": land_y}
+			return {}
+		x += dir * JUMP_PROBE_STEP
+	return {}
+
+
+func _begin_gap_jump(landing: Dictionary) -> void:
+	if _state == State.JUMP:
+		return
+	_state = State.JUMP
+	_jump_token += 1
+	var token := _jump_token
+	_kill_jump_tween()
+	_apply_facing(_facing)
+	if _sprite != null:
+		_sprite.play(&"jump")
+	var start := global_position
+	var land := Vector2(float(landing["x"]), float(landing["y"]))
+	var dist := absf(land.x - start.x)
+	var duration := clampf(dist / JUMP_SPEED_X, 0.32, 1.2)
+	_jump_tween = create_tween()
+	_jump_tween.tween_method(_jump_arc.bind(token, start, land), 0.0, 1.0, duration)
+	_jump_tween.tween_callback(_finish_gap_jump.bind(token, land))
+
+
+func _jump_arc(t: float, token: int, start: Vector2, land: Vector2) -> void:
+	if token != _jump_token or _tied:
+		return
+	var x := lerpf(start.x, land.x, t)
+	var base_y := lerpf(start.y, land.y, t)
+	var lift := 4.0 * JUMP_HEIGHT * t * (1.0 - t)
+	global_position = Vector2(x, base_y - lift)
+
+
+func _finish_gap_jump(token: int, land: Vector2) -> void:
+	if token != _jump_token or _tied:
+		return
+	global_position = land
+	_state = State.CHASE
+	_set_move_animation(true)
 
 
 func _handle_flying_player(player: Player, delta: float) -> void:
@@ -292,7 +401,9 @@ func _apply_facing(direction: float) -> void:
 
 
 func _set_move_animation(moving: bool) -> void:
-	if _sprite == null or _tied or _state == State.ATTACK or _state == State.THROW:
+	if _sprite == null or _tied:
+		return
+	if _state == State.ATTACK or _state == State.THROW or _state == State.JUMP:
 		return
 	if moving:
 		if _sprite.animation != &"run" or not _sprite.is_playing():
@@ -312,6 +423,8 @@ func tie_up(_award_bounty: bool = true) -> void:
 	_state = State.TIED
 	_attack_token += 1
 	_throw_token += 1
+	_jump_token += 1
+	_kill_jump_tween()
 	collision_layer = 0
 	var body_shape := get_node_or_null("CollisionShape2D") as CollisionShape2D
 	if body_shape != null:
@@ -360,8 +473,10 @@ func untie_for_respawn() -> void:
 	_activated = false
 	_attack_token += 1
 	_throw_token += 1
+	_jump_token += 1
 	_throw_timer = 0.0
 	_kill_pose_tween()
+	_kill_jump_tween()
 	collision_layer = 0
 	z_index = 0
 	global_position = _anchor
@@ -392,8 +507,10 @@ func restore_for_respawn() -> void:
 	_activated = false
 	_attack_token += 1
 	_throw_token += 1
+	_jump_token += 1
 	_throw_timer = 0.0
 	_kill_pose_tween()
+	_kill_jump_tween()
 	global_position = _anchor
 	_set_dormant(true)
 	_setup_sprite()
@@ -406,6 +523,11 @@ func restore_for_respawn() -> void:
 func _kill_pose_tween() -> void:
 	EnemyContact.kill_tween(_pose_tween)
 	_pose_tween = null
+
+
+func _kill_jump_tween() -> void:
+	EnemyContact.kill_tween(_jump_tween)
+	_jump_tween = null
 
 
 func _update_nearby_hint() -> void:

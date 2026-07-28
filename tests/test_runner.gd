@@ -82,6 +82,7 @@ func _ready() -> void:
 	failures += await _run("Lasso ties ninjas", _test_lasso_ties_ninja)
 	failures += await _run("Jumping on a ninja head ties him", _test_stomp_ties_ninja)
 	failures += await _run("Ninja throws shuriken at flying player", _test_ninja_shuriken_vs_wings)
+	failures += await _run("Ninja jumps pits and canyons", _test_ninja_jumps_gaps)
 	failures += await _run("Shuriken sprite is handcrafted art", _test_shuriken_art)
 	failures += await _run("Side contact with a bandit sends the cowboy to camp", _test_side_contact_hurts)
 	failures += await _run("Upward contact with a bandit sends the cowboy to camp", _test_upward_contact_hurts)
@@ -2481,6 +2482,104 @@ func _test_ninja_shuriken_vs_wings() -> Variant:
 	for child in get_children():
 		if child is NinjaShuriken:
 			child.queue_free()
+	return error
+
+
+func _test_ninja_jumps_gaps() -> Variant:
+	## Ninjas should leap a pit/canyon gap toward the cowboy instead of stalling.
+	for path in [
+		"res://assets/world/ninja_jump_0.png",
+		"res://assets/world/ninja_jump_1.png",
+	]:
+		if load(path) as Texture2D == null:
+			return "Missing ninja jump frame %s." % path
+
+	var left := StaticBody2D.new()
+	left.collision_layer = 1
+	left.position = Vector2(100, 420)
+	var left_shape := CollisionShape2D.new()
+	var left_rect := RectangleShape2D.new()
+	left_rect.size = Vector2(200, 40)
+	left_shape.shape = left_rect
+	left.add_child(left_shape)
+	add_child(left)
+
+	var right := StaticBody2D.new()
+	right.collision_layer = 1
+	right.position = Vector2(460, 420)
+	var right_shape := CollisionShape2D.new()
+	var right_rect := RectangleShape2D.new()
+	right_rect.size = Vector2(200, 40)
+	right_shape.shape = right_rect
+	right.add_child(right_shape)
+	add_child(right)
+
+	var packed: PackedScene = load("res://scenes/world/ninja_enemy.tscn")
+	if packed == null:
+		left.queue_free()
+		right.queue_free()
+		return "Missing ninja enemy scene."
+	var ninja := packed.instantiate() as NinjaEnemy
+	ninja.position = Vector2(188, 400)
+	add_child(ninja)
+	ninja._state = NinjaEnemy.State.CHASE
+	ninja._set_dormant(false)
+
+	var player := Player.new()
+	player.name = "Player"
+	player.position = Vector2(480, 400)
+	player.set_physics_process(false)
+	add_child(player)
+
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+
+	var landing := ninja._find_gap_landing(1.0)
+	if landing.is_empty():
+		player.queue_free()
+		ninja.queue_free()
+		left.queue_free()
+		right.queue_free()
+		return "Ninja gap probe should find the far bank."
+	if not ninja._gap_is_imminent(1.0):
+		player.queue_free()
+		ninja.queue_free()
+		left.queue_free()
+		right.queue_free()
+		return "Gap should read as imminent on the pit lip."
+
+	ninja._facing = 1.0
+	ninja._handle_ground_player(player, 0.016)
+	if ninja._state != NinjaEnemy.State.JUMP:
+		player.queue_free()
+		ninja.queue_free()
+		left.queue_free()
+		right.queue_free()
+		return "Chase should start a gap JUMP when the cowboy is across a pit."
+
+	var sprite := ninja.get_node_or_null("NinjaSprite") as AnimatedSprite2D
+	if sprite == null or sprite.animation != &"jump":
+		player.queue_free()
+		ninja.queue_free()
+		left.queue_free()
+		right.queue_free()
+		return "Ninja jump should play the jump animation frames."
+
+	var cleared_gap := false
+	for _i in range(90):
+		await get_tree().physics_frame
+		if ninja.global_position.x >= 360.0:
+			cleared_gap = true
+			break
+
+	var error: Variant = null
+	if not cleared_gap:
+		error = "Ninja should land past the gap (x=%.1f)." % ninja.global_position.x
+
+	player.queue_free()
+	ninja.queue_free()
+	left.queue_free()
+	right.queue_free()
 	return error
 
 
