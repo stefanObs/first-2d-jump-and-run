@@ -200,13 +200,6 @@ func add_play_time(seconds: float) -> void:
 	(_data["slots"] as Array)[active_slot_index] = slot
 
 
-func collect_stars(amount: int) -> void:
-	if active_slot_index < 0 or amount <= 0:
-		return
-	var slot: Dictionary = get_slot(active_slot_index)
-	slot["stars"] = int(slot.get("stars", 0)) + amount
-	(_data["slots"] as Array)[active_slot_index] = slot
-
 
 func complete_level(level_number: int, stars_found: int) -> void:
 	if active_slot_index < 0:
@@ -258,9 +251,6 @@ func return_to_save_select() -> void:
 	active_slot_index = -1
 	get_tree().change_scene_to_file("res://scenes/ui/save_select.tscn")
 
-
-func restart_current_level() -> void:
-	load_level(get_current_level_number())
 
 
 func request_horse_arrival() -> void:
@@ -493,15 +483,6 @@ func load_from_disk() -> void:
 	_ensure_data()
 	saves_changed.emit()
 
-
-func level_scene_for(level_number: int) -> String:
-	var entries := campaign_entries()
-	var entry := entries[clampi(level_number, 1, entries.size()) - 1]
-	return (
-		"res://scenes/levels/custom_level_runtime.tscn"
-		if str(entry.get("kind", "builtin")) == "custom"
-		else str(entry.get("scene", LEVEL_SCENES[0]))
-	)
 
 
 func level_name_for(level_number: int) -> String:

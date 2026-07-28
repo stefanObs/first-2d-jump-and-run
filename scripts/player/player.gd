@@ -162,9 +162,6 @@ func unregister_ladder(ladder: Ladder) -> void:
 		_end_climb()
 
 
-func is_climbing() -> bool:
-	return _climbing
-
 
 func _best_ladder() -> Ladder:
 	var best: Ladder = null
@@ -297,16 +294,6 @@ func mount_horse() -> void:
 		_body_shape.shape = horse_shape
 		_body_shape.position = Vector2(8.0, -29.0)
 
-
-func dismount_horse() -> void:
-	_mounted = false
-	if _mounted_sprite != null:
-		_mounted_sprite.visible = false
-	if _sprite != null:
-		_sprite.visible = true
-	if _body_shape != null:
-		_body_shape.shape = _normal_shape
-		_body_shape.position = _normal_shape_position
 
 
 func is_mounted() -> bool:
@@ -498,10 +485,6 @@ func bounce_from_hazard(from_world: Vector2, strength: float = 420.0) -> void:
 	velocity = Vector2(dir.x * strength, minf(dir.y * strength * 0.85, -280.0))
 	_invulnerable_remaining = maxf(_invulnerable_remaining, 0.45)
 
-
-func get_jump_assist() -> JumpAssist:
-	_ensure_jump_assist()
-	return _jump_assist
 
 
 func get_modes() -> ModeController:

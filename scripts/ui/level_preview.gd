@@ -31,7 +31,6 @@ var _ghost_root: Node2D
 var _rebuild_pending := false
 var _last_built_hash := ""
 
-
 func _ready() -> void:
 	custom_minimum_size = MIN_PREVIEW_SIZE
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -43,26 +42,21 @@ func _ready() -> void:
 	if not _data.is_empty():
 		_queue_rebuild()
 
-
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
 		_fit_preview_to_pane()
 		_update_ghost_world()
 
-
 func show_level(data: Dictionary) -> void:
 	_data = data.duplicate(true)
 	_queue_rebuild()
-
 
 func set_selected_type(type_name: String) -> void:
 	_selected_type = type_name
 	_update_ghost_world()
 
-
 func set_hover_column(column: int) -> void:
 	set_hover_cell(column, _hover_row)
-
 
 func set_hover_cell(column: int, row: int) -> void:
 	var width := maxi(int(_data.get("width", 24)), 1)
@@ -78,7 +72,6 @@ func set_hover_cell(column: int, row: int) -> void:
 	hover_column_changed.emit(_hover_column)
 	hover_cell_changed.emit(_hover_column, _hover_row)
 
-
 func set_view_center_column(column: int) -> void:
 	if _data.is_empty():
 		return
@@ -88,7 +81,6 @@ func set_view_center_column(column: int) -> void:
 	var clamped := clampi(column, 0, width - 1)
 	_view_center_x = (float(clamped) + 0.5) * grid
 	_update_camera()
-
 
 func pan_view_screen(delta_screen_px: float) -> void:
 	if _camera == null or _data.is_empty() or absf(delta_screen_px) <= 0.01:
@@ -103,14 +95,8 @@ func pan_view_screen(delta_screen_px: float) -> void:
 	_view_center_x = clampf(_view_center_x + delta_screen_px / zoom, min_x, max_x)
 	_update_camera()
 
-
 func get_hover_column() -> int:
 	return _hover_column
-
-
-func get_hover_row() -> int:
-	return _hover_row
-
 
 func _build_viewport() -> void:
 	_frame = PanelContainer.new()
@@ -146,7 +132,6 @@ func _build_viewport() -> void:
 	_viewport.canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_LINEAR
 	_container.add_child(_viewport)
 
-
 func _build_ghost_overlay() -> void:
 	_ghost_overlay = Control.new()
 	_ghost_overlay.name = "StampGhostOverlay"
@@ -154,13 +139,11 @@ func _build_ghost_overlay() -> void:
 	_ghost_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_ghost_overlay)
 
-
 func _queue_rebuild() -> void:
 	if _rebuild_pending:
 		return
 	_rebuild_pending = true
 	call_deferred("_rebuild_world")
-
 
 func _rebuild_world() -> void:
 	_rebuild_pending = false
@@ -236,7 +219,6 @@ func _rebuild_world() -> void:
 	_update_camera()
 	_update_ghost_world()
 
-
 func _ensure_view_center() -> void:
 	if _view_center_x >= 0.0 or _data.is_empty():
 		return
@@ -248,7 +230,6 @@ func _ensure_view_center() -> void:
 	spawn_col = clampi(spawn_col, 0, width - 1)
 	_view_center_x = (float(spawn_col) + 0.5) * grid
 
-
 func _update_camera() -> void:
 	if _camera == null or not is_instance_valid(_camera) or _data.is_empty():
 		return
@@ -257,7 +238,6 @@ func _update_camera() -> void:
 	_camera.zoom = Vector2(metrics["zoom"], metrics["zoom"])
 	_camera.position = Vector2(_view_center_x, metrics["center_y"])
 	_update_cursor_marker()
-
 
 func _update_cursor_marker() -> void:
 	if _cursor_marker == null or not is_instance_valid(_cursor_marker) or _data.is_empty():
@@ -277,10 +257,8 @@ func _update_cursor_marker() -> void:
 		marker.position = Vector2(-4.0, top_y - float(trail) * grid)
 		marker.size = Vector2(8.0, bottom_y - top_y)
 
-
 func _frame_insets() -> Vector2:
 	return Vector2(FRAME_CONTENT_MARGIN * 2.0, FRAME_CONTENT_MARGIN * 2.0)
-
 
 func _preview_display_rect() -> Rect2:
 	var insets := _frame_insets()
@@ -288,7 +266,6 @@ func _preview_display_rect() -> Rect2:
 	if available.x <= 1.0 or available.y <= 1.0:
 		return Rect2(Vector2.ZERO, Vector2.ZERO)
 	return Rect2(Vector2(FRAME_CONTENT_MARGIN, FRAME_CONTENT_MARGIN), available)
-
 
 func _fit_preview_to_pane() -> void:
 	if _container == null or _viewport == null:
@@ -305,7 +282,6 @@ func _fit_preview_to_pane() -> void:
 		_viewport.size = viewport_size
 	_update_camera()
 	_update_ghost_world()
-
 
 func _view_metrics() -> Dictionary:
 	var grid := float(_data.get("grid", 40))
@@ -331,7 +307,6 @@ func _view_metrics() -> Dictionary:
 		"zoom": zoom,
 	}
 
-
 func _mouse_to_cell(local: Vector2) -> Vector2i:
 	var display := _preview_display_rect()
 	if display.size.x <= 1.0 or not display.has_point(local) or _camera == null:
@@ -353,19 +328,8 @@ func _mouse_to_cell(local: Vector2) -> Vector2i:
 		clampi(int(floor(world.y / grid)), 0, height - 1)
 	)
 
-
-func _placement_row(click_row: int) -> int:
-	var trail: int = _view_metrics()["trail"]
-	return CustomLevelStore.placement_row(_selected_type, click_row, trail)
-
-
 func _ghost_rect_screen() -> Rect2:
-	return _world_rect_to_screen(_ghost_world_rect())
-
-
-func _ghost_world_rect() -> Rect2:
-	return _aligned_ghost_world_rect()
-
+	return _world_rect_to_screen(_aligned_ghost_world_rect())
 
 func _ghost_cell_rects_screen() -> Array[Rect2]:
 	var rects: Array[Rect2] = []
@@ -380,7 +344,6 @@ func _ghost_cell_rects_screen() -> Array[Rect2]:
 			_world_rect_to_screen(Rect2(float(cell.x) * grid, float(cell.y) * grid, grid, grid))
 		)
 	return rects
-
 
 func _ghost_placement_object() -> Dictionary:
 	if _hover_column < 0 or _hover_row < 0 or _data.is_empty():
@@ -397,7 +360,6 @@ func _ghost_placement_object() -> Dictionary:
 		col = cells[0].x
 		place_row = cells[0].y
 	return {"type": _selected_type, "x": col, "y": place_row}
-
 
 func _aligned_ghost_world_rect() -> Rect2:
 	if _hover_column < 0 or _hover_row < 0 or _data.is_empty():
@@ -426,18 +388,14 @@ func _aligned_ghost_world_rect() -> Rect2:
 	var floor_y := float(surface["y"])
 	if CustomLevelStore.is_ground_standing(_selected_type):
 		rect.position.y = floor_y + WildWestTheme.CACTUS_DESERT_SINK - rect.size.y
-	elif _selected_type == "chest":
-		rect.position.y = floor_y + WildWestTheme.CHEST_FOOT_SINK - rect.size.y
-	elif _selected_type in ["spring", "checkpoint", "goal", "star", "bandit", "bounty_bandit", "bull", "ninja"]:
+	elif _selected_type == "star":
 		rect.position.y = floor_y - rect.size.y
 	return rect
-
 
 func _clear_ghost_root() -> void:
 	if _ghost_root != null and is_instance_valid(_ghost_root):
 		_ghost_root.queue_free()
 	_ghost_root = null
-
 
 func _update_ghost_world() -> void:
 	_clear_ghost_root()
@@ -466,7 +424,8 @@ func _update_ghost_world() -> void:
 	])
 	_ghost_root.add_child(fill)
 
-	var icon_path := _icon_path_for_type(_selected_type)
+	var style := CustomLevelStore.normalize_style(_data.get("style", "desert")) if not _data.is_empty() else "desert"
+	var icon_path := LevelStyle.stamp_icon_path(_selected_type, style)
 	if not icon_path.is_empty() and ResourceLoader.exists(icon_path):
 		var texture := load(icon_path) as Texture2D
 		if texture != null:
@@ -491,7 +450,6 @@ func _update_ghost_world() -> void:
 		var cell_rect := Rect2(float(cell.x) * grid, float(cell.y) * grid, grid, grid)
 		_ghost_root.add_child(_make_world_outline(cell_rect))
 
-
 func _make_world_outline(world_rect: Rect2) -> Node2D:
 	var root := Node2D.new()
 	root.position = world_rect.position
@@ -512,7 +470,6 @@ func _make_world_outline(world_rect: Rect2) -> Node2D:
 		root.add_child(line)
 	return root
 
-
 func _world_rect_to_screen(world_rect: Rect2) -> Rect2:
 	if world_rect.size.x <= 0.0 or world_rect.size.y <= 0.0:
 		return Rect2()
@@ -531,12 +488,6 @@ func _world_rect_to_screen(world_rect: Rect2) -> Rect2:
 		world_rect.size.y * zoom * screen_scale.y
 	)
 	return Rect2(top_left, screen_size)
-
-
-func _icon_path_for_type(type_name: String) -> String:
-	var style := CustomLevelStore.normalize_style(_data.get("style", "desert")) if not _data.is_empty() else "desert"
-	return LevelStyle.stamp_icon_path(type_name, style)
-
 
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion or event is InputEventMouseButton:
@@ -559,7 +510,3 @@ func _gui_input(event: InputEvent) -> void:
 				remove_requested.emit(cell.x, cell.y)
 				accept_event()
 
-
-func _window_start(width: int, window: int) -> int:
-	var focus := _hover_column if _hover_column >= 0 else mini(4, width - 1)
-	return clampi(focus - window / 2, 0, maxi(width - window, 0))

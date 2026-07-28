@@ -5,8 +5,6 @@ extends RefCounted
 
 const DESERT := "desert"
 const CAVE := "cave"
-const STYLES: PackedStringArray = [DESERT, CAVE]
-
 
 static func normalize(value: Variant) -> String:
 	var text := str(value).strip_edges().to_lower()
@@ -14,20 +12,13 @@ static func normalize(value: Variant) -> String:
 		return CAVE
 	return DESERT
 
-
 static func is_cave(value: Variant) -> bool:
 	return normalize(value) == CAVE
-
-
-static func display_name(style: String) -> String:
-	return "Cave" if normalize(style) == CAVE else "Desert"
-
 
 static func from_level(level: Node) -> String:
 	if level != null and level.has_meta("level_style"):
 		return normalize(level.get_meta("level_style"))
 	return DESERT
-
 
 static func stamp_icon_path(type_name: String, style: String = DESERT) -> String:
 	var cave := is_cave(style)
@@ -89,7 +80,6 @@ static func stamp_icon_path(type_name: String, style: String = DESERT) -> String
 		_:
 			return ""
 
-
 static func stamp_label(type_name: String, style: String = DESERT) -> String:
 	var cave := is_cave(style)
 	match type_name:
@@ -147,7 +137,6 @@ static func stamp_label(type_name: String, style: String = DESERT) -> String:
 			return "Erase"
 		_:
 			return type_name.capitalize()
-
 
 static func tool_categories(style: String = DESERT) -> Array:
 	var cave := is_cave(style)
@@ -225,18 +214,14 @@ static func tool_categories(style: String = DESERT) -> Array:
 		},
 	]
 
-
 static func _tool(type_name: String, style: String) -> Array:
 	return [type_name, stamp_label(type_name, style), stamp_icon_path(type_name, style)]
-
 
 static func sky_path(style: String) -> String:
 	return "res://assets/world/cave_sky.png" if is_cave(style) else "res://assets/world/sky_handdrawn.png"
 
-
 static func ceiling_path(style: String) -> String:
 	return "res://assets/world/cave_ceiling_tile.png" if is_cave(style) else ""
-
 
 static func floor_path(style: String) -> String:
 	return (
@@ -245,7 +230,6 @@ static func floor_path(style: String) -> String:
 		else "res://assets/world/trail_desert_tile.png"
 	)
 
-
 static func dirt_path(style: String) -> String:
 	return (
 		"res://assets/world/cave_dirt_tile.png"
@@ -253,14 +237,11 @@ static func dirt_path(style: String) -> String:
 		else "res://assets/world/trail_dirt_tile.png"
 	)
 
-
 static func plank_path(style: String) -> String:
 	return "res://assets/world/cave_plank.png" if is_cave(style) else "res://assets/world/wood_plank.png"
 
-
 static func pit_path(style: String) -> String:
 	return "res://assets/world/cave_pit.png" if is_cave(style) else "res://assets/world/pit.png"
-
 
 static func sky_color(style: String) -> Color:
 	if is_cave(style):

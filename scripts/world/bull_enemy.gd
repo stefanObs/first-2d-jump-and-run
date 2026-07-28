@@ -193,9 +193,6 @@ func _integrate_gravity(next: Vector2, delta: float) -> Vector2:
 	return next
 
 
-func _apply_gravity(delta: float) -> void:
-	global_position = _integrate_gravity(global_position, delta)
-
 
 func _begin_fallen() -> void:
 	if _fallen:

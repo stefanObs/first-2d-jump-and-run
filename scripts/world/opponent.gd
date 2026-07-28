@@ -129,10 +129,6 @@ func _make_sprite_frames() -> SpriteFrames:
 	return frames
 
 
-func _make_walk_frames() -> SpriteFrames:
-	## Kept for callers/tests that still expect the old helper name.
-	return _make_sprite_frames()
-
 
 func _set_move_animation(moving: bool) -> void:
 	if _sprite == null or _tied or _shooting:

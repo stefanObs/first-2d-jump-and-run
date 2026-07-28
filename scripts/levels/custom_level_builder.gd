@@ -52,20 +52,10 @@ static func build(level: LevelController, data: Dictionary, preview: bool = fals
 		counters[type_name] = index + 1
 		var position := CustomLevelStore.object_world_position(object, grid, trail)
 		match type_name:
-			"platform":
+			"platform", "ladder_ledge":
 				_add_block(
 					level,
-					"Platform%d" % index,
-					position,
-					Vector2(grid * 2.0, 24),
-					Color(0.55, 0.32, 0.14),
-					false,
-					true
-				)
-			"ladder_ledge":
-				_add_block(
-					level,
-					"LadderLedge%d" % index,
+					("Platform%d" if type_name == "platform" else "LadderLedge%d") % index,
 					position,
 					Vector2(grid * 2.0, 24),
 					Color(0.55, 0.32, 0.14),

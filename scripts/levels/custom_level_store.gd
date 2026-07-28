@@ -35,10 +35,8 @@ const WIDTH_STEP := 12
 const PIT_PIXEL_SIZE := Vector2(128.0, 64.0)
 const GRID_SIZE := 40.0
 
-
 static func trail_row(height: int) -> int:
 	return maxi(height - 1, 0)
-
 
 const GROUND_STANDING_TYPES: PackedStringArray = [
 	"cactus", "checkpoint", "spring", "bandit", "bounty_bandit", "bull", "ninja",
@@ -49,18 +47,14 @@ const STYLE_DESERT := "desert"
 const STYLE_CAVE := "cave"
 const LADDER_HEIGHT_CELLS := 3
 
-
 static func is_ground_standing(type_name: String) -> bool:
 	return type_name in GROUND_STANDING_TYPES
-
 
 static func is_ceiling_hanging(type_name: String) -> bool:
 	return type_name in CEILING_HANGING_TYPES
 
-
 static func normalize_style(value: Variant) -> String:
 	return LevelStyle.normalize(value)
-
 
 static func placement_row(type_name: String, click_y: int, trail: int) -> int:
 	if is_ceiling_hanging(type_name):
@@ -68,7 +62,6 @@ static func placement_row(type_name: String, click_y: int, trail: int) -> int:
 	if is_ground_standing(type_name) and click_y >= trail - 1:
 		return maxi(trail - 1, 0)
 	return clampi(click_y, 0, trail)
-
 
 static func stamp_footprint(type_name: String) -> Vector2:
 	match type_name:
@@ -80,7 +73,6 @@ static func stamp_footprint(type_name: String) -> Vector2:
 			return Vector2(1.0, float(LADDER_HEIGHT_CELLS))
 		_:
 			return Vector2(1.0, 1.0)
-
 
 static func stamp_world_size(type_name: String, style: String = STYLE_DESERT) -> Vector2:
 	var resolved := normalize_style(style)
@@ -118,7 +110,6 @@ static func stamp_world_size(type_name: String, style: String = STYLE_DESERT) ->
 		_:
 			return Vector2(GRID_SIZE, GRID_SIZE)
 
-
 static func _mode_item_icon_path(type_name: String) -> String:
 	match type_name:
 		"wings":
@@ -132,7 +123,6 @@ static func _mode_item_icon_path(type_name: String) -> String:
 		_:
 			return ""
 
-
 static func _texture_pixel_size(path: String, scale: float = 1.0) -> Vector2:
 	if path.is_empty() or not ResourceLoader.exists(path):
 		return Vector2(GRID_SIZE, GRID_SIZE)
@@ -140,7 +130,6 @@ static func _texture_pixel_size(path: String, scale: float = 1.0) -> Vector2:
 	if texture == null:
 		return Vector2(GRID_SIZE, GRID_SIZE)
 	return texture.get_size() * scale
-
 
 static func _bull_stamp_world_size(style: String = STYLE_DESERT) -> Vector2:
 	const TARGET_HEIGHT := 92.0
@@ -151,7 +140,6 @@ static func _bull_stamp_world_size(style: String = STYLE_DESERT) -> Vector2:
 	var tex_size := texture.get_size()
 	var scale := TARGET_HEIGHT / maxf(tex_size.y, 1.0)
 	return tex_size * scale
-
 
 static func stamp_hover_cells(
 	type_name: String, hover_col: int, hover_row: int, trail: int, width: int
@@ -182,44 +170,6 @@ static func stamp_hover_cells(
 				continue
 			cells.append(Vector2i(start_col + dx, row))
 	return cells
-
-
-static func stamp_world_rect(
-	type_name: String, hover_col: int, hover_row: int, trail: int, width: int, grid: float = GRID_SIZE
-) -> Rect2:
-	if type_name in ["erase", "ground", "canyon"] or hover_col < 0 or hover_row < 0:
-		return Rect2()
-	if type_name == "pit":
-		if hover_row != trail:
-			return Rect2()
-		var center := pit_world_position({"type": "pit", "x": hover_col, "y": trail}, grid, trail)
-		var size := PIT_PIXEL_SIZE
-		return Rect2(center - size * 0.5, size)
-	var cells := stamp_hover_cells(type_name, hover_col, hover_row, trail, width)
-	if cells.is_empty():
-		return Rect2()
-	var min_col := cells[0].x
-	var max_col := cells[0].x
-	var min_row := cells[0].y
-	var max_row := cells[0].y
-	for cell in cells:
-		min_col = mini(min_col, cell.x)
-		max_col = maxi(max_col, cell.x)
-		min_row = mini(min_row, cell.y)
-		max_row = maxi(max_row, cell.y)
-	var world_size := stamp_world_size(type_name)
-	var world_left := float(min_col) * grid
-	var world_top := float(min_row) * grid
-	if type_name == "platform":
-		world_left = float(cells[0].x) * grid
-		return Rect2(world_left, world_top, world_size.x, world_size.y)
-	return Rect2(
-		world_left,
-		world_top,
-		float(max_col - min_col + 1) * grid,
-		float(max_row - min_row + 1) * grid
-	)
-
 
 static func stamp_visual_world_rect(
 	type_name: String,
@@ -257,20 +207,17 @@ static func stamp_visual_world_rect(
 		return Rect2(anchor.x - size.x * 0.5, anchor.y - size.y * 0.5, size.x, size.y)
 	return Rect2(anchor.x - size.x * 0.5, anchor.y - size.y, size.x, size.y)
 
-
 static func pit_world_position(object: Dictionary, grid: float, trail: int) -> Vector2:
 	var cell_x := float(object.get("x", 0))
 	var center_x := (cell_x + 0.5) * grid
 	var surface_y := float(trail) * grid
 	return Vector2(center_x, surface_y)
 
-
 static func pit_column_span(object: Dictionary, grid: float = GRID_SIZE) -> Vector2i:
 	var center_x := (float(object.get("x", 0)) + 0.5) * grid
 	var left := center_x - PIT_PIXEL_SIZE.x * 0.5
 	var right := center_x + PIT_PIXEL_SIZE.x * 0.5
 	return Vector2i(int(floor(left / grid)), int(floor((right - 0.001) / grid)))
-
 
 static func pit_fits_on_dirt(objects: Array, center_x: int, trail: int) -> bool:
 	var probe := {"type": "pit", "x": center_x, "y": trail}
@@ -279,7 +226,6 @@ static func pit_fits_on_dirt(objects: Array, center_x: int, trail: int) -> bool:
 		if not _has_ground_at(objects, col, trail):
 			return false
 	return true
-
 
 static func _has_ground_at(objects: Array, x: int, y: int) -> bool:
 	for value in objects:
@@ -290,23 +236,6 @@ static func _has_ground_at(objects: Array, x: int, y: int) -> bool:
 			if str(object.get("type", "")) == "ground":
 				return true
 	return false
-
-
-static func pit_blocked_columns(data: Dictionary, trail: int) -> Dictionary:
-	var blocked := {}
-	for value in data.get("objects", []):
-		if not (value is Dictionary):
-			continue
-		var object := value as Dictionary
-		if str(object.get("type", "")) != "pit":
-			continue
-		if int(object.get("y", -1)) != trail:
-			continue
-		var span := pit_column_span(object)
-		for col in range(span.x, span.y + 1):
-			blocked[col] = true
-	return blocked
-
 
 ## Trail columns whose crust the cowboy actually drops through — the ones whose
 ## cell centre sits inside the painted pit mouth. The dirt bank stays solid on
@@ -331,7 +260,6 @@ static func pit_hole_columns(data: Dictionary, trail: int, grid: float = GRID_SI
 				hole[col] = true
 	return hole
 
-
 static func object_world_position(object: Dictionary, grid: float, trail: int) -> Vector2:
 	var type_name := str(object.get("type", ""))
 	var cell_x := float(object.get("x", 0))
@@ -344,7 +272,6 @@ static func object_world_position(object: Dictionary, grid: float, trail: int) -
 	if type_name == "carrion" or type_name == "bat":
 		return Vector2(world_x, (cell_y + 0.5) * grid)
 	return Vector2(world_x, cell_y * grid)
-
 
 static func default_level(slot_index: int) -> Dictionary:
 	var height := DEFAULT_HEIGHT
@@ -374,7 +301,6 @@ static func default_level(slot_index: int) -> Dictionary:
 		"objects": objects,
 	}
 
-
 static func resize_width(source: Dictionary, new_width: int, slot_index: int = -1) -> Dictionary:
 	var slot := slot_index if slot_index >= 0 else int(source.get("slot", 0))
 	var old_width := int(source.get("width", DEFAULT_WIDTH))
@@ -403,7 +329,6 @@ static func resize_width(source: Dictionary, new_width: int, slot_index: int = -
 		]
 	return sanitize(result, slot)
 
-
 static func save(slot_index: int, data: Dictionary) -> bool:
 	var path := SavePaths.custom_level_path(slot_index)
 	var file := FileAccess.open(path, FileAccess.WRITE)
@@ -412,7 +337,6 @@ static func save(slot_index: int, data: Dictionary) -> bool:
 	var cleaned := sanitize(data, slot_index)
 	file.store_string(JSON.stringify(cleaned, "\t"))
 	return true
-
 
 static func load_level(slot_index: int) -> Dictionary:
 	var path := SavePaths.custom_level_path(slot_index)
@@ -436,10 +360,8 @@ static func load_level(slot_index: int) -> Dictionary:
 		raw = migrate_v3_to_v4(raw)
 	return sanitize(raw, slot_index)
 
-
 static func exists(slot_index: int) -> bool:
 	return FileAccess.file_exists(SavePaths.custom_level_path(slot_index))
-
 
 static func existing_custom_slots() -> Array[int]:
 	var slots: Array[int] = []
@@ -448,14 +370,12 @@ static func existing_custom_slots() -> Array[int]:
 			slots.append(slot)
 	return slots
 
-
 static func free_extra_slots() -> Array[int]:
 	var slots: Array[int] = []
 	for slot in range(EXTRA_SLOT_START, SLOT_COUNT):
 		if not exists(slot):
 			slots.append(slot)
 	return slots
-
 
 static func export_share_pack(path: String, slots: Array = []) -> bool:
 	var target_slots: Array[int] = []
@@ -472,7 +392,6 @@ static func export_share_pack(path: String, slots: Array = []) -> bool:
 	for slot in target_slots:
 		trails.append(sanitize(load_level(slot), slot))
 	return write_share_pack(path, trails)
-
 
 static func write_share_pack(path: String, trail_docs: Array) -> bool:
 	var trails: Array = []
@@ -495,7 +414,6 @@ static func write_share_pack(path: String, trail_docs: Array) -> bool:
 		return false
 	file.store_string(JSON.stringify(pack, "\t"))
 	return true
-
 
 static func import_share_pack(path: String) -> Dictionary:
 	var result := {
@@ -555,7 +473,6 @@ static func import_share_pack(path: String) -> Dictionary:
 	result["errors"] = errors
 	return result
 
-
 static func read_share_pack(path: String) -> Dictionary:
 	var result := {
 		"ok": false,
@@ -597,7 +514,6 @@ static func read_share_pack(path: String) -> Dictionary:
 	result["ok"] = true
 	return result
 
-
 static func merge_imported_trail(
 	current: Dictionary, imported: Dictionary, slot_index: int
 ) -> Dictionary:
@@ -614,25 +530,13 @@ static func merge_imported_trail(
 	merged["slot"] = slot_index
 	return merged
 
-
 static func erase(slot_index: int) -> void:
 	var path := SavePaths.custom_level_path(slot_index)
 	if FileAccess.file_exists(path):
 		DirAccess.remove_absolute(path)
 
-
 static func override_slot_for(level_number: int) -> int:
 	return BUILTIN_SLOT_START + clampi(level_number, 1, BUILTIN_COUNT) - 1
-
-
-static func create_extra(insert_position: int) -> int:
-	var data := new_extra_draft(insert_position)
-	if data.is_empty():
-		return -1
-	var slot := int(data["slot"])
-	save(slot, data)
-	return slot
-
 
 static func new_extra_draft(insert_position: int) -> Dictionary:
 	for slot in range(EXTRA_SLOT_START, SLOT_COUNT):
@@ -644,7 +548,6 @@ static func new_extra_draft(insert_position: int) -> Dictionary:
 		data["title"] = "Extra Trail"
 		return data
 	return {}
-
 
 static func campaign_entries() -> Array[Dictionary]:
 	var extras_by_position: Dictionary = {}
@@ -687,7 +590,6 @@ static func campaign_entries() -> Array[Dictionary]:
 	for extra_entry in extras_by_position.get(BUILTIN_COUNT + 1, []):
 		result.append(extra_entry)
 	return result
-
 
 ## Collapse the old bottom three stamp rows into one trail row.
 ## Old y=H-1 (bottom / 3rd of the lower trio) defined dirt vs canyon underside;
@@ -736,7 +638,6 @@ static func migrate_v3_to_v4(source: Dictionary) -> Dictionary:
 	result["objects"] = objects
 	result["version"] = VERSION
 	return result
-
 
 static func import_builtin(level_number: int) -> Dictionary:
 	var number := clampi(level_number, 1, BUILTIN_COUNT)
@@ -833,7 +734,6 @@ static func import_builtin(level_number: int) -> Dictionary:
 	level.free()
 	return result
 
-
 static func _import_type_for(node: Node) -> String:
 	if node is Star:
 		return "star"
@@ -862,7 +762,6 @@ static func _import_type_for(node: Node) -> String:
 		return "canyon" if maxf(absf(body.scale.x), absf(body.scale.y)) > 1.35 else "cactus"
 	return ""
 
-
 static func append_ladder_branch(
 	objects: Array[Dictionary], trail: int, start_x: int = 28
 ) -> void:
@@ -874,7 +773,6 @@ static func append_ladder_branch(
 		_append_unique(objects, {"type": "ladder_ledge", "x": x, "y": upper})
 	_append_unique(objects, {"type": "star", "x": start_x + 6, "y": maxi(upper - 1, 0)})
 
-
 static func _append_unique(objects: Array[Dictionary], object: Dictionary) -> void:
 	for existing in objects:
 		if (
@@ -884,7 +782,6 @@ static func _append_unique(objects: Array[Dictionary], object: Dictionary) -> vo
 		):
 			return
 	objects.append(object)
-
 
 static func sanitize(source: Dictionary, slot_index: int) -> Dictionary:
 	var result := default_level(slot_index)
@@ -920,7 +817,6 @@ static func sanitize(source: Dictionary, slot_index: int) -> Dictionary:
 	if spawn is Array and spawn.size() >= 2:
 		result["spawn"] = [int(spawn[0]), clampi(int(spawn[1]), 0, trail)]
 	return result
-
 
 static func _valid_object(object: Dictionary, trail: int) -> bool:
 	var valid_types := [

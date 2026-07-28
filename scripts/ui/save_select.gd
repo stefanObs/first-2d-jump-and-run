@@ -340,9 +340,6 @@ func nudge_element_reference_zoom(delta: float) -> void:
 	_apply_sheet_zoom(_sheet_zoom + delta)
 
 
-func set_element_reference_zoom(zoom: float) -> void:
-	_apply_sheet_zoom(zoom)
-
 
 func _element_reference_open() -> bool:
 	return _element_ref_overlay != null and _element_ref_overlay.visible

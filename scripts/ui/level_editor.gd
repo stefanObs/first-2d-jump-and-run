@@ -837,9 +837,6 @@ func _set_hover_cell(column: int, row: int) -> void:
 		_sync_preview_to_hover()
 
 
-func _set_hover_column(column: int) -> void:
-	_set_hover_cell(column, _hover_row if _hover_row >= 0 else _trail_y())
-
 
 func _on_preview_hover_column(column: int) -> void:
 	_hover_column = column

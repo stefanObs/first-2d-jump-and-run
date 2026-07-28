@@ -28,9 +28,6 @@ func _process(delta: float) -> void:
 	rotation = sin(_phase * 0.5) * 0.12
 
 
-func is_taken() -> bool:
-	return _taken
-
 
 func _on_body_entered(body: Node2D) -> void:
 	if _taken or not (body is Player):

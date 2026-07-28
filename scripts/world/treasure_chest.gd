@@ -39,9 +39,6 @@ func is_opened() -> bool:
 	return _opened
 
 
-func rolled_loot() -> TreasureChestLoot.Type:
-	return _rolled_loot
-
 
 func ground_contact_y() -> float:
 	return global_position.y + _foot_local_y()

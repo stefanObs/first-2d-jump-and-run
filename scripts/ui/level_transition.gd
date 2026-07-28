@@ -209,9 +209,6 @@ func play_arrival(
 	_run_arrival()
 
 
-func get_spawn_screen_position() -> Vector2:
-	return _spawn_screen_pos
-
 
 func leaves_horse_at_spawn() -> bool:
 	## Arrival ends with the empty horse still at the level start, not ridden away.
@@ -319,12 +316,6 @@ func get_ride_center_y() -> float:
 	return _ride_center_y()
 
 
-func get_ride_visual_scale() -> float:
-	return _ride_visual_scale()
-
-
-func uses_live_level_saloon() -> bool:
-	return _uses_live_level_saloon
 
 
 func _apply_ride_scales() -> void:

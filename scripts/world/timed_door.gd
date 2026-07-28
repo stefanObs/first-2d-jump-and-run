@@ -168,6 +168,3 @@ func _update_warning_blink() -> void:
 		_gate_art.modulate.a = pulse
 	_refresh_status_visual(true, pulse)
 
-
-func is_open() -> bool:
-	return _open
