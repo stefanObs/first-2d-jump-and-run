@@ -11,8 +11,6 @@ enum State { DORMANT, APPEAR, CHASE, ATTACK, THROW, TIED }
 const STAND_SCALE := 1.15
 ## Tied art is the same 64×80 frame as idle — keep standing size so he does not shrink.
 const STAND_FOOT_OFFSET := Vector2(0, -40)
-const STOMP_BOUNCE := -420.0
-const STOMP_MIN_FALL_SPEED := 80.0
 const SPAWN_AHEAD := 480.0
 const TRIGGER_RANGE := 1040.0
 const CHASE_SPEED := 170.0
@@ -467,34 +465,7 @@ func _update_nearby_hint() -> void:
 
 
 func _find_player() -> Player:
-	var tree := get_tree()
-	if tree == null:
-		return null
-	for node in tree.get_nodes_in_group("player"):
-		if node is Player:
-			return node as Player
-	var root := tree.current_scene
-	if root == null:
-		return null
-	var player_node := root.find_child("Player", true, false)
-	if player_node is Player:
-		return player_node as Player
-	return null
-
-
-func _is_head_stomp(player: Player) -> bool:
-	var chest_y := global_position.y - 24.0
-	if player.global_position.y > chest_y:
-		return false
-	if player.velocity.y < STOMP_MIN_FALL_SPEED:
-		return false
-	return true
-
-
-func _bounce_after_stomp(player: Player) -> void:
-	player.velocity.y = STOMP_BOUNCE
-	if absf(player.velocity.x) < 40.0:
-		player.velocity.x = 0.0
+	return PlayerLookup.find_in_tree(self)
 
 
 func _resolve_player_overlap() -> void:
@@ -509,9 +480,9 @@ func _resolve_player_overlap() -> void:
 func _handle_player_contact(player: Player) -> bool:
 	if _tied or _state == State.DORMANT:
 		return false
-	if _is_head_stomp(player):
+	if EnemyContact.is_head_stomp(self, player, 24.0):
 		tie_up()
-		_bounce_after_stomp(player)
+		EnemyContact.bounce_after_stomp(player)
 		return true
 	if player.is_invulnerable():
 		return false

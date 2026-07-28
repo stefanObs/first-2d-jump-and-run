@@ -74,23 +74,11 @@ func _player_reached_camp() -> bool:
 
 
 func _find_player() -> Node2D:
-	var tree := get_tree()
-	if tree == null:
-		return null
-	for node in tree.get_nodes_in_group("player"):
-		if node is Node2D:
-			return node as Node2D
-	return null
+	return PlayerLookup.find_in_tree(self)
 
 
 func _player_nearby(radius: float) -> bool:
-	var tree := get_tree()
-	if tree == null:
-		return false
-	for node in tree.get_nodes_in_group("player"):
-		if node is Node2D and global_position.distance_to((node as Node2D).global_position) <= radius:
-			return true
-	return false
+	return PlayerLookup.any_in_radius(self, radius)
 
 
 func activate() -> void:

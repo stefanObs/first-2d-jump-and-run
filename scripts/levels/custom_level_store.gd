@@ -103,22 +103,9 @@ static func stamp_world_size(type_name: String, style: String = STYLE_DESERT) ->
 		"ladder":
 			return Vector2(48.0, float(LADDER_HEIGHT_CELLS) * GRID_SIZE)
 		"wings", "boots", "speed", "shield":
-			return _texture_pixel_size(_mode_item_icon_path(type_name))
+			return _texture_pixel_size(LevelStyle.stamp_icon_path(type_name))
 		_:
 			return Vector2(GRID_SIZE, GRID_SIZE)
-
-static func _mode_item_icon_path(type_name: String) -> String:
-	match type_name:
-		"wings":
-			return "res://assets/world/modes/wings.png"
-		"boots":
-			return "res://assets/world/modes/magic_boots.png"
-		"speed":
-			return "res://assets/world/modes/speed_badge.png"
-		"shield":
-			return "res://assets/world/modes/bubble_shield.png"
-		_:
-			return ""
 
 static func _texture_pixel_size(path: String, scale: float = 1.0) -> Vector2:
 	if path.is_empty() or not ResourceLoader.exists(path):

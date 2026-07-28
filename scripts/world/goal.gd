@@ -106,25 +106,7 @@ func _update_approach_arrow() -> void:
 
 
 func _find_player() -> Player:
-	var tree := get_tree()
-	if tree == null:
-		return null
-	var best: Player = null
-	var best_dist := INF
-	for node in tree.get_nodes_in_group("player"):
-		if node is Player:
-			var candidate := node as Player
-			var dist := global_position.distance_squared_to(candidate.global_position)
-			if dist < best_dist:
-				best_dist = dist
-				best = candidate
-	if best != null:
-		return best
-	var root := tree.current_scene
-	if root == null:
-		return null
-	var found := root.find_child("Player", true, false)
-	return found as Player if found is Player else null
+	return PlayerLookup.find_in_tree(self)
 
 
 func _player_reached_saloon() -> bool:

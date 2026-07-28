@@ -117,3 +117,17 @@ static func mode_toast(mode: Mode) -> String:
 			return "Safe bubble! Bounce off cacti!"
 		_:
 			return ""
+
+
+static func mode_from_stamp(type_name: String) -> Mode:
+	match type_name:
+		"boots":
+			return Mode.MAGIC_BOOTS
+		"speed":
+			return Mode.SPEED_STAR
+		"shield":
+			return Mode.BUBBLE_SHIELD
+		"wings":
+			return Mode.WINGS
+		_:
+			return Mode.NONE

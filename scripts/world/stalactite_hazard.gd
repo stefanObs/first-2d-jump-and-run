@@ -169,10 +169,4 @@ func _on_body_entered(body: Node2D) -> void:
 
 
 func _find_player() -> Player:
-	var tree := get_tree()
-	if tree == null:
-		return null
-	for node in tree.get_nodes_in_group("player"):
-		if node is Player:
-			return node as Player
-	return null
+	return PlayerLookup.find_in_tree(self)

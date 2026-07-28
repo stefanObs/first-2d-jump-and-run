@@ -17,8 +17,6 @@ const LIZARD_DOWN_TEX := preload("res://assets/world/cave_lizard_down.png")
 const STAND_TARGET_HEIGHT := 92.0
 ## Lying pose uses a shorter texture; keep body mass similar to the standing bull.
 const DOWN_TARGET_HEIGHT := 72.0
-const STOMP_BOUNCE := -420.0
-const STOMP_MIN_FALL_SPEED := 80.0
 const CHARGE_SPEED := 150.0
 const CHARGE_RANGE := 560.0
 const CHARGE_Y_BAND := 180.0
@@ -442,34 +440,7 @@ func _update_nearby_hint() -> void:
 
 
 func _find_nearby_player(radius: float) -> Player:
-	var tree := get_tree()
-	if tree == null:
-		return null
-	for node in tree.get_nodes_in_group("player"):
-		if node is Player and global_position.distance_to((node as Node2D).global_position) <= radius:
-			return node as Player
-	var root := tree.current_scene
-	if root == null:
-		return null
-	var player_node := root.find_child("Player", true, false)
-	if player_node is Player and global_position.distance_to((player_node as Node2D).global_position) <= radius:
-		return player_node as Player
-	return null
-
-
-func _is_head_stomp(player: Player) -> bool:
-	var chest_y := global_position.y - 28.0
-	if player.global_position.y > chest_y:
-		return false
-	if player.velocity.y < STOMP_MIN_FALL_SPEED:
-		return false
-	return true
-
-
-func _bounce_after_stomp(player: Player) -> void:
-	player.velocity.y = STOMP_BOUNCE
-	if absf(player.velocity.x) < 40.0:
-		player.velocity.x = 0.0
+	return PlayerLookup.find_in_tree(self, radius)
 
 
 func _resolve_player_overlap() -> void:
@@ -484,9 +455,9 @@ func _resolve_player_overlap() -> void:
 func _handle_player_contact(player: Player) -> bool:
 	if _tied:
 		return false
-	if _is_head_stomp(player):
+	if EnemyContact.is_head_stomp(self, player, 28.0):
 		tie_up()
-		_bounce_after_stomp(player)
+		EnemyContact.bounce_after_stomp(player)
 		return true
 	if player.is_invulnerable():
 		return false

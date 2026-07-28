@@ -106,18 +106,7 @@ func _ensure_collision() -> void:
 
 
 func _find_nearby_player(radius: float) -> Player:
-	var tree := get_tree()
-	if tree == null:
-		return null
-	for node in tree.get_nodes_in_group("player"):
-		if node is Player and global_position.distance_to((node as Player).global_position) <= radius:
-			return node as Player
-	var root := tree.current_scene
-	if root != null:
-		var candidate := root.find_child("Player", true, false)
-		if candidate is Player and global_position.distance_to((candidate as Player).global_position) <= radius:
-			return candidate as Player
-	return null
+	return PlayerLookup.find_in_tree(self, radius)
 
 
 func _face_player(player: Player) -> void:

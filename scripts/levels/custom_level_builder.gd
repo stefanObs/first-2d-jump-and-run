@@ -48,114 +48,13 @@ static func build(level: LevelController, data: Dictionary, preview: bool = fals
 		var type_name := str(object.get("type", ""))
 		if type_name == "ground" or type_name == "canyon":
 			continue
+		if type_name == "goal" and has_goal:
+			continue
 		var index := int(counters.get(type_name, 0))
 		counters[type_name] = index + 1
 		var position := CustomLevelStore.object_world_position(object, grid, trail)
-		match type_name:
-			"platform", "ladder_ledge":
-				_add_block(
-					level,
-					("Platform%d" if type_name == "platform" else "LadderLedge%d") % index,
-					position,
-					Vector2(grid * 2.0, 24),
-					Color(0.55, 0.32, 0.14),
-					false,
-					true
-				)
-			"ladder":
-				var ladder := Ladder.new()
-				ladder.name = "Ladder%d" % index
-				ladder.height_cells = CustomLevelStore.LADDER_HEIGHT_CELLS
-				# Anchor at standing feet (bottom of climb).
-				ladder.position = position
-				level.add_child(ladder)
-			"star":
-				_add_scene(level, STAR, "CustomStar%d" % index, position)
-			"chest":
-				_add_scene(level, CHEST, "CustomChest%d" % index, position)
-			"cactus":
-				var cactus := _add_scene(level, HAZARD, "Cactus%d" % index, position) as Hazard
-				if cactus != null:
-					cactus.apply_level_style(style)
-			"pit":
-				var pit := _add_scene(
-					level,
-					HAZARD,
-					"Pit%d" % index,
-					CustomLevelStore.pit_world_position(object, grid, trail)
-				) as Hazard
-				if pit != null:
-					pit.set_meta("fixed_pit", true)
-					pit.scale = Vector2.ONE
-					pit.apply_level_style(style)
-					pit._configure_visual()
-			"checkpoint":
-				var camp := _add_scene(
-					level,
-					CHECKPOINT,
-					"Checkpoint" if index == 0 else "Checkpoint%d" % index,
-					position
-				) as Checkpoint
-				if camp != null:
-					camp.apply_level_style(style)
-			"spring":
-				_add_scene(level, SPRING, "Spring%d" % index, position)
-			"bandit":
-				var bandit := _add_scene(level, BANDIT, "Opponent%d" % index, position) as Opponent
-				if bandit != null:
-					bandit.apply_level_style(style)
-			"bounty_bandit":
-				var bounty := BANDIT.instantiate() as Opponent
-				if bounty != null:
-					bounty.bounty_bandit = true
-					bounty.name = "Opponent%d" % index
-					bounty.position = position
-					level.add_child(bounty)
-					bounty.apply_level_style(style)
-			"bull":
-				var bull := _add_scene(level, BULL, "Bull%d" % index, position) as BullEnemy
-				if bull != null:
-					bull.apply_level_style(style)
-			"ninja":
-				_add_scene(level, NINJA, "Ninja%d" % index, position)
-			"rattlesnake":
-				var snake := _add_scene(level, RATTLESNAKE, "Rattlesnake%d" % index, position) as Rattlesnake
-				if snake != null:
-					snake.apply_level_style(style)
-			"carrion":
-				_add_scene(level, CARRION, "Carrion%d" % index, position)
-			"bat":
-				var bat := BatEnemy.new()
-				bat.name = "Bat%d" % index
-				bat.position = position
-				level.add_child(bat)
-			"acid_drip":
-				var drip := AcidDrip.new()
-				drip.name = "AcidDrip%d" % index
-				drip.position = position
-				level.add_child(drip)
-			"stalactite":
-				var spike := StalactiteHazard.new()
-				spike.name = "Stalactite%d" % index
-				spike.drops = true
-				spike.position = position
-				level.add_child(spike)
-			"stalactite_static":
-				var decor := StalactiteHazard.new()
-				decor.name = "StalactiteStatic%d" % index
-				decor.drops = false
-				decor.position = position
-				level.add_child(decor)
-			"wings", "boots", "speed", "shield":
-				var mode_item := _add_scene(level, MODE_ITEM, "ModeItem%d" % index, position) as ModeItem
-				if mode_item != null:
-					mode_item.mode = _mode_for_type(type_name)
-			"goal":
-				if not has_goal:
-					var goal := _add_scene(level, GOAL, "Goal", position) as Goal
-					if goal != null:
-						goal.apply_level_style(style)
-					has_goal = true
+		if _spawn_object(level, type_name, index, position, object, grid, trail, style):
+			has_goal = true
 
 	for run_index in range(canyon_runs.size()):
 		var run: Dictionary = canyon_runs[run_index]
@@ -165,14 +64,116 @@ static func build(level: LevelController, data: Dictionary, preview: bool = fals
 		canyon.scale = Vector2(1.8, 1.8)
 
 	if not has_goal:
-		var auto_goal := _add_scene(
-			level,
-			GOAL,
-			"Goal",
-			Vector2((width - 2) * grid, float(trail) * grid)
-		) as Goal
-		if auto_goal != null:
-			auto_goal.apply_level_style(style)
+		_add_styled(level, GOAL, "Goal", Vector2((width - 2) * grid, float(trail) * grid), style)
+	_finalize_player_and_ui(level, data, spawn, preview)
+
+
+## Returns true when a goal stamp was placed.
+static func _spawn_object(
+	level: LevelController,
+	type_name: String,
+	index: int,
+	position: Vector2,
+	object: Dictionary,
+	grid: float,
+	trail: int,
+	style: String
+) -> bool:
+	match type_name:
+		"platform", "ladder_ledge":
+			_add_block(
+				level,
+				("Platform%d" if type_name == "platform" else "LadderLedge%d") % index,
+				position,
+				Vector2(grid * 2.0, 24),
+				Color(0.55, 0.32, 0.14),
+				false,
+				true
+			)
+		"ladder":
+			var ladder := Ladder.new()
+			ladder.name = "Ladder%d" % index
+			ladder.height_cells = CustomLevelStore.LADDER_HEIGHT_CELLS
+			ladder.position = position
+			level.add_child(ladder)
+		"star":
+			_add_scene(level, STAR, "CustomStar%d" % index, position)
+		"chest":
+			_add_scene(level, CHEST, "CustomChest%d" % index, position)
+		"cactus":
+			_add_styled(level, HAZARD, "Cactus%d" % index, position, style)
+		"pit":
+			var pit := _add_styled(
+				level,
+				HAZARD,
+				"Pit%d" % index,
+				CustomLevelStore.pit_world_position(object, grid, trail),
+				style
+			) as Hazard
+			if pit != null:
+				pit.set_meta("fixed_pit", true)
+				pit.scale = Vector2.ONE
+				pit._configure_visual()
+		"checkpoint":
+			_add_styled(
+				level,
+				CHECKPOINT,
+				"Checkpoint" if index == 0 else "Checkpoint%d" % index,
+				position,
+				style
+			)
+		"spring":
+			_add_scene(level, SPRING, "Spring%d" % index, position)
+		"bandit", "bounty_bandit":
+			var bandit := BANDIT.instantiate() as Opponent
+			if bandit != null:
+				bandit.bounty_bandit = type_name == "bounty_bandit"
+				bandit.name = "Opponent%d" % index
+				bandit.position = position
+				level.add_child(bandit)
+				bandit.apply_level_style(style)
+		"bull":
+			_add_styled(level, BULL, "Bull%d" % index, position, style)
+		"ninja":
+			_add_scene(level, NINJA, "Ninja%d" % index, position)
+		"rattlesnake":
+			_add_styled(level, RATTLESNAKE, "Rattlesnake%d" % index, position, style)
+		"carrion":
+			_add_scene(level, CARRION, "Carrion%d" % index, position)
+		"bat":
+			var bat := BatEnemy.new()
+			bat.name = "Bat%d" % index
+			bat.position = position
+			level.add_child(bat)
+		"acid_drip":
+			var drip := AcidDrip.new()
+			drip.name = "AcidDrip%d" % index
+			drip.position = position
+			level.add_child(drip)
+		"stalactite", "stalactite_static":
+			var spike := StalactiteHazard.new()
+			spike.name = (
+				"Stalactite%d" if type_name == "stalactite" else "StalactiteStatic%d"
+			) % index
+			spike.drops = type_name == "stalactite"
+			spike.position = position
+			level.add_child(spike)
+		"wings", "boots", "speed", "shield":
+			var mode_item := _add_scene(level, MODE_ITEM, "ModeItem%d" % index, position) as ModeItem
+			if mode_item != null:
+				mode_item.mode = ModeController.mode_from_stamp(type_name)
+		"goal":
+			_add_styled(level, GOAL, "Goal", position, style)
+			return true
+	return false
+
+
+static func _finalize_player_and_ui(
+	level: LevelController,
+	data: Dictionary,
+	spawn: Marker2D,
+	preview: bool
+) -> void:
 	var player := PLAYER.instantiate() as Player
 	player.name = "Player"
 	# Dusty Trail (campaign source 1) teaches mounted riding — keep that when
@@ -191,16 +192,17 @@ static func build(level: LevelController, data: Dictionary, preview: bool = fals
 		level.add_child(PAUSE.instantiate())
 
 
-static func _mode_for_type(type_name: String) -> ModeController.Mode:
-	match type_name:
-		"boots":
-			return ModeController.Mode.MAGIC_BOOTS
-		"speed":
-			return ModeController.Mode.SPEED_STAR
-		"shield":
-			return ModeController.Mode.BUBBLE_SHIELD
-		_:
-			return ModeController.Mode.WINGS
+static func _add_styled(
+	level: Node,
+	packed: PackedScene,
+	node_name: String,
+	position: Vector2,
+	style: String
+) -> Node:
+	var node := _add_scene(level, packed, node_name, position)
+	if node != null and node.has_method("apply_level_style"):
+		node.call("apply_level_style", style)
+	return node
 
 
 ## Merge horizontally adjacent canyon stamps into one wider gap run.

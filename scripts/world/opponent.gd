@@ -10,8 +10,6 @@ signal bounty_caught(opponent: Opponent, amount: int)
 
 const STAND_SCALE := 1.15
 const TIED_SCALE := 0.7
-const STOMP_BOUNCE := -420.0
-const STOMP_MIN_FALL_SPEED := 80.0
 ## Sprite offset so feet sit on local y=0 (desert surface when root is on the trail floor).
 ## Offset is scaled with the sprite (Godot CanvasItem), so use -half_height, not -half_height*scale.
 const STAND_FOOT_OFFSET := Vector2(0, -40)
@@ -483,36 +481,7 @@ func _update_nearby_hint() -> void:
 
 
 func _find_nearby_player(radius: float) -> Player:
-	var tree := get_tree()
-	if tree == null:
-		return null
-	for node in tree.get_nodes_in_group("player"):
-		if node is Player and global_position.distance_to((node as Node2D).global_position) <= radius:
-			return node as Player
-	var root := tree.current_scene
-	if root == null:
-		return null
-	var player_node := root.find_child("Player", true, false)
-	if player_node is Player and global_position.distance_to((player_node as Node2D).global_position) <= radius:
-		return player_node as Player
-	return null
-
-
-func _is_head_stomp(player: Player) -> bool:
-	# Stomp = contact from above while falling downward (jump onto the bandit).
-	# Side bumps, upward hits, and standing overlap without fall speed hurt instead.
-	var chest_y := global_position.y - 24.0
-	if player.global_position.y > chest_y:
-		return false
-	if player.velocity.y < STOMP_MIN_FALL_SPEED:
-		return false
-	return true
-
-
-func _bounce_after_stomp(player: Player) -> void:
-	player.velocity.y = STOMP_BOUNCE
-	if absf(player.velocity.x) < 40.0:
-		player.velocity.x = 0.0
+	return PlayerLookup.find_in_tree(self, radius)
 
 
 func _resolve_player_overlap() -> void:
@@ -531,9 +500,9 @@ func _handle_player_contact(player: Player) -> bool:
 	# Top contact ties the bandit; any other contact sends the cowboy to camp.
 	if _tied:
 		return false
-	if _is_head_stomp(player):
+	if EnemyContact.is_head_stomp(self, player, 24.0):
 		tie_up()
-		_bounce_after_stomp(player)
+		EnemyContact.bounce_after_stomp(player)
 		return true
 	if player.is_invulnerable():
 		return false
