@@ -772,6 +772,7 @@ position = Vector2(2300, 330)
 
 [node name="Rattlesnake22" parent="." instance=ExtResource("19_snake")]
 position = Vector2(4845, 330)
+as_scorpion = true
 
 
 [node name="Cactus34" parent="." instance=ExtResource("5_hazard")]

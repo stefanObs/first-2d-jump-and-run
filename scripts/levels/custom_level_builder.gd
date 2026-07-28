@@ -155,8 +155,11 @@ static func _spawn_object(
 			_add_styled(level, BULL, "Bull%d" % index, position, style)
 		"ninja":
 			_add_scene(level, NINJA, "Ninja%d" % index, position)
-		"rattlesnake":
-			_add_styled(level, RATTLESNAKE, "Rattlesnake%d" % index, position, style)
+		"rattlesnake", "scorpion":
+			var snake := _add_styled(level, RATTLESNAKE, "Rattlesnake%d" % index, position, style) as Rattlesnake
+			if snake != null and type_name == "scorpion":
+				snake.as_scorpion = true
+				snake.apply_level_style(style)
 		"carrion":
 			_add_scene(level, CARRION, "Carrion%d" % index, position)
 		"bat":

@@ -40,7 +40,7 @@ static func trail_row(height: int) -> int:
 
 const GROUND_STANDING_TYPES: PackedStringArray = [
 	"cactus", "checkpoint", "spring", "bandit", "bounty_bandit", "bull", "ninja",
-	"rattlesnake", "goal", "chest", "wings", "boots", "speed", "shield", "ladder",
+	"rattlesnake", "scorpion", "goal", "chest", "wings", "boots", "speed", "shield", "ladder",
 	"conveyor", "timed_door", "fence",
 ]
 const CEILING_HANGING_TYPES: PackedStringArray = ["acid_drip", "stalactite", "stalactite_static"]
@@ -101,7 +101,7 @@ static func stamp_world_size(type_name: String, style: String = STYLE_DESERT) ->
 			return _texture_pixel_size("res://assets/world/treasure_chest_closed.png")
 		"spring":
 			return _texture_pixel_size("res://assets/world/spring.png")
-		"cactus", "bandit", "bounty_bandit", "rattlesnake", "carrion", "checkpoint", "goal", "bat":
+		"cactus", "bandit", "bounty_bandit", "rattlesnake", "scorpion", "carrion", "checkpoint", "goal", "bat":
 			var scale := 1.15 if type_name in ["bandit", "bounty_bandit"] else 1.0
 			return _texture_pixel_size(LevelStyle.stamp_icon_path(type_name, resolved), scale)
 		"bull":
@@ -814,7 +814,7 @@ static func _import_type_for(node: Node) -> String:
 	if node is Carrion:
 		return "carrion"
 	if node is Rattlesnake:
-		return "rattlesnake"
+		return "scorpion" if (node as Rattlesnake).as_scorpion else "rattlesnake"
 	if node is MovingPlatform:
 		return "moving_cloud" if (node as MovingPlatform).visual_style == MovingPlatform.VisualStyle.CLOUD else "mover"
 	if node is DisappearingPlatform:
@@ -994,7 +994,7 @@ static func _valid_object(object: Dictionary, trail: int) -> bool:
 	var valid_types := [
 		"ground", "platform", "ladder_ledge", "star", "chest", "cactus", "canyon", "pit",
 		"checkpoint", "spring", "goal", "bandit", "bounty_bandit", "bull", "ninja",
-		"rattlesnake", "carrion", "bat", "acid_drip", "stalactite", "stalactite_static", "ladder",
+		"rattlesnake", "scorpion", "carrion", "bat", "acid_drip", "stalactite", "stalactite_static", "ladder",
 		"conveyor", "timed_door", "fence",
 		"mover", "moving_cloud", "blink_cloud", "wind",
 		"wings", "boots", "speed", "shield",

@@ -58,6 +58,10 @@ func _ready() -> void:
 		_test_rattlesnakes_clear_of_canyons
 	)
 	failures += await _run(
+		"Desert trails place scorpions among rattlesnakes",
+		_test_desert_scorpions_among_snakes
+	)
+	failures += await _run(
 		"Canyons that end higher need an approach spring",
 		_test_canyon_up_needs_spring
 	)
@@ -1826,6 +1830,64 @@ func _test_rattlesnakes_clear_of_canyons() -> Variant:
 	probe.queue_free()
 	if bad.is_empty():
 		return "Layout rules must reject a rattlesnake planted directly in front of a canyon."
+	return null
+
+
+func _test_desert_scorpions_among_snakes() -> Variant:
+	## Desert can stamp scorpions; late-trail snakes on 6/8/9/10 are converted.
+	var trail := CustomLevelStore.trail_row(8)
+	if not CustomLevelStore._valid_object({"type": "scorpion", "x": 4, "y": trail - 1}, trail):
+		return "Scorpion should be a valid workshop stamp."
+	var data := CustomLevelStore.default_level(0)
+	data["style"] = CustomLevelStore.STYLE_DESERT
+	data["objects"] = [
+		{"type": "ground", "x": 2, "y": trail},
+		{"type": "scorpion", "x": 6, "y": trail - 1},
+		{"type": "goal", "x": 10, "y": trail - 1},
+	]
+	var level := LevelController.new()
+	add_child(level)
+	CustomLevelBuilder.build(level, data)
+	await get_tree().process_frame
+	var stamped := level.find_child("Rattlesnake0", true, false) as Rattlesnake
+	var error: Variant = null
+	if stamped == null or not stamped.as_scorpion:
+		error = "Desert scorpion stamp should spawn a rattlesnake with as_scorpion."
+	elif not stamped.uses_scorpion_art():
+		error = "Desert scorpion stamp should use scorpion art."
+	level.queue_free()
+	await get_tree().process_frame
+	if error != null:
+		return error
+
+	var found := 0
+	for path in [
+		"res://scenes/levels/level_06.tscn",
+		"res://scenes/levels/level_08.tscn",
+		"res://scenes/levels/level_09.tscn",
+		"res://scenes/levels/level_10.tscn",
+	]:
+		var packed: PackedScene = load(path)
+		if packed == null:
+			return "Missing level: %s" % path
+		var scene: Node = packed.instantiate()
+		add_child(scene)
+		await get_tree().process_frame
+		var snakes := 0
+		var scorpions := 0
+		for node in scene.find_children("*", "Rattlesnake", true, false):
+			var foe := node as Rattlesnake
+			if foe.as_scorpion:
+				scorpions += 1
+			else:
+				snakes += 1
+		scene.queue_free()
+		await get_tree().process_frame
+		if scorpions < 1:
+			return "%s should place at least one desert scorpion." % path.get_file()
+		found += scorpions
+	if found < 4:
+		return "Expected scorpions on levels 6/8/9/10 (got %d)." % found
 	return null
 
 
@@ -5496,9 +5558,29 @@ func _test_workshop_stamp_catalog() -> Variant:
 	editor.queue_free()
 	if style_dropdown == null or style_dropdown.item_count < 3:
 		return "Workshop editor needs a Desert/Cave/Horse level style picker."
-	for type_name in ["bounty_bandit", "carrion", "pit", "chest", "bull", "ninja"]:
+	for type_name in ["bounty_bandit", "carrion", "pit", "chest", "bull", "ninja", "scorpion"]:
 		if type_name not in palette_types:
 			return "Workshop palette missing %s stamp." % type_name
+	if "scorpion" not in palette_types:
+		return "Desert workshop palette should offer scorpions alongside rattlesnakes."
+	var desert_enemies := LevelStyle.tool_categories(LevelStyle.DESERT)
+	var desert_enemy_types: PackedStringArray = []
+	for category in desert_enemies:
+		if str((category as Dictionary).get("id", "")) != "enemies":
+			continue
+		for tool in (category as Dictionary).get("tools", []) as Array:
+			desert_enemy_types.append(str((tool as Array)[0]))
+	if "rattlesnake" not in desert_enemy_types or "scorpion" not in desert_enemy_types:
+		return "Desert enemies should include both rattlesnake and scorpion stamps."
+	var cave_enemies := LevelStyle.tool_categories(LevelStyle.CAVE)
+	var cave_enemy_types: PackedStringArray = []
+	for category in cave_enemies:
+		if str((category as Dictionary).get("id", "")) != "enemies":
+			continue
+		for tool in (category as Dictionary).get("tools", []) as Array:
+			cave_enemy_types.append(str((tool as Array)[0]))
+	if "scorpion" in cave_enemy_types:
+		return "Cave palette should keep the remapped rattlesnake stamp instead of a duplicate scorpion tool."
 	for type_name in ["conveyor", "timed_door", "fence", "mover", "moving_cloud", "blink_cloud", "wind"]:
 		if type_name not in palette_types:
 			return "Workshop palette missing %s stamp." % type_name
@@ -5523,7 +5605,7 @@ func _test_workshop_stamp_catalog() -> Variant:
 	var trail := CustomLevelStore.trail_row(8)
 	for type_name in [
 		"bounty_bandit", "carrion", "chest", "bull", "ninja", "acid_drip", "stalactite", "bat",
-		"conveyor", "timed_door", "fence", "mover", "moving_cloud", "blink_cloud", "wind",
+		"conveyor", "timed_door", "fence", "mover", "moving_cloud", "blink_cloud", "wind", "scorpion",
 	]:
 		if not CustomLevelStore._valid_object({"type": type_name, "x": 1, "y": trail - 1}, trail):
 			return "%s should be accepted by CustomLevelStore." % type_name

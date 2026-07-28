@@ -2,6 +2,7 @@ class_name Rattlesnake
 extends Area2D
 
 ## Floor-bound desert hazard. Body stays put; only the head rises to warn, then bites.
+## Set as_scorpion for desert scorpions; cave style always uses scorpion art.
 
 signal hurt_player(player: Player)
 
@@ -9,6 +10,9 @@ const IDLE_TEXTURE := preload("res://assets/world/rattlesnake_idle.png")
 const BITE_TEXTURE := preload("res://assets/world/rattlesnake_bite.png")
 const SCORPION_IDLE := preload("res://assets/world/scorpion_idle.png")
 const SCORPION_STING := preload("res://assets/world/scorpion_sting.png")
+
+## Desert workshop/campaign can place scorpions without switching the whole trail to cave.
+@export var as_scorpion: bool = false
 
 var _sprite: Sprite2D
 var _label: Label
@@ -31,12 +35,16 @@ func apply_level_style(style: String) -> void:
 		_sprite.texture = _idle_tex()
 
 
+func uses_scorpion_art() -> bool:
+	return as_scorpion or LevelStyle.is_cave(_level_style)
+
+
 func _idle_tex() -> Texture2D:
-	return SCORPION_IDLE if LevelStyle.is_cave(_level_style) else IDLE_TEXTURE
+	return SCORPION_IDLE if uses_scorpion_art() else IDLE_TEXTURE
 
 
 func _bite_tex() -> Texture2D:
-	return SCORPION_STING if LevelStyle.is_cave(_level_style) else BITE_TEXTURE
+	return SCORPION_STING if uses_scorpion_art() else BITE_TEXTURE
 
 
 func _ready() -> void:
@@ -76,7 +84,7 @@ func _process(delta: float) -> void:
 		_shadow.modulate.a = 0.4 if _raised else 0.28
 	if _label != null and not _biting:
 		_label.visible = _raised
-		_label.text = "STING!" if LevelStyle.is_cave(_level_style) else "RATTLE!"
+		_label.text = "STING!" if uses_scorpion_art() else "RATTLE!"
 		_label.position.y = -78.0 + sin(_phase * 10.0) * 2.0
 
 
@@ -142,7 +150,7 @@ func _bite(player: Player) -> void:
 		tween.tween_property(_sprite, "position", RAISED_OFFSET + Vector2(0, -8), 0.08)
 		tween.tween_property(_sprite, "position", RAISED_OFFSET, 0.1)
 	if _label != null:
-		_label.text = "HISS!"
+		_label.text = "STING!" if uses_scorpion_art() else "HISS!"
 		_label.visible = true
 	await get_tree().create_timer(0.24).timeout
 	if is_instance_valid(player) and player in get_overlapping_bodies() and not player.is_invulnerable():

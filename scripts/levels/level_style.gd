@@ -43,6 +43,8 @@ static func stamp_icon_path(type_name: String, style: String = DESERT) -> String
 			return "res://assets/world/cave_lizard.png" if cave else "res://assets/world/boss_stampede_bull.png"
 		"rattlesnake":
 			return "res://assets/world/scorpion_idle.png" if cave else "res://assets/world/rattlesnake_idle.png"
+		"scorpion":
+			return "res://assets/world/scorpion_idle.png"
 		"carrion":
 			return "res://assets/world/cave_bat_0.png" if cave else "res://assets/world/carrion_bird.png"
 		"checkpoint":
@@ -117,6 +119,8 @@ static func stamp_label(type_name: String, style: String = DESERT) -> String:
 			return "Cave Lizard" if cave else "Bull"
 		"rattlesnake":
 			return "Scorpion" if cave else "Rattlesnake"
+		"scorpion":
+			return "Scorpion"
 		"carrion":
 			return "Bat" if cave else "Carrion Bird"
 		"checkpoint":
@@ -186,6 +190,9 @@ static func tool_categories(style: String = DESERT, start_mounted: bool = false)
 		_tool("ninja", style),
 		_tool("rattlesnake", style),
 	]
+	## Desert can place both snakes and scorpions; cave remaps rattlesnake→scorpion art.
+	if not cave:
+		enemies.append(_tool("scorpion", style))
 	if cave:
 		enemies.append(_tool("bat", style))
 	else:
