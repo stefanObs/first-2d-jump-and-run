@@ -154,8 +154,6 @@ static func _level_15() -> Dictionary:
 	CustomLevelStore.append_ladder_branch(objects, trail, 28)
 	_add(objects, "bull", 52, trail - 1)
 	_add(objects, "checkpoint", 60, trail - 1)
-	_add(objects, "stalactite", 68, 0)
-	_add(objects, "stalactite", 74, 0)
 	_add(objects, "ninja", 80, trail - 1)
 	_add(objects, "bandit", 90, trail - 1)
 	_add(objects, "rattlesnake", 98, trail - 1)

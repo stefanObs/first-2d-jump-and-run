@@ -104,6 +104,10 @@ static func _dress_cave_ceiling(level: Node, style: String = LevelStyle.DESERT) 
 	_tile_strip_row(root, tex, -200.0, width + 200.0, ceiling_y, ceiling_h, 0, "CeilingRock")
 	_add_cave_flight_ceiling(root, width, ceiling_y, underside)
 
+	# Dragon Gate / Cave Dragon keep a clean rock band (no hanging teeth).
+	if _is_dragon_cave_level(level):
+		return
+
 	var existing: Array = level.find_children("*", "StalactiteHazard", true, false)
 	var x := 180.0
 	var index := 0
@@ -130,6 +134,15 @@ static func _dress_cave_ceiling(level: Node, style: String = LevelStyle.DESERT) 
 		index += 1
 		if index > 28:
 			break
+
+
+static func _is_dragon_cave_level(level: Node) -> bool:
+	if level is BossArena and int(level.get("source_level")) == 15:
+		return true
+	var level_number := int(level.get("level_number"))
+	var campaign_source := int(level.get("campaign_source_level"))
+	var source := campaign_source if campaign_source > 0 else level_number
+	return source == 15 or level_number == 15
 
 
 static func _add_cave_flight_ceiling(

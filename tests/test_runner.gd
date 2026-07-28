@@ -196,6 +196,10 @@ func _ready() -> void:
 		"Cave ceiling guards flight with sparse décor stalactites",
 		_test_cave_ceiling_sparse_flight_guard
 	)
+	failures += await _run(
+		"Dragon Gate and Cave Dragon have no stalactites",
+		_test_dragon_levels_have_no_stalactites
+	)
 
 	if failures == 0:
 		print("All tests passed.")
@@ -6376,6 +6380,41 @@ func _test_cave_ceiling_sparse_flight_guard() -> Variant:
 		)
 	if decor_count < 1:
 		return "Cave ceiling should place at least one décor stalactite."
+	return null
+
+
+func _test_dragon_levels_have_no_stalactites() -> Variant:
+	## Dragon Gate + Cave Dragon keep a clean ceiling (no stamped or décor teeth).
+	var data := CaveCampaignLevels.level_data(15)
+	for obj in data.get("objects", []):
+		if not (obj is Dictionary):
+			continue
+		var type_name := str(obj.get("type", ""))
+		if type_name == "stalactite" or type_name == "stalactite_static":
+			return "Dragon Gate must not stamp stalactites."
+	var level := LevelController.new()
+	level.level_number = 15
+	add_child(level)
+	CustomLevelBuilder.build(level, data)
+	await get_tree().process_frame
+	WildWestTheme.apply_to_level(level)
+	await get_tree().process_frame
+	var stamped := level.find_children("*", "StalactiteHazard", true, false)
+	level.queue_free()
+	if not stamped.is_empty():
+		return "Dragon Gate must not dress décor/hazard stalactites (found %d)." % stamped.size()
+
+	var packed: PackedScene = load("res://scenes/bosses/boss_cave_dragon.tscn")
+	if packed == null:
+		return "Failed to load Cave Dragon boss scene."
+	var boss: Node = packed.instantiate()
+	add_child(boss)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var boss_teeth := boss.find_children("*", "StalactiteHazard", true, false)
+	boss.queue_free()
+	if not boss_teeth.is_empty():
+		return "Cave Dragon arena must not dress décor stalactites (found %d)." % boss_teeth.size()
 	return null
 
 
