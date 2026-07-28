@@ -80,68 +80,69 @@ def _force_split_halves(im: Image.Image, *, gap: int = 8) -> list[Image.Image]:
     return [f for f in (left, right) if f.getbbox() is not None]
 
 
-def _keep_largest_component(im: Image.Image, *, alpha_thresh: int = 8) -> Image.Image:
-    """Clear opaque pixels not 4-connected to the largest blob (edge bleed)."""
+def _opaque_coords(px, w: int, h: int, *, alpha_thresh: int = 8) -> list[tuple[int, int]]:
+    return [(x, y) for y in range(h) for x in range(w) if px[x, y][3] > alpha_thresh]
+
+
+def _content_bbox_alpha(px, w: int, h: int, *, alpha_thresh: int = 8):
+    xs: list[int] = []
+    ys: list[int] = []
+    for y in range(h):
+        for x in range(w):
+            if px[x, y][3] > alpha_thresh:
+                xs.append(x)
+                ys.append(y)
+    if not xs:
+        return None
+    return min(xs), min(ys), max(xs) + 1, max(ys) + 1
+
+
+def _column_opaque_ys(px, x: int, h: int, *, alpha_thresh: int = 8) -> list[int]:
+    return [y for y in range(h) if px[x, y][3] > alpha_thresh]
+
+
+def _has_vertical_gap(ys: list[int]) -> bool:
+    if len(ys) < 2:
+        return False
+    ys = sorted(ys)
+    return any(ys[i] - ys[i - 1] > 1 for i in range(1, len(ys)))
+
+
+def _leftward_span(px, x: int, y: int, *, alpha_thresh: int = 8) -> int:
+    lx = x
+    while lx > 0 and px[lx - 1, y][3] > alpha_thresh:
+        lx -= 1
+    return x - lx + 1
+
+
+def _rightward_span(px, x: int, y: int, w: int, *, alpha_thresh: int = 8) -> int:
+    rx = x
+    while rx + 1 < w and px[rx + 1, y][3] > alpha_thresh:
+        rx += 1
+    return rx - x + 1
+
+
+def _clear_xy(px, x: int, y: int) -> None:
+    r, g, b, _ = px[x, y]
+    px[x, y] = (r, g, b, 0)
+
+
+def _keep_main_component(im: Image.Image, *, alpha_thresh: int = 8) -> Image.Image:
+    """Keep the 4-connected component seeded from the opaque-pixel centroid."""
     out = im.copy()
     w, h = out.size
     px = out.load()
-    visited = [[False] * w for _ in range(h)]
-    comps: list[list[tuple[int, int]]] = []
-    for y in range(h):
-        for x in range(w):
-            if px[x, y][3] <= alpha_thresh or visited[y][x]:
-                continue
-            q: deque[tuple[int, int]] = deque([(x, y)])
-            visited[y][x] = True
-            pixels: list[tuple[int, int]] = []
-            while q:
-                cx, cy = q.popleft()
-                pixels.append((cx, cy))
-                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-                    nx, ny = cx + dx, cy + dy
-                    if (
-                        0 <= nx < w
-                        and 0 <= ny < h
-                        and not visited[ny][nx]
-                        and px[nx, ny][3] > alpha_thresh
-                    ):
-                        visited[ny][nx] = True
-                        q.append((nx, ny))
-            comps.append(pixels)
-    if len(comps) <= 1:
+    coords = _opaque_coords(px, w, h, alpha_thresh=alpha_thresh)
+    if not coords:
         return out
-    comps.sort(key=len, reverse=True)
-    for pixels in comps[1:]:
-        for x, y in pixels:
-            r, g, b, _ = px[x, y]
-            px[x, y] = (r, g, b, 0)
-    return out
-
-
-def _trim_far_edge_strip(im: Image.Image, *, side: str, max_cols: int = 4) -> Image.Image:
-    """Clear a thin right/left strip that is disconnected from the main body."""
-    out = im.copy()
-    w, h = out.size
-    if w < 8:
-        return out
-    px = out.load()
-    # Largest-component mask via flood from CoM of opaque pixels.
-    sx = sy = n = 0
-    for y in range(h):
-        for x in range(w):
-            if px[x, y][3] > 8:
-                sx += x
-                sy += y
-                n += 1
-    if n == 0:
-        return out
-    cx, cy = sx // n, sy // n
+    cx = sum(x for x, _ in coords) // len(coords)
+    cy = sum(y for _, y in coords) // len(coords)
     start = None
     for r in range(max(w, h)):
         for dy in range(-r, r + 1):
             for dx in range(-r, r + 1):
                 x, y = cx + dx, cy + dy
-                if 0 <= x < w and 0 <= y < h and px[x, y][3] > 8:
+                if 0 <= x < w and 0 <= y < h and px[x, y][3] > alpha_thresh:
                     start = (x, y)
                     break
             if start is not None:
@@ -150,7 +151,7 @@ def _trim_far_edge_strip(im: Image.Image, *, side: str, max_cols: int = 4) -> Im
             break
     if start is None:
         return out
-    connected: set[tuple[int, int]] = {start}
+    main: set[tuple[int, int]] = {start}
     q: deque[tuple[int, int]] = deque([start])
     while q:
         x, y = q.popleft()
@@ -159,25 +160,164 @@ def _trim_far_edge_strip(im: Image.Image, *, side: str, max_cols: int = 4) -> Im
             if (
                 0 <= nx < w
                 and 0 <= ny < h
-                and (nx, ny) not in connected
-                and px[nx, ny][3] > 8
+                and (nx, ny) not in main
+                and px[nx, ny][3] > alpha_thresh
             ):
-                connected.add((nx, ny))
+                main.add((nx, ny))
                 q.append((nx, ny))
-    xs = range(w - max_cols, w) if side == "right" else range(0, max_cols)
-    for x in xs:
+    for x, y in coords:
+        if (x, y) not in main:
+            _clear_xy(px, x, y)
+    return out
+
+
+# Back-compat alias used elsewhere / older call sites.
+_keep_largest_component = _keep_main_component
+
+
+def _trim_far_edge_strip(im: Image.Image, *, side: str, max_cols: int = 4) -> Image.Image:
+    """Clear thin far-edge wing-bleed that stays 4-connected via a 1px bridge.
+
+    Neighbor-bat slivers often remain attached after half-slice + largest-component
+    keep. Clear them when they are sparse, vertically gapped, or tip columns that
+    are not a wide wing surface spanning into the body.
+    """
+    out = im.copy()
+    w, h = out.size
+    if w < 8:
+        return out
+    px = out.load()
+    alpha = 8
+    bbox = _content_bbox_alpha(px, w, h, alpha_thresh=alpha)
+    if bbox is None:
+        return out
+    x0, _y0, x1, _y1 = bbox
+
+    # Pass A: rightmost/leftmost 2 columns — drop pixels without a wide tip span.
+    edge_cols = [x1 - 1, x1 - 2] if side == "right" else [x0, x0 + 1]
+    for x in edge_cols:
+        if not (0 <= x < w):
+            continue
         for y in range(h):
-            if px[x, y][3] > 8 and (x, y) not in connected:
-                r, g, b, _ = px[x, y]
-                px[x, y] = (r, g, b, 0)
+            if px[x, y][3] <= alpha:
+                continue
+            span = (
+                _leftward_span(px, x, y, alpha_thresh=alpha)
+                if side == "right"
+                else _rightward_span(px, x, y, w, alpha_thresh=alpha)
+            )
+            if span < 4:
+                _clear_xy(px, x, y)
+
+    # Pass B: rightmost/leftmost 1–3 columns — thin / discontinuous strips.
+    if side == "right":
+        probe = list(range(x1 - 1, max(x0, x1 - 3) - 1, -1))
+    else:
+        probe = list(range(x0, min(x1, x0 + 3)))
+    for x in probe:
+        ys = _column_opaque_ys(px, x, h, alpha_thresh=alpha)
+        if not ys:
+            continue
+        n = len(ys)
+        if side == "right":
+            scan = range(x - 1, max(x0 - 1, x - 8), -1)
+        else:
+            scan = range(x + 1, min(x1, x + 8))
+        gap_before_body = False
+        found_body = False
+        for sx in scan:
+            sn = len(_column_opaque_ys(px, sx, h, alpha_thresh=alpha))
+            if sn == 0:
+                gap_before_body = True
+            if sn >= 18:
+                found_body = True
+                break
+        yspan = max(ys) - min(ys) + 1
+        fill = n / max(1, yspan)
+        # Solid wing tips often have 18–24 opaque cols — only treat as bleed when
+        # sparse (gaps / low fill) or separated from dense body by a clear gap.
+        discontinuous = gap_before_body or _has_vertical_gap(ys) or (not found_body)
+        sparse_strip = yspan >= 8 and fill < 0.55 and n < 25
+        if n < 25 and (discontinuous or sparse_strip):
+            if _has_vertical_gap(ys) and n >= 6:
+                runs: list[list[int]] = []
+                run = [ys[0]]
+                for yy in ys[1:]:
+                    if yy == run[-1] + 1:
+                        run.append(yy)
+                    else:
+                        runs.append(run)
+                        run = [yy]
+                runs.append(run)
+                runs.sort(key=len, reverse=True)
+                for run in runs[1:]:
+                    for yy in run:
+                        _clear_xy(px, x, yy)
+                edge_dist = (x1 - 1 - x) if side == "right" else (x - x0)
+                if len(runs[0]) < 8 and edge_dist <= 2:
+                    for yy in runs[0]:
+                        _clear_xy(px, x, yy)
+            else:
+                for y in ys:
+                    _clear_xy(px, x, y)
+
+    # Pass C: shave far-edge columns separated by a transparent gap from body mass,
+    # or tiny tip columns (<=6 opaque) at the content bbox edge.
+    changed = True
+    while changed:
+        changed = False
+        bbox = _content_bbox_alpha(px, w, h, alpha_thresh=alpha)
+        if bbox is None:
+            break
+        x0, _y0, x1, _y1 = bbox
+        x = x1 - 1 if side == "right" else x0
+        ys = _column_opaque_ys(px, x, h, alpha_thresh=alpha)
+        if not ys:
+            break
+        if side == "right":
+            scan = range(x - 1, max(-1, x - 12), -1)
+        else:
+            scan = range(x + 1, min(w, x + 12))
+        saw_gap = False
+        body_after_gap = False
+        for sx in scan:
+            sn = len(_column_opaque_ys(px, sx, h, alpha_thresh=alpha))
+            if sn == 0:
+                saw_gap = True
+            elif saw_gap and sn >= 12:
+                body_after_gap = True
+                break
+            elif not saw_gap and sn >= 25:
+                break
+        thin = len(ys) < 25
+        if (saw_gap and body_after_gap and thin) or (thin and _has_vertical_gap(ys)):
+            for y in ys:
+                _clear_xy(px, x, y)
+            changed = True
+            continue
+        if thin and len(ys) <= 6:
+            nx = x - 1 if side == "right" else x + 1
+            nys = _column_opaque_ys(px, nx, h, alpha_thresh=alpha) if 0 <= nx < w else []
+            if len(ys) <= 4 or (len(nys) < 15 and len(ys) <= 6):
+                for y in ys:
+                    _clear_xy(px, x, y)
+                changed = True
+
     return out
 
 
 def _clean_bat_figure(fig: Image.Image, *, index: int) -> Image.Image:
-    """Drop neighboring-bat bleed after a half-slice."""
-    cleaned = _keep_largest_component(fig)
+    """Drop neighboring-bat bleed after a half-slice (and after framing)."""
+    cleaned = _keep_main_component(fig)
     side = "right" if index == 0 else "left"
-    return _trim_far_edge_strip(cleaned, side=side, max_cols=4)
+    # Trim can expose a new far-edge fringe pixel; converge so the helper is
+    # idempotent when re-run on an already-cleaned frame.
+    for _ in range(6):
+        nxt = _trim_far_edge_strip(cleaned, side=side, max_cols=4)
+        if list(nxt.get_flattened_data()) == list(cleaned.get_flattened_data()):
+            return nxt
+        cleaned = nxt
+    return cleaned
 
 
 def _slice_or_halves(im: Image.Image) -> list[Image.Image]:
@@ -355,6 +495,8 @@ def fix_bats() -> None:
     for i, fig in enumerate(figs[:2]):
         fig = _clean_bat_figure(fig, index=i)
         framed = _fit(fig, (96, 64))
+        # Re-clean after framing: LANCZOS resize can reintroduce soft edge bridges.
+        framed = _clean_bat_figure(framed, index=i)
         _save(framed, OUT / f"cave_bat_{i}.png")
         print(f"cave_bat_{i}: clear%={_clear_pct(framed):.1f}")
 
@@ -568,14 +710,45 @@ def fix_floors() -> None:
     densify_tile(dirt, (200, 38))
 
 
+def _rightmost_opaque_x(im: Image.Image, *, alpha_thresh: int = 8) -> int | None:
+    w, h = im.size
+    px = im.load()
+    for x in range(w - 1, -1, -1):
+        if any(px[x, y][3] > alpha_thresh for y in range(h)):
+            return x
+    return None
+
+
+def _orphan_edge_columns(im: Image.Image, *, side: str, alpha_thresh: int = 8) -> list[int]:
+    """Columns at the far edge that are thin (<25) with a vertical gap (bleed)."""
+    w, h = im.size
+    px = im.load()
+    bbox = _content_bbox_alpha(px, w, h, alpha_thresh=alpha_thresh)
+    if bbox is None:
+        return []
+    x0, _y0, x1, _y1 = bbox
+    bad: list[int] = []
+    cols = range(max(x0, x1 - 3), x1) if side == "right" else range(x0, min(x1, x0 + 3))
+    for x in cols:
+        ys = _column_opaque_ys(px, x, h, alpha_thresh=alpha_thresh)
+        if ys and len(ys) < 25 and _has_vertical_gap(ys):
+            bad.append(x)
+    return bad
+
+
 def verify() -> None:
     print("\n=== verification ===")
     b0 = Image.open(OUT / "cave_bat_0.png").convert("RGBA")
     b1 = Image.open(OUT / "cave_bat_1.png").convert("RGBA")
     bat_diff = list(b0.get_flattened_data()) != list(b1.get_flattened_data())
-    print(f"cave_bat_0 clear%={_clear_pct(b0):.1f} size={b0.size}")
+    rm0 = _rightmost_opaque_x(b0)
+    orphans0 = _orphan_edge_columns(b0, side="right")
+    print(f"cave_bat_0 clear%={_clear_pct(b0):.1f} size={b0.size} rightmost_opaque_x={rm0}")
+    print(f"cave_bat_0 orphan_edge_cols={orphans0}")
     print(f"cave_bat_1 clear%={_clear_pct(b1):.1f} size={b1.size}")
     print(f"bat0!=bat1: {bat_diff}")
+    if orphans0:
+        raise RuntimeError(f"cave_bat_0 still has orphan edge columns: {orphans0}")
 
     idle = Image.open(OUT / "skeleton.png").convert("RGBA")
     print(f"skeleton idle size={idle.size} content_h={_content_height(idle)}")
