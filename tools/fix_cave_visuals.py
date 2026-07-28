@@ -1332,7 +1332,10 @@ def verify() -> None:
         "stalactite.png",
         "cave_ceiling_tile.png",
         "cave_ceiling_fill.png",
-        "cave_ceiling_seg_a.png",
+        "cave_ceiling_ll_0.png",
+        "cave_ceiling_lh_0.png",
+        "cave_ceiling_hl_0.png",
+        "cave_ceiling_hh_0.png",
         "cave_sky.png",
     ):
         p = OUT / name

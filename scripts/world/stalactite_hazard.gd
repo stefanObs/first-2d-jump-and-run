@@ -18,6 +18,8 @@ const RESPAWN_TIME := 2.4
 const RELEASE_TIME := 0.42
 
 @export var drops: bool = true
+## When true, hanging look matches ceiling rock until the release animation.
+@export var fuse_with_ceiling: bool = false
 
 var _origin: Vector2
 var _sprite: Sprite2D
@@ -30,6 +32,8 @@ var _release: float = 0.0
 var _floor_y: float = NAN
 var _hang_h: float = 96.0
 var _hang_w: float = 48.0
+const FUSED_MODULATE := Color(0.72, 0.62, 0.78, 1.0)
+const LIVE_MODULATE := Color(1.0, 1.0, 1.0, 1.0)
 
 
 func _ready() -> void:
@@ -61,7 +65,20 @@ func _ready() -> void:
 	else:
 		# Decorative only — never hurt the cowboy.
 		monitoring = false
+	_apply_hang_look(true)
 	set_physics_process(drops)
+
+
+func _apply_hang_look(fused: bool) -> void:
+	if _sprite == null:
+		return
+	if fuse_with_ceiling and fused:
+		# Same purple rock cast as the ceiling slab — reads as part of the lip.
+		_sprite.modulate = FUSED_MODULATE
+		_sprite.z_index = -1
+	else:
+		_sprite.modulate = LIVE_MODULATE
+		_sprite.z_index = 0
 
 
 func _probe_floor() -> void:
@@ -87,27 +104,32 @@ func _physics_process(delta: float) -> void:
 					_wiggle = 0.28
 		"wiggle":
 			_wiggle -= delta
-			_sprite.rotation = sin(Time.get_ticks_msec() * 0.04) * 0.18
-			_sprite.position.y = sin(Time.get_ticks_msec() * 0.05) * 2.0
+			# Still fused while trembling; reveal as a separate tooth on release.
+			_apply_hang_look(true)
+			_sprite.rotation = sin(Time.get_ticks_msec() * 0.04) * 0.12
+			_sprite.position.y = sin(Time.get_ticks_msec() * 0.05) * 1.2
 			if _wiggle <= 0.0:
 				_state = "releasing"
 				_release = RELEASE_TIME
 				_sprite.rotation = 0.0
+				_apply_hang_look(false)
 		"releasing":
 			# Pull free from the ceiling rock before the drop.
 			_release -= delta
 			var t := 1.0 - clampf(_release / RELEASE_TIME, 0.0, 1.0)
+			_apply_hang_look(false)
+			_sprite.modulate = FUSED_MODULATE.lerp(LIVE_MODULATE, t)
 			_sprite.position.y = t * 18.0
 			_sprite.scale = Vector2(1.0 + t * 0.08, 1.0 - t * 0.12)
-			_sprite.modulate = Color(1.15, 1.05, 0.95, 1.0)
 			_sprite.rotation = sin(t * TAU * 2.0) * 0.12
 			if _release <= 0.0:
 				_state = "falling"
 				_vel_y = 80.0
 				_sprite.scale = Vector2.ONE
-				_sprite.modulate = Color.WHITE
+				_sprite.modulate = LIVE_MODULATE
 				_sprite.rotation = 0.0
 				_sprite.position = Vector2(-_hang_w * 0.5, 0.0)
+				_sprite.z_index = 0
 		"falling":
 			_vel_y += FALL_GRAVITY * delta
 			global_position.y += _vel_y * delta
@@ -146,8 +168,8 @@ func _respawn() -> void:
 	_sprite.centered = false
 	_sprite.position = Vector2(-_hang_w * 0.5, 0.0)
 	_sprite.scale = Vector2.ONE
-	_sprite.modulate = Color.WHITE
 	_sprite.rotation = 0.0
+	_apply_hang_look(true)
 
 
 func _on_body_entered(body: Node2D) -> void:

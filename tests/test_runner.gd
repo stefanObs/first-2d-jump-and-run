@@ -6539,7 +6539,7 @@ func _test_wings_carrion_variety() -> Variant:
 
 
 func _test_cave_ceiling_sparse_flight_guard() -> Variant:
-	## Crystal Mouth dresses multi-height cowboy rock segments with seat-attached teeth.
+	## Crystal Mouth dresses low/high-edge rock panels with matching seams and fused teeth.
 	var data := CaveCampaignLevels.level_data(11)
 	var level := LevelController.new()
 	add_child(level)
@@ -6573,13 +6573,25 @@ func _test_cave_ceiling_sparse_flight_guard() -> Variant:
 			if fill_bottom > segment_top + 1.0:
 				level.queue_free()
 				return "Ceiling fill must not extend below the ceiling segment art."
-	var rock_count := 0
+	var rocks: Array[Sprite2D] = []
 	for child in ceiling.get_children():
 		if child is Sprite2D and String(child.name).begins_with("CeilingRock"):
-			rock_count += 1
-	if rock_count < 3:
+			rocks.append(child as Sprite2D)
+	if rocks.size() < 3:
 		level.queue_free()
-		return "Cave ceiling should place multiple rock segment arts (got %d)." % rock_count
+		return "Cave ceiling should place multiple rock segment arts (got %d)." % rocks.size()
+	# Adjacent panels must share matching edge heights (prev.end == next.start).
+	for i in range(1, rocks.size()):
+		var prev_end := str(rocks[i - 1].get_meta("end", ""))
+		var next_start := str(rocks[i].get_meta("start", ""))
+		if prev_end.is_empty() or next_start.is_empty():
+			level.queue_free()
+			return "Ceiling panels must store start/end height metas."
+		if prev_end != next_start:
+			level.queue_free()
+			return "Adjacent ceiling panels must match edge heights (%s→%s at %d)." % [
+				prev_end, next_start, i
+			]
 	var attach_points: Array = ceiling.get_meta("attach_points", [])
 	if attach_points.size() < 4:
 		level.queue_free()
@@ -6598,15 +6610,18 @@ func _test_cave_ceiling_sparse_flight_guard() -> Variant:
 	for child in ceiling.get_children():
 		if child is StalactiteHazard and String(child.name).begins_with("CeilingStalactite"):
 			decor_count += 1
-			var tooth := child as Node2D
+			var tooth := child as StalactiteHazard
 			tooth_ys.append(tooth.position.y)
+			if not tooth.fuse_with_ceiling:
+				level.queue_free()
+				return "Ceiling décor stalactites should fuse with the rock until release."
 			var near_seat := false
 			for seat_v in attach_points:
 				if not (seat_v is Dictionary):
 					continue
 				var seat := seat_v as Dictionary
 				if absf(tooth.position.x - float(seat.get("x", 0.0))) < 8.0 \
-						and absf(tooth.position.y - (float(seat.get("y", 0.0)) - 6.0)) < 10.0:
+						and absf(tooth.position.y - (float(seat.get("y", 0.0)) - 2.0)) < 10.0:
 					near_seat = true
 					break
 			if not near_seat:

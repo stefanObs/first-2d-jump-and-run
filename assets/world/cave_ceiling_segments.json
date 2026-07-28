@@ -1,98 +1,198 @@
 {
   "tile_width": 320,
   "tile_height": 200,
+  "low_y": 108.0,
+  "high_y": 156.0,
   "segments": [
     {
-      "file": "cave_ceiling_seg_a.png",
-      "kind": "shallow",
-      "attach": [
-        {
-          "x": 70,
-          "y": 108.1
-        },
-        {
-          "x": 250,
-          "y": 99.1
-        }
-      ]
-    },
-    {
-      "file": "cave_ceiling_seg_b.png",
-      "kind": "mid",
-      "attach": [
-        {
-          "x": 55,
-          "y": 139.4
-        },
-        {
-          "x": 160,
-          "y": 128.3
-        },
-        {
-          "x": 275,
-          "y": 134.1
-        }
-      ]
-    },
-    {
-      "file": "cave_ceiling_seg_c.png",
-      "kind": "deep",
+      "file": "cave_ceiling_ll_0.png",
+      "start": "low",
+      "end": "low",
       "attach": [
         {
           "x": 90,
-          "y": 164.6
+          "y": 104.4
         },
         {
           "x": 230,
-          "y": 129.6
+          "y": 104.8
         }
       ]
     },
     {
-      "file": "cave_ceiling_seg_d.png",
-      "kind": "mixed",
+      "file": "cave_ceiling_ll_1.png",
+      "start": "low",
+      "end": "low",
+      "attach": [
+        {
+          "x": 90,
+          "y": 103.3
+        },
+        {
+          "x": 230,
+          "y": 105.5
+        }
+      ]
+    },
+    {
+      "file": "cave_ceiling_ll_2.png",
+      "start": "low",
+      "end": "low",
       "attach": [
         {
           "x": 100,
-          "y": 120.4
+          "y": 104.0
         },
         {
           "x": 220,
-          "y": 121.9
+          "y": 109.2
         }
       ]
     },
     {
-      "file": "cave_ceiling_seg_e.png",
-      "kind": "mid",
+      "file": "cave_ceiling_lh_0.png",
+      "start": "low",
+      "end": "high",
       "attach": [
         {
-          "x": 55,
-          "y": 139.4
+          "x": 110,
+          "y": 120.2
         },
+        {
+          "x": 210,
+          "y": 139.3
+        }
+      ]
+    },
+    {
+      "file": "cave_ceiling_lh_1.png",
+      "start": "low",
+      "end": "high",
+      "attach": [
+        {
+          "x": 110,
+          "y": 121.0
+        },
+        {
+          "x": 210,
+          "y": 132.7
+        }
+      ]
+    },
+    {
+      "file": "cave_ceiling_lh_2.png",
+      "start": "low",
+      "end": "high",
+      "attach": [
         {
           "x": 160,
-          "y": 128.3
-        },
-        {
-          "x": 275,
-          "y": 134.1
+          "y": 147.4
         }
       ]
     },
     {
-      "file": "cave_ceiling_seg_f.png",
-      "kind": "shallow",
+      "file": "cave_ceiling_hl_0.png",
+      "start": "high",
+      "end": "low",
       "attach": [
         {
-          "x": 70,
-          "y": 108.1
+          "x": 110,
+          "y": 149.4
         },
         {
-          "x": 250,
-          "y": 99.1
+          "x": 210,
+          "y": 119.2
+        }
+      ]
+    },
+    {
+      "file": "cave_ceiling_hl_1.png",
+      "start": "high",
+      "end": "low",
+      "attach": [
+        {
+          "x": 160,
+          "y": 122.3
+        }
+      ]
+    },
+    {
+      "file": "cave_ceiling_hl_2.png",
+      "start": "high",
+      "end": "low",
+      "attach": [
+        {
+          "x": 110,
+          "y": 147.7
+        },
+        {
+          "x": 210,
+          "y": 117.5
+        }
+      ]
+    },
+    {
+      "file": "cave_ceiling_hh_0.png",
+      "start": "high",
+      "end": "high",
+      "attach": [
+        {
+          "x": 90,
+          "y": 152.8
+        },
+        {
+          "x": 230,
+          "y": 153.3
+        }
+      ]
+    },
+    {
+      "file": "cave_ceiling_hh_1.png",
+      "start": "high",
+      "end": "high",
+      "attach": [
+        {
+          "x": 100,
+          "y": 157.1
+        },
+        {
+          "x": 220,
+          "y": 159.4
+        }
+      ]
+    },
+    {
+      "file": "cave_ceiling_hh_2.png",
+      "start": "high",
+      "end": "high",
+      "attach": [
+        {
+          "x": 90,
+          "y": 158.3
+        },
+        {
+          "x": 230,
+          "y": 155.6
         }
       ]
     }
-  ]
+  ],
+  "by_start": {
+    "low": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "high": [
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ]
+  }
 }

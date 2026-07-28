@@ -156,9 +156,9 @@ static func _retuck_cave_sky_to_floor(level: Node, style: String) -> void:
 
 
 static func _dress_cave_ceiling(level: Node, style: String = LevelStyle.DESERT) -> void:
-	## Cowboy-style rock segments with varied lip heights. Fill stays above the
-	## segment tops so sky/fill never shows through below the painted underside.
-	## Stalactites only attach at per-segment seat positions.
+	## Cowboy-style rock panels with fixed low/high side heights. Adjacent panels
+	## only pair when the shared edge heights match. Fill stays above segment tops.
+	## Stalactites fuse into seats until their release animation starts.
 	if not LevelStyle.is_cave(style):
 		return
 	if level.get_node_or_null("CaveCeiling") != null:
@@ -179,12 +179,10 @@ static func _dress_cave_ceiling(level: Node, style: String = LevelStyle.DESERT) 
 	root.z_index = -17
 	level.add_child(root)
 
-	# Segment tops sit near the camera top; lips hang to varied world Ys.
 	const CAMERA_TOP := -280.0
 	const SEGMENT_TOP := -168.0
 	var fill_top := CAMERA_TOP - 100.0
 
-	# Fill ONLY above the segment art — never into transparent lip air.
 	if fill_tex != null:
 		_tile_strip_row(
 			root,
@@ -197,31 +195,36 @@ static func _dress_cave_ceiling(level: Node, style: String = LevelStyle.DESERT) 
 			"CeilingFill"
 		)
 
+	var by_start: Dictionary = catalog.get("by_start", {})
 	var attach_points: Array = []
 	var min_underside := INF
 	var max_underside := SEGMENT_TOP
 	var x := -200.0
 	var seg_i := 0
-	var overlap := 10.0
+	var overlap := 8.0
+	var need_start := "low"
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+
 	while x < width + 200.0:
-		var entry: Dictionary = segments[seg_i % segments.size()]
+		var entry := _pick_ceiling_segment(segments, by_start, need_start, rng)
+		if entry.is_empty():
+			break
 		var file_name := str(entry.get("file", ""))
 		var path := "res://assets/world/%s" % file_name
 		if file_name.is_empty() or not ResourceLoader.exists(path):
-			seg_i += 1
-			if seg_i > 64:
-				break
-			continue
+			break
 		var tex: Texture2D = load(path)
 		if tex == null:
-			seg_i += 1
-			continue
+			break
 		var sprite := Sprite2D.new()
 		sprite.name = "CeilingRock_%d" % seg_i
 		sprite.texture = tex
 		sprite.centered = false
 		sprite.position = Vector2(x, SEGMENT_TOP)
 		sprite.z_index = 1
+		sprite.set_meta("start", str(entry.get("start", "low")))
+		sprite.set_meta("end", str(entry.get("end", "low")))
 		root.add_child(sprite)
 		var seats: Array = entry.get("attach", [])
 		for seat_v in seats:
@@ -233,14 +236,15 @@ static func _dress_cave_ceiling(level: Node, style: String = LevelStyle.DESERT) 
 			attach_points.append({"x": ax, "y": ay})
 			min_underside = minf(min_underside, ay)
 			max_underside = maxf(max_underside, ay)
+		need_start = str(entry.get("end", need_start))
 		x += float(tex.get_width()) - overlap
 		seg_i += 1
 		if seg_i > 400:
 			break
 
 	if attach_points.is_empty():
-		min_underside = SEGMENT_TOP + 120.0
-		max_underside = SEGMENT_TOP + 140.0
+		min_underside = SEGMENT_TOP + float(catalog.get("low_y", 108.0))
+		max_underside = SEGMENT_TOP + float(catalog.get("high_y", 156.0))
 	var mid_underside := (min_underside + max_underside) * 0.5
 	root.set_meta("underside_y", mid_underside)
 	root.set_meta("attach_points", attach_points)
@@ -248,14 +252,12 @@ static func _dress_cave_ceiling(level: Node, style: String = LevelStyle.DESERT) 
 	_add_cave_flight_ceiling(root, width, fill_top, max_underside + 6.0)
 	_snap_ceiling_hangings(level, attach_points, mid_underside)
 
-	# Dragon Gate / Cave Dragon keep a clean rock band (no hanging teeth).
 	if _is_dragon_cave_level(level):
 		return
 
 	var existing: Array = level.find_children("*", "StalactiteHazard", true, false)
 	var index := 0
 	var last_x := -9999.0
-	# Place décor teeth only on attach seats, keeping wide gaps for readability.
 	for i in range(attach_points.size()):
 		var seat: Dictionary = attach_points[i]
 		var sx := float(seat.get("x", 0.0))
@@ -274,11 +276,12 @@ static func _dress_cave_ceiling(level: Node, style: String = LevelStyle.DESERT) 
 		var spike := StalactiteHazard.new()
 		spike.name = "CeilingStalactite%d" % index
 		spike.drops = true
-		# Crown tucks just into the rock shelf.
-		spike.position = Vector2(sx, sy - 6.0)
-		spike.z_index = 2
+		spike.fuse_with_ceiling = true
+		# Sit on the shelf; fused look covers the painted nub until release.
+		spike.position = Vector2(sx, sy - 2.0)
+		spike.z_index = 1
 		root.add_child(spike)
-		var scale := randf_range(0.92, 1.12)
+		var scale := randf_range(0.95, 1.08)
 		var spr := spike.get_node_or_null("Sprite2D") as Sprite2D
 		if spr != null:
 			spr.scale = Vector2(scale, scale)
@@ -287,6 +290,23 @@ static func _dress_cave_ceiling(level: Node, style: String = LevelStyle.DESERT) 
 		index += 1
 		if index > 16:
 			break
+
+
+static func _pick_ceiling_segment(
+	segments: Array, by_start: Dictionary, need_start: String, rng: RandomNumberGenerator
+) -> Dictionary:
+	var indices: Array = by_start.get(need_start, [])
+	if indices.is_empty():
+		# Fallback: any segment that happens to start correctly.
+		for entry_v in segments:
+			if entry_v is Dictionary and str((entry_v as Dictionary).get("start", "")) == need_start:
+				return entry_v as Dictionary
+		return segments[0] as Dictionary if segments[0] is Dictionary else {}
+	var pick: int = int(indices[rng.randi_range(0, indices.size() - 1)])
+	if pick < 0 or pick >= segments.size():
+		return {}
+	var chosen: Variant = segments[pick]
+	return chosen as Dictionary if chosen is Dictionary else {}
 
 
 static func _load_ceiling_segment_catalog(style: String) -> Dictionary:
