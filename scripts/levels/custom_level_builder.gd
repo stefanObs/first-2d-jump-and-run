@@ -54,6 +54,8 @@ static func build(level: LevelController, data: Dictionary, preview: bool = fals
 		match type_name:
 			"platform":
 				_add_block(level, "Platform%d" % index, position, Vector2(grid * 2.0, 24), Color(0.55, 0.32, 0.14))
+			"ladder_ledge":
+				_add_block(level, "LadderLedge%d" % index, position, Vector2(grid * 2.0, 24), Color(0.55, 0.32, 0.14))
 			"ladder":
 				var ladder := Ladder.new()
 				ladder.name = "Ladder%d" % index

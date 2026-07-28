@@ -7,9 +7,9 @@ const VERSION := 4
 const SHARE_PACK_FORMAT := "cowboy_trail_pack"
 const SHARE_PACK_VERSION := 1
 const BUILTIN_SLOT_START := 3
-const BUILTIN_COUNT := 10
-const EXTRA_SLOT_START := 13
-const SLOT_COUNT := 20
+const BUILTIN_COUNT := 15
+const EXTRA_SLOT_START := 18
+const SLOT_COUNT := 26
 const SavePaths := preload("res://scripts/autoload/save_paths.gd")
 const BUILTIN_SCENES: PackedStringArray = [
 	"res://scenes/levels/level_01.tscn", "res://scenes/levels/level_02.tscn",
@@ -17,10 +17,14 @@ const BUILTIN_SCENES: PackedStringArray = [
 	"res://scenes/levels/level_05.tscn", "res://scenes/levels/level_06.tscn",
 	"res://scenes/levels/level_07.tscn", "res://scenes/levels/level_08.tscn",
 	"res://scenes/levels/level_09.tscn", "res://scenes/levels/level_10.tscn",
+	"res://scenes/levels/level_11.tscn", "res://scenes/levels/level_12.tscn",
+	"res://scenes/levels/level_13.tscn", "res://scenes/levels/level_14.tscn",
+	"res://scenes/levels/level_15.tscn",
 ]
 const BUILTIN_NAMES: PackedStringArray = [
 	"Dusty Trail", "Badge Meadow", "Bronco Springs", "Canyon Ferry", "Outlaw Cave",
 	"Windy Mesa", "Sky Ranch", "Rail Yard", "Moonlight Gulch", "Rainbow Saloon",
+	"Crystal Mouth", "Bat Gallery", "Acid Veins", "Ladder Grotto", "Dragon Gate",
 ]
 ## Workshop defaults and resize limits — match typical built-in campaign width (goal ~column 177).
 const MIN_WIDTH := 12
@@ -68,7 +72,7 @@ static func placement_row(type_name: String, click_y: int, trail: int) -> int:
 
 static func stamp_footprint(type_name: String) -> Vector2:
 	match type_name:
-		"platform":
+		"platform", "ladder_ledge":
 			return Vector2(2.0, 1.0)
 		"pit":
 			return Vector2(PIT_PIXEL_SIZE.x / GRID_SIZE, 1.0)
@@ -81,7 +85,7 @@ static func stamp_footprint(type_name: String) -> Vector2:
 static func stamp_world_size(type_name: String, style: String = STYLE_DESERT) -> Vector2:
 	var resolved := normalize_style(style)
 	match type_name:
-		"platform":
+		"platform", "ladder_ledge":
 			return Vector2(GRID_SIZE * 2.0, 24.0)
 		"pit":
 			return PIT_PIXEL_SIZE
@@ -360,7 +364,7 @@ static func default_level(slot_index: int) -> Dictionary:
 		"kind": "standalone",
 		"style": STYLE_DESERT,
 		"source_level": 0,
-		"insert_position": 11,
+		"insert_position": BUILTIN_COUNT + 1,
 		"grid": 40,
 		"width": width,
 		"height": height,
@@ -601,7 +605,7 @@ static func merge_imported_trail(
 		int(current.get("source_level", merged.get("source_level", 0))), 0, BUILTIN_COUNT
 	)
 	merged["insert_position"] = clampi(
-		int(current.get("insert_position", merged.get("insert_position", 11))),
+		int(current.get("insert_position", merged.get("insert_position", BUILTIN_COUNT + 1))),
 		1,
 		BUILTIN_COUNT + 1,
 	)
@@ -648,7 +652,7 @@ static func campaign_entries() -> Array[Dictionary]:
 		var extra := load_level(slot)
 		if str(extra.get("kind", "")) != "extra":
 			continue
-		var position := clampi(int(extra.get("insert_position", 11)), 1, BUILTIN_COUNT + 1)
+		var position := clampi(int(extra.get("insert_position", BUILTIN_COUNT + 1)), 1, BUILTIN_COUNT + 1)
 		if not extras_by_position.has(position):
 			extras_by_position[position] = []
 		(extras_by_position[position] as Array).append({
@@ -735,11 +739,18 @@ static func migrate_v3_to_v4(source: Dictionary) -> Dictionary:
 static func import_builtin(level_number: int) -> Dictionary:
 	var number := clampi(level_number, 1, BUILTIN_COUNT)
 	var slot := override_slot_for(number)
+	## Levels 11–15 are stamp layouts (not hand scenes); import the cave catalog directly.
+	if number >= 11 and number <= 15:
+		var cave := CaveCampaignLevels.level_data(number)
+		cave["kind"] = "override"
+		cave["source_level"] = number
+		cave["title"] = BUILTIN_NAMES[number - 1]
+		return sanitize(cave, slot)
 	var result := default_level(slot)
 	result["kind"] = "override"
 	result["source_level"] = number
 	result["title"] = BUILTIN_NAMES[number - 1]
-	result["style"] = STYLE_CAVE if number == 5 else STYLE_DESERT
+	result["style"] = STYLE_CAVE if CaveCampaignLevels.is_cave_source(number) else STYLE_DESERT
 	result["height"] = 10
 	var packed := load(BUILTIN_SCENES[number - 1]) as PackedScene
 	if packed == null:
@@ -800,7 +811,7 @@ static func import_builtin(level_number: int) -> Dictionary:
 		result["objects"] = objects
 	if number == 1:
 		result["start_mounted"] = true
-	if number == 5:
+	if CaveCampaignLevels.is_cave_source(number):
 		var cave_objects: Array = result.get("objects", [])
 		if cave_objects is Array:
 			var typed: Array[Dictionary] = []
@@ -857,7 +868,7 @@ static func append_ladder_branch(
 	var upper := maxi(trail - LADDER_HEIGHT_CELLS, 0)
 	_append_unique(objects, {"type": "ladder", "x": start_x, "y": maxi(trail - 1, 0)})
 	for x in range(start_x, start_x + 14, 2):
-		_append_unique(objects, {"type": "platform", "x": x, "y": upper})
+		_append_unique(objects, {"type": "ladder_ledge", "x": x, "y": upper})
 	_append_unique(objects, {"type": "star", "x": start_x + 6, "y": maxi(upper - 1, 0)})
 	_append_unique(objects, {"type": "ladder", "x": start_x + 14, "y": maxi(trail - 1, 0)})
 
@@ -879,12 +890,12 @@ static func sanitize(source: Dictionary, slot_index: int) -> Dictionary:
 	result["spawn"] = source.get("spawn", result["spawn"])
 	result["kind"] = str(source.get("kind", result["kind"]))
 	result["source_level"] = clampi(int(source.get("source_level", 0)), 0, BUILTIN_COUNT)
-	result["insert_position"] = clampi(int(source.get("insert_position", 11)), 1, BUILTIN_COUNT + 1)
+	result["insert_position"] = clampi(int(source.get("insert_position", BUILTIN_COUNT + 1)), 1, BUILTIN_COUNT + 1)
 	result["width"] = clampi(int(source.get("width", result["width"])), MIN_WIDTH, MAX_WIDTH)
 	result["height"] = clampi(int(source.get("height", result["height"])), 6, 14)
 	result["version"] = VERSION
 	result["start_mounted"] = bool(source.get("start_mounted", false)) or int(result["source_level"]) == 1
-	var default_style := STYLE_CAVE if int(result["source_level"]) == 5 else STYLE_DESERT
+	var default_style := STYLE_CAVE if CaveCampaignLevels.is_cave_source(int(result["source_level"])) else STYLE_DESERT
 	result["style"] = normalize_style(source.get("style", default_style))
 	var trail := trail_row(int(result["height"]))
 	var objects: Array[Dictionary] = []
@@ -911,7 +922,7 @@ static func sanitize(source: Dictionary, slot_index: int) -> Dictionary:
 
 static func _valid_object(object: Dictionary, trail: int) -> bool:
 	var valid_types := [
-		"ground", "platform", "star", "chest", "cactus", "canyon", "pit",
+		"ground", "platform", "ladder_ledge", "star", "chest", "cactus", "canyon", "pit",
 		"checkpoint", "spring", "goal", "bandit", "bounty_bandit", "bull", "ninja",
 		"rattlesnake", "carrion", "bat", "acid_drip", "stalactite", "ladder",
 		"wings", "boots", "speed", "shield",

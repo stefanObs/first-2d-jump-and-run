@@ -1,0 +1,111 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/bosses/cave_dragon_boss.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="3"]
+[ext_resource type="Texture2D" path="res://assets/world/boss_cave_dragon_0.png" id="4"]
+[ext_resource type="Script" path="res://scripts/bosses/boss_lasso_target.gd" id="5"]
+
+[sub_resource type="RectangleShape2D" id="Ground"]
+size = Vector2(1600, 64)
+
+[sub_resource type="RectangleShape2D" id="DragonBody"]
+size = Vector2(160, 120)
+
+[sub_resource type="RectangleShape2D" id="DragonHurt"]
+size = Vector2(140, 110)
+
+[sub_resource type="RectangleShape2D" id="DragonLasso"]
+size = Vector2(100, 100)
+
+[node name="BossCaveDragon" type="Node2D"]
+script = ExtResource("1")
+
+[node name="Background" type="ColorRect" parent="."]
+z_index = -20
+offset_left = -200.0
+offset_top = -400.0
+offset_right = 1800.0
+offset_bottom = 500.0
+color = Color(0.12, 0.14, 0.22, 1)
+
+[node name="SkyBand" type="ColorRect" parent="."]
+z_index = -19
+offset_left = -200.0
+offset_top = -400.0
+offset_right = 1800.0
+offset_bottom = 80.0
+color = Color(0.1, 0.12, 0.2, 1)
+
+[node name="HintLabel" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 40.0
+offset_right = 1100.0
+offset_bottom = 80.0
+theme_override_colors/font_color = Color(0.95, 0.75, 0.85, 1)
+theme_override_font_sizes/font_size = 20
+text = "Cave Dragon — dodge flameballs, then lasso him three times!"
+
+[node name="SpawnPoint" type="Marker2D" parent="."]
+position = Vector2(220, 320)
+
+[node name="Ground" type="StaticBody2D" parent="."]
+position = Vector2(800, 352)
+
+[node name="Visual" type="ColorRect" parent="Ground"]
+offset_left = -800.0
+offset_top = -32.0
+offset_right = 800.0
+offset_bottom = 32.0
+color = Color(0.28, 0.26, 0.34, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Ground"]
+shape = SubResource("Ground")
+
+[node name="Dragon" type="AnimatableBody2D" parent="."]
+position = Vector2(980, 220)
+z_index = 1
+collision_layer = 1
+collision_mask = 0
+
+[node name="Sprite2D" type="Sprite2D" parent="Dragon"]
+position = Vector2(0, -70)
+scale = Vector2(0.85, 0.85)
+texture = ExtResource("4")
+flip_h = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Dragon"]
+position = Vector2(0, -60)
+shape = SubResource("DragonBody")
+
+[node name="HurtArea" type="Area2D" parent="Dragon"]
+collision_layer = 0
+collision_mask = 2
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Dragon/HurtArea"]
+position = Vector2(0, -60)
+shape = SubResource("DragonHurt")
+
+[node name="LassoTarget" type="Area2D" parent="Dragon"]
+position = Vector2(-20, -80)
+script = ExtResource("5")
+active = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Dragon/LassoTarget"]
+shape = SubResource("DragonLasso")
+
+[node name="Label" type="Label" parent="Dragon"]
+offset_left = -80.0
+offset_top = -180.0
+offset_right = 80.0
+offset_bottom = -150.0
+theme_override_colors/font_color = Color(1, 0.85, 0.3, 1)
+theme_override_font_sizes/font_size = 18
+text = "DRAGON"
+horizontal_alignment = 1
+
+[node name="Player" parent="." instance=ExtResource("2")]
+position = Vector2(220, 320)
+
+[node name="Hud" parent="." instance=ExtResource("3")]

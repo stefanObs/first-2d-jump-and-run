@@ -45,7 +45,7 @@ script = ExtResource("1_level")
 level_number = 10
 celebration_duration = 5.2
 level_title = "Rainbow Saloon"
-is_final_level = true
+is_final_level = false
 
 [node name="Background" type="ColorRect" parent="."]
 z_index = -20

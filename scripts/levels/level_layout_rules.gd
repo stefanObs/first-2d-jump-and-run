@@ -82,6 +82,8 @@ static func _validate_forward_route(level: Node) -> PackedStringArray:
 	if ground == null:
 		ground = level.find_child("GroundLeft", true, false) as Node2D
 	if ground == null:
+		ground = level.find_child("Ground0", true, false) as Node2D
+	if ground == null:
 		errors.append("No styled ground route exists between spawn and goal.")
 	return errors
 
@@ -867,6 +869,7 @@ static func _is_optional_platform(name_text: String) -> bool:
 		or name_text == "BootsHopLedge"
 		or name_text.begins_with("WindLedge")
 		or name_text.begins_with("SpringLedge")
+		or name_text.begins_with("LadderLedge")
 	)
 
 

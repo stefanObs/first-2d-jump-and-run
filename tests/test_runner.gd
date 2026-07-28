@@ -40,7 +40,7 @@ func _ready() -> void:
 	failures += await _run("Translation editor loads and exports portably", _test_translation_editor)
 	failures += await _run("Handmade trail progress and effect sounds work", _test_handmade_progress_and_sfx)
 	failures += await _run("Level 01 contains core objects", _test_level_01_world_objects)
-	failures += await _run("Level catalog has ten scenes", _test_ten_levels_exist)
+	failures += await _run("Level catalog has fifteen scenes", _test_fifteen_levels_exist)
 	failures += await _run("LevelController respawns at checkpoint", _test_respawn_uses_checkpoint)
 	failures += await _run("Camp restores tied bandits and active bonuses", _test_camp_restores_state)
 	failures += await _run("Goal completion disables player input", _test_goal_disables_input)
@@ -574,8 +574,54 @@ func _test_boss_arenas() -> Variant:
 		return "Guards must stand in front (left) of the kingpin."
 	king.queue_free()
 
+	var dragon_packed: PackedScene = load("res://scenes/bosses/boss_cave_dragon.tscn")
+	if dragon_packed == null:
+		return "Missing Cave Dragon boss scene."
+	var dragon := dragon_packed.instantiate()
+	add_child(dragon)
+	var dragon_body := dragon.get_node_or_null("Dragon")
+	var dragon_target := dragon.get_node_or_null("Dragon/LassoTarget")
+	var dragon_sprite := dragon.get_node_or_null("Dragon/Sprite2D") as Sprite2D
+	if not (dragon_body is AnimatableBody2D):
+		dragon.queue_free()
+		return "Cave Dragon must be a solid AnimatableBody2D."
+	if dragon_target == null or not dragon_target.has_method("lasso_hit") or not (dragon_target is Area2D):
+		dragon.queue_free()
+		return "Cave Dragon needs an Area2D lasso target."
+	if int(dragon.get("lassos_needed")) != 3 or int(dragon.get("spit_rounds")) != 3:
+		dragon.queue_free()
+		return "Cave Dragon should require 3 spit rounds then 3 lassos."
+	for stage_path in [
+		"res://assets/world/boss_cave_dragon_0.png",
+		"res://assets/world/boss_cave_dragon_1.png",
+		"res://assets/world/boss_cave_dragon_2.png",
+		"res://assets/world/boss_cave_dragon_3.png",
+		"res://assets/world/dragon_flameball.png",
+	]:
+		if load(stage_path) == null:
+			dragon.queue_free()
+			return "Missing Cave Dragon art: %s" % stage_path
+	if dragon_sprite == null or dragon_sprite.texture == null:
+		dragon.queue_free()
+		return "Cave Dragon needs a stage sprite."
+	dragon.set("_lassos", 3)
+	dragon.call("_apply_stage_visual")
+	if (
+		dragon_sprite.texture == null
+		or not dragon_sprite.texture.resource_path.ends_with("boss_cave_dragon_3.png")
+	):
+		dragon.queue_free()
+		return "Third lasso should show the mouth-tied dragon frame."
+	if int(dragon.get("source_level")) != 15:
+		dragon.queue_free()
+		return "Cave Dragon must be the level-15 boss."
+	if str(dragon.get_meta("level_style", "")) != LevelStyle.CAVE:
+		dragon.queue_free()
+		return "Cave Dragon arena should use cave style."
+	dragon.queue_free()
+
 	# Shared 5-heart boss logic lives on BossArena.
-	for packed in [bull_packed, coach_packed, king_packed]:
+	for packed in [bull_packed, coach_packed, king_packed, dragon_packed]:
 		var arena: Node = packed.instantiate()
 		add_child(arena)
 		if not arena.has_method("lose_heart") or not arena.has_method("get_heart_drop_position"):
@@ -1396,14 +1442,19 @@ func _test_level_01_world_objects() -> Variant:
 	return error
 
 
-func _test_ten_levels_exist() -> Variant:
-	if GameManager.LEVEL_SCENES.size() != 10:
-		return "Expected 10 levels."
+func _test_fifteen_levels_exist() -> Variant:
+	if GameManager.LEVEL_SCENES.size() != 15:
+		return "Expected 15 levels."
 	var level_two := GameManager.level_name_for(2)
 	if not level_two.begins_with("2: "):
 		return "Level names should use the '<number>: <name>' format."
 	if level_two not in ["2: Badge Meadow", "2: Abzeichen-Wiese"]:
 		return "Level 2 should keep its English or German display title."
+	var level_fifteen := GameManager.level_name_for(15)
+	if not level_fifteen.begins_with("15: "):
+		return "Level 15 should use the numbered display title."
+	if level_fifteen not in ["15: Dragon Gate", "15: Drachentor"]:
+		return "Level 15 should keep its English or German display title."
 	for path in GameManager.LEVEL_SCENES:
 		if load(path) == null:
 			return "Missing scene: %s" % path

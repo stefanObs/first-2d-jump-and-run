@@ -160,7 +160,7 @@ func _add_extra_row(parent: VBoxContainer, entry: Dictionary) -> void:
 	var label := Label.new()
 	label.custom_minimum_size = Vector2(440, 44)
 	label.text = tr("Extra before position %d: %s") % [
-		int(data.get("insert_position", 11)),
+		int(data.get("insert_position", CustomLevelStore.BUILTIN_COUNT + 1)),
 		str(data.get("title", tr("Extra Trail"))),
 	]
 	label.add_theme_font_size_override(&"font_size", 18)

@@ -70,8 +70,7 @@ Stamp a **ladder**, run **platforms** along the upper row at the ladder top, the
 
 ## Campaign note
 
-Builtin **Outlaw Cave** (level 5) should eventually dress as `cave` when rebuilt or
-imported into the workshop. Until then, custom trails can pick Cave style freely.
+Builtin **Outlaw Cave** (level 5) and cave arc **levels 11–15** (`Crystal Mouth` → `Dragon Gate`) use `"style": "cave"`. After Dragon Gate the **Cave Dragon** boss flies and spits dodgeable flameballs for three rounds, lands for a lasso, then repeats; after three lassos his mouth is tied and the campaign victory plays. Workshop imports for 11–15 use the stamp catalog in `CaveCampaignLevels`. Custom trails can pick Cave style freely.
 
 ## Art checklist
 

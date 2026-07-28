@@ -96,7 +96,7 @@ func setup_level() -> void:
 	if not campaign_context.is_empty():
 		level_number = int(campaign_context.get("position", level_number))
 		campaign_source_level = int(campaign_context.get("source_level", level_number))
-		is_final_level = level_number >= int(campaign_context.get("count", 10))
+		is_final_level = level_number >= int(campaign_context.get("count", 15))
 
 	spawn_point = get_node_or_null("SpawnPoint") as Marker2D
 	var player_node := get_node_or_null("Player")
@@ -111,7 +111,13 @@ func setup_level() -> void:
 	if not has_meta("level_style"):
 		var style := (
 			LevelStyle.CAVE
-			if (is_custom_level == false and (level_number == 5 or campaign_source_level == 5))
+			if (
+				is_custom_level == false
+				and (
+					CaveCampaignLevels.is_cave_source(level_number)
+					or CaveCampaignLevels.is_cave_source(campaign_source_level)
+				)
+			)
 			else LevelStyle.DESERT
 		)
 		set_meta("level_style", style)

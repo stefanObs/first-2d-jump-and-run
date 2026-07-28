@@ -2,7 +2,7 @@
 
 Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, nonviolent lasso. **Classic mode** has no lives or game over; **Advanced Mode** (chosen in **Settings** before starting or continuing a slot) adds a three-life limit, badge milestones, and a game-over return to the start screen. Pick **Cowboy** or **Cowgirl** in Settings — the choice applies across all save slots. **German is the default language**; English is fully supported.
 
-**Content version:** `1.7.1` (see `content_version.txt`). Launchers reimport when this stamp changes.
+**Content version:** `1.8.0` (see `content_version.txt`). Launchers reimport when this stamp changes.
 
 This README is the **binding source of truth** for gameplay, level design, art, i18n, and audio. Agents and contributors must follow it (see [Agent / contributor rules](#agent--contributor-rules)).
 
@@ -32,7 +32,7 @@ godot --headless --path . res://tests/test_moving_platform_obstruction.tscn
 
 ## Campaign
 
-**10 levels** (`GameManager.LEVEL_NAMES`):
+**15 levels** (`CustomLevelStore.BUILTIN_NAMES` / `GameManager.level_name_for`):
 
 1. Dusty Trail — learn mounted riding/jumping toward the saloon  
 2. Badge Meadow — collect sheriff badges  
@@ -43,7 +43,12 @@ godot --headless --path . res://tests/test_moving_platform_obstruction.tscn
 7. Sky Ranch — Wings flying trail  
 8. Rail Yard — Bubble Shields, conveyors, timed gates  
 9. Moonlight Gulch — Speed Stars + earlier tricks  
-10. Rainbow Saloon — finale using all skills  
+10. Rainbow Saloon — desert finale before the cavern arc  
+11. Crystal Mouth — cave remaps, first ladder path split  
+12. Bat Gallery — bats, ceiling drips, upper ledge route  
+13. Acid Veins — pink drips, fungus, canyon hop  
+14. Ladder Grotto — double ladder branches + cave lizards  
+15. Dragon Gate — cave finale trail before the Cave Dragon  
 
 **Bosses** (after clearing the listed level; same tools as the trail; classic mode uses **5 hearts** per fight; Advanced Mode uses campaign lives instead; nonviolent win):
 
@@ -52,8 +57,9 @@ godot --headless --path . res://tests/test_moving_platform_obstruction.tscn
 | Level 3 | Stampede Bull | Bounce past horns; lasso glowing back ring 3× while stunned |
 | Level 7 | Midnight Coach | Horse chase; lasso door handles 1→2→3 |
 | Level 10 | Outlaw Kingpin | Lasso both guards, then the kingpin once |
+| Level 15 | Cave Dragon | Dodge flameballs for 3 spit rounds, then lasso; repeat; 3rd lasso ties the mouth |
 
-After Kingpin: horizon victory ride, fade, dedication **VOM PAPI FÜR FINN**, then save select.
+After Kingpin the campaign continues into the cave (levels 11–15). After the Cave Dragon: horizon victory ride, fade, dedication **VOM PAPI FÜR FINN**, then save select.
 
 **Saves:** three slots; auto-save; local `savegames/` (gitignored). `SAVE_VERSION` 4 — older formats discarded. Delete via card context / Space / Xbox Y + confirm.
 
