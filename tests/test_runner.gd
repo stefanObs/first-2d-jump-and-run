@@ -5499,14 +5499,14 @@ func _test_workshop_stamp_catalog() -> Variant:
 	for type_name in ["bounty_bandit", "carrion", "pit", "chest", "bull", "ninja"]:
 		if type_name not in palette_types:
 			return "Workshop palette missing %s stamp." % type_name
-	for type_name in ["conveyor", "timed_door", "fence"]:
+	for type_name in ["conveyor", "timed_door", "fence", "mover", "moving_cloud", "blink_cloud", "wind"]:
 		if type_name not in palette_types:
 			return "Workshop palette missing %s stamp." % type_name
 	var cave_palette: PackedStringArray = []
 	for category in LevelStyle.tool_categories(LevelStyle.CAVE):
 		for tool in (category as Dictionary).get("tools", []) as Array:
 			cave_palette.append(str((tool as Array)[0]))
-	for type_name in ["acid_drip", "stalactite", "bat", "conveyor", "timed_door", "fence"]:
+	for type_name in ["acid_drip", "stalactite", "bat", "conveyor", "timed_door", "fence", "mover", "wind"]:
 		if type_name not in cave_palette:
 			return "Cave style palette missing %s stamp." % type_name
 	var horse_palette: PackedStringArray = []
@@ -5518,13 +5518,42 @@ func _test_workshop_stamp_catalog() -> Variant:
 			return "Horse theme palette must not offer %s." % banned
 	if "star" not in horse_palette or "checkpoint" not in horse_palette:
 		return "Horse theme should still allow badges and camps."
+	if "mover" not in horse_palette or "wind" not in horse_palette:
+		return "Horse theme should still allow motion stamps."
 	var trail := CustomLevelStore.trail_row(8)
 	for type_name in [
 		"bounty_bandit", "carrion", "chest", "bull", "ninja", "acid_drip", "stalactite", "bat",
-		"conveyor", "timed_door", "fence",
+		"conveyor", "timed_door", "fence", "mover", "moving_cloud", "blink_cloud", "wind",
 	]:
 		if not CustomLevelStore._valid_object({"type": type_name, "x": 1, "y": trail - 1}, trail):
 			return "%s should be accepted by CustomLevelStore." % type_name
+	# Motion stamps must build into real gameplay nodes (ceiling height stays automated).
+	var motion_data := CustomLevelStore.default_level(0)
+	motion_data["objects"] = [
+		{"type": "ground", "x": 2, "y": trail},
+		{"type": "mover", "x": 8, "y": trail - 3},
+		{"type": "moving_cloud", "x": 14, "y": trail - 3},
+		{"type": "blink_cloud", "x": 20, "y": trail - 3},
+		{"type": "wind", "x": 26, "y": trail - 2},
+		{"type": "goal", "x": 30, "y": trail - 1},
+	]
+	var motion_level := LevelController.new()
+	add_child(motion_level)
+	CustomLevelBuilder.build(motion_level, motion_data)
+	await get_tree().process_frame
+	var motion_error: Variant = null
+	if motion_level.find_child("Mover0", true, false) == null:
+		motion_error = "Builder should spawn a moving plank from the mover stamp."
+	elif motion_level.find_child("MovingCloud0", true, false) == null:
+		motion_error = "Builder should spawn a moving cloud from the moving_cloud stamp."
+	elif motion_level.find_child("BlinkCloud0", true, false) == null:
+		motion_error = "Builder should spawn a blink cloud from the blink_cloud stamp."
+	elif motion_level.find_child("Wind0", true, false) == null:
+		motion_error = "Builder should spawn a wind zone from the wind stamp."
+	motion_level.queue_free()
+	await get_tree().process_frame
+	if motion_error != null:
+		return motion_error
 	var data := CustomLevelStore.default_level(0)
 	data["objects"] = [
 		{"type": "ground", "x": 2, "y": trail},

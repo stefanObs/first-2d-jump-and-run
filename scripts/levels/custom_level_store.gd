@@ -83,6 +83,10 @@ static func stamp_footprint(type_name: String) -> Vector2:
 			return Vector2(4.0, 1.0)
 		"timed_door":
 			return Vector2(2.0, 1.0)
+		"mover", "moving_cloud", "blink_cloud":
+			return Vector2(3.0, 1.0)
+		"wind":
+			return Vector2(5.0, 4.0)
 		_:
 			return Vector2(1.0, 1.0)
 
@@ -120,6 +124,14 @@ static func stamp_world_size(type_name: String, style: String = STYLE_DESERT) ->
 			return Vector2(56.0, 100.0)
 		"fence":
 			return _texture_pixel_size("res://assets/world/fence.png")
+		"mover":
+			return Vector2(140.0, 30.0)
+		"moving_cloud":
+			return _texture_pixel_size("res://assets/world/moving_cloud.svg", 0.95)
+		"blink_cloud":
+			return _texture_pixel_size("res://assets/world/cloud.png", 0.95)
+		"wind":
+			return Vector2(200.0, 150.0)
 		"wings", "boots", "speed", "shield":
 			return _texture_pixel_size(LevelStyle.stamp_icon_path(type_name))
 		_:
@@ -803,6 +815,26 @@ static func _import_type_for(node: Node) -> String:
 		return "carrion"
 	if node is Rattlesnake:
 		return "rattlesnake"
+	if node is MovingPlatform:
+		return "moving_cloud" if (node as MovingPlatform).visual_style == MovingPlatform.VisualStyle.CLOUD else "mover"
+	if node is DisappearingPlatform:
+		return "blink_cloud"
+	if node is WindZone:
+		return "wind"
+	if node is ConveyorBelt:
+		return "conveyor"
+	if node is TimedDoor:
+		return "timed_door"
+	if node is Ladder:
+		return "ladder"
+	if node is BatEnemy:
+		return "bat"
+	if node is AcidDrip:
+		return "acid_drip"
+	if node is StalactiteHazard:
+		return "stalactite" if (node as StalactiteHazard).drops else "stalactite_static"
+	if node is ModeItem:
+		return ModeController.stamp_from_mode((node as ModeItem).mode)
 	if node is Hazard:
 		var body := node as Node2D
 		if node.has_meta("fixed_pit") and bool(node.get_meta("fixed_pit")):
@@ -964,6 +996,7 @@ static func _valid_object(object: Dictionary, trail: int) -> bool:
 		"checkpoint", "spring", "goal", "bandit", "bounty_bandit", "bull", "ninja",
 		"rattlesnake", "carrion", "bat", "acid_drip", "stalactite", "stalactite_static", "ladder",
 		"conveyor", "timed_door", "fence",
+		"mover", "moving_cloud", "blink_cloud", "wind",
 		"wings", "boots", "speed", "shield",
 	]
 	var type_name := str(object.get("type", ""))

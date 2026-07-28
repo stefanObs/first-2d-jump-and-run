@@ -131,3 +131,17 @@ static func mode_from_stamp(type_name: String) -> Mode:
 			return Mode.WINGS
 		_:
 			return Mode.NONE
+
+
+static func stamp_from_mode(mode: Mode) -> String:
+	match mode:
+		Mode.MAGIC_BOOTS:
+			return "boots"
+		Mode.SPEED_STAR:
+			return "speed"
+		Mode.BUBBLE_SHIELD:
+			return "shield"
+		Mode.WINGS:
+			return "wings"
+		_:
+			return ""

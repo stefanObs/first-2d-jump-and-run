@@ -40,6 +40,12 @@ Stamp **type ids stay the same** for remapped foes/hazards so packs stay simple:
 | `conveyor` | Moving belt; optional `"push_right": false` for left push. Must not push into an open canyon. |
 | `timed_door` | Ranch gate that opens/closes on a timer (same Rail Yard rules). Keep clear of canyon mouths. |
 | `fence` | Decorative ranch fence segment (no collision). |
+| `mover` | Wooden moving plank (default ±120 px travel). Cave style uses crystal plank art. |
+| `moving_cloud` | Moving cloud ferry (same travel defaults; cloud art). |
+| `blink_cloud` | One-way blink cloud that fades in/out on a timer. |
+| `wind` | Gust zone; optional `"push_right": false` flips direction. Speed/lift stay capped. |
+
+Cave **ceiling height / rock panels** are automated by theme dress — not workshop stamps.
 
 ### Cave-only stamps
 

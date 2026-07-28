@@ -18,10 +18,14 @@ const CARRION := preload("res://scenes/world/carrion.tscn")
 const MODE_ITEM := preload("res://scenes/world/mode_item.tscn")
 const CONVEYOR := preload("res://scenes/world/conveyor_belt.tscn")
 const TIMED_DOOR := preload("res://scenes/world/timed_door.tscn")
+const MOVING_PLATFORM := preload("res://scenes/world/moving_platform.tscn")
+const BLINK_CLOUD := preload("res://scenes/world/disappearing_platform.tscn")
+const WIND_ZONE := preload("res://scenes/world/wind_zone.tscn")
 const FENCE_TEX := preload("res://assets/world/fence.png")
 const HUD := preload("res://scenes/ui/hud.tscn")
 const PAUSE := preload("res://scenes/ui/pause_menu.tscn")
 const TRANSITION := preload("res://scenes/ui/level_transition.tscn")
+const MOVER_TRAVEL := 120.0
 
 
 static func build(level: LevelController, data: Dictionary, preview: bool = false) -> void:
@@ -184,6 +188,12 @@ static func _spawn_object(
 				belt.position = position
 				belt.push_right = bool(object.get("push_right", true))
 				level.add_child(belt)
+		"mover", "moving_cloud":
+			_add_mover(level, type_name, index, position, object, style)
+		"blink_cloud":
+			_add_blink_cloud(level, index, position, object, trail, grid)
+		"wind":
+			_add_wind(level, index, position, object)
 		"timed_door":
 			_add_scene(level, TIMED_DOOR, "Door%d" % index, position)
 		"fence":
@@ -192,6 +202,72 @@ static func _spawn_object(
 			_add_styled(level, GOAL, "Goal", position, style)
 			return true
 	return false
+
+
+static func _add_mover(
+	level: Node,
+	type_name: String,
+	index: int,
+	position: Vector2,
+	object: Dictionary,
+	style: String
+) -> void:
+	var mover := MOVING_PLATFORM.instantiate() as MovingPlatform
+	if mover == null:
+		return
+	mover.name = ("MovingCloud%d" if type_name == "moving_cloud" else "Mover%d") % index
+	mover.position = position
+	var travel := float(object.get("travel", MOVER_TRAVEL))
+	mover.point_a = Vector2(-travel, 0.0)
+	mover.point_b = Vector2(travel, 0.0)
+	mover.start_at_point_b = bool(object.get("start_at_point_b", false))
+	mover.visual_style = (
+		MovingPlatform.VisualStyle.CLOUD
+		if type_name == "moving_cloud"
+		else MovingPlatform.VisualStyle.RAFT
+	)
+	level.add_child(mover)
+	mover._configure_visual_style()
+	if type_name == "mover" and LevelStyle.is_cave(style):
+		var plank := mover.get_node_or_null("Visual") as Sprite2D
+		if plank != null:
+			var tex: Texture2D = load(LevelStyle.plank_path(style))
+			if tex != null:
+				plank.texture = tex
+
+
+static func _add_blink_cloud(
+	level: Node,
+	index: int,
+	position: Vector2,
+	object: Dictionary,
+	trail: int,
+	grid: float
+) -> void:
+	var cloud := BLINK_CLOUD.instantiate() as DisappearingPlatform
+	if cloud == null:
+		return
+	cloud.name = "BlinkCloud%d" % index
+	cloud.position = position
+	cloud.trail_floor_top = float(trail) * grid
+	if object.has("visible_time"):
+		cloud.visible_time = float(object.get("visible_time"))
+	if object.has("hidden_time"):
+		cloud.hidden_time = float(object.get("hidden_time"))
+	level.add_child(cloud)
+
+
+static func _add_wind(level: Node, index: int, position: Vector2, object: Dictionary) -> void:
+	var wind := WIND_ZONE.instantiate() as WindZone
+	if wind == null:
+		return
+	wind.name = "Wind%d" % index
+	wind.position = position
+	if not bool(object.get("push_right", true)):
+		wind.wind_force.x = -absf(wind.wind_force.x)
+	else:
+		wind.wind_force.x = absf(wind.wind_force.x)
+	level.add_child(wind)
 
 
 static func _add_fence_decor(level: Node, node_name: String, feet_position: Vector2) -> void:

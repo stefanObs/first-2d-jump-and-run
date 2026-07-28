@@ -83,6 +83,14 @@ static func stamp_icon_path(type_name: String, style: String = DESERT) -> String
 			return "res://assets/world/fence_gate.png"
 		"fence":
 			return "res://assets/world/fence.png"
+		"mover":
+			return "res://assets/world/wood_plank.png" if not cave else "res://assets/world/cave_plank.png"
+		"moving_cloud":
+			return "res://assets/world/moving_cloud.svg"
+		"blink_cloud":
+			return "res://assets/world/cloud.png"
+		"wind":
+			return "res://assets/world/wind_gust.png"
 		_:
 			return ""
 
@@ -145,6 +153,14 @@ static func stamp_label(type_name: String, style: String = DESERT) -> String:
 			return "Timed Gate"
 		"fence":
 			return "Fence"
+		"mover":
+			return "Moving Plank"
+		"moving_cloud":
+			return "Moving Cloud"
+		"blink_cloud":
+			return "Blink Cloud"
+		"wind":
+			return "Wind"
 		"erase":
 			return "Erase"
 		_:
@@ -189,6 +205,16 @@ static func tool_categories(style: String = DESERT, start_mounted: bool = false)
 				_tool("conveyor", style),
 				_tool("timed_door", style),
 				_tool("fence", style),
+			],
+		},
+		{
+			"id": "motion",
+			"label": "Motion",
+			"tools": [
+				_tool("mover", style),
+				_tool("moving_cloud", style),
+				_tool("blink_cloud", style),
+				_tool("wind", style),
 			],
 		},
 		{
