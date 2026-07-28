@@ -146,6 +146,7 @@ def _draw_segment(start: str, end: str, seed: int) -> tuple[Image.Image, list[di
             if rng.random() < 0.08:
                 gpx[x, y] = (255, 230, 210, 18)
     im = Image.alpha_composite(im, grain)
+    px = im.load()
 
     draw = ImageDraw.Draw(im)
     for i in range(5):
@@ -158,6 +159,7 @@ def _draw_segment(start: str, end: str, seed: int) -> tuple[Image.Image, list[di
         if len(pts) >= 2:
             # Soft mauve strata — not black ink strokes.
             draw.line(pts, fill=(72, 48, 68, 120), width=2)
+    px = im.load()
 
     # Built-in fused tooth nubs at seats (blend with rock until gameplay tooth releases).
     for seat in seats:
