@@ -616,6 +616,30 @@ func _test_boss_arenas() -> Variant:
 		dragon.queue_free()
 		return "Dragon flameballs must keep a straight aim (no homing)."
 	ball.free()
+	# Flameballs must pass through the arena floor (player-only mask) and stay drawable above it.
+	var floor_ball := DragonFlameball.new()
+	floor_ball.setup(Vector2(0, 0), Vector2(0, 200), null)
+	add_child(floor_ball)
+	await get_tree().process_frame
+	if not is_instance_valid(floor_ball):
+		dragon.queue_free()
+		return "Dragon flameball vanished before flying."
+	if floor_ball.get_collision_mask_value(1):
+		floor_ball.queue_free()
+		dragon.queue_free()
+		return "Dragon flameballs must not collide with the world/floor layer."
+	if floor_ball.z_index < 1:
+		floor_ball.queue_free()
+		dragon.queue_free()
+		return "Dragon flameballs must draw above the floor so they stay visible."
+	for _i in range(30):
+		floor_ball._physics_process(0.05)
+	if not is_instance_valid(floor_ball) or floor_ball.global_position.y < 90.0:
+		if is_instance_valid(floor_ball):
+			floor_ball.queue_free()
+		dragon.queue_free()
+		return "Dragon flameballs must keep flying past the floor surface."
+	floor_ball.queue_free()
 	for stage_path in [
 		"res://assets/world/boss_cave_dragon_0.png",
 		"res://assets/world/boss_cave_dragon_1.png",

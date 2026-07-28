@@ -25,10 +25,13 @@ func setup(from: Vector2, toward: Vector2, _target: Player = null) -> void:
 func _ready() -> void:
 	add_to_group("hostile_projectile")
 	collision_layer = 0
-	# Player only — never collide with the dragon body / ground or shots vanish instantly.
-	collision_mask = 2
+	# Player only — floor/world must not stop the shot (dragon body shares world layer).
+	collision_mask = 0
+	set_collision_mask_value(2, true)
 	monitorable = false
 	monitoring = false
+	# Draw above TrailFloor so shots stay visible while they pass through the crust.
+	z_index = 6
 	_sprite = Sprite2D.new()
 	_sprite.texture = TEX
 	_sprite.centered = true
