@@ -68,11 +68,18 @@ static func _dress_sky(level: Node, style: String = LevelStyle.DESERT) -> void:
 		return
 	# Continuous trail sky — punch only Mesa hills out of canyon columns so the
 	# opening does not get a mismatched Background-blue sky seam.
-	_tile_backdrop(root, tex, "SkyTile", width, -520.0, 700.0, 8.0, Color.WHITE)
+	var sky_y := -520.0
+	var sky_h := 700.0
+	if LevelStyle.is_cave(style):
+		# Drop the cave wash so its bottom meets the trail floor crust.
+		var floor_top := _typical_floor_top(level)
+		sky_y = -620.0
+		sky_h = maxf(floor_top - sky_y, 400.0)
+	_tile_backdrop(root, tex, "SkyTile", width, sky_y, sky_h, 8.0, Color.WHITE)
 
 
 static func _dress_cave_ceiling(level: Node, style: String = LevelStyle.DESERT) -> void:
-	## Cowboy-style rock ceiling band with droppable teeth hanging from the underside.
+	## Higher cowboy-style rock ceiling with fewer droppable teeth fused into the underside.
 	if not LevelStyle.is_cave(style):
 		return
 	if level.get_node_or_null("CaveCeiling") != null:
@@ -88,35 +95,66 @@ static func _dress_cave_ceiling(level: Node, style: String = LevelStyle.DESERT) 
 	root.name = "CaveCeiling"
 	root.z_index = -17
 	level.add_child(root)
-	# Rock band near the top of the play view (flush hanging underside ~y 40–70 for teeth).
-	_tile_strip_row(root, tex, -200.0, width + 200.0, -50.0, 130.0, 0, "CeilingRock")
+	# Tall rock band near the camera top; teeth hang from the painted underside.
+	var ceiling_y := -210.0
+	var ceiling_h := 190.0
+	var underside := ceiling_y + ceiling_h
+	_tile_strip_row(root, tex, -200.0, width + 200.0, ceiling_y, ceiling_h, 0, "CeilingRock")
+	_add_cave_flight_ceiling(root, width, ceiling_y, underside)
+
 	var existing: Array = level.find_children("*", "StalactiteHazard", true, false)
-	var x := 100.0
+	var x := 180.0
 	var index := 0
-	while x < width - 40.0:
+	while x < width - 80.0:
 		var too_close := false
 		for node in existing:
-			if absf((node as Node2D).global_position.x - x) < 60.0:
+			if absf((node as Node2D).global_position.x - x) < 120.0:
 				too_close = true
 				break
 		if not too_close:
 			var spike := StalactiteHazard.new()
 			spike.name = "CeilingStalactite%d" % index
 			spike.drops = true
-			# Spike top sits just under the ceiling rock underside.
-			spike.position = Vector2(x, 50.0 + randf_range(-6.0, 12.0))
+			# Embed spike top into the rock underside so it reads as ceiling growth.
+			spike.position = Vector2(x, underside - 14.0 + randf_range(-4.0, 6.0))
 			spike.z_index = 1
 			root.add_child(spike)
-			var scale := randf_range(0.85, 1.1)
+			var scale := randf_range(0.9, 1.15)
 			var spr := spike.get_node_or_null("Sprite2D") as Sprite2D
 			if spr != null:
 				spr.scale = Vector2(scale, scale)
 			existing.append(spike)
-		x += randf_range(140.0, 200.0)
+		x += randf_range(340.0, 520.0)
 		index += 1
-		if index > 80:
+		if index > 28:
 			break
 
+
+static func _add_cave_flight_ceiling(
+	root: Node2D, width: float, ceiling_y: float, underside: float
+) -> void:
+	## Solid band so Wings cannot leave through the rock; Area2D respawns on touch.
+	var solid := StaticBody2D.new()
+	solid.name = "FlightCeilingCave"
+	solid.collision_layer = 1
+	solid.collision_mask = 0
+	solid.position = Vector2(width * 0.5, (ceiling_y + underside) * 0.5)
+	var solid_shape := CollisionShape2D.new()
+	var solid_rect := RectangleShape2D.new()
+	solid_rect.size = Vector2(width + 400.0, maxf(underside - ceiling_y, 40.0))
+	solid_shape.shape = solid_rect
+	solid.add_child(solid_shape)
+	root.add_child(solid)
+
+	var hazard := CaveCeilingHazard.new()
+	hazard.name = "CaveCeilingHazard"
+	hazard.position = Vector2(width * 0.5, underside - 8.0)
+	var hurt_shape := CollisionShape2D.new()
+	var hurt_rect := RectangleShape2D.new()
+	hurt_rect.size = Vector2(width + 400.0, 36.0)
+	hurt_shape.shape = hurt_rect
+	hazard.add_child(hurt_shape)
+	root.add_child(hazard)
 
 static func _dress_sun(level: Node, style: String = LevelStyle.DESERT) -> void:
 	var sun := level.get_node_or_null("Sun") as ColorRect

@@ -51,12 +51,12 @@ Stamp a **ladder**, run **one-way crystal ledges** along the climb top, then **d
 ## Hazards & enemies
 
 - **Pink drips:** soft glowing droplets; telegraph with a small sparkle before falling; **splash on the floor** then respawn.
-- **Stalactites:** cowboy-style rock spikes hanging from the ceiling band. Theme décor spawns **dropping** teeth along the trail (skips cells that already have a stamped hazard nearby). **Falling** ones wiggle, pull free, fall, then shatter with a transparent impact puff. **Ceiling Spike** stamps can stay put as static rock.
+- **Stalactites:** cowboy-style rock spikes hanging from the ceiling band. Theme décor spawns a **sparse** row of dropping teeth along the trail (skips cells that already have a stamped hazard nearby), with tops embedded in the rock so they read as part of the ceiling before they fall. **Falling** ones wiggle, pull free, fall, then shatter with a transparent impact puff. **Ceiling Spike** stamps can stay put as static rock.
 - **Bats:** two-frame wing flap on a sine/arc path (transparent cutouts).
 - **Lizards:** reuse bull AI (charge, face player, canyon falls, full tie sequence) with a single lizard sprite.
 - **Poison fungus:** cactus rules (hurt / Bubble bounce) with mushroom art and a soft toxic tint.
 - **Scorpions:** rattlesnake raise/strike timing with a tail sting pose.
-- **Bow skeletons:** bandit patrol + shoot cadence, but spawn **arrows** instead of revolver bullets; lasso/stomp still ties. Idle/walk frames share one body height.
+- **Bow skeletons:** bandit patrol + shoot cadence, but spawn **arrows** instead of revolver bullets; lasso/stomp still ties. Idle/walk/tied frames share one body height on a transparent canvas; tied pose keeps stand scale and sits on the dirt.
 - **Ninjas:** ambush appears ~12 columns ahead of the cowboy.
 - **Floor holes:** same pit rules (128×64), cave mouth art.
 
@@ -65,9 +65,8 @@ Stamp a **ladder**, run **one-way crystal ledges** along the climb top, then **d
 1. **Lantern camp** — checkpoint with a warm lantern instead of desert bedrolls.
 2. **Crystal ledge** — platform art: cool stone plank with crystal flecks (replaces wood plank look).
 3. **Glow shard** (optional future pickup) — brief silhouette of drip/stalactite danger columns; not required for v1 playability.
-4. **Cave wash backdrop** — no sun/mesas; deep cave_sky wash + cowboy-style hanging rock ceiling (`cave_ceiling_tile`) with droppable stalactite teeth integrated under the band.
+4. **Cave wash backdrop** — no sun/mesas; deep `cave_sky` wash that meets the trail floor + high hanging rock ceiling (`cave_ceiling_tile`) with sparse droppable stalactite teeth fused under the band. Rock band is solid (`FlightCeilingCave`); touching it while flying respawns at camp.
 5. **Mineral vein floor** — dense cool stone crust with pink crystal flecks; underfill is deep slate (no tile holes showing sky).
-
 ## Campaign note
 
 Builtin **Outlaw Cave** (level 5) and cave arc **levels 11–15** (`Crystal Mouth` → `Dragon Gate`) use `"style": "cave"`. After Dragon Gate the **Cave Dragon** boss flies left↔right below the ceiling (facing travel direction, wing-flap + landing poses), spits flameballs that steer toward the cowboy for three rounds, lands for a lasso, then repeats; after three lassos his mouth is tied and the campaign victory plays. Workshop imports for 11–15 use the stamp catalog in `CaveCampaignLevels`. Custom trails can pick Cave style freely.

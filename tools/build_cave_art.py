@@ -141,7 +141,11 @@ def main() -> int:
             continue
         dest_src = SOURCE_DIR / src_name
         shutil.copy2(src, dest_src)
-        cut = cutout(dest_src)
+        # Skeleton concept plates use a stubborn mid-gray matte below the default key.
+        if out_name.startswith("skeleton") and out_name != "skeleton_arrow.png":
+            cut = cutout(dest_src, level=185, sat=40)
+        else:
+            cut = cutout(dest_src)
 
         if out_name == "poison_fungus.png":
             out = _feet(cut, (64, 80), target_h=72, baseline=79)
@@ -185,13 +189,12 @@ def main() -> int:
     walk_src = CONCEPT_DIR / "cave_skeleton_walk_strip_concept.png"
     if walk_src.is_file():
         shutil.copy2(walk_src, SOURCE_DIR / walk_src.name)
-        figures = slice_strip(cutout(walk_src))
+        figures = slice_strip(cutout(walk_src, level=185, sat=40))
         for i, fig in enumerate(figures[:2]):
             framed = _feet(fig, (64, 80), target_h=67, baseline=76)
             path = OUT_DIR / f"skeleton_walk_{i}.png"
             framed.save(path)
             print(f"wrote {path.relative_to(ROOT)} {framed.size}")
-
     bat_src = CONCEPT_DIR / "cave_bat_strip_concept.png"
     if bat_src.is_file():
         shutil.copy2(bat_src, SOURCE_DIR / bat_src.name)

@@ -129,6 +129,8 @@ func setup_level() -> void:
 	_restore_run_state()
 	WildWestTheme.apply_to_level(self)
 	WildWestTheme.configure_player_camera(self, player)
+	# Theme may spawn cave ceiling décor/hazards — re-wire after dressing.
+	_wire_world_objects()
 	_animate_sun()
 	if hud != null:
 		var display_title := (
@@ -478,6 +480,10 @@ func _wire_world_objects() -> void:
 			var spike := node as StalactiteHazard
 			if not spike.hurt.is_connected(_on_cave_fall_hurt):
 				spike.hurt.connect(_on_cave_fall_hurt)
+		elif node is CaveCeilingHazard:
+			var ceiling := node as CaveCeilingHazard
+			if not ceiling.hurt.is_connected(_on_cave_fall_hurt):
+				ceiling.hurt.connect(_on_cave_fall_hurt)
 		elif node is Rattlesnake:
 			var snake := node as Rattlesnake
 			if not snake.hurt_player.is_connected(_on_opponent_hurt):

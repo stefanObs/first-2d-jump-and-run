@@ -133,6 +133,10 @@ func _make_sprite_frames() -> SpriteFrames:
 func _set_move_animation(moving: bool) -> void:
 	if _sprite == null or _tied or _shooting:
 		return
+	# Keep a stable on-screen size while flipping walk/idle frames.
+	var face := 1.0 if _facing >= 0.0 else -1.0
+	_sprite.scale = Vector2(STAND_SCALE * face, STAND_SCALE)
+	_sprite.offset = STAND_FOOT_OFFSET
 	if moving:
 		if _sprite.animation != &"walk" or not _sprite.is_playing():
 			_sprite.play(&"walk")
@@ -277,10 +281,11 @@ func _play_tying_flourish() -> void:
 		return
 	_kill_pose_tween()
 	var face := 1.0 if _facing >= 0.0 else -1.0
+	var end_scale := STAND_SCALE if LevelStyle.is_cave(_level_style) else TIED_SCALE
 	_pose_tween = create_tween()
 	_pose_tween.tween_property(_sprite, "scale", Vector2(0.9 * face, 0.55), 0.1)
 	_pose_tween.tween_property(_sprite, "scale", Vector2(0.78 * face, 0.78), 0.12)
-	_pose_tween.tween_property(_sprite, "scale", Vector2(TIED_SCALE * face, TIED_SCALE), 0.12)
+	_pose_tween.tween_property(_sprite, "scale", Vector2(end_scale * face, end_scale), 0.12)
 	if _label != null:
 		_label.text = "GOTCHA!"
 		var label_tween := create_tween()
@@ -407,11 +412,13 @@ func _show_floor_bound_pose() -> void:
 	_sprite.rotation = 0.0
 	var face := 1.0 if _facing >= 0.0 else -1.0
 	_sprite.flip_h = false
-	# The tied art is 130 px tall versus the 80 px standing art.
-	# Scale it to the same on-screen height instead of enlarging the capture.
-	_sprite.scale = Vector2(TIED_SCALE * face, TIED_SCALE)
-	# Feet/seat on the desert top (collision bottom at local y=0).
-	_sprite.offset = TIED_FOOT_OFFSET
+	# Desert tied art is taller (~130px); cave skeletons share the 64×80 idle canvas.
+	if LevelStyle.is_cave(_level_style):
+		_sprite.scale = Vector2(STAND_SCALE * face, STAND_SCALE)
+		_sprite.offset = STAND_FOOT_OFFSET
+	else:
+		_sprite.scale = Vector2(TIED_SCALE * face, TIED_SCALE)
+		_sprite.offset = TIED_FOOT_OFFSET
 	_sprite.play(&"tied")
 
 

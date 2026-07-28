@@ -192,6 +192,10 @@ func _ready() -> void:
 	)
 	failures += await _run("Canyon clouds include two-cloud hop chains", _test_two_cloud_canyon_chains)
 	failures += await _run("Wings levels place varied aerial carrions", _test_wings_carrion_variety)
+	failures += await _run(
+		"Cave ceiling guards flight with sparse décor stalactites",
+		_test_cave_ceiling_sparse_flight_guard
+	)
 
 	if failures == 0:
 		print("All tests passed.")
@@ -6301,6 +6305,42 @@ func _test_wings_carrion_variety() -> Variant:
 		heights.sort()
 		if heights[heights.size() - 1] - heights[0] < 200.0:
 			return "Level %s carrions should vary in height, not form one line." % lv
+	return null
+
+
+func _test_cave_ceiling_sparse_flight_guard() -> Variant:
+	## Crystal Mouth (100-wide cave) must dress a flight-blocking ceiling with sparse décor teeth.
+	var data := CaveCampaignLevels.level_data(11)
+	var level := LevelController.new()
+	add_child(level)
+	CustomLevelBuilder.build(level, data)
+	await get_tree().process_frame
+	WildWestTheme.apply_to_level(level)
+	await get_tree().process_frame
+
+	var ceiling := level.get_node_or_null("CaveCeiling") as Node2D
+	if ceiling == null:
+		level.queue_free()
+		return "Cave level 11 should dress a CaveCeiling after theme."
+	if ceiling.get_node_or_null("FlightCeilingCave") == null:
+		level.queue_free()
+		return "CaveCeiling should include FlightCeilingCave solid band."
+	if ceiling.get_node_or_null("CaveCeilingHazard") == null:
+		level.queue_free()
+		return "CaveCeiling should include CaveCeilingHazard for flying touch."
+
+	var decor_count := 0
+	for child in ceiling.get_children():
+		if child is StalactiteHazard and String(child.name).begins_with("CeilingStalactite"):
+			decor_count += 1
+	level.queue_free()
+	if decor_count >= 20:
+		return (
+			"Cave décor stalactites should stay sparse on a 100-wide trail (got %d, want < 20)."
+			% decor_count
+		)
+	if decor_count < 1:
+		return "Cave ceiling should place at least one décor stalactite."
 	return null
 
 
