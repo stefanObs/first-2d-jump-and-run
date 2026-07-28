@@ -65,7 +65,7 @@ Stamp a **ladder**, run **one-way crystal ledges** along the climb top, then **d
 1. **Lantern camp** — checkpoint with a warm lantern instead of desert bedrolls.
 2. **Crystal ledge** — platform art: cool stone plank with crystal flecks (replaces wood plank look).
 3. **Glow shard** (optional future pickup) — brief silhouette of drip/stalactite danger columns; not required for v1 playability.
-4. **Cave wash backdrop** — no sun/mesas; deep `cave_sky` wash that meets the trail floor + high hanging rock ceiling (`cave_ceiling_tile`) with sparse droppable stalactite teeth fused under the band (**Dragon Gate** and the **Cave Dragon** arena keep a clean rock band with no teeth). Rock band is solid (`FlightCeilingCave`); touching it while flying respawns at camp.
+4. **Cave wash backdrop** — no sun/mesas; deep `cave_sky` wash that meets the trail floor + hanging rock ceiling. Solid `cave_ceiling_fill` closes the sky gap above the camera; the wavy lip (`cave_ceiling_tile`) sits about **2cm (~76px)** below the top of a normal grounded view with sparse droppable stalactite teeth fused under it (**Dragon Gate** and the **Cave Dragon** arena keep a clean rock band with no teeth). Rock band is solid (`FlightCeilingCave`); touching it while flying respawns at camp.
 5. **Mineral vein floor** — dense cool stone crust with pink crystal flecks; underfill is deep slate (no tile holes showing sky).
 ## Campaign note
 
@@ -73,7 +73,7 @@ Builtin **Outlaw Cave** (level 5) and cave arc **levels 11–15** (`Crystal Mout
 
 ## Art checklist
 
-- Env: `cave_sky.png`, `cave_ceiling_tile.png`, `cave_floor_tile.png`, `cave_dirt_tile.png`, `cave_plank.png`, `cave_pit.png`
+- Env: `cave_sky.png`, `cave_ceiling_fill.png`, `cave_ceiling_tile.png`, `cave_floor_tile.png`, `cave_dirt_tile.png`, `cave_plank.png`, `cave_pit.png`
 - Goal: `goal_crystal_gate.png`
 - Camp: `checkpoint_cave_active.png` / `_inactive` (transparent cutout)
 - Fungus: `poison_fungus.png`

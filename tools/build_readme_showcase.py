@@ -107,18 +107,24 @@ def build_cave_trail() -> Image.Image:
     sky = load("assets/world/cave_sky.png").resize((w, h), Image.Resampling.LANCZOS)
     paste(canvas, sky, (0, 0))
 
-    ceiling = load("assets/world/cave_ceiling_tile.png")
+    ceiling = load("assets/world/cave_ceiling_fill.png")
     cx = -40
     while cx < w + 40:
-        paste(canvas, ceiling, (cx, -20), 0.55)
-        cx += int(ceiling.width * 0.55) - 12
+        paste(canvas, ceiling, (cx, 0), 0.45)
+        cx += int(ceiling.width * 0.45) - 8
+    lip = load("assets/world/cave_ceiling_tile.png")
+    cx = -40
+    while cx < w + 40:
+        paste(canvas, lip, (cx, 20), 0.55)
+        cx += int(lip.width * 0.55) - 12
 
     floor = load("assets/world/cave_floor_tile.png")
     floor_y = 300
     tile_x(canvas, floor, floor_y, -20, w + 40)
 
-    paste(canvas, load("assets/world/stalactite.png"), (160, 70), 1.0)
-    paste(canvas, load("assets/world/acid_drip.png"), (280, 55), 1.2)
+    paste(canvas, load("assets/world/stalactite.png"), (160, 55), 1.15)
+    paste(canvas, load("assets/world/stalactite_static.png"), (520, 58), 1.2)
+    paste(canvas, load("assets/world/acid_drip.png"), (280, 62), 1.2)
     paste(canvas, load("assets/world/poison_fungus.png"), (90, floor_y - 48), 1.2)
     paste(canvas, load("assets/world/skeleton.png"), (240, floor_y - 72), 1.25)
     paste(canvas, load("assets/world/cave_bat_0.png"), (420, 150), 1.5)

@@ -223,6 +223,9 @@ static func sky_path(style: String) -> String:
 static func ceiling_path(style: String) -> String:
 	return "res://assets/world/cave_ceiling_tile.png" if is_cave(style) else ""
 
+static func ceiling_fill_path(style: String) -> String:
+	return "res://assets/world/cave_ceiling_fill.png" if is_cave(style) else ""
+
 static func floor_path(style: String) -> String:
 	return (
 		"res://assets/world/cave_floor_tile.png"

@@ -2,7 +2,7 @@
 
 Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, nonviolent lasso. **Classic mode** has no lives or game over; **Advanced Mode** (chosen in **Settings** before starting or continuing a slot) adds a three-life limit, badge milestones, and a game-over return to the start screen. Pick **Cowboy** or **Cowgirl** in Settings — the choice applies across all save slots. **German is the default language**; English is fully supported.
 
-**Content version:** `1.8.18` (see `content_version.txt`). Launchers reimport when this stamp changes.
+**Content version:** `1.8.19` (see `content_version.txt`). Launchers reimport when this stamp changes.
 
 This README is the **binding source of truth** for gameplay, level design, art, i18n, and audio. Agents and contributors must follow it (see [Agent / contributor rules](#agent--contributor-rules)).
 
@@ -136,7 +136,7 @@ Agents **must** honor these when editing levels or trail systems:
 - Trail documents may set `"style": "cave"` (workshop **Level style**). Binding art/behavior notes: `docs/cave_biome.md`.
 - Cave remaps stamp **presentation** (same type ids): fungus/lizard/scorpion/bow skeleton/lantern camp/**Crystal Gate** (saloon replacement). Cave-only stamps: `acid_drip`, `stalactite`, `stalactite_static`, `bat`.
 - Pink drips splash on the floor then respawn; falling stalactites pull free before dropping; **Bubble does not block** drips/spikes. Bats can bounce off Bubble.
-- Cave floors use dense cool stone + pink flecks; **higher** curved rock ceiling with **sparse embedded stalactites** (none on Dragon Gate / Cave Dragon); deep cave wash / **sky wash touches the floor**; no desert sun/mesa hills.
+- Cave floors use dense cool stone + pink flecks; rock ceiling with **fill above the lip** (no sky strip under the camera top) and a wavy underside about **2cm from the top of a grounded view**, plus **sparse attached stalactites** (none on Dragon Gate / Cave Dragon); deep cave wash / **sky wash touches the floor**; no desert sun/mesa hills.
 - **Wings cannot pass the ceiling** (`FlightCeilingCave`); touching the rock while flying (`CaveCeilingHazard`) respawns at camp.
 - **Ladders** (workshop Trail stamp): 3-cell climb; Space/Up climbs up, S/Down climbs down. Upper one-way planks must sit on the climb-top row so the cowboy can step onto the higher path; drop off the ledge end back to dirt (no second “down” ladder required). Sample branches appear on new trails and on cave workshop imports.
 

@@ -772,52 +772,175 @@ def make_acid_drip_splash() -> None:
     print(f"acid_drip_splash: clear%={_clear_pct(im):.1f}")
 
 
-def make_stalactite_static() -> None:
-    """48x96 decorative hanging spike matching stalactite.png palette."""
-    # Sample palette from shipped falling stalactite if present.
-    palette = [(72, 60, 82), (84, 70, 94), (103, 84, 112), (139, 132, 151), (55, 42, 58)]
-    pinks = [(180, 110, 150), (200, 130, 165)]
-    src = OUT / "stalactite.png"
-    if src.is_file():
-        st = Image.open(src).convert("RGBA")
-        colors: list[tuple[int, int, int]] = []
-        px = st.load()
-        for y in range(st.size[1]):
-            for x in range(st.size[0]):
-                r, g, b, a = px[x, y]
-                if a > 200:
-                    colors.append((r, g, b))
-        if colors:
-            # Prefer darker slate tones.
-            colors.sort(key=lambda c: sum(c))
-            palette = colors[:: max(1, len(colors) // 5)][:5]
+def make_stalactite_hang() -> None:
+    """48x96 dropping tooth — flat rocky crown for ceiling join, taper to tip."""
+    import math
+    import random
 
-    im = Image.new("RGBA", (48, 96), (0, 0, 0, 0))
+    rng = random.Random(17)
+    w, h = 48, 96
+    im = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    px = im.load()
+
+    def rock(x: int, y: int, shade: float = 1.0) -> tuple[int, int, int, int]:
+        n = math.sin(x * 0.21) * 6 + math.cos(y * 0.17) * 5
+        base = 72 + int(n)
+        r = int(max(28, min(130, (base + 8) * shade)))
+        g = int(max(24, min(110, (base - 6) * shade)))
+        b = int(max(40, min(140, (base + 18) * shade)))
+        return (r, g, b, 255)
+
+    # Width envelope: wide flat crown, then taper.
+    for y in range(h):
+        t = y / float(h - 1)
+        if y < 10:
+            half = 21.0 - y * 0.15
+        else:
+            half = 20.0 * (1.0 - ((t - 0.08) / 0.92) ** 1.35) + 1.2
+        # Mild irregular silhouette.
+        half += 1.4 * math.sin(y * 0.33 + 0.4) + 0.8 * math.sin(y * 0.11)
+        cx = (w - 1) * 0.5
+        x0 = int(round(cx - half))
+        x1 = int(round(cx + half))
+        for x in range(max(0, x0), min(w, x1 + 1)):
+            edge = min(x - x0, x1 - x)
+            shade = 0.78 + 0.22 * (edge / max(1.0, half))
+            if y < 8:
+                shade *= 0.92  # slightly darker join into ceiling rock
+            col = rock(x, y, shade)
+            # Warm outline
+            if edge <= 1 or y >= h - 2:
+                col = (max(18, col[0] - 28), max(14, col[1] - 28), max(24, col[2] - 22), 255)
+            px[x, y] = col
+
+    # Segment ridges for cowboy-style rock layers.
     d = ImageDraw.Draw(im)
-    # Tapered spike from top.
-    outline = (40, 28, 38, 255)
-    body = (*palette[0], 255)
-    mid = (*palette[min(1, len(palette) - 1)], 255)
-    tip = (*palette[min(2, len(palette) - 1)], 255)
-    points_outer = [(10, 2), (38, 2), (28, 88), (20, 88)]
-    d.polygon(points_outer, fill=outline)
-    points_inner = [(13, 5), (35, 5), (26, 84), (22, 84)]
-    d.polygon(points_inner, fill=body)
-    d.polygon([(16, 8), (30, 8), (25, 50), (20, 50)], fill=mid)
-    d.polygon([(20, 55), (26, 55), (24, 82), (22, 82)], fill=tip)
+    for y in (14, 28, 44, 60, 74):
+        span = 10 + int((1.0 - y / h) * 10)
+        d.arc((24 - span, y - 3, 24 + span, y + 5), 200, 340, fill=(48, 36, 54, 200), width=1)
+
     # Pink crystal flecks
-    for x, y in ((18, 18), (28, 28), (22, 40), (26, 60)):
-        d.ellipse((x, y, x + 3, y + 4), fill=(*pinks[0], 220))
-    # Tip point
-    d.polygon([(22, 84), (26, 84), (24, 94)], fill=outline)
-    d.polygon([(23, 84), (25, 84), (24, 92)], fill=tip)
+    for x, y in ((18, 16), (28, 24), (22, 38), (26, 52), (23, 68)):
+        if px[x, y][3] < 200:
+            continue
+        d.ellipse((x, y, x + 3, y + 4), fill=(210, 120, 165, 230))
+
+    # Ensure top row is fully opaque across the crown for ceiling attach.
+    for x in range(6, 42):
+        if px[x, 0][3] < 8:
+            px[x, 0] = rock(x, 0, 0.85)
+        if px[x, 1][3] < 8:
+            px[x, 1] = rock(x, 1, 0.88)
+
+    _save(im, OUT / "stalactite.png")
+    print(f"stalactite: clear%={_clear_pct(im):.1f}")
+
+
+def make_stalactite_static() -> None:
+    """40x80 decorative hanging spike — shorter cousin of the droppable tooth."""
+    import math
+    import random
+
+    rng = random.Random(23)
+    w, h = 40, 80
+    im = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    px = im.load()
+
+    def rock(x: int, y: int, shade: float = 1.0) -> tuple[int, int, int, int]:
+        n = math.sin(x * 0.25) * 5 + math.cos(y * 0.19) * 4
+        base = 68 + int(n)
+        r = int(max(26, min(120, (base + 6) * shade)))
+        g = int(max(22, min(100, (base - 8) * shade)))
+        b = int(max(36, min(130, (base + 16) * shade)))
+        return (r, g, b, 255)
+
+    for y in range(h):
+        t = y / float(h - 1)
+        half = 16.5 * (1.0 - t ** 1.25) + 1.0
+        half += 1.1 * math.sin(y * 0.4)
+        cx = (w - 1) * 0.5
+        x0 = int(round(cx - half))
+        x1 = int(round(cx + half))
+        for x in range(max(0, x0), min(w, x1 + 1)):
+            edge = min(x - x0, x1 - x)
+            shade = 0.8 + 0.2 * (edge / max(1.0, half))
+            col = rock(x, y, shade)
+            if edge <= 1 or y >= h - 2:
+                col = (max(16, col[0] - 26), max(12, col[1] - 26), max(22, col[2] - 20), 255)
+            px[x, y] = col
+
+    d = ImageDraw.Draw(im)
+    for y in (12, 26, 42, 56):
+        span = 7 + int((1.0 - y / h) * 8)
+        d.arc((20 - span, y - 2, 20 + span, y + 4), 200, 340, fill=(44, 32, 50, 190), width=1)
+    for x, y in ((14, 14), (24, 22), (18, 36), (22, 50)):
+        if px[x, y][3] > 200:
+            d.ellipse((x, y, x + 2, y + 3), fill=(200, 115, 160, 220))
+    for x in range(5, 35):
+        if px[x, 0][3] < 8:
+            px[x, 0] = rock(x, 0, 0.85)
+
     _save(im, OUT / "stalactite_static.png")
     print(f"stalactite_static: clear%={_clear_pct(im):.1f}")
 
 
+def make_cave_ceiling_fill() -> None:
+    """Seamless dense slate fill used above the hanging lip (closes sky gaps)."""
+    import math
+    import random
+
+    rng = random.Random(61)
+    w, h = 256, 128
+    im = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    px = im.load()
+    for y in range(h):
+        for x in range(w):
+            n = (
+                math.sin(x * 0.09) * 7
+                + math.cos(y * 0.13) * 6
+                + math.sin((x + y) * 0.05) * 5
+                + rng.randint(-4, 4)
+            )
+            base = 52 + int(n)
+            # Slightly darker toward the very top so the band reads as deep rock.
+            top_shade = 0.82 + 0.18 * (y / max(1, h - 1))
+            r = int(max(18, min(105, (base + 4) * top_shade)))
+            g = int(max(16, min(92, (base - 8) * top_shade)))
+            b = int(max(28, min(118, (base + 14) * top_shade)))
+            px[x, y] = (r, g, b, 255)
+    # Soft mineral flecks (keep dim so the fill reads as rock, not stars).
+    for _ in range(40):
+        x = rng.randint(2, w - 3)
+        y = rng.randint(2, h - 3)
+        pr = 140 + rng.randint(-15, 25)
+        pg = 70 + rng.randint(-10, 20)
+        pb = 110 + rng.randint(-15, 20)
+        px[x, y] = (pr, pg, pb, 255)
+    # Larger packed-rock blotches for seam-hiding when tiled.
+    for _ in range(28):
+        cx = rng.randint(8, w - 9)
+        cy = rng.randint(8, h - 9)
+        rad = rng.randint(4, 10)
+        shade = 0.88 + rng.random() * 0.18
+        for dy in range(-rad, rad + 1):
+            for dx in range(-rad, rad + 1):
+                if dx * dx + dy * dy > rad * rad:
+                    continue
+                nx, ny = (cx + dx) % w, (cy + dy) % h
+                r, g, b, _a = px[nx, ny]
+                px[nx, ny] = (
+                    int(max(16, min(110, r * shade))),
+                    int(max(14, min(95, g * shade))),
+                    int(max(24, min(120, b * shade))),
+                    255,
+                )
+    _save(im, OUT / "cave_ceiling_fill.png")
+    print(f"cave_ceiling_fill: clear%={_clear_pct(im):.1f}")
+
+
 def make_cave_ceiling_tile() -> None:
-    """400x160 curved dark slate ceiling band with pink flecks + teeth."""
-    w, h = 400, 160
+    """512x140 wavy hanging lip — solid rock above, transparent below the curve."""
+    w, h = 512, 140
     im = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     px = im.load()
     import math
@@ -833,41 +956,38 @@ def make_cave_ceiling_tile() -> None:
         b = max(30, min(120, base + 12 + rng.randint(-6, 6)))
         return (r, g, b, 255)
 
-    # Bottom rock edge: wavy curve near mid-lower area, transparent below.
+    # Bottom rock edge: wavy curve; short fused nubs only (game teeth are separate sprites).
     for x in range(w):
         wave = (
-            88
-            + 18 * math.sin(x * 0.028)
-            + 10 * math.sin(x * 0.07 + 1.2)
-            + 6 * math.cos(x * 0.015)
+            78
+            + 16 * math.sin(x * 0.022)
+            + 9 * math.sin(x * 0.06 + 1.2)
+            + 5 * math.cos(x * 0.013)
         )
-        # Short stalactite teeth along bottom.
         tooth = 0
-        local = x % 48
-        if 8 <= local <= 18:
-            t = (local - 8) / 10.0
-            tooth = int(22 * (1.0 - abs(t - 0.5) * 2) ** 0.7)
-        elif 28 <= local <= 36:
-            t = (local - 28) / 8.0
-            tooth = int(14 * (1.0 - abs(t - 0.5) * 2) ** 0.7)
+        local = x % 56
+        if 10 <= local <= 18:
+            t = (local - 10) / 8.0
+            tooth = int(10 * (1.0 - abs(t - 0.5) * 2) ** 0.7)
+        elif 34 <= local <= 40:
+            t = (local - 34) / 6.0
+            tooth = int(7 * (1.0 - abs(t - 0.5) * 2) ** 0.7)
         edge = int(wave + tooth)
         for y in range(0, min(h, edge + 1)):
-            # Soft crust near edge
-            if y > edge - 3:
-                col = rock_color(x, y)
-                fade = 255 if y <= edge else 0
-                if y == edge:
-                    # Darker outline
-                    px[x, y] = (max(10, col[0] - 25), max(8, col[1] - 25), max(15, col[2] - 20), 255)
-                else:
-                    px[x, y] = col
+            col = rock_color(x, y)
+            if y >= edge - 1:
+                px[x, y] = (
+                    max(10, col[0] - 22),
+                    max(8, col[1] - 22),
+                    max(15, col[2] - 18),
+                    255,
+                )
             else:
-                px[x, y] = rock_color(x, y)
+                px[x, y] = col
 
-    # Pink flecks in rock mass
-    for _ in range(90):
+    for _ in range(110):
         x = rng.randint(4, w - 5)
-        y = rng.randint(4, 70)
+        y = rng.randint(4, 64)
         if px[x, y][3] < 200:
             continue
         pr = 200 + rng.randint(-20, 30)
@@ -879,15 +999,6 @@ def make_cave_ceiling_tile() -> None:
                 if 0 <= nx < w and 0 <= ny < h and px[nx, ny][3] >= 200:
                     if abs(dx) + abs(dy) <= 1 or rng.random() < 0.4:
                         px[nx, ny] = (pr, pg, pb, 255)
-
-    # Darker top band (attached to ceiling)
-    for y in range(0, 12):
-        for x in range(w):
-            r, g, b, a = px[x, y]
-            if a < 8:
-                continue
-            fac = 0.75 + y * 0.02
-            px[x, y] = (int(r * fac), int(g * fac), int(b * fac), a)
 
     _save(im, OUT / "cave_ceiling_tile.png")
     print(f"cave_ceiling_tile: clear%={_clear_pct(im):.1f}")
@@ -970,7 +1081,9 @@ def verify() -> None:
         "cave_dirt_tile.png",
         "acid_drip_splash.png",
         "stalactite_static.png",
+        "stalactite.png",
         "cave_ceiling_tile.png",
+        "cave_ceiling_fill.png",
     ):
         p = OUT / name
         if p.is_file():
@@ -986,7 +1099,9 @@ def main() -> int:
     fix_camp_and_impact()
     fix_floors()
     make_acid_drip_splash()
+    make_stalactite_hang()
     make_stalactite_static()
+    make_cave_ceiling_fill()
     make_cave_ceiling_tile()
     verify()
     print("\n=== files written ===")

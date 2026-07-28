@@ -81,28 +81,48 @@ static func _dress_sky(level: Node, style: String = LevelStyle.DESERT) -> void:
 
 
 static func _dress_cave_ceiling(level: Node, style: String = LevelStyle.DESERT) -> void:
-	## Higher cowboy-style rock ceiling with fewer droppable teeth fused into the underside.
+	## Rock ceiling near the top of the view: solid fill closes the sky gap, wavy
+	## lip hangs ~2cm below the camera top, and stalactite crowns fuse into it.
 	if not LevelStyle.is_cave(style):
 		return
 	if level.get_node_or_null("CaveCeiling") != null:
 		return
-	var ceiling_path := LevelStyle.ceiling_path(style)
-	if ceiling_path.is_empty() or not ResourceLoader.exists(ceiling_path):
+	var lip_path := LevelStyle.ceiling_path(style)
+	var fill_path := LevelStyle.ceiling_fill_path(style)
+	if lip_path.is_empty() or not ResourceLoader.exists(lip_path):
 		return
-	var tex: Texture2D = load(ceiling_path)
-	if tex == null:
+	var lip_tex: Texture2D = load(lip_path)
+	if lip_tex == null:
 		return
+	var fill_tex: Texture2D = null
+	if not fill_path.is_empty() and ResourceLoader.exists(fill_path):
+		fill_tex = load(fill_path)
 	var width := _level_width(level)
 	var root := Node2D.new()
 	root.name = "CaveCeiling"
 	root.z_index = -17
 	level.add_child(root)
-	# Tall rock band near the camera top; teeth hang from the painted underside.
-	var ceiling_y := -210.0
-	var ceiling_h := 190.0
-	var underside := ceiling_y + ceiling_h
-	_tile_strip_row(root, tex, -200.0, width + 200.0, ceiling_y, ceiling_h, 0, "CeilingRock")
-	_add_cave_flight_ceiling(root, width, ceiling_y, underside)
+
+	# Match configure_player_camera.limit_top. ~2cm ≈ 76px at the 720p base.
+	# Grounded play keeps the camera near y≈300 (view top ≈ -128 with zoom 0.84);
+	# hang the lip ~2cm below that so the ceiling reads at the top of the screen.
+	const CAMERA_TOP := -280.0
+	const SCREEN_PAD := 76.0
+	const TYPICAL_VIEW_TOP := -128.0
+	var underside := TYPICAL_VIEW_TOP + SCREEN_PAD
+	var fill_top := CAMERA_TOP - 100.0
+	var lip_h := 72.0
+	var lip_y := underside - lip_h
+	root.set_meta("underside_y", underside)
+
+	# Dense fill from above the camera top down to the lip (no sky strip).
+	if fill_tex != null:
+		_tile_strip_row(root, fill_tex, -200.0, width + 200.0, fill_top, underside - fill_top, 0, "CeilingFill")
+	_tile_strip_row(root, lip_tex, -200.0, width + 200.0, lip_y, lip_h, 1, "CeilingRock")
+	_add_cave_flight_ceiling(root, width, fill_top, underside)
+
+	# Snap workshop / layout hangings onto the painted underside.
+	_snap_ceiling_hangings(level, underside)
 
 	# Dragon Gate / Cave Dragon keep a clean rock band (no hanging teeth).
 	if _is_dragon_cave_level(level):
@@ -121,9 +141,9 @@ static func _dress_cave_ceiling(level: Node, style: String = LevelStyle.DESERT) 
 			var spike := StalactiteHazard.new()
 			spike.name = "CeilingStalactite%d" % index
 			spike.drops = true
-			# Embed spike top into the rock underside so it reads as ceiling growth.
-			spike.position = Vector2(x, underside - 14.0 + randf_range(-4.0, 6.0))
-			spike.z_index = 1
+			# Flat crown sits slightly inside the rock so the tooth reads fused on.
+			spike.position = Vector2(x, underside - 10.0 + randf_range(-3.0, 4.0))
+			spike.z_index = 2
 			root.add_child(spike)
 			var scale := randf_range(0.9, 1.15)
 			var spr := spike.get_node_or_null("Sprite2D") as Sprite2D
@@ -134,6 +154,18 @@ static func _dress_cave_ceiling(level: Node, style: String = LevelStyle.DESERT) 
 		index += 1
 		if index > 28:
 			break
+
+
+static func _snap_ceiling_hangings(level: Node, underside: float) -> void:
+	## Stamps use grid row 0 (near y=0); pull them up onto the real rock lip.
+	for node in level.find_children("*", "StalactiteHazard", true, false):
+		var spike := node as Node2D
+		if spike.get_parent() != null and String(spike.get_parent().name) == "CaveCeiling":
+			continue
+		spike.global_position.y = underside - 8.0
+	for node in level.find_children("*", "AcidDrip", true, false):
+		var drip := node as Node2D
+		drip.global_position.y = underside + 2.0
 
 
 static func _is_dragon_cave_level(level: Node) -> bool:

@@ -6367,11 +6367,33 @@ func _test_cave_ceiling_sparse_flight_guard() -> Variant:
 	if ceiling.get_node_or_null("CaveCeilingHazard") == null:
 		level.queue_free()
 		return "CaveCeiling should include CaveCeilingHazard for flying touch."
+	if ceiling.get_node_or_null("CeilingFill_0") == null:
+		level.queue_free()
+		return "CaveCeiling should fill the sky gap above the lip with CeilingFill art."
+	var underside := float(ceiling.get_meta("underside_y", 999.0))
+	# ~2cm below a grounded view top (−128 + 76 ≈ −52).
+	if underside < -70.0 or underside > -30.0:
+		level.queue_free()
+		return "Cave ceiling underside should sit near the top of the screen (got y=%.1f)." % underside
 
 	var decor_count := 0
 	for child in ceiling.get_children():
 		if child is StalactiteHazard and String(child.name).begins_with("CeilingStalactite"):
 			decor_count += 1
+			var tooth := child as Node2D
+			if absf(tooth.position.y - (underside - 10.0)) > 12.0:
+				level.queue_free()
+				return "Ceiling stalactites must attach at the rock underside (y=%.1f vs lip %.1f)." % [
+					tooth.position.y, underside
+				]
+	# Stamped hangings must snap onto the lip (not float at grid row 0).
+	for node in level.find_children("*", "StalactiteHazard", true, false):
+		var spike := node as Node2D
+		if spike.get_parent() == ceiling:
+			continue
+		if absf(spike.global_position.y - (underside - 8.0)) > 1.5:
+			level.queue_free()
+			return "Stamped stalactites must snap onto the ceiling underside."
 	level.queue_free()
 	if decor_count >= 20:
 		return (
