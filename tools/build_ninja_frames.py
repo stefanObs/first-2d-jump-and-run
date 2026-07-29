@@ -33,6 +33,26 @@ def _fig(path: str, target_h: int = BODY_H, baseline: int = BASELINE) -> Image.I
     return frame_sprite(cutout(str(SRC / path)), canvas=CANVAS, target_h=target_h, baseline=baseline)
 
 
+def _scrub_flat_gray(im: Image.Image, *, level: int = 110, chroma: int = 18) -> Image.Image:
+    """Clear residual flat matte after downscale (enclosed limb gaps / foot shadow)."""
+    out = im.copy()
+    px = out.load()
+    w, h = out.size
+    for y in range(h):
+        for x in range(w):
+            r, g, b, a = px[x, y]
+            if a < 8:
+                continue
+            if min(r, g, b) < level:
+                continue
+            if (max(r, g, b) - min(r, g, b)) > chroma:
+                continue
+            # Keep warm cream highlights; punch near-neutral gray only.
+            if abs(r - b) <= chroma and abs(g - b) <= chroma:
+                px[x, y] = (r, g, b, 0)
+    return out
+
+
 def _strip(path: str, *, level: int = 208, sat: int = 22) -> list[Image.Image]:
     """Cut a horizontal strip into left-to-right figures (two largest if extras)."""
     keyed = cutout(str(SRC / path), level=level, sat=sat)
@@ -70,10 +90,16 @@ def build() -> None:
     )
 
     # Jump concept uses a flatter gray matte (~197) — lower cutout threshold.
+    # Enclosed gray between the legs is punched by cutout(punch_holes=True);
+    # LANCZOS downscale can still bleed matte into the gap, so scrub framed output.
     jump = _strip("jump_strip.png", level=185, sat=30)
     frames["jump_0"], frames["jump_1"] = (
-        frame_sprite(jump[0], canvas=CANVAS, target_h=BODY_H, baseline=BASELINE),
-        frame_sprite(jump[1], canvas=CANVAS, target_h=BODY_H, baseline=BASELINE),
+        _scrub_flat_gray(
+            frame_sprite(jump[0], canvas=CANVAS, target_h=BODY_H, baseline=BASELINE)
+        ),
+        _scrub_flat_gray(
+            frame_sprite(jump[1], canvas=CANVAS, target_h=BODY_H, baseline=BASELINE)
+        ),
     )
 
     # Seated captured pose sits a touch lower/shorter than the standing frames.

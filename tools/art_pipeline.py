@@ -37,6 +37,7 @@ def cutout(
     feather: int = 3,
     level: int = 208,
     sat: int = 22,
+    punch_holes: bool = True,
 ) -> Image.Image:
     """Remove a painted checkerboard / flat white background via border flood fill.
 
@@ -46,6 +47,10 @@ def cutout(
 
     Lower ``level`` (e.g. 185) keys stubborner painted mattes that sit below the
     default light-gray threshold; default 208 matches existing call sites.
+
+    When ``punch_holes`` is true, remaining *flat* near-gray pockets (enclosed
+    matte between legs/arms that flood-fill cannot reach from the border) are
+    cleared too. Warm cream highlights are kept by requiring near-neutral chroma.
     """
     im = Image.open(src).convert("RGBA")
     w, h = im.size
@@ -72,6 +77,18 @@ def cutout(
                 if _is_bg(r, g, b, level=level, sat=sat):
                     bg[idx(nx, ny)] = 1
                     dq.append((nx, ny))
+
+    if punch_holes:
+        # Enclosed limb gaps keep painted matte that never touches the border.
+        # Only punch near-neutral grays so warm cream face highlights survive.
+        hole_level = min(level, 150)
+        for y in range(h):
+            for x in range(w):
+                if bg[idx(x, y)]:
+                    continue
+                r, g, b, _ = px[x, y]
+                if min(r, g, b) >= hole_level and (max(r, g, b) - min(r, g, b)) <= 12:
+                    bg[idx(x, y)] = 1
 
     for _ in range(feather):
         add: list[tuple[int, int]] = []
