@@ -70,7 +70,7 @@ Stamp a **ladder**, run **one-way crystal ledges** along the climb top, then **d
 - **Lizards:** reuse bull AI (charge, face player, turn back ~8 cm at pit/canyon lips, full tie sequence) with a single lizard sprite; never stamped on pit mouths or canyon columns.
 - **Poison fungus:** cactus rules (hurt / Bubble bounce) with mushroom art; loops a short **spore-puff** animation painted in the same cel-shaded style as the toadstool (idle → gather → puff → settle) so toxic wisps and soft spore motes feel like part of the mushroom, not a separate overlay.
 - **Scorpions:** rattlesnake raise/strike timing with a tail sting pose. Available as their own desert stamp (`scorpion` / `as_scorpion`); cave style still remaps the rattlesnake stamp to scorpion art.
-- **Bow skeletons:** bandit patrol + shoot cadence, but spawn **arrows** instead of revolver bullets; lasso/stomp still ties. Idle/walk/tied frames share one body height on a transparent canvas; tied pose keeps stand scale and sits on the dirt.
+- **Bow skeletons:** bandit patrol + shoot cadence, but spawn **arrows** instead of revolver bullets; when the cowboy is **flying above** them they play a shoot-up aim pose and loft arrows upward; lasso/stomp still ties. Idle/walk/tied/shoot-up frames share one body height on a transparent canvas; tied pose keeps stand scale and sits on the dirt.
 - **Ninjas:** ambush appears ~12 columns ahead of the cowboy; chase leaps pits/canyons with a crouch→airborne jump anim.
 - **Floor holes:** same pit rules (128×64), cave mouth art.
 

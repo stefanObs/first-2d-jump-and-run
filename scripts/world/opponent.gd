@@ -14,6 +14,11 @@ const TIED_SCALE := 0.7
 ## Offset is scaled with the sprite (Godot CanvasItem), so use -half_height, not -half_height*scale.
 const STAND_FOOT_OFFSET := Vector2(0, -40)
 const TIED_FOOT_OFFSET := Vector2(0, -65)
+## Horizontal shots only when the cowboy is near this height band.
+const SHOOT_Y_BAND := 150.0
+## Cave skeletons may loft arrows this far above their boots at flying cowboys.
+const SHOOT_UP_REACH := 420.0
+const SHOOT_UP_MIN := 80.0
 
 @export var point_a: Vector2 = Vector2(-80, 0)
 @export var point_b: Vector2 = Vector2(80, 0)
@@ -124,6 +129,20 @@ func _make_sprite_frames() -> SpriteFrames:
 		frames.add_frame(&"tied", tied_tex)
 	elif stand_tex != null:
 		frames.add_frame(&"tied", stand_tex)
+	if cave:
+		frames.add_animation(&"shoot_up")
+		frames.set_animation_speed(&"shoot_up", 6.0)
+		frames.set_animation_loop(&"shoot_up", false)
+		var skel := "skeleton_crystal" if bounty_bandit else "skeleton"
+		for path in [
+			"res://assets/world/%s_shoot_up_0.png" % skel,
+			"res://assets/world/%s_shoot_up_1.png" % skel,
+		]:
+			var tex: Texture2D = load(path)
+			if tex != null:
+				frames.add_frame(&"shoot_up", tex)
+		if frames.get_frame_count(&"shoot_up") == 0 and stand_tex != null:
+			frames.add_frame(&"shoot_up", stand_tex)
 	return frames
 
 
@@ -160,7 +179,7 @@ func _physics_process(delta: float) -> void:
 		return
 	if _shot_timer <= 0.0:
 		var player := _find_nearby_player(580.0)
-		if player != null and absf(player.global_position.y - global_position.y) <= 150.0:
+		if player != null and _can_shoot_at(player):
 			_shoot_at(player)
 			_shot_timer = randf_range(3.0, 5.0) if bounty_bandit else randf_range(5.0, 8.0)
 			return
@@ -377,6 +396,28 @@ func _show_floor_bound_pose() -> void:
 	_sprite.play(&"tied")
 
 
+func _can_shoot_at(player: Player) -> bool:
+	var dy := player.global_position.y - global_position.y
+	if absf(dy) <= SHOOT_Y_BAND:
+		return true
+	# Cave bow skeletons loft arrows at flyers / high jumpers above them.
+	if not LevelStyle.is_cave(_level_style):
+		return false
+	if dy >= -SHOOT_UP_MIN or dy < -SHOOT_UP_REACH:
+		return false
+	var modes := player.get_modes()
+	return modes != null and modes.is_flying()
+
+
+func _aim_up_at(player: Player) -> bool:
+	if not LevelStyle.is_cave(_level_style):
+		return false
+	if player.global_position.y >= global_position.y - SHOOT_UP_MIN:
+		return false
+	var modes := player.get_modes()
+	return modes != null and modes.is_flying()
+
+
 func _shoot_at(player: Player) -> void:
 	if _tied or _shooting:
 		return
@@ -385,9 +426,13 @@ func _shoot_at(player: Player) -> void:
 	var shot_id := _shot_generation
 	_facing = 1.0 if player.global_position.x >= global_position.x else -1.0
 	_apply_facing(_facing)
-	if _sprite != null:
-		_sprite.play(&"idle")
 	var cave := LevelStyle.is_cave(_level_style)
+	var aim_up := _aim_up_at(player)
+	if _sprite != null:
+		if aim_up and _sprite.sprite_frames != null and _sprite.sprite_frames.has_animation(&"shoot_up"):
+			_sprite.play(&"shoot_up")
+		else:
+			_sprite.play(&"idle")
 	if _revolver != null:
 		if cave:
 			_revolver.hide_gun()
@@ -404,10 +449,20 @@ func _shoot_at(player: Player) -> void:
 		_revolver.show_flash()
 	var bullet := BanditBullet.new()
 	bullet.name = "BanditBullet"
-	bullet.setup(_facing, cave)
+	var aim := Vector2(_facing, 0.0)
+	var muzzle := Vector2(36.0 * _facing, -39.0)
+	if aim_up:
+		var to_player := player.global_position - global_position
+		# Prefer lofting toward the cowboy; fall back to a steep facing-biased arc.
+		if to_player.y < -20.0:
+			aim = to_player.normalized()
+		else:
+			aim = Vector2(_facing * 0.28, -1.0).normalized()
+		muzzle = Vector2(8.0 * _facing, -70.0)
+	bullet.setup(_facing, cave, aim if cave else Vector2.ZERO)
 	bullet.hurt_player.connect(func(hit_player: Player) -> void: hurt_player.emit(hit_player))
 	get_parent().add_child(bullet)
-	bullet.global_position = global_position + Vector2(36.0 * _facing, -39.0)
+	bullet.global_position = global_position + muzzle
 	await get_tree().create_timer(0.25).timeout
 	if shot_id != _shot_generation:
 		_shooting = false
@@ -416,6 +471,8 @@ func _shoot_at(player: Player) -> void:
 		_revolver.hide_gun()
 	if not _tied:
 		_shooting = false
+		if _sprite != null and _sprite.animation == &"shoot_up":
+			_sprite.play(&"idle")
 		if _label != null:
 			_label.text = (
 				"BOUNTY!" if bounty_bandit else ("SKELETON" if cave else "BANDIT")

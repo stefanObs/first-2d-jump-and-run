@@ -200,6 +200,22 @@ def main() -> int:
             path = OUT_DIR / f"skeleton_walk_{i}.png"
             framed.save(path)
             print(f"wrote {path.relative_to(ROOT)} {framed.size}")
+
+    shoot_up_src = SOURCE_DIR / "skeleton_shoot_up_strip.png"
+    if shoot_up_src.is_file():
+        figures = slice_strip(cutout(shoot_up_src, level=185, sat=35))
+        if len(figures) > 2:
+            ranked = sorted(
+                range(len(figures)),
+                key=lambda i: figures[i].size[0] * figures[i].size[1],
+                reverse=True,
+            )[:2]
+            figures = [figures[i] for i in sorted(ranked)]
+        for i, fig in enumerate(figures[:2]):
+            framed = _feet(fig, (64, 80), target_h=67, baseline=76)
+            path = OUT_DIR / f"skeleton_shoot_up_{i}.png"
+            framed.save(path)
+            print(f"wrote {path.relative_to(ROOT)} {framed.size}")
     bat_src = CONCEPT_DIR / "cave_bat_strip_concept.png"
     if bat_src.is_file():
         shutil.copy2(bat_src, SOURCE_DIR / bat_src.name)
@@ -240,7 +256,14 @@ def main() -> int:
     # Clear opaque bow-triangle fill, then crystal bounty = magenta tint of bases.
     from PIL import Image
 
-    for base in ["skeleton.png", "skeleton_walk_0.png", "skeleton_walk_1.png", "skeleton_tied.png"]:
+    for base in [
+        "skeleton.png",
+        "skeleton_walk_0.png",
+        "skeleton_walk_1.png",
+        "skeleton_tied.png",
+        "skeleton_shoot_up_0.png",
+        "skeleton_shoot_up_1.png",
+    ]:
         src = OUT_DIR / base
         if not src.is_file():
             continue

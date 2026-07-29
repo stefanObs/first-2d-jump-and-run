@@ -119,6 +119,7 @@ func _ready() -> void:
 	failures += await _run("Cave camp sprites have transparent backgrounds", _test_cave_camp_transparent)
 	failures += await _run("Filled save can pick Advanced Mode", _test_filled_slot_advanced_mode_select)
 	failures += await _run("Bandits play walk animation while moving", _test_bandit_walk_animation)
+	failures += await _run("Cave skeletons loft arrows at flyers above", _test_skeleton_shoots_up_at_flyer)
 	failures += await _run("Campaign hazards are no longer blocked by plank highways", _test_no_plank_highways)
 	failures += await _run(
 		"Canyon ferry uses synchronized opposite-phase cloud pairs",
@@ -4015,6 +4016,90 @@ func _test_bandit_walk_animation() -> Variant:
 	bandit.queue_free()
 	ground.queue_free()
 	return null
+
+
+func _test_skeleton_shoots_up_at_flyer() -> Variant:
+	## Cave skeletons play shoot_up and fire angled arrows when Wings flyer is above.
+	for path in [
+		"res://assets/world/skeleton_shoot_up_0.png",
+		"res://assets/world/skeleton_shoot_up_1.png",
+		"res://assets/world/skeleton_crystal_shoot_up_0.png",
+		"res://assets/world/skeleton_crystal_shoot_up_1.png",
+	]:
+		if load(path) == null:
+			return "Missing skeleton shoot-up art: %s" % path
+	var packed: PackedScene = load("res://scenes/world/opponent.tscn")
+	if packed == null:
+		return "Missing opponent scene."
+	var ground := StaticBody2D.new()
+	ground.collision_layer = 1
+	var ground_shape := CollisionShape2D.new()
+	var ground_rect := RectangleShape2D.new()
+	ground_rect.size = Vector2(600.0, 40.0)
+	ground_shape.shape = ground_rect
+	ground_shape.position = Vector2(400.0, 420.0)
+	ground.add_child(ground_shape)
+	add_child(ground)
+	var skeleton := packed.instantiate() as Opponent
+	skeleton.position = Vector2(400.0, 400.0)
+	skeleton.point_a = Vector2.ZERO
+	skeleton.point_b = Vector2.ZERO
+	skeleton.apply_level_style(LevelStyle.CAVE)
+	add_child(skeleton)
+	await get_tree().process_frame
+	var walk := skeleton.get_node_or_null("WalkSprite") as AnimatedSprite2D
+	if walk == null or walk.sprite_frames == null or not walk.sprite_frames.has_animation(&"shoot_up"):
+		skeleton.queue_free()
+		ground.queue_free()
+		return "Cave skeleton needs a shoot_up animation."
+	if walk.sprite_frames.get_frame_count(&"shoot_up") < 2:
+		skeleton.queue_free()
+		ground.queue_free()
+		return "shoot_up needs draw + release frames."
+	var player := Player.new()
+	player.name = "Player"
+	player.position = Vector2(420.0, 180.0)
+	add_child(player)
+	player.set_physics_process(false)
+	player.set_process(false)
+	if not player.is_in_group("player"):
+		player.add_to_group("player")
+	player.activate_mode(ModeController.Mode.WINGS, 30.0)
+	if not skeleton._can_shoot_at(player):
+		player.queue_free()
+		skeleton.queue_free()
+		ground.queue_free()
+		return "Skeleton should target a Wings flyer above it."
+	if not skeleton._aim_up_at(player):
+		player.queue_free()
+		skeleton.queue_free()
+		ground.queue_free()
+		return "Flyer above should use upward aim."
+	skeleton._shot_timer = 0.0
+	skeleton._shoot_at(player)
+	await get_tree().process_frame
+	if walk.animation != &"shoot_up":
+		player.queue_free()
+		skeleton.queue_free()
+		ground.queue_free()
+		return "Upward shot should play the shoot_up pose."
+	await get_tree().create_timer(0.55).timeout
+	var arrow: BanditBullet = null
+	for child in skeleton.get_parent().get_children():
+		if child is BanditBullet:
+			arrow = child as BanditBullet
+			break
+	var error: Variant = null
+	if arrow == null:
+		error = "Cave skeleton should spawn an arrow toward the flyer."
+	elif arrow._aim.y >= -0.35:
+		error = "Arrow at a flyer should travel upward (aim.y=%.2f)." % arrow._aim.y
+	if arrow != null:
+		arrow.queue_free()
+	player.queue_free()
+	skeleton.queue_free()
+	ground.queue_free()
+	return error
 
 
 func _test_no_plank_highways() -> Variant:
