@@ -147,7 +147,7 @@ func _setup_fungus_spore_anim() -> void:
 		add_child(_fungus_anim)
 	var frames := SpriteFrames.new()
 	frames.add_animation(&"spore")
-	frames.set_animation_speed(&"spore", 5.0)
+	frames.set_animation_speed(&"spore", 3.5)
 	frames.set_animation_loop(&"spore", true)
 	var added := 0
 	for path in FUNGUS_FRAME_PATHS:

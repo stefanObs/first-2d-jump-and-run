@@ -2,7 +2,7 @@
 
 Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, nonviolent lasso. **Classic mode** has no lives or game over; **Advanced Mode** (chosen in **Settings** before starting or continuing a slot) adds a three-life limit, badge milestones, and a game-over return to the start screen. Pick **Cowboy** or **Cowgirl** in Settings — the choice applies across all save slots. **German is the default language**; English is fully supported.
 
-**Content version:** `1.8.51` (see `content_version.txt`). Launchers reimport when this stamp changes.
+**Content version:** `1.8.52` (see `content_version.txt`). Launchers reimport when this stamp changes.
 
 This README is the **binding source of truth** for gameplay, level design, art, i18n, and audio. Agents and contributors must follow it (see [Agent / contributor rules](#agent--contributor-rules)).
 
@@ -137,7 +137,7 @@ Agents **must** honor these when editing levels or trail systems:
 ### Cave style
 
 - Trail documents may set `"style": "cave"` (workshop **Level style**). Binding art/behavior notes: `docs/cave_biome.md`.
-- Cave remaps stamp **presentation** (same type ids): fungus/lizard/scorpion/bow skeleton/lantern camp/**Crystal Gate** (saloon replacement). Poison fungus loops a short spore-puff animation. Cave-only stamps: `acid_drip`, `stalactite`, `stalactite_static`, `bat`.
+- Cave remaps stamp **presentation** (same type ids): fungus/lizard/scorpion/bow skeleton/lantern camp/**Crystal Gate** (saloon replacement). Poison fungus loops a short painted spore-puff animation. Cave-only stamps: `acid_drip`, `stalactite`, `stalactite_static`, `bat`.
 - Pink drips splash on the floor then respawn; falling stalactites pull free before dropping; **Bubble does not block** drips/spikes. Bats can bounce off Bubble.
 - Cave floors use dense cool stone + pink flecks; cowboy-style rock ceiling **panels** with fixed **low/high** side heights (3 variants of each start→end combo) chained only when adjacent edges match; solid fill stays **above** the panel tops; sparse décor stalactites fuse into seat nubs until release (none on Dragon Gate / Cave Dragon); deep cave wash **tucks under the floor** (no gap); no desert sun/mesa hills.
 - **Wings cannot pass the ceiling** (`FlightCeilingCave`); touching the rock while flying (`CaveCeilingHazard`) respawns at camp.
