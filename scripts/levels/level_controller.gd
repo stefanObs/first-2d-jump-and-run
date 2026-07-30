@@ -96,7 +96,9 @@ func setup_level() -> void:
 	if not campaign_context.is_empty():
 		level_number = int(campaign_context.get("position", level_number))
 		campaign_source_level = int(campaign_context.get("source_level", level_number))
-		is_final_level = level_number >= int(campaign_context.get("count", 15))
+		is_final_level = level_number >= int(
+			campaign_context.get("count", CustomLevelStore.BUILTIN_COUNT)
+		)
 
 	spawn_point = get_node_or_null("SpawnPoint") as Marker2D
 	var player_node := get_node_or_null("Player")

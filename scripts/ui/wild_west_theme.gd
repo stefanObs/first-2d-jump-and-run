@@ -355,12 +355,12 @@ static func _nearest_ceiling_attach_y(attach_points: Array, world_x: float, fall
 
 
 static func _is_dragon_cave_level(level: Node) -> bool:
-	if level is BossArena and int(level.get("source_level")) == 15:
+	if level is BossArena and int(level.get("source_level")) == 16:
 		return true
 	var level_number := int(level.get("level_number"))
 	var campaign_source := int(level.get("campaign_source_level"))
 	var source := campaign_source if campaign_source > 0 else level_number
-	return source == 15 or level_number == 15
+	return source == 16 or level_number == 16
 
 
 static func _add_cave_flight_ceiling(

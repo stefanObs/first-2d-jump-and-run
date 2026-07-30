@@ -66,7 +66,7 @@ godot --headless --path . res://tests/test_moving_platform_obstruction.tscn
 
 ## Campaign
 
-**15 levels** (`CustomLevelStore.BUILTIN_NAMES` / `GameManager.level_name_for`):
+**16 levels** (`CustomLevelStore.BUILTIN_NAMES` / `GameManager.level_name_for`):
 
 1. Dusty Trail — learn mounted riding/jumping toward the saloon  
 2. Badge Meadow — collect sheriff badges  
@@ -82,7 +82,8 @@ godot --headless --path . res://tests/test_moving_platform_obstruction.tscn
 12. Bat Gallery — bats, drips, ledges, springs, first cave conveyor gate  
 13. Acid Veins — pink drip gauntlet, fungus, canyon hop with approach spring, conveyor gate  
 14. Ladder Grotto — ladder branches, lizards, springs, reverse belt, ceiling drips  
-15. Dragon Gate — cave finale with belts, ladders, springs, drips, and fences before the Cave Dragon  
+15. Wing Chasm — Wings waiting at camp; fly the high badge line over two cave chasms (fresh wings mid-trail)  
+16. Dragon Gate — cave finale with belts, ladders, springs, drips, and fences before the Cave Dragon  
 
 **Bosses** (after clearing the listed level; same tools as the trail; classic mode uses **5 hearts** per fight; Advanced Mode uses campaign lives instead; nonviolent win):
 
@@ -91,9 +92,9 @@ godot --headless --path . res://tests/test_moving_platform_obstruction.tscn
 | Level 3 | Stampede Bull | Bounce past horns; lasso glowing back ring 3× while stunned |
 | Level 7 | Midnight Coach | Horse chase; lasso door handles 1→2→3 |
 | Level 10 | Outlaw Kingpin | Lasso both guards, then the kingpin once (walk cycle while patrolling) |
-| Level 15 | Cave Dragon | Starts on the floor, takes off into L↔R flight spitting straight flameballs that die on the floor (2×2), land for lasso; repeat; ropes on the flying frames match the floor tied stages (neck, then neck+torso); 3rd lasso ties the mouth |
+| Level 16 | Cave Dragon | Starts on the floor, takes off into L↔R flight spitting straight flameballs that die on the floor (2×2), land for lasso; repeat; ropes on the flying frames match the floor tied stages (neck, then neck+torso); 3rd lasso ties the mouth |
 
-After Kingpin the campaign continues into the cave (levels 11–15). After the Cave Dragon: horizon victory ride, fade, dedication **VOM PAPI FÜR FINN**, then save select.
+After Kingpin the campaign continues into the cave (levels 11–16). After the Cave Dragon: horizon victory ride, fade, dedication **VOM PAPI FÜR FINN**, then save select.
 
 **Saves:** three slots; auto-save; local `savegames/` (gitignored). `SAVE_VERSION` 4 — older formats discarded. Delete via card context / Space / Xbox Y + confirm.
 
@@ -143,7 +144,8 @@ Agents **must** honor these when editing levels or trail systems:
 - Pink drips splash on the floor then respawn; falling stalactites pull free before dropping; **Bubble does not block** drips/spikes. Bats can bounce off Bubble.
 - Cave floors use dense cool stone + pink flecks; cowboy-style rock ceiling **panels** with fixed **low/high** side heights (3 variants of each start→end combo) chained only when adjacent edges match; solid fill stays **above** the panel tops; sparse décor stalactites fuse into seat nubs until release (none on Dragon Gate / Cave Dragon); deep cave wash **tucks under the floor** (no gap); no desert sun/mesa hills.
 - **Wings cannot pass the ceiling** (`FlightCeilingCave`); touching the rock while flying (`CaveCeilingHazard`) respawns at camp.
-- **Ladders** (workshop Trail stamp): 3-cell climb; Space/Up climbs up, S/Down climbs down. Upper one-way planks must sit on the climb-top row so the cowboy can step onto the higher path; drop off the ledge end back to dirt (no second “down” ladder required). Sample branches appear on new trails and on cave workshop imports. **Conveyor**, **Timed Gate**, and **Fence** Trail stamps work in desert and cave; cave campaign levels 11–15 place sheriff badges along the trail plus extra ladders/planks, fences, **springs**, and (from Bat Gallery on) belt+gate pairs on solid ground.
+- **Wing Chasm** (level 15) is the cave flying trail: the Wings stamp sits at camp, ahead of the first badge, with two more pairs mid-trail so flight can be refreshed. Its high badge line is an optional reward route — planks, springs and a ladder branch still carry the whole trail on foot.
+- **Ladders** (workshop Trail stamp): 3-cell climb; Space/Up climbs up, S/Down climbs down. Upper one-way planks must sit on the climb-top row so the cowboy can step onto the higher path; drop off the ledge end back to dirt (no second “down” ladder required). Sample branches appear on new trails and on cave workshop imports. **Conveyor**, **Timed Gate**, and **Fence** Trail stamps work in desert and cave; cave campaign levels 11–16 place sheriff badges along the trail plus extra ladders/planks, fences, **springs**, and (from Bat Gallery on) belts that end on solid ground.
 
 ### Canyon art
 

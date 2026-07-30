@@ -1,14 +1,14 @@
 extends LevelController
 
-## Dragon Gate — cave campaign level 15 (finale trail before the dragon).
+## Wing Chasm — cave campaign level 15 (wings waiting at camp).
 
 
 func _ready() -> void:
 	skip_auto_setup = true
 	level_number = 15
-	level_title = "Dragon Gate"
-	celebration_duration = 4.5
-	is_final_level = true
+	level_title = "Wing Chasm"
+	celebration_duration = 4.0
+	is_final_level = false
 	var data := CaveCampaignLevels.level_data(15)
 	data["source_level"] = 15
 	CustomLevelBuilder.build(self, data)

@@ -1,15 +1,15 @@
 class_name CaveCampaignLevels
 extends RefCounted
 
-## Stamp layouts for builtin cave trails 11–15.
+## Stamp layouts for builtin cave trails 11–16.
 
 
 static func is_cave_source(level_number: int) -> bool:
-	return level_number == 5 or (level_number >= 11 and level_number <= 15)
+	return level_number == 5 or (level_number >= 11 and level_number <= 16)
 
 
 static func level_data(level_number: int) -> Dictionary:
-	match clampi(level_number, 11, 15):
+	match clampi(level_number, 11, 16):
 		11:
 			return _level_11()
 		12:
@@ -18,8 +18,10 @@ static func level_data(level_number: int) -> Dictionary:
 			return _level_13()
 		14:
 			return _level_14()
-		_:
+		15:
 			return _level_15()
+		_:
+			return _level_16()
 
 
 static func _base(title: String, width: int = 120, height: int = 10) -> Dictionary:
@@ -228,6 +230,64 @@ static func _level_14() -> Dictionary:
 
 
 static func _level_15() -> Dictionary:
+	## Wing Chasm — wings wait at camp, so the whole trail can be flown from step one.
+	var data := _base("Wing Chasm", 130, 10)
+	var trail: int = CustomLevelStore.trail_row(int(data["height"]))
+	var objects: Array[Dictionary] = []
+	for x in range(int(data["width"])):
+		if (x >= 34 and x <= 41) or (x >= 84 and x <= 91):
+			objects.append({"type": "canyon", "x": x, "y": trail})
+		else:
+			objects.append({"type": "ground", "x": x, "y": trail})
+	# Wings sit two hops from the spawn post, before the first badge.
+	_add(objects, "wings", 5, trail - 1)
+	CustomLevelStore.append_fence_run(objects, trail, 8, 1)
+	_add_badge(objects, 11, trail)
+	# High badge line: walkers see it, only the flying cowboy collects it.
+	_add(objects, "star", 14, 3)
+	_add(objects, "star", 17, 2)
+	_add(objects, "bat", 20, trail - 5)
+	_add(objects, "acid_drip", 22, 0)
+	_add_badge(objects, 24, trail)
+	_add(objects, "spring", 30, trail - 1)
+	# First chasm: planks carry the walking route, open air rewards the flight.
+	CustomLevelStore.append_platform_run(objects, trail, 34, 4, 2)
+	_add(objects, "star", 37, 2)
+	_add_badge(objects, 44, trail)
+	_add(objects, "bat", 47, trail - 6)
+	_add(objects, "star", 50, 3)
+	_add(objects, "checkpoint", 54, trail - 1)
+	# Fresh wings before the first pair runs dry.
+	_add(objects, "wings", 57, trail - 1)
+	_add(objects, "acid_drip", 60, 0)
+	_add_badge(objects, 62, trail)
+	CustomLevelStore.append_ladder_branch(objects, trail, 64)
+	_add(objects, "star", 71, 2)
+	_add(objects, "bat", 74, trail - 5)
+	_add(objects, "acid_drip", 76, 1)
+	_add(objects, "spring", 80, trail - 1)
+	CustomLevelStore.append_platform_run(objects, trail, 84, 4, 2)
+	_add(objects, "star", 87, 3)
+	_add_badge(objects, 94, trail)
+	_add(objects, "ninja", 97, trail - 1)
+	_add(objects, "star", 100, 2)
+	# Last pair of wings for the run to the goal.
+	_add(objects, "wings", 103, trail - 1)
+	_add(objects, "acid_drip", 106, 0)
+	_add_badge(objects, 108, trail)
+	CustomLevelStore.append_conveyor_belt(objects, trail, 110, true)
+	_add(objects, "bat", 114, trail - 6)
+	_add(objects, "star", 117, 2)
+	_add(objects, "spring", 120, trail - 1)
+	_add(objects, "chest", 122, trail - 1)
+	CustomLevelStore.append_fence_run(objects, trail, 124, 1)
+	_add_badge(objects, 126, trail, 3)
+	_add(objects, "goal", 128, trail - 1)
+	data["objects"] = objects
+	return data
+
+
+static func _level_16() -> Dictionary:
 	## Dragon Gate — finale trail before the dragon boss.
 	var data := _base("Dragon Gate", 140, 10)
 	var trail: int = CustomLevelStore.trail_row(int(data["height"]))

@@ -66,7 +66,7 @@ var _floor_y: float = FLOOR_Y
 
 
 func _ready() -> void:
-	source_level = 15
+	source_level = 16
 	boss_title = tr("Cave Dragon — dodge flameballs, then lasso him three times!")
 	set_meta("level_style", LevelStyle.CAVE)
 	super._ready()

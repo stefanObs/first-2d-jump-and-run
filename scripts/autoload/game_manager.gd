@@ -37,6 +37,7 @@ var _data: Dictionary = {}
 func _ready() -> void:
 	_data = _default_data()
 	SavePaths.migrate_legacy_if_needed()
+	CUSTOM_LEVEL_STORE.migrate_extra_slot_shift()
 	load_from_disk()
 	_apply_settings()
 
@@ -267,10 +268,10 @@ const BOSS_SCENES := {
 	3: "res://scenes/bosses/boss_stampede_bull.tscn",
 	7: "res://scenes/bosses/boss_midnight_coach.tscn",
 	10: "res://scenes/bosses/boss_outlaw_kingpin.tscn",
-	15: "res://scenes/bosses/boss_cave_dragon.tscn",
+	16: "res://scenes/bosses/boss_cave_dragon.tscn",
 }
 
-const BOSS_ORDER: Array[int] = [3, 7, 10, 15]
+const BOSS_ORDER: Array[int] = [3, 7, 10, 16]
 
 
 func try_load_boss_after(_level_number: int) -> bool:
@@ -298,7 +299,7 @@ func load_next_boss(from_source_level: int) -> void:
 
 func load_next_boss_from_level(level_number: int) -> void:
 	## From a campaign trail: open the next boss at or after this level.
-	## Levels 1–3 → Bull, 4–7 → Coach, 8–10 → Kingpin, 11–15 → Dragon; from a boss, use load_next_boss.
+	## Levels 1–3 → Bull, 4–7 → Coach, 8–10 → Kingpin, 11–16 → Dragon; from a boss, use load_next_boss.
 	var target := BOSS_ORDER[BOSS_ORDER.size() - 1]
 	for boss_level in BOSS_ORDER:
 		if level_number <= boss_level:

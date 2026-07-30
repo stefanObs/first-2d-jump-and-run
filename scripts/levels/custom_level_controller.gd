@@ -10,7 +10,9 @@ func _ready() -> void:
 	campaign_source_level = int(campaign_context.get("source_level", 0))
 	is_final_level = (
 		not campaign_context.is_empty()
-		and level_number >= int(campaign_context.get("count", 15))
+		and level_number >= int(
+			campaign_context.get("count", CustomLevelStore.BUILTIN_COUNT)
+		)
 	)
 	var data := CustomLevelStore.load_level(GameManager.active_custom_slot)
 	level_title = str(data.get("title", "Family Trail"))

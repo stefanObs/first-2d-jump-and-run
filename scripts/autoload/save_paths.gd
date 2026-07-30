@@ -12,6 +12,9 @@ const CUSTOM_SUBDIR := "custom_levels"
 const TRANSLATION_EXPORT_FILE := "game_text_edited.csv"
 const LEGACY_USER_SAVE := "user://save_data.json"
 const LEGACY_USER_CUSTOM := "user://custom_levels"
+## Upper bound for trail file names; must stay above CustomLevelStore.SLOT_COUNT,
+## which cannot be referenced here without a cyclic preload.
+const MAX_SLOT_INDEX := 31
 
 static var _cached_root: String = ""
 
@@ -33,7 +36,9 @@ static func custom_levels_dir() -> String:
 
 
 static func custom_level_path(slot_index: int) -> String:
-	return custom_levels_dir().path_join("trail_%d.json" % (clampi(slot_index, 0, 19) + 1))
+	return custom_levels_dir().path_join(
+		"trail_%d.json" % (clampi(slot_index, 0, MAX_SLOT_INDEX) + 1)
+	)
 
 
 static func translation_export_path() -> String:

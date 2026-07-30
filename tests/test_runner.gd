@@ -40,7 +40,7 @@ func _ready() -> void:
 	failures += await _run("Translation editor loads and exports portably", _test_translation_editor)
 	failures += await _run("Handmade trail progress and effect sounds work", _test_handmade_progress_and_sfx)
 	failures += await _run("Level 01 contains core objects", _test_level_01_world_objects)
-	failures += await _run("Level catalog has fifteen scenes", _test_fifteen_levels_exist)
+	failures += await _run("Level catalog has sixteen scenes", _test_sixteen_levels_exist)
 	failures += await _run("LevelController respawns at checkpoint", _test_respawn_uses_checkpoint)
 	failures += await _run("Camp restores tied bandits and active bonuses", _test_camp_restores_state)
 	failures += await _run("Goal completion disables player input", _test_goal_disables_input)
@@ -104,6 +104,7 @@ func _ready() -> void:
 	failures += await _run("Flying levels guard the very top of the screen", _test_flying_levels_top_guarded)
 	failures += await _run("Timed door shows a clear open/closed barrier", _test_timed_door_states)
 	failures += await _run("Cave trails carry no ranch gates", _test_cave_trails_have_no_doors)
+	failures += await _run("Wing Chasm hands out wings at camp", _test_wing_chasm_hands_out_wings_at_camp)
 	failures += await _run(
 		"Conveyors do not push into open canyons",
 		_test_conveyors_do_not_push_into_canyons
@@ -817,9 +818,9 @@ func _test_boss_arenas() -> Variant:
 	if torso_rope - torso_free < 80:
 		dragon.queue_free()
 		return "Flying stage-2 should keep a mid-torso rope like the floor tied pose."
-	if int(dragon.get("source_level")) != 15:
+	if int(dragon.get("source_level")) != 16:
 		dragon.queue_free()
-		return "Cave Dragon must be the level-15 boss."
+		return "Cave Dragon must be the level-16 boss."
 	if str(dragon.get_meta("level_style", "")) != LevelStyle.CAVE:
 		dragon.queue_free()
 		return "Cave Dragon arena should use cave style."
@@ -1658,19 +1659,22 @@ func _test_level_01_world_objects() -> Variant:
 	return error
 
 
-func _test_fifteen_levels_exist() -> Variant:
-	if GameManager.LEVEL_SCENES.size() != 15:
-		return "Expected 15 levels."
+func _test_sixteen_levels_exist() -> Variant:
+	if GameManager.LEVEL_SCENES.size() != 16:
+		return "Expected 16 levels."
 	var level_two := GameManager.level_name_for(2)
 	if not level_two.begins_with("2: "):
 		return "Level names should use the '<number>: <name>' format."
 	if level_two not in ["2: Badge Meadow", "2: Abzeichen-Wiese"]:
 		return "Level 2 should keep its English or German display title."
 	var level_fifteen := GameManager.level_name_for(15)
-	if not level_fifteen.begins_with("15: "):
-		return "Level 15 should use the numbered display title."
-	if level_fifteen not in ["15: Dragon Gate", "15: Drachentor"]:
-		return "Level 15 should keep its English or German display title."
+	if level_fifteen not in ["15: Wing Chasm", "15: Flügelschlucht"]:
+		return "Level 15 should keep its English or German display title (got %s)." % level_fifteen
+	var level_sixteen := GameManager.level_name_for(16)
+	if not level_sixteen.begins_with("16: "):
+		return "Level 16 should use the numbered display title."
+	if level_sixteen not in ["16: Dragon Gate", "16: Drachentor"]:
+		return "Level 16 should keep its English or German display title."
 	for path in GameManager.LEVEL_SCENES:
 		if load(path) == null:
 			return "Missing scene: %s" % path
@@ -3382,6 +3386,56 @@ func _test_cave_trails_have_no_doors() -> Variant:
 	level.queue_free()
 	await get_tree().process_frame
 	return error
+
+
+func _test_wing_chasm_hands_out_wings_at_camp() -> Variant:
+	## Wing Chasm is the cave flying trail: the cowboy picks up wings before the first badge.
+	var data := CaveCampaignLevels.level_data(15)
+	var spawn: Array = data.get("spawn", [2, 9])
+	var spawn_x := int(spawn[0])
+	var first_wings := -1
+	var first_star := -1
+	var high_stars := 0
+	for value in data.get("objects", []):
+		var object := value as Dictionary
+		var x := int(object.get("x", 0))
+		match str(object.get("type", "")):
+			"wings":
+				if first_wings < 0 or x < first_wings:
+					first_wings = x
+			"star":
+				if first_star < 0 or x < first_star:
+					first_star = x
+				# Badges parked in the upper cave air are the reward for flying.
+				if int(object.get("y", 0)) <= 3:
+					high_stars += 1
+	if first_wings < 0:
+		return "Wing Chasm must stamp the wings item."
+	if first_wings > spawn_x + 6:
+		return "Wing Chasm wings should sit at camp (column %d, spawn %d)." % [first_wings, spawn_x]
+	if first_star >= 0 and first_wings > first_star:
+		return "Wing Chasm should hand out wings before the first badge."
+	if high_stars < 6:
+		return "Wing Chasm should hang badges in the upper cave air (found %d)." % high_stars
+
+	var level := LevelController.new()
+	level.level_number = 15
+	add_child(level)
+	CustomLevelBuilder.build(level, data)
+	await get_tree().process_frame
+	var wings_at_camp := false
+	for node in level.find_children("*", "ModeItem", true, false):
+		var item := node as ModeItem
+		if item.mode == ModeController.Mode.WINGS and item.global_position.x <= 320.0:
+			wings_at_camp = true
+	var errors := LevelLayoutRules.validate_level_node(level)
+	level.queue_free()
+	await get_tree().process_frame
+	if not wings_at_camp:
+		return "Built Wing Chasm should place a wings pickup within reach of the camp."
+	if not errors.is_empty():
+		return "Wing Chasm layout errors: %s" % ", ".join(errors)
+	return null
 
 
 func _test_conveyors_do_not_push_into_canyons() -> Variant:
@@ -5467,7 +5521,8 @@ func _test_cave_levels_belts_fences_ladders() -> Variant:
 		12: {"ladders": 2, "platforms": 3, "fences": 2, "conveyors": 1, "doors": 0, "drips": 5, "springs": 3, "stars": 10},
 		13: {"ladders": 1, "platforms": 7, "fences": 2, "conveyors": 1, "doors": 0, "drips": 6, "springs": 3, "stars": 10},
 		14: {"ladders": 3, "platforms": 6, "fences": 3, "conveyors": 1, "doors": 0, "drips": 5, "springs": 4, "stars": 12},
-		15: {"ladders": 2, "platforms": 6, "fences": 3, "conveyors": 1, "doors": 0, "drips": 5, "springs": 4, "stars": 12},
+		15: {"ladders": 1, "platforms": 8, "fences": 2, "conveyors": 1, "doors": 0, "drips": 4, "springs": 3, "stars": 14},
+		16: {"ladders": 2, "platforms": 6, "fences": 3, "conveyors": 1, "doors": 0, "drips": 5, "springs": 4, "stars": 12},
 	}
 	for level_number in expected.keys():
 		var data := CaveCampaignLevels.level_data(int(level_number))
@@ -6628,7 +6683,9 @@ func _test_campaign_workshop() -> Variant:
 								var wheel := InputEventMouseButton.new()
 								wheel.button_index = MOUSE_BUTTON_WHEEL_LEFT
 								wheel.pressed = true
-								grid_scroll._gui_input(wheel)
+								wheel.position = grid_scroll.get_global_rect().get_center()
+								grid_scroll.get_viewport().push_input(wheel)
+								await get_tree().process_frame
 								if float(grid_scroll.scroll_horizontal) != before:
 									error = "Horizontal wheel scrolling over the grid should stay disabled."
 			editor._sync_tool_dropdowns()
@@ -7700,7 +7757,7 @@ func _test_cave_ceiling_sparse_flight_guard() -> Variant:
 
 func _test_dragon_levels_have_no_stalactites() -> Variant:
 	## Dragon Gate + Cave Dragon keep a clean ceiling (no stamped or décor teeth).
-	var data := CaveCampaignLevels.level_data(15)
+	var data := CaveCampaignLevels.level_data(16)
 	for obj in data.get("objects", []):
 		if not (obj is Dictionary):
 			continue
@@ -7708,7 +7765,7 @@ func _test_dragon_levels_have_no_stalactites() -> Variant:
 		if type_name == "stalactite" or type_name == "stalactite_static":
 			return "Dragon Gate must not stamp stalactites."
 	var level := LevelController.new()
-	level.level_number = 15
+	level.level_number = 16
 	add_child(level)
 	CustomLevelBuilder.build(level, data)
 	await get_tree().process_frame

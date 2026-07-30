@@ -7,9 +7,9 @@ const VERSION := 4
 const SHARE_PACK_FORMAT := "cowboy_trail_pack"
 const SHARE_PACK_VERSION := 1
 const BUILTIN_SLOT_START := 3
-const BUILTIN_COUNT := 15
-const EXTRA_SLOT_START := 18
-const SLOT_COUNT := 26
+const BUILTIN_COUNT := 16
+const EXTRA_SLOT_START := 19
+const SLOT_COUNT := 27
 const SavePaths := preload("res://scripts/autoload/save_paths.gd")
 const BUILTIN_SCENES: PackedStringArray = [
 	"res://scenes/levels/level_01.tscn", "res://scenes/levels/level_02.tscn",
@@ -19,12 +19,13 @@ const BUILTIN_SCENES: PackedStringArray = [
 	"res://scenes/levels/level_09.tscn", "res://scenes/levels/level_10.tscn",
 	"res://scenes/levels/level_11.tscn", "res://scenes/levels/level_12.tscn",
 	"res://scenes/levels/level_13.tscn", "res://scenes/levels/level_14.tscn",
-	"res://scenes/levels/level_15.tscn",
+	"res://scenes/levels/level_15.tscn", "res://scenes/levels/level_16.tscn",
 ]
 const BUILTIN_NAMES: PackedStringArray = [
 	"Dusty Trail", "Badge Meadow", "Bronco Springs", "Canyon Ferry", "Outlaw Cave",
 	"Windy Mesa", "Sky Ranch", "Rail Yard", "Moonlight Gulch", "Rainbow Saloon",
-	"Crystal Mouth", "Bat Gallery", "Acid Veins", "Ladder Grotto", "Dragon Gate",
+	"Crystal Mouth", "Bat Gallery", "Acid Veins", "Ladder Grotto", "Wing Chasm",
+	"Dragon Gate",
 ]
 ## Workshop defaults and resize limits — match typical built-in campaign width (goal ~column 177).
 const MIN_WIDTH := 12
@@ -435,6 +436,28 @@ static func existing_custom_slots() -> Array[int]:
 			slots.append(slot)
 	return slots
 
+static func migrate_extra_slot_shift() -> void:
+	## The builtin campaign grew to 16 trails, so the first extra slot moved up one.
+	## A saved extra left in the old slot would now read as the level-16 override.
+	var legacy_slot := EXTRA_SLOT_START - 1
+	if not exists(legacy_slot):
+		return
+	var file := FileAccess.open(SavePaths.custom_level_path(legacy_slot), FileAccess.READ)
+	if file == null:
+		return
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	file.close()
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return
+	if str((parsed as Dictionary).get("kind", "")) != "extra":
+		return
+	var free_slots := free_extra_slots()
+	if free_slots.is_empty():
+		return
+	if save(free_slots[0], parsed as Dictionary):
+		erase(legacy_slot)
+
+
 static func free_extra_slots() -> Array[int]:
 	var slots: Array[int] = []
 	for slot in range(EXTRA_SLOT_START, SLOT_COUNT):
@@ -707,8 +730,8 @@ static func migrate_v3_to_v4(source: Dictionary) -> Dictionary:
 static func import_builtin(level_number: int) -> Dictionary:
 	var number := clampi(level_number, 1, BUILTIN_COUNT)
 	var slot := override_slot_for(number)
-	## Levels 11–15 are stamp layouts (not hand scenes); import the cave catalog directly.
-	if number >= 11 and number <= 15:
+	## Levels 11–16 are stamp layouts (not hand scenes); import the cave catalog directly.
+	if number >= 11 and number <= 16:
 		var cave := CaveCampaignLevels.level_data(number)
 		cave["kind"] = "override"
 		cave["source_level"] = number
