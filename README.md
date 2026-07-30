@@ -2,7 +2,7 @@
 
 Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, nonviolent lasso. **Classic mode** has no lives or game over; **Advanced Mode** (chosen in **Settings** before starting or continuing a slot) adds a three-life limit, badge milestones, and a game-over return to the start screen. Pick **Cowboy** or **Cowgirl** in Settings — the choice applies across all save slots. **German is the default language**; English is fully supported.
 
-**Content version:** `1.8.57` (see `content_version.txt`). Launchers reimport when this stamp changes.
+**Content version:** `1.8.58` (see `content_version.txt`). Launchers reimport when this stamp changes.
 
 This README is the **binding source of truth** for gameplay, level design, art, i18n, and audio. Agents and contributors must follow it (see [Agent / contributor rules](#agent--contributor-rules)).
 
@@ -130,7 +130,7 @@ Agents **must** honor these when editing levels or trail systems:
 - **Ninjas:** handcrafted **chibi cel-shaded sprites** in the same big-head / thick-ink style as the bandit (`tools/build_ninja_frames.py`: hooded head, red headband + obi, navy gi, 64×80); workshop stamp marks an **ambush anchor** — when the cowboy enters range, the ninja **appears ~12 columns (480 px) in front** of him, runs in with a **sword slash** on reach, **jumps pits and canyons** toward the cowboy (crouch + airborne jump frames), and throws hand-drawn **shuriken** at winged flyers; lasso or head stomp ties with a unique bound rope pose; **camp respawn** cancels appear/chase/jump and hides him back at the stamp post (unless already tied at that camp).
 - **Ninja jump height matches the cowboy's own apex** (derived from the live `Player.jump_velocity` / `Player.gravity`, not a hand-tuned constant), so a ninja can **hop up onto any plank / ledge the cowboy can reach** and step back down off a lip instead of stalling on it. Do not regress this to a fixed jump height that leaves planks unreachable.
 - **No cactus inside canyon mouths** or on hand-painted rim bands (keep clear of the rim body past the gap).
-- **Rattlesnakes / scorpions:** floor hazards that raise then bite/sting; desert trails can stamp both; cave remaps the rattlesnake stamp to scorpion art. Campaign desert levels 6/8/9/10 place a late-trail scorpion among the snakes.
+- **Rattlesnakes / scorpions:** floor hazards that raise then bite/sting; desert campaign trails use **rattlesnakes** (workshop can still stamp a desert scorpion); cave remaps the rattlesnake stamp to scorpion art.
 - **No rattlesnake directly in front of** (approaching) a canyon mouth.
 - **No timed doors** (`TimedDoor`) over ground canyon gaps or on rim bands (tall gates must not sit above canyon mouths).
 - **No timed doors in cave trails at all** — ranch gates are a desert prop. The cave palette hides the stamp, sanitize/build strip it, and `LevelLayoutRules` rejects one that slips into a `"style": "cave"` level.
