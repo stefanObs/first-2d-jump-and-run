@@ -78,7 +78,8 @@ func _ready() -> void:
 	failures += await _run("Lasso cast ties bandits via HurtArea", _test_lasso_cast_hits_hurt_area)
 	failures += await _run("Jumping on a bandit head ties him", _test_stomp_ties_bandit)
 	failures += await _run("Trail bull charges toward the player", _test_bull_charges_player)
-	failures += await _run("Bulls turn back at pit and canyon edges", _test_bull_retreats_from_gap)
+	failures += await _run("Bulls turn at pit and canyon edges", _test_bull_turns_at_gap)
+	failures += await _run("Bulls turn after the cowboy jumps over", _test_bull_turns_after_jump_over)
 	failures += await _run("Bulls never stamp on pits or canyons", _test_bull_stamp_avoids_gaps)
 	failures += await _run("Lasso ties trail bulls", _test_lasso_ties_bull)
 	failures += await _run("Jumping on a bull head ties it", _test_stomp_ties_bull)
@@ -2396,8 +2397,11 @@ func _test_bull_charges_player() -> Variant:
 	return error
 
 
-func _test_bull_retreats_from_gap() -> Variant:
-	## At a pit/canyon lip the bull turns inland and runs back ~8 cm.
+func _test_bull_turns_at_gap() -> Variant:
+	## At a pit/canyon lip the bull turns inland instead of tumbling in.
+	for node in get_tree().get_nodes_in_group("player"):
+		if is_instance_valid(node):
+			node.free()
 	var left := StaticBody2D.new()
 	left.collision_layer = 1
 	left.position = Vector2(200, 420)
@@ -2424,8 +2428,8 @@ func _test_bull_retreats_from_gap() -> Variant:
 		right.queue_free()
 		return "Missing bull enemy scene."
 	var bull := packed.instantiate() as BullEnemy
-	# Stand on the right lip of the left bank; player waits across the gap.
-	bull.position = Vector2(360, 400)
+	# Mid-bank so he can charge toward the player across the gap, then hit the lip.
+	bull.position = Vector2(220, 400)
 	add_child(bull)
 	await get_tree().physics_frame
 	bull._was_grounded = true
@@ -2433,8 +2437,7 @@ func _test_bull_retreats_from_gap() -> Variant:
 	var player := Player.new()
 	player.name = "Player"
 	player.position = Vector2(700, 400)
-	player.set_physics_process(false)
-	player.set_process(false)
+	player.process_mode = Node.PROCESS_MODE_DISABLED
 	if not player.is_in_group("player"):
 		player.add_to_group("player")
 	add_child(player)
@@ -2442,13 +2445,18 @@ func _test_bull_retreats_from_gap() -> Variant:
 	await get_tree().physics_frame
 	await get_tree().physics_frame
 	var start_x := bull.global_position.x
-	var saw_retreat := false
-	var min_x := start_x
-	for _i in range(90):
+	var max_x := start_x
+	var saw_right_charge := false
+	var saw_inland_turn := false
+	for _i in range(120):
 		await get_tree().physics_frame
-		min_x = minf(min_x, bull.global_position.x)
-		if bull._retreat_remaining > 0.0:
-			saw_retreat = true
+		# Keep the decoy cowboy planted — this fixture only drives bull AI facing.
+		player.global_position = Vector2(700, bull.global_position.y)
+		max_x = maxf(max_x, bull.global_position.x)
+		if bull._charge_dir > 0.0:
+			saw_right_charge = true
+		if saw_right_charge and bull._charge_dir < 0.0:
+			saw_inland_turn = true
 		# Must never cross into the open gap (left bank ends at x=400).
 		if bull.global_position.x > 400.0:
 			player.queue_free()
@@ -2458,12 +2466,12 @@ func _test_bull_retreats_from_gap() -> Variant:
 			return "Bull must not charge into the canyon gap (x=%.1f)." % bull.global_position.x
 
 	var error: Variant = null
-	if not saw_retreat:
-		error = "Bull should start an edge retreat at the canyon lip."
-	elif start_x - min_x < BullEnemy.EDGE_RETREAT_PX * 0.45:
-		error = "Bull should run back inland about 8 cm (moved %.1fpx, need >= %.1f)." % [
-			start_x - min_x, BullEnemy.EDGE_RETREAT_PX * 0.45
-		]
+	if not saw_right_charge:
+		error = "Bull should first charge toward the player (right, toward the canyon)."
+	elif max_x < start_x + 20.0:
+		error = "Bull should run toward the canyon lip before turning (moved %.1fpx)." % (max_x - start_x)
+	elif not saw_inland_turn:
+		error = "Bull should turn inland once he touches the canyon lip."
 	elif bull._fallen or bull.global_position.y > 480.0:
 		error = "Bull should stay on the bank instead of falling into the canyon."
 
@@ -2471,6 +2479,92 @@ func _test_bull_retreats_from_gap() -> Variant:
 	bull.queue_free()
 	left.queue_free()
 	right.queue_free()
+	return error
+
+
+func _test_bull_turns_after_jump_over() -> Variant:
+	## After the cowboy jumps over, the bull keeps his heading ~5 cm, then turns.
+	for node in get_tree().get_nodes_in_group("player"):
+		if is_instance_valid(node):
+			node.free()
+	var floor := StaticBody2D.new()
+	floor.collision_layer = 1
+	floor.position = Vector2(400, 420)
+	var floor_shape := CollisionShape2D.new()
+	var floor_rect := RectangleShape2D.new()
+	floor_rect.size = Vector2(900, 40)
+	floor_shape.shape = floor_rect
+	floor.add_child(floor_shape)
+	add_child(floor)
+
+	var packed: PackedScene = load("res://scenes/world/bull_enemy.tscn")
+	if packed == null:
+		floor.queue_free()
+		return "Missing bull enemy scene."
+	var bull := packed.instantiate() as BullEnemy
+	bull.position = Vector2(250, 400)
+	add_child(bull)
+	await get_tree().physics_frame
+	bull._was_grounded = true
+
+	var player := Player.new()
+	player.name = "Player"
+	player.position = Vector2(420, 400)
+	player.process_mode = Node.PROCESS_MODE_DISABLED
+	if not player.is_in_group("player"):
+		player.add_to_group("player")
+	add_child(player)
+
+	# Let the bull commit a rightward charge toward the cowboy.
+	for _i in range(10):
+		await get_tree().physics_frame
+		player.global_position.y = bull.global_position.y
+	if bull._charge_dir <= 0.0:
+		player.queue_free()
+		bull.queue_free()
+		floor.queue_free()
+		return "Bull should be charging right toward the player before the jump-over."
+
+	var cross_x := bull.global_position.x
+	# Jump over to the left side (behind the charge), briefly high then land behind.
+	player.global_position = Vector2(cross_x - 80.0, bull.global_position.y - 120.0)
+	await get_tree().physics_frame
+	if bull._charge_dir <= 0.0:
+		player.queue_free()
+		bull.queue_free()
+		floor.queue_free()
+		return "Bull should keep his charge while the cowboy is airborne overhead."
+	player.global_position = Vector2(cross_x - 80.0, bull.global_position.y)
+	await get_tree().physics_frame
+	if bull._turn_after_px <= 0.0:
+		player.queue_free()
+		bull.queue_free()
+		floor.queue_free()
+		return "Jumping over should arm the ~5 cm turn delay."
+
+	var turned_left := false
+	var traveled := 0.0
+	var prev_x := bull.global_position.x
+	for _i in range(90):
+		await get_tree().physics_frame
+		player.global_position.y = bull.global_position.y
+		traveled += absf(bull.global_position.x - prev_x)
+		prev_x = bull.global_position.x
+		if bull._charge_dir < 0.0:
+			turned_left = true
+			break
+
+	var error: Variant = null
+	if not turned_left:
+		error = "Bull should turn toward the cowboy after about 5 cm."
+	elif traveled < BullEnemy.JUMP_OVER_TURN_PX * 0.4:
+		error = "Jump-over turn came too soon (traveled %.1fpx, need ~%.0f)." % [
+			traveled, BullEnemy.JUMP_OVER_TURN_PX
+		]
+
+	player.queue_free()
+	bull.queue_free()
+	floor.queue_free()
 	return error
 
 

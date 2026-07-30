@@ -32,8 +32,8 @@ const GROUND_PROBE_UP := 48.0
 const GROUND_PROBE_DOWN := 64.0
 ## Once the bull tumbles this far below its post it has cleared into the canyon.
 const FALL_DEATH_DEPTH := 1400.0
-## About 8 cm on a typical play window — reverse run after a pit/canyon lip.
-const EDGE_RETREAT_PX := 300.0
+## About 5 cm on a typical play window — keep charging past a jump-over before turning.
+const JUMP_OVER_TURN_PX := 190.0
 const EDGE_LOOKAHEAD_PX := 32.0
 const RUN_FPS := 10.0
 
@@ -52,8 +52,10 @@ var _vel_y: float = 0.0
 var _fallen: bool = false
 var _was_grounded: bool = false
 var _level_style: String = LevelStyle.DESERT
-var _retreat_remaining: float = 0.0
-var _retreat_dir: float = 0.0
+## Locked charge heading while running; 0 means idle / glaring only.
+var _charge_dir: float = 0.0
+## Distance still to cover in `_charge_dir` before turning after the cowboy jumps over.
+var _turn_after_px: float = 0.0
 
 
 func apply_level_style(style: String) -> void:
@@ -159,37 +161,78 @@ func _physics_process(delta: float) -> void:
 	if _tied:
 		return
 	var player := _find_nearby_player(99999.0)
-	var retreating := _retreat_remaining > 0.0
-	if not retreating and player != null:
-		# Always turn to glare at the cowpoke, even before the charge begins.
-		_facing = 1.0 if player.global_position.x >= global_position.x else -1.0
-		_apply_facing(_facing)
-	var charging := (
-		not retreating
-		and player != null
-		and global_position.distance_to(player.global_position) <= CHARGE_RANGE
+	var horiz_near := (
+		player != null
+		and absf(player.global_position.x - global_position.x) <= CHARGE_RANGE
+	)
+	var band_near := (
+		horiz_near
 		and absf(player.global_position.y - global_position.y) <= CHARGE_Y_BAND
 	)
+	# Once committed, keep charging through a jump-over (player leaves the Y band).
+	var pursuing := horiz_near and (not is_zero_approx(_charge_dir) or band_near)
 	# AnimatableBody2D defers transform writes — combine charge + gravity into one
 	# assignment so the X shove is not wiped by the floor snap.
 	var next := global_position
-	if retreating:
-		if _edge_ahead(_retreat_dir):
-			_retreat_remaining = 0.0
+	var moving := false
+	if pursuing:
+		var toward := 1.0 if player.global_position.x >= global_position.x else -1.0
+		if is_zero_approx(_charge_dir):
+			# Commit toward the cowboy and keep that heading until a lip or jump-over turn.
+			_charge_dir = toward
+			_turn_after_px = 0.0
+		elif signf(toward) == signf(_charge_dir):
+			# Still ahead in the charge lane — cancel a pending jump-over turn.
+			_turn_after_px = 0.0
+		elif _same_bank_as(player):
+			# Cowboy jumped over on the same bank — keep going ~5 cm, then turn.
+			if _turn_after_px <= 0.0:
+				_turn_after_px = JUMP_OVER_TURN_PX
 		else:
-			var step := _retreat_dir * CHARGE_SPEED * delta
+			# Player is across a canyon we already refused — don't flip back into the gap.
+			_turn_after_px = 0.0
+
+		if _edge_ahead(_charge_dir):
+			# Canyon / pit lip: turn inland immediately and keep charging.
+			var reverse := -_charge_dir
+			if not is_zero_approx(reverse) and not _edge_ahead(reverse):
+				_charge_dir = reverse
+			_turn_after_px = 0.0
+		elif not is_zero_approx(_charge_dir):
+			var step := _charge_dir * CHARGE_SPEED * delta
 			next.x += step
-			_retreat_remaining = maxf(_retreat_remaining - absf(step), 0.0)
-			_facing = _retreat_dir
+			moving = true
+			if _turn_after_px > 0.0:
+				_turn_after_px = maxf(_turn_after_px - absf(step), 0.0)
+				if _turn_after_px <= 0.0:
+					_charge_dir = toward
+		_facing = _charge_dir if not is_zero_approx(_charge_dir) else toward
+		_apply_facing(_facing)
+	else:
+		_charge_dir = 0.0
+		_turn_after_px = 0.0
+		if player != null:
+			_facing = 1.0 if player.global_position.x >= global_position.x else -1.0
 			_apply_facing(_facing)
-	elif charging:
-		if _edge_ahead(_facing):
-			_begin_edge_retreat()
-		else:
-			next.x += _facing * CHARGE_SPEED * delta
 	next = _integrate_gravity(next, delta)
 	global_position = next
-	_play_move_visual((charging or retreating) and not _fallen, delta)
+	_play_move_visual(moving and not _fallen, delta)
+
+
+func _same_bank_as(player: Player) -> bool:
+	## True when solid trail crust runs from the bull to the cowboy (no pit/canyon between).
+	var a := global_position.x
+	var b := player.global_position.x
+	var span := b - a
+	if absf(span) <= 8.0:
+		return true
+	var step := 24.0 * signf(span)
+	var x := a + step
+	while (step > 0.0 and x < b) or (step < 0.0 and x > b):
+		if is_nan(_probe_floor_y_at(Vector2(x, global_position.y), GROUND_PROBE_DOWN)):
+			return false
+		x += step
+	return true
 
 
 func _edge_ahead(direction: float) -> bool:
@@ -201,16 +244,6 @@ func _edge_ahead(direction: float) -> bool:
 		return true
 	var probe := global_position + Vector2(dir * EDGE_LOOKAHEAD_PX, 0.0)
 	return is_nan(_probe_floor_y_at(probe, GROUND_PROBE_DOWN))
-
-
-func _begin_edge_retreat() -> void:
-	## Spin away from the gap and run inland ~8 cm instead of tumbling in.
-	_retreat_dir = -_facing
-	if is_zero_approx(_retreat_dir):
-		_retreat_dir = -1.0
-	_facing = _retreat_dir
-	_apply_facing(_facing)
-	_retreat_remaining = EDGE_RETREAT_PX
 
 
 func _probe_floor_y_at(world_pos: Vector2, down_reach: float) -> float:
@@ -279,8 +312,8 @@ func restore_for_respawn() -> void:
 	_fallen = false
 	_vel_y = 0.0
 	_was_grounded = false
-	_retreat_remaining = 0.0
-	_retreat_dir = 0.0
+	_charge_dir = 0.0
+	_turn_after_px = 0.0
 	global_position = _origin
 	_facing = 1.0
 	visible = true
