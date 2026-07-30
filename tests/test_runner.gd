@@ -3637,6 +3637,8 @@ func _test_wing_chasm_hands_out_wings_at_camp() -> Variant:
 	var first_wings := -1
 	var first_star := -1
 	var high_stars := 0
+	var bandits := 0
+	var bounty_bandits := 0
 	for value in data.get("objects", []):
 		var object := value as Dictionary
 		var x := int(object.get("x", 0))
@@ -3650,6 +3652,10 @@ func _test_wing_chasm_hands_out_wings_at_camp() -> Variant:
 				# Badges parked in the upper cave air are the reward for flying.
 				if int(object.get("y", 0)) <= 3:
 					high_stars += 1
+			"bandit":
+				bandits += 1
+			"bounty_bandit":
+				bounty_bandits += 1
 	if first_wings < 0:
 		return "Wing Chasm must stamp the wings item."
 	if first_wings > spawn_x + 6:
@@ -3658,6 +3664,10 @@ func _test_wing_chasm_hands_out_wings_at_camp() -> Variant:
 		return "Wing Chasm should hand out wings before the first badge."
 	if high_stars < 6:
 		return "Wing Chasm should hang badges in the upper cave air (found %d)." % high_stars
+	if bandits < 2:
+		return "Wing Chasm should stamp bow skeletons on the solid trail (found %d)." % bandits
+	if bounty_bandits < 1:
+		return "Wing Chasm should stamp a crystal skeleton after the late belt."
 
 	var level := LevelController.new()
 	level.level_number = 15
@@ -3669,11 +3679,16 @@ func _test_wing_chasm_hands_out_wings_at_camp() -> Variant:
 		var item := node as ModeItem
 		if item.mode == ModeController.Mode.WINGS and item.global_position.x <= 320.0:
 			wings_at_camp = true
+	var skeleton_count := 0
+	for node in level.find_children("*", "Opponent", true, false):
+		skeleton_count += 1
 	var errors := LevelLayoutRules.validate_level_node(level)
 	level.queue_free()
 	await get_tree().process_frame
 	if not wings_at_camp:
 		return "Built Wing Chasm should place a wings pickup within reach of the camp."
+	if skeleton_count < 3:
+		return "Built Wing Chasm should place cave skeletons (found %d)." % skeleton_count
 	if not errors.is_empty():
 		return "Wing Chasm layout errors: %s" % ", ".join(errors)
 	return null
@@ -4835,6 +4850,34 @@ func _test_level_09_gulch_clearance() -> Variant:
 				"%s blocks the gulch floor (bottom %.0f, need <= %.0f)."
 				% [name_text, plank_bottom, plank_bottom_max]
 			)
+
+	# The final plank is optional: without a spring, the cowboy must have a
+	# comfortable route under it on the real (possibly sloped) walk surface.
+	var final_plank := level.get_node_or_null("SpringLedge5") as StaticBody2D
+	if final_plank == null:
+		level.queue_free()
+		return "Level 09 needs its final optional plank."
+	var final_surface := LevelLayoutRules._surface_for(final_plank)
+	var final_shape := final_plank.get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if final_surface.is_empty() or final_shape == null or not (final_shape.shape is RectangleShape2D):
+		level.queue_free()
+		return "Level 09 final plank needs rectangular collision."
+	var final_center_x := (float(final_surface["left"]) + float(final_surface["right"])) * 0.5
+	var final_walk_y := float(WildWestTheme.walk_surface_at(level, final_center_x)["y"])
+	var final_bottom := (
+		float(final_surface["top"])
+		+ (final_shape.shape as RectangleShape2D).size.y
+	)
+	var final_clearance := final_walk_y - final_bottom
+	if final_clearance < min_clear + 28.0:
+		level.queue_free()
+		return (
+			"Level 09 final plank needs a clear route underneath (got %.0fpx, need %.0fpx)."
+			% [final_clearance, min_clear + 28.0]
+		)
+	if level.get_node_or_null("Spring5") != null:
+		level.queue_free()
+		return "Level 09 final ground route must not force the cowboy onto Spring5."
 
 	for node in level.find_children("*", "Area2D", true, false):
 		if not (node is SpringPad):

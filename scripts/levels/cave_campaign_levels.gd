@@ -249,6 +249,8 @@ static func _level_15() -> Dictionary:
 	_add(objects, "bat", 20, trail - 5)
 	_add(objects, "acid_drip", 22, 0)
 	_add_badge(objects, 24, trail)
+	# Bow skeleton on the solid approach before the first chasm.
+	_add(objects, "bandit", 27, trail - 1)
 	_add(objects, "spring", 30, trail - 1)
 	# First chasm: planks carry the walking route, open air rewards the flight.
 	CustomLevelStore.append_platform_run(objects, trail, 34, 4, 2)
@@ -262,6 +264,8 @@ static func _level_15() -> Dictionary:
 	_add(objects, "acid_drip", 60, 0)
 	_add_badge(objects, 62, trail)
 	CustomLevelStore.append_ladder_branch(objects, trail, 64)
+	# Mid-trail bow skeleton between the ladder branch and the second chasm.
+	_add(objects, "bandit", 68, trail - 1)
 	_add(objects, "star", 71, 2)
 	_add(objects, "bat", 74, trail - 5)
 	_add(objects, "acid_drip", 76, 1)
@@ -277,6 +281,8 @@ static func _level_15() -> Dictionary:
 	_add_badge(objects, 108, trail)
 	CustomLevelStore.append_conveyor_belt(objects, trail, 110, true)
 	_add(objects, "bat", 114, trail - 6)
+	# Crystal skeleton after the belt — one last ground threat before the chest.
+	_add(objects, "bounty_bandit", 116, trail - 1)
 	_add(objects, "star", 117, 2)
 	_add(objects, "spring", 120, trail - 1)
 	_add(objects, "chest", 122, trail - 1)

@@ -921,13 +921,8 @@ shape = SubResource("BlockWide")
 position = Vector2(5740, 150)
 
 
-[node name="Spring5" parent="." instance=ExtResource("11_spring")]
-position = Vector2(5520, 320)
-bounce_velocity = -820.0
-
-
 [node name="SpringLedge5" type="StaticBody2D" parent="."]
-position = Vector2(6880, 200)
+position = Vector2(6880, 160)
 [node name="Visual" type="ColorRect" parent="SpringLedge5"]
 offset_left = -110.0
 offset_top = -16.0
@@ -945,7 +940,7 @@ shape = SubResource("BlockWide")
 
 
 [node name="SpringStar5" parent="." instance=ExtResource("9_star")]
-position = Vector2(6880, 150)
+position = Vector2(6880, 110)
 
 
 [node name="BootsHopLedge" type="StaticBody2D" parent="."]
