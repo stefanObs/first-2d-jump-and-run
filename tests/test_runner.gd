@@ -767,6 +767,56 @@ func _test_boss_arenas() -> Variant:
 	):
 		dragon.queue_free()
 		return "Third lasso should show the mouth-tied dragon frame."
+	# Flying with 1–2 lassos must use the same rope layout as the floor stages
+	# (neck, then neck+torso) — not a muzzle-only fly variant.
+	dragon.set("_lassos", 1)
+	dragon.call("_set_fly_pose")
+	if (
+		dragon_sprite.texture == null
+		or dragon_sprite.texture.resource_path.find("fly_bound1") < 0
+	):
+		dragon.queue_free()
+		return "One lasso in flight should show fly_bound1 neck coils."
+	dragon.set("_lassos", 2)
+	dragon.call("_set_fly_pose")
+	if (
+		dragon_sprite.texture == null
+		or dragon_sprite.texture.resource_path.find("fly_bound2") < 0
+	):
+		dragon.queue_free()
+		return "Two lassos in flight should show fly_bound2 neck+torso ropes."
+	var fly2 := dragon_sprite.texture.get_image()
+	var fly_free := (load("res://assets/world/boss_cave_dragon_fly_0.png") as Texture2D).get_image()
+	if fly2 == null or fly_free == null:
+		dragon.queue_free()
+		return "Could not read dragon rope art images."
+	# Extra tan pixels on the snout vs unbound flight = a muzzle (wrong for stage 2).
+	var snout_extra := 0
+	for y in range(70, 110):
+		for x in range(20, 70):
+			var c := fly2.get_pixel(x, y)
+			var f := fly_free.get_pixel(x, y)
+			var tied_rope := c.a > 0.4 and c.r > 0.35 and c.g > 0.22 and c.b < 0.45 and c.r > c.b + 0.12
+			var free_tan := f.a > 0.4 and f.r > 0.35 and f.g > 0.22 and f.b < 0.45 and f.r > f.b + 0.12
+			if tied_rope and not free_tan:
+				snout_extra += 1
+	if snout_extra > 40:
+		dragon.queue_free()
+		return "Flying stage-2 ropes must not muzzle the snout (that is floor stage 3 / win)."
+	# Mid-torso should carry rope like the floor stage-2 wrap.
+	var torso_rope := 0
+	var torso_free := 0
+	for y in range(115, 165):
+		for x in range(145, 200):
+			var tc := fly2.get_pixel(x, y)
+			var tf := fly_free.get_pixel(x, y)
+			if tc.a > 0.4 and tc.r > 0.35 and tc.g > 0.22 and tc.b < 0.45 and tc.r > tc.b + 0.12:
+				torso_rope += 1
+			if tf.a > 0.4 and tf.r > 0.35 and tf.g > 0.22 and tf.b < 0.45 and tf.r > tf.b + 0.12:
+				torso_free += 1
+	if torso_rope - torso_free < 80:
+		dragon.queue_free()
+		return "Flying stage-2 should keep a mid-torso rope like the floor tied pose."
 	if int(dragon.get("source_level")) != 15:
 		dragon.queue_free()
 		return "Cave Dragon must be the level-15 boss."

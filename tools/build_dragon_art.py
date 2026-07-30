@@ -56,6 +56,13 @@ def main() -> int:
         framed.save(dest)
         print("wrote", dest.relative_to(ROOT), framed.size)
 
+    # Fly bound2 concepts painted a muzzle; rebuild from bound1 neck + torso coils
+    # so flying matches floor stage-2 ropes (neck + mid-body, mouth free).
+    sys.path.insert(0, str(ROOT / "tools"))
+    from paint_dragon_fly_ropes import build as paint_fly_ropes  # noqa: E402
+
+    paint_fly_ropes()
+
     flame = CONCEPT / "dragon_flameball_concept.png"
     if flame.is_file():
         shutil.copy2(flame, SOURCE / flame.name)
