@@ -415,6 +415,24 @@ func _test_boss_arenas() -> Variant:
 		if load(art_path) == null:
 			bull.queue_free()
 			return "Missing bull art: %s" % art_path
+	# Charge run frames must match stun/idle standing size (no shrink while running).
+	var stand_tex := load("res://assets/world/boss_stampede_bull.png") as Texture2D
+	var stand_h := float(stand_tex.get_height())
+	for i in range(4):
+		var run_tex := load("res://assets/world/boss_stampede_bull_run_%d.png" % i) as Texture2D
+		if absf(float(run_tex.get_height()) - stand_h) > 2.0:
+			bull.queue_free()
+			return "Boss run frame %d canvas height (%d) should match stun standing art (%d)." % [
+				i, run_tex.get_height(), stand_tex.get_height()
+			]
+		var run_img := run_tex.get_image()
+		if run_img != null:
+			var used := run_img.get_used_rect()
+			if used.size.y < stand_h - 8.0:
+				bull.queue_free()
+				return "Boss run frame %d content height %.0f is too short vs stun art %.0f." % [
+					i, used.size.y, stand_h
+				]
 	var spawn := bull.get_node_or_null("SpawnPoint") as Marker2D
 	var wall_l := bull.get_node_or_null("WallLeft") as Node2D
 	var wall_r := bull.get_node_or_null("WallRight") as Node2D

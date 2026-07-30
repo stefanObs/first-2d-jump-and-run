@@ -122,12 +122,15 @@ func _play_charge_run(delta: float) -> void:
 	if BULL_RUN_TEX.is_empty():
 		_charge_bob += delta * 14.0
 		_sprite.texture = BULL_TEX
+		_sprite.scale = Vector2.ONE
 		_sprite.position.y = BULL_FOOT_Y + sin(_charge_bob) * 4.0
 		_sprite.rotation = sin(_charge_bob * 0.5) * 0.04 * _dir
 		return
 	_run_phase += delta * RUN_FPS
 	var idx := int(floor(_run_phase)) % BULL_RUN_TEX.size()
 	_sprite.texture = BULL_RUN_TEX[idx]
+	# Run frames are baked to the same body height as the stun/idle standing art.
+	_sprite.scale = Vector2.ONE
 	_sprite.position.y = BULL_FOOT_Y
 	_sprite.rotation = 0.0
 
@@ -192,6 +195,7 @@ func _animate_stun_idle(delta: float) -> void:
 		return
 	_run_phase = 0.0
 	_sprite.texture = BULL_TEX
+	_sprite.scale = Vector2.ONE
 	_charge_bob += delta * 8.0
 	_sprite.position.y = BULL_FOOT_Y + sin(_charge_bob) * 2.0
 	_sprite.rotation = sin(_charge_bob) * 0.08
@@ -249,6 +253,7 @@ func _end_stun(from_lasso: bool) -> void:
 		_sprite.modulate = Color.WHITE
 		_sprite.rotation = 0.0
 		_sprite.texture = BULL_TEX
+		_sprite.scale = Vector2.ONE
 		_sprite.position.y = BULL_FOOT_Y
 	_run_phase = 0.0
 

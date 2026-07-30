@@ -2,7 +2,8 @@
 
 Trail bull standing has no painted lasso ring. Boss standing stays
 `assets/world/boss_stampede_bull.png` (ring kept for the stampede fight).
-Run cycles are 4-frame strips keyed and framed to 320×160.
+Trail run cycles frame to 320×160 at trail body height. Boss run frames
+fill nearly the full canvas so they match the stun/idle standing size.
 
     python tools/build_bull_frames.py
 """
@@ -18,13 +19,24 @@ ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "assets" / "source" / "bull"
 OUT = ROOT / "assets" / "world"
 
-CANVAS = (320, 160)
-BASELINE = 150
-BODY_H = 118
+# Trail bulls (and cave lizards) share this smaller chibi footprint.
+TRAIL_CANVAS = (320, 160)
+TRAIL_BASELINE = 150
+TRAIL_BODY_H = 118
+# Stampede Bull stun art fills 320×159; run frames must match that on-screen size.
+BOSS_CANVAS = (320, 159)
+BOSS_BASELINE = 158
+BOSS_BODY_H = 158
 
 
-def _frame(img: Image.Image) -> Image.Image:
-	return frame_sprite(img, canvas=CANVAS, target_h=BODY_H, baseline=BASELINE)
+def _frame(
+	img: Image.Image,
+	*,
+	canvas: tuple[int, int],
+	target_h: int,
+	baseline: int,
+) -> Image.Image:
+	return frame_sprite(img, canvas=canvas, target_h=target_h, baseline=baseline)
 
 
 def _column_density(im: Image.Image, *, win: int = 8) -> list[float]:
@@ -55,7 +67,14 @@ def _valley_cuts(im: Image.Image, count: int = 4) -> list[int]:
 	return cuts
 
 
-def _save_strip(src_name: str, out_prefix: str) -> None:
+def _save_strip(
+	src_name: str,
+	out_prefix: str,
+	*,
+	canvas: tuple[int, int],
+	target_h: int,
+	baseline: int,
+) -> None:
 	keyed = cutout(str(SRC / src_name), level=200, sat=25)
 	cuts = _valley_cuts(keyed, 4)
 	inset = 10
@@ -67,7 +86,7 @@ def _save_strip(src_name: str, out_prefix: str) -> None:
 		if bbox:
 			cell = cell.crop(bbox)
 		path = OUT / f"{out_prefix}_run_{i}.png"
-		_frame(cell).save(path)
+		_frame(cell, canvas=canvas, target_h=target_h, baseline=baseline).save(path)
 		print("wrote", path.relative_to(ROOT))
 
 
@@ -80,11 +99,28 @@ def build() -> None:
 	if bbox:
 		stand = stand.crop(bbox)
 	stand_path = OUT / "trail_bull.png"
-	_frame(stand).save(stand_path)
+	_frame(
+		stand,
+		canvas=TRAIL_CANVAS,
+		target_h=TRAIL_BODY_H,
+		baseline=TRAIL_BASELINE,
+	).save(stand_path)
 	print("wrote", stand_path.relative_to(ROOT))
 
-	_save_strip("run_strip_no_ring.png", "trail_bull")
-	_save_strip("run_strip_boss.png", "boss_stampede_bull")
+	_save_strip(
+		"run_strip_no_ring.png",
+		"trail_bull",
+		canvas=TRAIL_CANVAS,
+		target_h=TRAIL_BODY_H,
+		baseline=TRAIL_BASELINE,
+	)
+	_save_strip(
+		"run_strip_boss.png",
+		"boss_stampede_bull",
+		canvas=BOSS_CANVAS,
+		target_h=BOSS_BODY_H,
+		baseline=BOSS_BASELINE,
+	)
 
 
 if __name__ == "__main__":
