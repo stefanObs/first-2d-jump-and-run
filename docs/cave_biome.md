@@ -27,7 +27,7 @@ Stamp **type ids stay the same** for remapped foes/hazards so packs stay simple:
 | Pit | Floor hole |
 | Bandit / Bounty Bandit | Bow skeleton / Crystal skeleton |
 | Bull | Cave lizard (same charge + tie poses) |
-| Rattlesnake | Scorpion (cave remap; desert may also stamp `scorpion` directly) |
+| Rattlesnake | Scorpion (cave remap; no duplicate standalone stamp) |
 | Carrion Bird | *(hidden in cave)* |
 | Camp | Lantern camp |
 | Saloon | Crystal Gate |
@@ -58,6 +58,8 @@ sanitizing/building a cave trail strips it, and `LevelLayoutRules` rejects one t
 | `bat` | Flies a smooth curve through the cavern; contact hurts (Bubble can block) |
 | `ladder` | Climb with Space/Up (up) and S/Down (down); used for upper/lower path splits that rejoin |
 
+`stalactite_static` remains a build/import type for auto ceiling décor (harmless fused rock), but is not offered in the workshop dropdown.
+
 Ceiling stamps place on the top rows; ground props still sit one row above dirt. Ladders stand on the trail and rise three cells.
 
 ## Path splits (ladders)
@@ -67,11 +69,11 @@ Stamp a **ladder**, run **one-way crystal ledges** along the climb top, then **d
 ## Hazards & enemies
 
 - **Pink drips:** soft glowing droplets; telegraph with a small sparkle before falling; **splash on the floor** then respawn.
-- **Stalactites:** cowboy-style rock spikes hanging from the ceiling band. Theme décor spawns a **sparse** row of dropping teeth along the trail (skips cells that already have a stamped hazard nearby), with tops embedded in the rock so they read as part of the ceiling before they fall. **Falling** ones wiggle, pull free, fall, then shatter with a transparent impact puff. **Ceiling Spike** stamps can stay put as static rock.
+- **Stalactites:** cowboy-style rock spikes hanging from the ceiling band. Theme décor spawns a **sparse** row of dropping teeth along the trail (skips cells that already have a stamped hazard nearby), with tops embedded in the rock so they read as part of the ceiling before they fall. **Falling** workshop stamps (`stalactite`) wiggle, pull free, fall, then shatter with a transparent impact puff. Static décor spikes stay put and never hurt.
 - **Bats:** two-frame wing flap on a sine/arc path (transparent cutouts).
 - **Lizards:** reuse bull AI (charge toward the cowboy and keep heading until a pit/canyon lip, then turn inland; ~5 cm delay before turning after a same-bank jump-over; full tie sequence) with a single lizard sprite; never stamped on pit mouths or canyon columns.
 - **Poison fungus:** cactus rules (hurt / Bubble bounce) with mushroom art; loops a short **spore-puff** animation painted in the same cel-shaded style as the toadstool (idle → gather → puff → settle) so toxic wisps and soft spore motes feel like part of the mushroom, not a separate overlay.
-- **Scorpions:** rattlesnake raise/strike timing with a tail sting pose. Available as their own desert stamp (`scorpion` / `as_scorpion`); cave style still remaps the rattlesnake stamp to scorpion art.
+- **Scorpions:** rattlesnake raise/strike timing with a tail sting pose. The workshop exposes the campaign-used `rattlesnake` stamp: desert shows a rattlesnake and cave remaps it to scorpion art. Legacy imported `scorpion` stamps still build, but are not offered in the dropdown.
 - **Bow skeletons:** bandit patrol + shoot cadence, but spawn **arrows** instead of revolver bullets; when the cowboy is **flying above** them they play a shoot-up aim pose and loft arrows upward; lasso/stomp still ties. Idle/walk/tied/shoot-up frames share one body height on a transparent canvas; tied pose keeps stand scale and sits on the dirt.
 - **Ninjas:** ambush appears ~12 columns ahead of the cowboy; chase leaps pits/canyons and **hops up onto crystal ledges / planks** with a crouch→airborne jump anim. Their hop apex equals the cowboy's own jump height, so every plank he can reach they can follow him onto (and they step back down off a lip instead of stalling).
 - **Floor holes:** same pit rules (128×64), cave mouth art.

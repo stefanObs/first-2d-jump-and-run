@@ -168,7 +168,10 @@ func _ready() -> void:
 	failures += await _run("Workshop trail length add and remove", _test_workshop_trail_length_resize)
 	failures += await _run("Trail workshop uses one trail row and stacked dirt", _test_trail_row_model)
 	failures += await _run("Workshop ground props stamp one row above dirt", _test_workshop_ground_prop_offset)
-	failures += await _run("Workshop stamp catalog includes bounty and carrion", _test_workshop_stamp_catalog)
+	failures += await _run(
+		"Workshop stamp catalog matches campaign and separates threats",
+		_test_workshop_stamp_catalog
+	)
 	failures += await _run(
 		"Horse theme bans chests and power-up items",
 		_test_horse_theme_bans_items_and_chests
@@ -6283,29 +6286,64 @@ func _test_workshop_stamp_catalog() -> Variant:
 	editor.queue_free()
 	if style_dropdown == null or style_dropdown.item_count < 3:
 		return "Workshop editor needs a Desert/Cave/Horse level style picker."
-	for type_name in ["bounty_bandit", "carrion", "pit", "chest", "bull", "ninja", "scorpion"]:
+	for type_name in ["bounty_bandit", "carrion", "pit", "chest", "bull", "ninja"]:
 		if type_name not in palette_types:
 			return "Workshop palette missing %s stamp." % type_name
-	if "scorpion" not in palette_types:
-		return "Desert workshop palette should offer scorpions alongside rattlesnakes."
-	var desert_enemies := LevelStyle.tool_categories(LevelStyle.DESERT)
+	for unused_type in ["scorpion", "speed", "stalactite_static"]:
+		if unused_type in palette_types:
+			return "Workshop should not offer unused stamp %s." % unused_type
+	var desert_categories := LevelStyle.tool_categories(LevelStyle.DESERT)
+	var desert_hazard_types: PackedStringArray = []
 	var desert_enemy_types: PackedStringArray = []
-	for category in desert_enemies:
-		if str((category as Dictionary).get("id", "")) != "enemies":
-			continue
+	var desert_trail_types: PackedStringArray = []
+	var desert_powerup_types: PackedStringArray = []
+	for category in desert_categories:
+		var category_id := str((category as Dictionary).get("id", ""))
 		for tool in (category as Dictionary).get("tools", []) as Array:
-			desert_enemy_types.append(str((tool as Array)[0]))
-	if "rattlesnake" not in desert_enemy_types or "scorpion" not in desert_enemy_types:
-		return "Desert enemies should include both rattlesnake and scorpion stamps."
-	var cave_enemies := LevelStyle.tool_categories(LevelStyle.CAVE)
+			var type_name := str((tool as Array)[0])
+			if category_id == "hazards":
+				desert_hazard_types.append(type_name)
+			elif category_id == "enemies":
+				desert_enemy_types.append(type_name)
+			elif category_id == "trail":
+				desert_trail_types.append(type_name)
+			elif category_id == "powerups":
+				desert_powerup_types.append(type_name)
+	for type_name in ["cactus", "pit", "rattlesnake"]:
+		if type_name not in desert_hazard_types:
+			return "Stationary threat %s should be in the Hazards category." % type_name
+	for type_name in ["bandit", "bounty_bandit", "bull", "ninja", "carrion"]:
+		if type_name not in desert_enemy_types:
+			return "Moving enemy %s should be in the Enemies category." % type_name
+	if "spring" in desert_hazard_types or "spring" not in desert_trail_types:
+		return "Helpful springs belong with trail traversal, not Hazards."
+	if "rattlesnake" in desert_enemy_types:
+		return "Stationary rattlesnakes belong in Hazards, not Enemies."
+	for type_name in ["wings", "boots", "shield"]:
+		if type_name not in desert_powerup_types:
+			return "Campaign power-up %s should stay in the Power-ups palette." % type_name
+	if "speed" in desert_powerup_types:
+		return "Speed Stars are chest/boss loot only — omit the unused trail stamp."
+	var cave_categories := LevelStyle.tool_categories(LevelStyle.CAVE)
+	var cave_hazard_types: PackedStringArray = []
 	var cave_enemy_types: PackedStringArray = []
-	for category in cave_enemies:
-		if str((category as Dictionary).get("id", "")) != "enemies":
-			continue
+	for category in cave_categories:
+		var category_id := str((category as Dictionary).get("id", ""))
 		for tool in (category as Dictionary).get("tools", []) as Array:
-			cave_enemy_types.append(str((tool as Array)[0]))
-	if "scorpion" in cave_enemy_types:
+			var type_name := str((tool as Array)[0])
+			if category_id == "hazards":
+				cave_hazard_types.append(type_name)
+			elif category_id == "enemies":
+				cave_enemy_types.append(type_name)
+	if "scorpion" in cave_enemy_types or "scorpion" in cave_hazard_types:
 		return "Cave palette should keep the remapped rattlesnake stamp instead of a duplicate scorpion tool."
+	for type_name in ["acid_drip", "stalactite"]:
+		if type_name not in cave_hazard_types:
+			return "Cave environmental threat %s should be in Hazards." % type_name
+	if "stalactite_static" in cave_hazard_types or "stalactite_static" in cave_enemy_types:
+		return "Static ceiling spikes are auto décor, not a workshop stamp."
+	if "bat" not in cave_enemy_types:
+		return "Cave bats are roaming enemies and belong under Enemies."
 	for type_name in ["conveyor", "timed_door", "fence", "mover", "moving_cloud", "blink_cloud", "wind"]:
 		if type_name not in palette_types:
 			return "Workshop palette missing %s stamp." % type_name
@@ -6318,6 +6356,8 @@ func _test_workshop_stamp_catalog() -> Variant:
 			return "Cave style palette missing %s stamp." % type_name
 	if "timed_door" in cave_palette:
 		return "Cave palette must not offer ranch gates; caves have no doors."
+	if "stalactite_static" in cave_palette or "speed" in cave_palette:
+		return "Cave palette must not expose unused static-spike or Speed Star stamps."
 	var horse_palette: PackedStringArray = []
 	for category in LevelStyle.tool_categories(LevelStyle.DESERT, true):
 		for tool in (category as Dictionary).get("tools", []) as Array:
@@ -6331,11 +6371,12 @@ func _test_workshop_stamp_catalog() -> Variant:
 		return "Horse theme should still allow motion stamps."
 	var trail := CustomLevelStore.trail_row(8)
 	for type_name in [
-		"bounty_bandit", "carrion", "chest", "bull", "ninja", "acid_drip", "stalactite", "bat",
-		"conveyor", "timed_door", "fence", "mover", "moving_cloud", "blink_cloud", "wind", "scorpion",
+		"bounty_bandit", "carrion", "chest", "bull", "ninja", "acid_drip", "stalactite",
+		"stalactite_static", "bat", "conveyor", "timed_door", "fence", "mover", "moving_cloud",
+		"blink_cloud", "wind", "scorpion", "speed",
 	]:
 		if not CustomLevelStore._valid_object({"type": type_name, "x": 1, "y": trail - 1}, trail):
-			return "%s should be accepted by CustomLevelStore." % type_name
+			return "%s should remain accepted by CustomLevelStore for imports." % type_name
 	# Motion stamps must build into real gameplay nodes (ceiling height stays automated).
 	var motion_data := CustomLevelStore.default_level(0)
 	motion_data["objects"] = [

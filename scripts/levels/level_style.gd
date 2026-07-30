@@ -172,27 +172,23 @@ static func stamp_label(type_name: String, style: String = DESERT) -> String:
 
 static func tool_categories(style: String = DESERT, start_mounted: bool = false) -> Array:
 	var cave := is_cave(style)
+	## Hazards = stationary / environmental threats. Enemies = roaming actors.
 	var hazards: Array = [
 		_tool("cactus", style),
 		_tool("pit", style),
-		_tool("spring", style),
+		_tool("rattlesnake", style),
 	]
 	if cave:
 		hazards.append_array([
 			_tool("acid_drip", style),
 			_tool("stalactite", style),
-			_tool("stalactite_static", style),
 		])
 	var enemies: Array = [
 		_tool("bandit", style),
 		_tool("bounty_bandit", style),
 		_tool("bull", style),
 		_tool("ninja", style),
-		_tool("rattlesnake", style),
 	]
-	## Desert can place both snakes and scorpions; cave remaps rattlesnake→scorpion art.
-	if not cave:
-		enemies.append(_tool("scorpion", style))
 	if cave:
 		enemies.append(_tool("bat", style))
 	else:
@@ -205,6 +201,7 @@ static func tool_categories(style: String = DESERT, start_mounted: bool = false)
 		_tool("canyon", style),
 		_tool("platform", style),
 		_tool("ladder", style),
+		_tool("spring", style),
 		_tool("conveyor", style),
 	]
 	## Ranch gates are a desert prop; cave trails route around belts and ledges instead.
@@ -247,10 +244,10 @@ static func tool_categories(style: String = DESERT, start_mounted: bool = false)
 		categories.append({
 			"id": "powerups",
 			"label": "Power-ups",
+			## Speed Stars only drop from chests / bosses — never stamped on campaign trails.
 			"tools": [
 				_tool("wings", style),
 				_tool("boots", style),
-				_tool("speed", style),
 				_tool("shield", style),
 			],
 		})
