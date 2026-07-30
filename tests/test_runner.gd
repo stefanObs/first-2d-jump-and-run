@@ -385,6 +385,21 @@ func _test_debug_name_overlay() -> Variant:
 	return error
 
 
+func _widest_spring_gap(arena: Node, left_x: float, right_x: float) -> float:
+	## Longest stretch of the patrol with no spring pad to vault the boss from.
+	var xs: Array[float] = [left_x, right_x]
+	for node in arena.find_children("*", "Area2D", true, false):
+		if node is SpringPad:
+			var x := (node as Node2D).global_position.x
+			if x >= left_x - 200.0 and x <= right_x + 200.0:
+				xs.append(x)
+	xs.sort()
+	var widest := 0.0
+	for i in range(xs.size() - 1):
+		widest = maxf(widest, xs[i + 1] - xs[i])
+	return widest
+
+
 func _test_boss_arenas() -> Variant:
 	var bull_packed: PackedScene = load("res://scenes/bosses/boss_stampede_bull.tscn")
 	var coach_packed: PackedScene = load("res://scenes/bosses/boss_midnight_coach.tscn")
@@ -621,22 +636,72 @@ func _test_boss_arenas() -> Variant:
 	if not king.has_method("_is_head_stomp") or not king.has_method("_handle_kingpin_contact"):
 		king.queue_free()
 		return "Kingpin must distinguish head stomps from harmful side contact."
-	var patrol_span: float = absf(float(king.get("_right_x")) - float(king.get("_left_x")))
-	if patrol_span < 400.0:
+	var left_x := float(king.get("_left_x"))
+	var right_x := float(king.get("_right_x"))
+	var patrol_span: float = absf(right_x - left_x)
+	if patrol_span < 900.0:
 		king.queue_free()
-		return "Kingpin should patrol a wider bounded arena path."
+		return "Kingpin should patrol a long stretch of the yard (span %.0f)." % patrol_span
 	if float(king.get("_walk_speed")) < 90.0:
 		king.queue_free()
 		return "Kingpin should move more during the fight."
-	for walk_path in [
-		"res://assets/world/boss_outlaw_kingpin_walk_0.png",
-		"res://assets/world/boss_outlaw_kingpin_walk_1.png",
-		"res://assets/world/boss_outlaw_kingpin_walk_2.png",
-		"res://assets/world/boss_outlaw_kingpin_walk_3.png",
-	]:
-		if load(walk_path) == null:
+	# The widened patrol must stay on the arena floor at both ends.
+	var king_ground := king.get_node_or_null("Ground") as StaticBody2D
+	var ground_shape := (
+		king_ground.get_node_or_null("CollisionShape2D") as CollisionShape2D
+		if king_ground != null
+		else null
+	)
+	if ground_shape == null or not (ground_shape.shape is RectangleShape2D):
+		king.queue_free()
+		return "Kingpin arena needs a rectangular ground body."
+	var ground_rect := ground_shape.shape as RectangleShape2D
+	var ground_left := king_ground.position.x - ground_rect.size.x * 0.5
+	var ground_right := king_ground.position.x + ground_rect.size.x * 0.5
+	if left_x < ground_left + 60.0 or right_x > ground_right - 60.0:
+		king.queue_free()
+		return "Kingpin patrol %.0f..%.0f leaves the arena floor %.0f..%.0f." % [
+			left_x, right_x, ground_left, ground_right
+		]
+	# Springs must stay spread along the patrol so vaulting him is possible anywhere.
+	var spring_gap := _widest_spring_gap(king, left_x, right_x)
+	if spring_gap > 420.0:
+		king.queue_free()
+		return "Kingpin patrol has a %.0fpx stretch with no vaulting spring." % spring_gap
+	var king_stand_tex := load("res://assets/world/boss_outlaw_kingpin.png") as Texture2D
+	var king_stand_img := king_stand_tex.get_image() if king_stand_tex != null else null
+	if king_stand_img == null:
+		king.queue_free()
+		return "Could not read kingpin standing art."
+	var king_stand_used := king_stand_img.get_used_rect()
+	var king_stand_feet := king_stand_used.position.y + king_stand_used.size.y
+	for i in range(4):
+		var walk_tex := load("res://assets/world/boss_outlaw_kingpin_walk_%d.png" % i) as Texture2D
+		if walk_tex == null:
 			king.queue_free()
-			return "Missing kingpin walk art: %s" % walk_path
+			return "Missing kingpin walk art: frame %d" % i
+		if walk_tex.get_size() != king_stand_tex.get_size():
+			king.queue_free()
+			return "Kingpin walk frame %d canvas must match the standing art." % i
+		var walk_img := walk_tex.get_image()
+		if walk_img == null:
+			king.queue_free()
+			return "Could not read kingpin walk frame %d." % i
+		var walk_used := walk_img.get_used_rect()
+		# Same foot row, so halting mid-stride never lifts or sinks his boots.
+		var walk_feet := walk_used.position.y + walk_used.size.y
+		if absi(walk_feet - king_stand_feet) > 1:
+			king.queue_free()
+			return "Kingpin walk frame %d foot row (%d) should match standing (%d)." % [
+				i, walk_feet, king_stand_feet
+			]
+		# Near-equal heights: a drawn bob is welcome, a size pop is not.
+		var height_drop := king_stand_used.size.y - walk_used.size.y
+		if height_drop < 0 or height_drop > 6:
+			king.queue_free()
+			return "Kingpin walk frame %d height %d should sit just under standing %d." % [
+				i, walk_used.size.y, king_stand_used.size.y
+			]
 	var king_sprite := king.get_node_or_null("Kingpin/Sprite2D") as Sprite2D
 	if king_sprite == null:
 		king.queue_free()
@@ -645,6 +710,8 @@ func _test_boss_arenas() -> Variant:
 	king.set("_shooting", false)
 	king.set("_shot_timer", 99.0)
 	var start_tex: Texture2D = king_sprite.texture
+	var king_body := king.get_node_or_null("Kingpin") as Node2D
+	var walk_from_x := king_body.position.x if king_body != null else 0.0
 	var saw_walk := false
 	for _i in range(20):
 		await get_tree().physics_frame
@@ -652,8 +719,26 @@ func _test_boss_arenas() -> Variant:
 			saw_walk = true
 			break
 	if not saw_walk:
+		var moved := absf(king_body.position.x - walk_from_x) if king_body != null else -1.0
 		king.queue_free()
-		return "Kingpin should play walk frames while patrolling."
+		return "Kingpin should play walk frames while patrolling (moved %.2fpx, phase %.2f)." % [
+			moved, float(king.get("_walk_phase"))
+		]
+	# Cadence follows ground covered, so the same distance always advances the
+	# same number of frames no matter how fast he is walking.
+	king.set("_walk_phase", 0.0)
+	king.call("_play_walk_visual", king.WALK_STEP_PX * 2.0)
+	if king_sprite.texture != king.WALK_TEX[2]:
+		king.queue_free()
+		return "Two stride lengths of travel should advance two walk frames."
+	king.call("_play_walk_visual", 0.0)
+	if king_sprite.texture != king.KING_TEX:
+		king.queue_free()
+		return "Standing still should show the kingpin's standing pose."
+	king.call("_play_walk_visual", king.WALK_STEP_PX)
+	if king_sprite.texture != king.WALK_TEX[3]:
+		king.queue_free()
+		return "Resuming a walk should continue the stride, not restart it."
 	if target == null or not target.has_method("lasso_hit") or not (target is Area2D):
 		king.queue_free()
 		return "Kingpin needs an Area2D lasso target."

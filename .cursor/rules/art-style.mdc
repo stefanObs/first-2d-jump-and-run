@@ -77,6 +77,11 @@ throw_0/1, jump_0/1, tied on a **64×80** canvas — body ~67 px, feet on y=76 �
 Outlaw Kingpin walk frames live in `assets/world/boss_outlaw_kingpin_walk_*.png`
 (130×180, matching standing `boss_outlaw_kingpin.png`). Rebuild from
 `assets/source/kingpin/walk_strip.png` with `python tools/build_kingpin_frames.py`.
+The four frames share one scale, the standing art's foot row, and an upper-body
+sway anchor, so the drawn head bob survives, the boots stay on one ground line,
+and the torso does not slide as the stride opens. Do not re-normalise each frame
+to its own height — that flattens the bob and pops his size against the standing
+pose.
 
 The treasure chest uses full-frame closed/open sprites (`treasure_chest_closed`
 ~66×48, `treasure_chest_open` same width / taller, `treasure_chest_stamp` 64×64).

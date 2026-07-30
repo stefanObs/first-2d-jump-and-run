@@ -11,7 +11,12 @@ const WALK_TEX: Array[Texture2D] = [
 	preload("res://assets/world/boss_outlaw_kingpin_walk_3.png"),
 ]
 const STOMP_BOUNCE := -420.0
-const WALK_FPS := 8.0
+## Ground covered per walk frame. Matches the drawn stride, so his boots plant
+## instead of skating; cadence then follows whatever speed he is walking at.
+const WALK_STEP_PX := 28.0
+## Beat spent standing at each end of the patrol so the turn reads as a decision
+## rather than a bounce off an invisible wall.
+const TURN_PAUSE := 0.4
 
 var _king: Node2D
 var _king_sprite: Sprite2D
@@ -22,10 +27,13 @@ var _revolver: RevolverOverlay
 var _guards_left: int = 2
 var _vulnerable: bool = false
 var _walk_dir: float = -1.0
-var _walk_speed: float = 105.0
+var _walk_speed: float = 140.0
 var _walk_phase: float = 0.0
-var _left_x: float = 720.0
-var _right_x: float = 1280.0
+## Patrol spans most of the widened yard; the left end stops short of the
+## bodyguards so tying them stays a fair first objective.
+var _left_x: float = 700.0
+var _right_x: float = 1780.0
+var _turn_pause_left: float = 0.0
 var _shot_timer: float = 1.2
 var _shooting: bool = false
 var _shot_generation: int = 0
@@ -91,36 +99,40 @@ func _physics_process(delta: float) -> void:
 		return
 	_stomp_cooldown = maxf(_stomp_cooldown - delta, 0.0)
 	_resolve_kingpin_contact()
-	var walking := false
+	var stepped := 0.0
 	if not _shooting:
-		_king.position.x += _walk_dir * _walk_speed * delta
-		walking = true
-		if _king.position.x <= _left_x:
-			_king.position.x = _left_x
-			_walk_dir = 1.0
-			_apply_facing()
-		elif _king.position.x >= _right_x:
-			_king.position.x = _right_x
-			_walk_dir = -1.0
-			_apply_facing()
-		elif absf(_walk_dir) > 0.01:
-			_apply_facing()
-	_play_walk_visual(walking, delta)
+		if _turn_pause_left > 0.0:
+			_turn_pause_left = maxf(_turn_pause_left - delta, 0.0)
+		else:
+			# He syncs to physics, so his transform only catches up next frame —
+			# measure the step from the move we ask for, not from a read-back.
+			var from_x := _king.position.x
+			var to_x := clampf(
+				from_x + _walk_dir * _walk_speed * delta, _left_x, _right_x
+			)
+			stepped = absf(to_x - from_x)
+			_king.position.x = to_x
+			if to_x <= _left_x or to_x >= _right_x:
+				_walk_dir = 1.0 if to_x <= _left_x else -1.0
+				_turn_pause_left = TURN_PAUSE
+		_apply_facing()
+	_play_walk_visual(stepped)
 	_shot_timer -= delta
 	if _shot_timer <= 0.0 and not _shooting:
 		_shoot_at_player()
 
 
-func _play_walk_visual(moving: bool, delta: float) -> void:
+func _play_walk_visual(stepped: float) -> void:
 	if _king_sprite == null or _capturing:
 		return
-	if moving and not WALK_TEX.is_empty():
-		_walk_phase += delta * WALK_FPS
-		var idx := int(floor(_walk_phase)) % WALK_TEX.size()
-		_king_sprite.texture = WALK_TEX[idx]
-	else:
-		_walk_phase = 0.0
+	if stepped <= 0.0 or WALK_TEX.is_empty():
+		# Standing art shares the walk frames' height and foot line, so halting
+		# to shoot or turn swaps the pose without popping his size.
 		_king_sprite.texture = KING_TEX
+		return
+	# Keep the phase across halts so he resumes mid-stride instead of restarting.
+	_walk_phase = fposmod(_walk_phase + stepped / WALK_STEP_PX, float(WALK_TEX.size()))
+	_king_sprite.texture = WALK_TEX[int(_walk_phase)]
 
 
 func _resolve_kingpin_contact() -> void:
@@ -199,7 +211,7 @@ func _shoot_at_player() -> void:
 	var shot_id := _shot_generation
 	_walk_dir = 1.0 if player.global_position.x >= _king.global_position.x else -1.0
 	_apply_facing()
-	_play_walk_visual(false, 0.0)
+	_play_walk_visual(0.0)
 	# Raise the gun into his hands before the shot (hip height for standing hits).
 	if _revolver != null:
 		_revolver.position = Vector2(10.0 * _walk_dir, -14.0)

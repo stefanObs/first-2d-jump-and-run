@@ -9,7 +9,7 @@
 [ext_resource type="PackedScene" path="res://scenes/world/spring_pad.tscn" id="9_spring"]
 
 [sub_resource type="RectangleShape2D" id="Ground"]
-size = Vector2(1600, 64)
+size = Vector2(1900, 64)
 
 [sub_resource type="RectangleShape2D" id="KingLasso"]
 size = Vector2(70, 110)
@@ -27,7 +27,7 @@ script = ExtResource("1")
 z_index = -20
 offset_left = -200.0
 offset_top = -400.0
-offset_right = 1800.0
+offset_right = 2100.0
 offset_bottom = 500.0
 color = Color(0.45, 0.32, 0.22, 1)
 
@@ -35,7 +35,7 @@ color = Color(0.45, 0.32, 0.22, 1)
 z_index = -19
 offset_left = -200.0
 offset_top = -400.0
-offset_right = 1800.0
+offset_right = 2100.0
 offset_bottom = 80.0
 color = Color(0.35, 0.22, 0.18, 1)
 
@@ -52,11 +52,11 @@ text = "Outlaw Kingpin — lasso the guards, then lasso the kingpin once!"
 position = Vector2(220, 320)
 
 [node name="Ground" type="StaticBody2D" parent="."]
-position = Vector2(800, 352)
+position = Vector2(950, 352)
 [node name="Visual" type="ColorRect" parent="Ground"]
-offset_left = -800.0
+offset_left = -950.0
 offset_top = -32.0
-offset_right = 800.0
+offset_right = 950.0
 offset_bottom = 32.0
 color = Color(0.55, 0.35, 0.2, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground"]
@@ -121,6 +121,14 @@ bounce_velocity = -820.0
 
 [node name="KingpinJumpSpring3" parent="." instance=ExtResource("9_spring")]
 position = Vector2(1120, 320)
+bounce_velocity = -820.0
+
+[node name="KingpinJumpSpring4" parent="." instance=ExtResource("9_spring")]
+position = Vector2(1380, 320)
+bounce_velocity = -820.0
+
+[node name="KingpinJumpSpring5" parent="." instance=ExtResource("9_spring")]
+position = Vector2(1620, 320)
 bounce_velocity = -820.0
 
 [node name="Player" parent="." instance=ExtResource("2")]
