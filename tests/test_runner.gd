@@ -89,6 +89,7 @@ func _ready() -> void:
 	failures += await _run("Jumping on a ninja head ties him", _test_stomp_ties_ninja)
 	failures += await _run("Ninja throws shuriken at flying player", _test_ninja_shuriken_vs_wings)
 	failures += await _run("Ninja jumps pits and canyons", _test_ninja_jumps_gaps)
+	failures += await _run("Ninja hops onto planks the cowboy can reach", _test_ninja_hops_onto_planks)
 	failures += await _run("Ninja resets to dormancy on respawn", _test_ninja_respawn_restore)
 	failures += await _run("Shuriken sprite is handcrafted art", _test_shuriken_art)
 	failures += await _run("Side contact with a bandit sends the cowboy to camp", _test_side_contact_hurts)
@@ -101,6 +102,7 @@ func _ready() -> void:
 	failures += await _run("Controller bindings match every gamepad device", _test_controller_all_devices)
 	failures += await _run("Flying levels guard the very top of the screen", _test_flying_levels_top_guarded)
 	failures += await _run("Timed door shows a clear open/closed barrier", _test_timed_door_states)
+	failures += await _run("Cave trails carry no ranch gates", _test_cave_trails_have_no_doors)
 	failures += await _run(
 		"Conveyors do not push into open canyons",
 		_test_conveyors_do_not_push_into_canyons
@@ -2827,6 +2829,77 @@ func _test_ninja_jumps_gaps() -> Variant:
 	return error
 
 
+func _test_ninja_hops_onto_planks() -> Variant:
+	## Any plank the cowboy can jump onto, the ninja must be able to follow him onto.
+	for node in get_tree().get_nodes_in_group("player"):
+		if is_instance_valid(node):
+			node.free()
+
+	var floor_body := StaticBody2D.new()
+	floor_body.collision_layer = 1
+	floor_body.position = Vector2(400, 420)
+	var floor_shape := CollisionShape2D.new()
+	var floor_rect := RectangleShape2D.new()
+	floor_rect.size = Vector2(800, 40)
+	floor_shape.shape = floor_rect
+	floor_body.add_child(floor_shape)
+	add_child(floor_body)
+
+	var player := Player.new()
+	player.name = "Player"
+	player.set_physics_process(false)
+	add_child(player)
+	# A plank exactly at the cowboy's apex is the hardest one he can still reach.
+	var reach := StarReachability.max_jump_height(player.jump_velocity, player.gravity)
+	var plank_top := 400.0 - (reach - 6.0)
+	var plank := StaticBody2D.new()
+	plank.collision_layer = 1
+	plank.position = Vector2(340, plank_top + 12.0)
+	var plank_shape := CollisionShape2D.new()
+	var plank_rect := RectangleShape2D.new()
+	plank_rect.size = Vector2(80, 24)
+	plank_shape.shape = plank_rect
+	plank.add_child(plank_shape)
+	add_child(plank)
+	player.position = Vector2(340, plank_top)
+
+	var packed: PackedScene = load("res://scenes/world/ninja_enemy.tscn")
+	if packed == null:
+		player.queue_free()
+		plank.queue_free()
+		floor_body.queue_free()
+		return "Missing ninja enemy scene."
+	var ninja := packed.instantiate() as NinjaEnemy
+	ninja.position = Vector2(250, 400)
+	add_child(ninja)
+	ninja._state = NinjaEnemy.State.CHASE
+	ninja._set_dormant(false)
+
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+
+	var error: Variant = null
+	if ninja._find_ledge_landing(1.0).is_empty():
+		error = "Ninja should spot a plank lip sitting inside the cowboy's jump apex."
+	else:
+		var landed := false
+		for _i in range(120):
+			await get_tree().physics_frame
+			if absf(ninja.global_position.y - plank_top) <= 4.0:
+				landed = true
+				break
+		if not landed:
+			error = "Ninja should hop onto the plank (y=%.1f, plank top %.1f)." % [
+				ninja.global_position.y, plank_top
+			]
+
+	player.queue_free()
+	ninja.queue_free()
+	plank.queue_free()
+	floor_body.queue_free()
+	return error
+
+
 func _test_ninja_respawn_restore() -> Variant:
 	## Camp respawn must cancel ambush/jump work and hide the ninja at his stamp post.
 	# Prior ninja tests queue_free players; purge leftovers so dormancy is not re-armed.
@@ -3134,6 +3207,45 @@ func _test_timed_door_states() -> Variant:
 		elif closed_scale.x <= open_scale.x:
 			error = "A closed gate should look wider and solid while the open gate turns edge-on."
 	door.queue_free()
+	return error
+
+
+func _test_cave_trails_have_no_doors() -> Variant:
+	## Ranch gates are a desert prop — cave trails route around belts, ladders and ledges.
+	var trail := CustomLevelStore.trail_row(8)
+	var doc := CustomLevelStore.default_level(0)
+	doc["style"] = CustomLevelStore.STYLE_CAVE
+	doc["objects"] = [
+		{"type": "ground", "x": 2, "y": trail},
+		{"type": "conveyor", "x": 6, "y": trail - 1, "push_right": true},
+		{"type": "timed_door", "x": 10, "y": trail - 1},
+		{"type": "goal", "x": 14, "y": trail - 1},
+	]
+	var clean := CustomLevelStore.sanitize(doc, 0)
+	for value in clean.get("objects", []):
+		if str((value as Dictionary).get("type", "")) == "timed_door":
+			return "Sanitizing a cave trail should drop stamped ranch gates."
+
+	# A hand-edited document must still build (and validate) without a gate.
+	var level := LevelController.new()
+	add_child(level)
+	CustomLevelBuilder.build(level, doc)
+	await get_tree().process_frame
+	var error: Variant = null
+	if level.find_child("Door0", true, false) != null:
+		error = "Cave builder should skip timed door stamps."
+	elif level.find_child("Conveyor0", true, false) == null:
+		error = "Cave trails should still keep their conveyor belts."
+	else:
+		var door := CustomLevelBuilder.TIMED_DOOR.instantiate() as TimedDoor
+		door.name = "StrayGate"
+		door.position = Vector2(400, float(trail) * 40.0)
+		level.add_child(door)
+		await get_tree().process_frame
+		if LevelLayoutRules._validate_no_doors_in_caves(level).is_empty():
+			error = "Layout rules must reject a ranch gate placed in a cave trail."
+	level.queue_free()
+	await get_tree().process_frame
 	return error
 
 
@@ -5214,13 +5326,13 @@ func _test_ladder_branch_upper_ledge() -> Variant:
 
 
 func _test_cave_levels_belts_fences_ladders() -> Variant:
-	## Cave arc should keep extra climb routes and ranch props kids already know.
+	## Cave arc should keep extra climb routes and ranch props kids already know — but no gates.
 	var expected := {
 		11: {"ladders": 2, "platforms": 3, "fences": 3, "conveyors": 0, "doors": 0, "drips": 3, "springs": 2, "stars": 10},
-		12: {"ladders": 2, "platforms": 3, "fences": 2, "conveyors": 1, "doors": 1, "drips": 5, "springs": 3, "stars": 10},
-		13: {"ladders": 1, "platforms": 7, "fences": 2, "conveyors": 1, "doors": 1, "drips": 6, "springs": 3, "stars": 10},
-		14: {"ladders": 3, "platforms": 6, "fences": 3, "conveyors": 1, "doors": 1, "drips": 5, "springs": 4, "stars": 12},
-		15: {"ladders": 2, "platforms": 6, "fences": 3, "conveyors": 1, "doors": 1, "drips": 5, "springs": 4, "stars": 12},
+		12: {"ladders": 2, "platforms": 3, "fences": 2, "conveyors": 1, "doors": 0, "drips": 5, "springs": 3, "stars": 10},
+		13: {"ladders": 1, "platforms": 7, "fences": 2, "conveyors": 1, "doors": 0, "drips": 6, "springs": 3, "stars": 10},
+		14: {"ladders": 3, "platforms": 6, "fences": 3, "conveyors": 1, "doors": 0, "drips": 5, "springs": 4, "stars": 12},
+		15: {"ladders": 2, "platforms": 6, "fences": 3, "conveyors": 1, "doors": 0, "drips": 5, "springs": 4, "stars": 12},
 	}
 	for level_number in expected.keys():
 		var data := CaveCampaignLevels.level_data(int(level_number))
@@ -5259,6 +5371,10 @@ func _test_cave_levels_belts_fences_ladders() -> Variant:
 				return "Cave level %d expected >= %d %s (got %d)." % [
 					int(level_number), int(want[key]), key, int(counts[key])
 				]
+		if int(counts["doors"]) > 0:
+			return "Cave level %d should carry no ranch gates (found %d)." % [
+				int(level_number), int(counts["doors"])
+			]
 		var level := LevelController.new()
 		add_child(level)
 		CustomLevelBuilder.build(level, data)
@@ -5273,7 +5389,7 @@ func _test_cave_levels_belts_fences_ladders() -> Variant:
 		var layout_errors: PackedStringArray = []
 		layout_errors.append_array(LevelLayoutRules._validate_ladder_tops(level))
 		layout_errors.append_array(LevelLayoutRules._validate_stars(level))
-		layout_errors.append_array(LevelLayoutRules._validate_timed_doors_clear_of_canyons(level))
+		layout_errors.append_array(LevelLayoutRules._validate_no_doors_in_caves(level))
 		layout_errors.append_array(LevelLayoutRules._validate_conveyors_not_pushing_into_canyons(level))
 		layout_errors.append_array(LevelLayoutRules._validate_cactus_clear_of_springs(level))
 		layout_errors.append_array(LevelLayoutRules._validate_canyon_up_needs_spring(level))
@@ -5723,9 +5839,11 @@ func _test_workshop_stamp_catalog() -> Variant:
 	for category in LevelStyle.tool_categories(LevelStyle.CAVE):
 		for tool in (category as Dictionary).get("tools", []) as Array:
 			cave_palette.append(str((tool as Array)[0]))
-	for type_name in ["acid_drip", "stalactite", "bat", "conveyor", "timed_door", "fence", "mover", "wind"]:
+	for type_name in ["acid_drip", "stalactite", "bat", "conveyor", "fence", "mover", "wind"]:
 		if type_name not in cave_palette:
 			return "Cave style palette missing %s stamp." % type_name
+	if "timed_door" in cave_palette:
+		return "Cave palette must not offer ranch gates; caves have no doors."
 	var horse_palette: PackedStringArray = []
 	for category in LevelStyle.tool_categories(LevelStyle.DESERT, true):
 		for tool in (category as Dictionary).get("tools", []) as Array:

@@ -657,6 +657,9 @@ func _on_style_selected(index: int) -> void:
 		1:
 			_data["style"] = LevelStyle.CAVE
 			_data["start_mounted"] = false
+			var cave_objects := _objects()
+			CustomLevelStore.strip_cave_banned_stamps(cave_objects)
+			_data["objects"] = cave_objects
 		2:
 			_data["style"] = LevelStyle.DESERT
 			_data["start_mounted"] = true
@@ -1039,6 +1042,11 @@ func _place(x: int, y: int) -> void:
 	if (
 		bool(_data.get("start_mounted", false))
 		and CustomLevelStore.is_mounted_banned(_selected_type)
+	):
+		return
+	if (
+		LevelStyle.is_cave(CustomLevelStore.normalize_style(_data.get("style", "desert")))
+		and CustomLevelStore.is_cave_banned(_selected_type)
 	):
 		return
 	if _selected_type == "erase":

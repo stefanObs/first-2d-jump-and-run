@@ -62,6 +62,8 @@ static func build(level: LevelController, data: Dictionary, preview: bool = fals
 			continue
 		if start_mounted and CustomLevelStore.is_mounted_banned(type_name):
 			continue
+		if LevelStyle.is_cave(style) and CustomLevelStore.is_cave_banned(type_name):
+			continue
 		if (
 			type_name == "bull"
 			and not CustomLevelStore.bull_stamp_allowed(

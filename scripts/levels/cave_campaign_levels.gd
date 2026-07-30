@@ -88,7 +88,7 @@ static func _level_11() -> Dictionary:
 
 
 static func _level_12() -> Dictionary:
-	## Bat Gallery — bats, drips, ledges + first cave conveyor gate.
+	## Bat Gallery — bats, drips, ledges + first cave conveyor belt.
 	var data := _base("Bat Gallery", 110, 10)
 	var trail: int = CustomLevelStore.trail_row(int(data["height"]))
 	var objects: Array[Dictionary] = data["objects"]
@@ -113,7 +113,7 @@ static func _level_12() -> Dictionary:
 	_add(objects, "bull", 60, trail - 1)
 	_add(objects, "checkpoint", 64, trail - 1)
 	_add_badge(objects, 66, trail)
-	CustomLevelStore.append_conveyor_gate(objects, trail, 68, 74, true)
+	CustomLevelStore.append_conveyor_belt(objects, trail, 68, true)
 	_add(objects, "acid_drip", 78, 0)
 	_add(objects, "stalactite", 80, 0)
 	_add(objects, "stalactite", 84, 1)
@@ -171,7 +171,7 @@ static func _level_13() -> Dictionary:
 	_add(objects, "bat", 92, trail - 4)
 	_add(objects, "acid_drip", 94, 1)
 	_add_badge(objects, 96, trail)
-	CustomLevelStore.append_conveyor_gate(objects, trail, 98, 104, true)
+	CustomLevelStore.append_conveyor_belt(objects, trail, 98, true)
 	_add(objects, "spring", 108, trail - 1)
 	_add(objects, "chest", 110, trail - 1)
 	CustomLevelStore.append_fence_run(objects, trail, 112, 1)
@@ -209,7 +209,7 @@ static func _level_14() -> Dictionary:
 	_add_badge(objects, 78, trail, 3)
 	_add(objects, "checkpoint", 84, trail - 1)
 	_add_badge(objects, 86, trail)
-	CustomLevelStore.append_conveyor_gate(objects, trail, 92, 88, false)
+	CustomLevelStore.append_conveyor_belt(objects, trail, 92, false)
 	_add(objects, "acid_drip", 96, 1)
 	_add(objects, "bandit", 100, trail - 1)
 	_add_badge(objects, 103, trail)
@@ -250,7 +250,7 @@ static func _level_15() -> Dictionary:
 	_add(objects, "bull", 56, trail - 1)
 	_add_badge(objects, 58, trail)
 	_add(objects, "checkpoint", 60, trail - 1)
-	CustomLevelStore.append_conveyor_gate(objects, trail, 66, 72, true)
+	CustomLevelStore.append_conveyor_belt(objects, trail, 66, true)
 	_add(objects, "acid_drip", 74, 0)
 	_add_badge(objects, 76, trail)
 	CustomLevelStore.append_ladder_branch(objects, trail, 78)

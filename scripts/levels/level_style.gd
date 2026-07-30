@@ -200,19 +200,22 @@ static func tool_categories(style: String = DESERT, start_mounted: bool = false)
 	var pickup_tools: Array = [_tool("star", style), _tool("checkpoint", style)]
 	if not start_mounted:
 		pickup_tools.insert(1, _tool("chest", style))
+	var trail_tools: Array = [
+		_tool("ground", style),
+		_tool("canyon", style),
+		_tool("platform", style),
+		_tool("ladder", style),
+		_tool("conveyor", style),
+	]
+	## Ranch gates are a desert prop; cave trails route around belts and ledges instead.
+	if not cave:
+		trail_tools.append(_tool("timed_door", style))
+	trail_tools.append(_tool("fence", style))
 	var categories: Array = [
 		{
 			"id": "trail",
 			"label": "Trail",
-			"tools": [
-				_tool("ground", style),
-				_tool("canyon", style),
-				_tool("platform", style),
-				_tool("ladder", style),
-				_tool("conveyor", style),
-				_tool("timed_door", style),
-				_tool("fence", style),
-			],
+			"tools": trail_tools,
 		},
 		{
 			"id": "motion",

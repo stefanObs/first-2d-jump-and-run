@@ -50,6 +50,8 @@ const STYLE_CAVE := "cave"
 const MOUNTED_BANNED_TYPES: PackedStringArray = [
 	"chest", "wings", "boots", "speed", "shield",
 ]
+## Cave trails have no ranch gates — belts, ladders and crystal ledges carry the routes.
+const CAVE_BANNED_TYPES: PackedStringArray = ["timed_door"]
 const LADDER_HEIGHT_CELLS := 3
 
 static func is_ground_standing(type_name: String) -> bool:
@@ -60,6 +62,9 @@ static func is_ceiling_hanging(type_name: String) -> bool:
 
 static func is_mounted_banned(type_name: String) -> bool:
 	return type_name in MOUNTED_BANNED_TYPES
+
+static func is_cave_banned(type_name: String) -> bool:
+	return type_name in CAVE_BANNED_TYPES
 
 static func normalize_style(value: Variant) -> String:
 	return LevelStyle.normalize(value)
@@ -868,20 +873,19 @@ static func append_platform_run(
 		_append_unique(objects, {"type": "platform", "x": start_x + i * 2, "y": y})
 
 
-static func append_conveyor_gate(
+static func append_conveyor_belt(
 	objects: Array[Dictionary],
 	trail: int,
 	belt_x: int,
-	door_x: int,
 	push_right: bool = true
 ) -> void:
-	## Belt + timed ranch gate on solid trail (never over a canyon mouth).
+	## Belt on solid trail. Cave trails run belts without a gate, so the push path
+	## must already end on solid ground (never aimed at a canyon mouth).
 	var y := maxi(trail - 1, 0)
 	_append_unique(
 		objects,
 		{"type": "conveyor", "x": belt_x, "y": y, "push_right": push_right}
 	)
-	_append_unique(objects, {"type": "timed_door", "x": door_x, "y": y})
 
 
 static func append_fence_run(
@@ -965,6 +969,8 @@ static func sanitize(source: Dictionary, slot_index: int) -> Dictionary:
 		_strip_bulls_off_gaps(objects, trail)
 		if bool(result["start_mounted"]):
 			strip_mounted_banned_stamps(objects)
+		if LevelStyle.is_cave(str(result["style"])):
+			strip_cave_banned_stamps(objects)
 		result["objects"] = objects
 	var spawn: Array = result["spawn"]
 	if spawn is Array and spawn.size() >= 2:
@@ -977,6 +983,14 @@ static func strip_mounted_banned_stamps(objects: Array) -> void:
 	for i in range(objects.size() - 1, -1, -1):
 		var object := objects[i] as Dictionary
 		if is_mounted_banned(str(object.get("type", ""))):
+			objects.remove_at(i)
+
+
+static func strip_cave_banned_stamps(objects: Array) -> void:
+	## Cave trails keep belts and fences but never ranch gates.
+	for i in range(objects.size() - 1, -1, -1):
+		var object := objects[i] as Dictionary
+		if is_cave_banned(str(object.get("type", ""))):
 			objects.remove_at(i)
 
 

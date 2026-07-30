@@ -47,6 +47,7 @@ static func validate_level_node(level: Node) -> PackedStringArray:
 	errors.append_array(_validate_bulls_clear_of_pits_and_canyons(level))
 	errors.append_array(_validate_canyon_up_needs_spring(level))
 	errors.append_array(_validate_timed_doors_clear_of_canyons(level))
+	errors.append_array(_validate_no_doors_in_caves(level))
 	errors.append_array(_validate_conveyors_not_pushing_into_canyons(level))
 	errors.append_array(_validate_no_slopes_across_canyons(level))
 	errors.append_array(_validate_late_level_height_differences(level))
@@ -488,6 +489,17 @@ static func _validate_timed_doors_clear_of_canyons(level: Node) -> PackedStringA
 				% [door.name, float(gap["left"]), float(gap["right"])]
 			)
 			break
+	return errors
+
+
+static func _validate_no_doors_in_caves(level: Node) -> PackedStringArray:
+	## Ranch gates belong to the desert; cave trails use belts, ladders and ledges.
+	var errors: PackedStringArray = []
+	if not LevelStyle.is_cave(str(level.get_meta("level_style", LevelStyle.DESERT))):
+		return errors
+	for node in level.find_children("*", "StaticBody2D", true, false):
+		if node is TimedDoor:
+			errors.append("TimedDoor %s sits in a cave trail; caves carry no ranch gates." % node.name)
 	return errors
 
 

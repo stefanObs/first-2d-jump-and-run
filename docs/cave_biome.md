@@ -37,8 +37,7 @@ Stamp **type ids stay the same** for remapped foes/hazards so packs stay simple:
 
 | Stamp id | Behavior |
 |---|---|
-| `conveyor` | Moving belt; optional `"push_right": false` for left push. Must not push into an open canyon. |
-| `timed_door` | Ranch gate that opens/closes on a timer (same Rail Yard rules). Keep clear of canyon mouths. |
+| `conveyor` | Moving belt; optional `"push_right": false` for left push. Must not push into an open canyon. In caves there is no gate to catch the push, so the belt path has to end on solid ground. |
 | `fence` | Decorative ranch fence segment (no collision). |
 | `mover` | Wooden moving plank (default ±120 px travel). Cave style uses crystal plank art. |
 | `moving_cloud` | Moving cloud ferry (same travel defaults; cloud art). |
@@ -46,6 +45,9 @@ Stamp **type ids stay the same** for remapped foes/hazards so packs stay simple:
 | `wind` | Gust zone; optional `"push_right": false` flips direction. Speed/lift stay capped. |
 
 Cave **ceiling height / rock panels** are automated by theme dress — not workshop stamps.
+
+**No ranch gates in caves.** `timed_door` is a desert-only prop: the cave palette hides it,
+sanitizing/building a cave trail strips it, and `LevelLayoutRules` rejects one that slips in.
 
 ### Cave-only stamps
 
@@ -60,7 +62,7 @@ Ceiling stamps place on the top rows; ground props still sit one row above dirt.
 
 ## Path splits (ladders)
 
-Stamp a **ladder**, run **one-way crystal ledges** along the climb top, then **drop off the end** back to the dirt trail. Lower dirt stays walkable the whole time — kids can take the high ledge or stay low. Workshop defaults and cave imports include sample up-ladder branches (no down ladder). Cave arc levels also place floating crystal plank runs, ranch fences, spring pads on solid ground, and conveyor + timed-gate pairs on solid ground.
+Stamp a **ladder**, run **one-way crystal ledges** along the climb top, then **drop off the end** back to the dirt trail. Lower dirt stays walkable the whole time — kids can take the high ledge or stay low. Workshop defaults and cave imports include sample up-ladder branches (no down ladder). Cave arc levels also place floating crystal plank runs, ranch fences, spring pads on solid ground, and single conveyor belts on solid ground (no gates).
 
 ## Hazards & enemies
 
@@ -71,7 +73,7 @@ Stamp a **ladder**, run **one-way crystal ledges** along the climb top, then **d
 - **Poison fungus:** cactus rules (hurt / Bubble bounce) with mushroom art; loops a short **spore-puff** animation painted in the same cel-shaded style as the toadstool (idle → gather → puff → settle) so toxic wisps and soft spore motes feel like part of the mushroom, not a separate overlay.
 - **Scorpions:** rattlesnake raise/strike timing with a tail sting pose. Available as their own desert stamp (`scorpion` / `as_scorpion`); cave style still remaps the rattlesnake stamp to scorpion art.
 - **Bow skeletons:** bandit patrol + shoot cadence, but spawn **arrows** instead of revolver bullets; when the cowboy is **flying above** them they play a shoot-up aim pose and loft arrows upward; lasso/stomp still ties. Idle/walk/tied/shoot-up frames share one body height on a transparent canvas; tied pose keeps stand scale and sits on the dirt.
-- **Ninjas:** ambush appears ~12 columns ahead of the cowboy; chase leaps pits/canyons with a crouch→airborne jump anim.
+- **Ninjas:** ambush appears ~12 columns ahead of the cowboy; chase leaps pits/canyons and **hops up onto crystal ledges / planks** with a crouch→airborne jump anim. Their hop apex equals the cowboy's own jump height, so every plank he can reach they can follow him onto (and they step back down off a lip instead of stalling).
 - **Floor holes:** same pit rules (128×64), cave mouth art.
 
 ## Own extras (shipped with the style)

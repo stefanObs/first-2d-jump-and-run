@@ -21,7 +21,15 @@ const SHURIKEN_COOLDOWN := 1.35
 const JUMP_MAX_GAP := 360.0
 const JUMP_PROBE_STEP := 16.0
 const JUMP_SPEED_X := 260.0
-const JUMP_HEIGHT := 108.0
+## Used only until a cowboy is in the scene to read the real jump tuning from.
+const FALLBACK_JUMP_VELOCITY := -500.0
+const FALLBACK_GRAVITY := 1350.0
+## Height difference that reads as a real ledge rather than trail bumpiness.
+const LEDGE_STEP_MIN := 24.0
+## How far ahead to look for a plank lip when the cowboy is overhead.
+const LEDGE_SCAN_RUN := 140.0
+## Smallest arc a hop may use, so short steps still look like jumps.
+const JUMP_ARC_MIN := 26.0
 
 var _anchor: Vector2
 var _facing: float = 1.0
@@ -37,6 +45,9 @@ var _throw_token: int = 0
 var _jump_token: int = 0
 var _appear_token: int = 0
 var _throw_timer: float = 0.0
+## Vertical reach of a hop — kept equal to the cowboy's own jump apex.
+var _jump_reach: float = StarReachability.max_jump_height(FALLBACK_JUMP_VELOCITY, FALLBACK_GRAVITY)
+var _jump_lift: float = 0.0
 var _pose_tween: Tween
 var _jump_tween: Tween
 var _appear_tween: Tween
@@ -150,6 +161,7 @@ func _physics_process(delta: float) -> void:
 		if _state == State.CHASE:
 			_set_move_animation(false)
 		return
+	_jump_reach = StarReachability.max_jump_height(player.jump_velocity, player.gravity)
 	if player.get_modes().is_flying():
 		_handle_flying_player(player, delta)
 	else:
@@ -225,11 +237,21 @@ func _handle_ground_player(player: Player, delta: float) -> void:
 	):
 		_begin_gap_jump(landing)
 		return
+	if player.global_position.y < global_position.y - LEDGE_STEP_MIN:
+		var ledge := _find_ledge_landing(_facing)
+		if not ledge.is_empty():
+			_begin_gap_jump(ledge)
+			return
 	if FloorProbe.has_floor_ahead(self, _facing):
 		_apply_facing(_facing)
 		global_position.x += _facing * CHASE_SPEED * delta
 		_set_move_animation(true)
 		return
+	if player.global_position.y > global_position.y + LEDGE_STEP_MIN:
+		var drop := _find_drop_landing(_facing)
+		if not drop.is_empty():
+			_begin_gap_jump(drop)
+			return
 	_set_move_animation(false)
 
 
@@ -277,9 +299,61 @@ func _find_gap_landing(direction: float) -> Dictionary:
 			var theme_y := _walk_surface_y(x, hit_y)
 			if absf(theme_y - hit_y) <= 28.0:
 				land_y = theme_y
-			if absf(land_y - start_y) <= 72.0:
+			# The downward probe already caps how far below a bank can be spotted,
+			# so only the climb needs a limit — and that limit is the cowboy's apex.
+			if start_y - land_y <= _jump_reach:
 				return {"x": x, "y": land_y}
 			return {}
+		x += dir * JUMP_PROBE_STEP
+	return {}
+
+
+func _find_ledge_landing(direction: float) -> Dictionary:
+	## Nearest plank/ledge lip ahead that sits inside the cowboy's own jump apex,
+	## so any plank he can hop onto the ninja can follow him onto.
+	var dir := signf(direction)
+	if is_zero_approx(dir):
+		return {}
+	var x := global_position.x
+	var end_x := x + dir * LEDGE_SCAN_RUN
+	while (dir > 0.0 and x <= end_x) or (dir < 0.0 and x >= end_x):
+		var top_y := _ledge_top_y(x)
+		if not is_inf(top_y):
+			return {"x": x, "y": top_y}
+		x += dir * JUMP_PROBE_STEP
+	return {}
+
+
+func _ledge_top_y(world_x: float) -> float:
+	## Top of the first surface standing above the ninja's boots but within reach.
+	var world := get_world_2d()
+	if world == null:
+		return INF
+	var from := Vector2(world_x, global_position.y - _jump_reach)
+	var to := Vector2(world_x, global_position.y - LEDGE_STEP_MIN)
+	if from.y >= to.y:
+		return INF
+	var query := PhysicsRayQueryParameters2D.create(from, to, 1)
+	query.exclude = [get_rid()]
+	var hit := world.direct_space_state.intersect_ray(query)
+	# Only a top face is standable; a wall flank would drop him back off.
+	if hit.is_empty() or float(hit["normal"].y) > -0.5:
+		return INF
+	return float(hit["position"].y)
+
+
+func _find_drop_landing(direction: float) -> Dictionary:
+	## Step off a plank lip onto the surface below instead of stalling up there.
+	var dir := signf(direction)
+	if is_zero_approx(dir):
+		return {}
+	var start_y := global_position.y
+	var x := global_position.x + dir * JUMP_PROBE_STEP
+	var end_x := global_position.x + dir * JUMP_MAX_GAP
+	while (dir > 0.0 and x <= end_x) or (dir < 0.0 and x >= end_x):
+		var hit_y := _floor_hit_y(x, start_y)
+		if not is_inf(hit_y) and hit_y - start_y >= LEDGE_STEP_MIN:
+			return {"x": x, "y": hit_y}
 		x += dir * JUMP_PROBE_STEP
 	return {}
 
@@ -296,6 +370,8 @@ func _begin_gap_jump(landing: Dictionary) -> void:
 		_sprite.play(&"jump")
 	var start := global_position
 	var land := Vector2(float(landing["x"]), float(landing["y"]))
+	# Arc peaks one cowboy-jump above take-off, whatever the lip height.
+	_jump_lift = maxf(_jump_reach - maxf(start.y - land.y, 0.0) * 0.5, JUMP_ARC_MIN)
 	var dist := absf(land.x - start.x)
 	var duration := clampf(dist / JUMP_SPEED_X, 0.32, 1.2)
 	_jump_tween = create_tween()
@@ -308,7 +384,7 @@ func _jump_arc(t: float, token: int, start: Vector2, land: Vector2) -> void:
 		return
 	var x := lerpf(start.x, land.x, t)
 	var base_y := lerpf(start.y, land.y, t)
-	var lift := 4.0 * JUMP_HEIGHT * t * (1.0 - t)
+	var lift := 4.0 * _jump_lift * t * (1.0 - t)
 	global_position = Vector2(x, base_y - lift)
 
 
