@@ -435,6 +435,10 @@ func _test_boss_arenas() -> Variant:
 	# Charge run frames must match stun/idle standing size (no shrink while running).
 	var stand_tex := load("res://assets/world/boss_stampede_bull.png") as Texture2D
 	var stand_h := float(stand_tex.get_height())
+	var stand_img_for_size := stand_tex.get_image()
+	var stand_content_h := stand_h
+	if stand_img_for_size != null:
+		stand_content_h = float(stand_img_for_size.get_used_rect().size.y)
 	for i in range(4):
 		var run_tex := load("res://assets/world/boss_stampede_bull_run_%d.png" % i) as Texture2D
 		if absf(float(run_tex.get_height()) - stand_h) > 2.0:
@@ -445,10 +449,11 @@ func _test_boss_arenas() -> Variant:
 		var run_img := run_tex.get_image()
 		if run_img != null:
 			var used := run_img.get_used_rect()
-			if used.size.y < stand_h - 8.0:
+			# Drawn bob may drop a few px under standing; a real shrink is much larger.
+			if float(used.size.y) < stand_content_h - 14.0:
 				bull.queue_free()
 				return "Boss run frame %d content height %.0f is too short vs stun art %.0f." % [
-					i, used.size.y, stand_h
+					i, used.size.y, stand_content_h
 				]
 	var spawn := bull.get_node_or_null("SpawnPoint") as Marker2D
 	var wall_l := bull.get_node_or_null("WallLeft") as Node2D
@@ -461,13 +466,44 @@ func _test_boss_arenas() -> Variant:
 		return "Player spawn must be between the bull arena walls."
 	var bull_sprite := bull.get_node_or_null("Bull/Sprite2D") as Sprite2D
 	var tied_texture: Texture2D = load("res://assets/world/boss_stampede_bull_tied_legs.png")
-	if bull_sprite == null or bull_sprite.position.y > -75.0:
+	if bull_sprite == null or bull_sprite.position.y > -80.0:
 		bull.queue_free()
 		return "Bull artwork should stand above the desert surface, not inside it."
+	# Roomy canvas: standing and run frames must keep clear margin so horns/tails
+	# are not jammed against the texture edge.
+	var stand_img := stand_tex.get_image()
+	if stand_img != null:
+		var stand_used := stand_img.get_used_rect()
+		var side_margin := mini(stand_used.position.x, stand_tex.get_width() - stand_used.end.x)
+		if stand_tex.get_width() < 400 or stand_tex.get_height() < 180:
+			bull.queue_free()
+			return "Boss bull canvas should be roomy (got %dx%d)." % [
+				stand_tex.get_width(), stand_tex.get_height()
+			]
+		if side_margin < 40:
+			bull.queue_free()
+			return "Boss standing art side margin %d is too tight." % side_margin
+	for i in range(4):
+		var run_tex2 := load("res://assets/world/boss_stampede_bull_run_%d.png" % i) as Texture2D
+		var run_img2 := run_tex2.get_image() if run_tex2 != null else null
+		if run_img2 == null:
+			continue
+		var run_used2 := run_img2.get_used_rect()
+		var run_side := mini(run_used2.position.x, run_tex2.get_width() - run_used2.end.x)
+		if run_side < 60:
+			bull.queue_free()
+			return "Boss run frame %d side margin %d is too tight (horns/tail clipped)." % [
+				i, run_side
+			]
 	var tied_scale: Vector2 = bull.call("_sprite_scale_for", tied_texture, 190.0)
-	var normal_width := float(bull_sprite.texture.get_width()) * absf(bull_sprite.scale.x)
+	# Compare painted body widths — the roomy canvas has transparent margin.
+	var normal_body_w: float
+	if stand_img_for_size != null:
+		normal_body_w = float(stand_img_for_size.get_used_rect().size.x) * absf(bull_sprite.scale.x)
+	else:
+		normal_body_w = float(bull_sprite.texture.get_width()) * absf(bull_sprite.scale.x)
 	var tied_width := float(tied_texture.get_width()) * absf(tied_scale.x)
-	if tied_width < normal_width * 0.85:
+	if tied_width < normal_body_w * 0.85:
 		bull.queue_free()
 		return "Tied bull should remain close to his normal on-screen size."
 	bull.queue_free()

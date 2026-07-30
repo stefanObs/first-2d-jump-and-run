@@ -100,7 +100,7 @@ collision_layer = 1
 collision_mask = 0
 
 [node name="Sprite2D" type="Sprite2D" parent="Bull"]
-position = Vector2(0, -78)
+position = Vector2(0, -88)
 texture = ExtResource("5")
 
 [node name="StunStars" type="Node2D" parent="Bull"]

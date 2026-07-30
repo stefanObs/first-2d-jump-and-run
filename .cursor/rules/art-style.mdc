@@ -83,6 +83,14 @@ and the torso does not slide as the stride opens. Do not re-normalise each frame
 to its own height — that flattens the bob and pops his size against the standing
 pose.
 
+Stampede Bull boss frames live in `assets/world/boss_stampede_bull.png` and
+`boss_stampede_bull_run_*.png` on a **440×188** canvas (body ~164 px, feet on
+y=182). Rebuild from `assets/source/bull/run_strip_boss.png` (and reframe the
+standing stun art) with `python tools/build_bull_frames.py`. The packed strip
+overlaps neighbouring bulls in x, so do **not** hard-cut at density valleys —
+flood from each density peak while excluding neighbouring cores, or horns and
+tails get sliced off. Keep clear side margin (≥40 px standing, ≥60 px run).
+
 The treasure chest uses full-frame closed/open sprites (`treasure_chest_closed`
 ~66×48, `treasure_chest_open` same width / taller, `treasure_chest_stamp` 64×64).
 Rebuild from `assets/source/chest/` (`closed.png` / `open.png`) with

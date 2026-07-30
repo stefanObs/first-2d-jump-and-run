@@ -13,7 +13,8 @@ const BULL_RUN_TEX: Array[Texture2D] = [
 ]
 ## Keep the bull body clear of the solid arena walls.
 const WALL_CLEAR := 90.0
-const BULL_FOOT_Y := -78.0
+## Sprite is centered; feet sit on baseline 182 of the 188px canvas → 88px below center.
+const BULL_FOOT_Y := -88.0
 const TIED_SPRITE_HEIGHT := 190.0
 const DOWN_SPRITE_HEIGHT := 118.0
 const RUN_FPS := 10.0
