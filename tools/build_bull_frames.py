@@ -28,8 +28,8 @@ TRAIL_BASELINE = 150
 TRAIL_BODY_H = 118
 # Stampede Bull: roomy canvas so the full stride (tail → horns) and ring glow
 # keep a clear margin. Body height matches across stun idle and run frames.
-BOSS_CANVAS = (440, 188)
-BOSS_BASELINE = 182
+BOSS_CANVAS = (440, 230)
+BOSS_BASELINE = 222
 BOSS_BODY_H = 164
 # Columns within this of another peak are that bull's exclusive core — flood
 # fill may spill past the valley midline for a tail tip, but not into a neighbour's body.
@@ -44,6 +44,38 @@ def _frame(
 	baseline: int,
 ) -> Image.Image:
 	return frame_sprite(img, canvas=canvas, target_h=target_h, baseline=baseline)
+
+
+def _opaque_area(im: Image.Image) -> int:
+	return sum(1 for value in im.split()[3].get_flattened_data() if value > 16)
+
+
+def _frame_to_opaque_area(img: Image.Image, target_area: int) -> Image.Image:
+	"""Scale a pose until its painted mass matches standing.
+
+	Matching canvas or bounding-box height is insufficient for the boss strip:
+	tucked-leg poses contain much less painted bull and visibly shrink. Opaque
+	area tracks apparent character size while preserving each pose's aspect.
+	"""
+	target_h = BOSS_BODY_H
+	framed = _frame(
+		img,
+		canvas=BOSS_CANVAS,
+		target_h=target_h,
+		baseline=BOSS_BASELINE,
+	)
+	for _iteration in range(3):
+		current_area = _opaque_area(framed)
+		if current_area <= 0:
+			break
+		target_h = max(1, round(target_h * (target_area / current_area) ** 0.5))
+		framed = _frame(
+			img,
+			canvas=BOSS_CANVAS,
+			target_h=target_h,
+			baseline=BOSS_BASELINE,
+		)
+	return framed
 
 
 def _column_density(im: Image.Image, *, win: int = 8) -> list[float]:
@@ -149,25 +181,16 @@ def _save_trail_strip(src_name: str, out_prefix: str) -> None:
 		print("wrote", path.relative_to(ROOT))
 
 
-def _save_boss_run_frames() -> None:
+def _save_boss_run_frames(target_area: int) -> None:
 	keyed = cutout(str(SRC / "run_strip_boss.png"), level=200, sat=25)
 	figures = _extract_boss_figures(keyed)
-	# One shared scale from the tallest stride so the drawn bob survives and every
-	# frame matches the standing body height.
-	scale = BOSS_BODY_H / max(fig.size[1] for fig in figures)
 	for i, fig in enumerate(figures):
-		target_h = max(1, round(fig.size[1] * scale))
 		path = OUT / f"boss_stampede_bull_run_{i}.png"
-		_frame(
-			fig,
-			canvas=BOSS_CANVAS,
-			target_h=target_h,
-			baseline=BOSS_BASELINE,
-		).save(path)
+		_frame_to_opaque_area(fig, target_area).save(path)
 		print("wrote", path.relative_to(ROOT))
 
 
-def _reframe_boss_standing() -> None:
+def _reframe_boss_standing() -> int:
 	"""Pad the existing stun/idle art onto the roomy canvas at the run body height."""
 	stand_path = OUT / "boss_stampede_bull.png"
 	if not stand_path.exists():
@@ -177,13 +200,15 @@ def _reframe_boss_standing() -> None:
 	bbox = stand.split()[3].getbbox()
 	if bbox:
 		stand = stand.crop(bbox)
-	_frame(
+	framed = _frame(
 		stand,
 		canvas=BOSS_CANVAS,
 		target_h=BOSS_BODY_H,
 		baseline=BOSS_BASELINE,
-	).save(stand_path)
+	)
+	framed.save(stand_path)
 	print("wrote", stand_path.relative_to(ROOT), "(reframed)")
+	return _opaque_area(framed)
 
 
 def build() -> None:
@@ -204,8 +229,8 @@ def build() -> None:
 	print("wrote", stand_path.relative_to(ROOT))
 
 	_save_trail_strip("run_strip_no_ring.png", "trail_bull")
-	_reframe_boss_standing()
-	_save_boss_run_frames()
+	boss_target_area = _reframe_boss_standing()
+	_save_boss_run_frames(boss_target_area)
 
 
 if __name__ == "__main__":

@@ -91,6 +91,8 @@ func _ready() -> void:
 	failures += await _run("Ninja throws shuriken at flying player", _test_ninja_shuriken_vs_wings)
 	failures += await _run("Ninja jumps pits and canyons", _test_ninja_jumps_gaps)
 	failures += await _run("Ninja hops onto planks the cowboy can reach", _test_ninja_hops_onto_planks)
+	failures += await _run("Ninja shows only one facing sprite", _test_ninja_single_sprite)
+	failures += await _run("Ninja follows dune slope height while chasing", _test_ninja_follows_slope_height)
 	failures += await _run("Ninja resets to dormancy on respawn", _test_ninja_respawn_restore)
 	failures += await _run("Shuriken sprite is handcrafted art", _test_shuriken_art)
 	failures += await _run("Side contact with a bandit sends the cowboy to camp", _test_side_contact_hurts)
@@ -436,9 +438,12 @@ func _test_boss_arenas() -> Variant:
 	var stand_tex := load("res://assets/world/boss_stampede_bull.png") as Texture2D
 	var stand_h := float(stand_tex.get_height())
 	var stand_img_for_size := stand_tex.get_image()
-	var stand_content_h := stand_h
+	var stand_opaque := 0
 	if stand_img_for_size != null:
-		stand_content_h = float(stand_img_for_size.get_used_rect().size.y)
+		for y in range(stand_img_for_size.get_height()):
+			for x in range(stand_img_for_size.get_width()):
+				if stand_img_for_size.get_pixel(x, y).a > 0.06:
+					stand_opaque += 1
 	for i in range(4):
 		var run_tex := load("res://assets/world/boss_stampede_bull_run_%d.png" % i) as Texture2D
 		if absf(float(run_tex.get_height()) - stand_h) > 2.0:
@@ -448,12 +453,16 @@ func _test_boss_arenas() -> Variant:
 			]
 		var run_img := run_tex.get_image()
 		if run_img != null:
-			var used := run_img.get_used_rect()
-			# Drawn bob may drop a few px under standing; a real shrink is much larger.
-			if float(used.size.y) < stand_content_h - 14.0:
+			var run_opaque := 0
+			for y in range(run_img.get_height()):
+				for x in range(run_img.get_width()):
+					if run_img.get_pixel(x, y).a > 0.06:
+						run_opaque += 1
+			var mass_ratio := float(run_opaque) / maxf(float(stand_opaque), 1.0)
+			if mass_ratio < 0.96 or mass_ratio > 1.04:
 				bull.queue_free()
-				return "Boss run frame %d content height %.0f is too short vs stun art %.0f." % [
-					i, used.size.y, stand_content_h
+				return "Boss run frame %d visible mass %.1f%% should match standing." % [
+					i, mass_ratio * 100.0
 				]
 	var spawn := bull.get_node_or_null("SpawnPoint") as Marker2D
 	var wall_l := bull.get_node_or_null("WallLeft") as Node2D
@@ -475,7 +484,7 @@ func _test_boss_arenas() -> Variant:
 	if stand_img != null:
 		var stand_used := stand_img.get_used_rect()
 		var side_margin := mini(stand_used.position.x, stand_tex.get_width() - stand_used.end.x)
-		if stand_tex.get_width() < 400 or stand_tex.get_height() < 180:
+		if stand_tex.get_width() < 400 or stand_tex.get_height() < 220:
 			bull.queue_free()
 			return "Boss bull canvas should be roomy (got %dx%d)." % [
 				stand_tex.get_width(), stand_tex.get_height()
@@ -495,6 +504,19 @@ func _test_boss_arenas() -> Variant:
 			return "Boss run frame %d side margin %d is too tight (horns/tail clipped)." % [
 				i, run_side
 			]
+	# Wall and lasso reactions may recoil/rotate, but must never squash the boss.
+	bull.call("_play_wall_impact")
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if not bull_sprite.scale.is_equal_approx(Vector2.ONE):
+		bull.queue_free()
+		return "Bull wall impact must not change his size."
+	bull.call("_play_hit_reaction")
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if not bull_sprite.scale.is_equal_approx(Vector2.ONE):
+		bull.queue_free()
+		return "Bull lasso reaction must not change his size."
 	var tied_scale: Vector2 = bull.call("_sprite_scale_for", tied_texture, 190.0)
 	# Compare painted body widths — the roomy canvas has transparent margin.
 	var normal_body_w: float
@@ -3157,6 +3179,104 @@ func _test_ninja_hops_onto_planks() -> Variant:
 	ninja.queue_free()
 	plank.queue_free()
 	floor_body.queue_free()
+	return error
+
+
+func _test_ninja_single_sprite() -> Variant:
+	## Only one drawable body — never a hidden scene Sprite2D plus the animated one.
+	var packed: PackedScene = load("res://scenes/world/ninja_enemy.tscn")
+	if packed == null:
+		return "Missing ninja enemy scene."
+	var ninja := packed.instantiate() as NinjaEnemy
+	add_child(ninja)
+	await get_tree().process_frame
+	var drawables := 0
+	for child in ninja.get_children():
+		if child is Sprite2D or child is AnimatedSprite2D:
+			drawables += 1
+	var anim := ninja.get_node_or_null("NinjaSprite") as AnimatedSprite2D
+	var error: Variant = null
+	if drawables != 1 or anim == null:
+		error = "Ninja must have exactly one animated sprite (found %d drawables)." % drawables
+	else:
+		ninja._apply_facing(-1.0)
+		if not anim.flip_h or anim.scale.x < 0.0:
+			error = "Facing left should flip_h without a negative scale mirror."
+		ninja._apply_facing(1.0)
+		if anim.flip_h or anim.scale.x < 0.0:
+			error = "Facing right should clear flip_h and keep positive scale."
+		# Respawn rebuild must not leave a second body behind.
+		ninja.restore_for_respawn()
+		await get_tree().process_frame
+		drawables = 0
+		for child in ninja.get_children():
+			if child is Sprite2D or child is AnimatedSprite2D:
+				drawables += 1
+		if drawables != 1:
+			error = "After respawn restore the ninja still has %d drawables." % drawables
+	ninja.queue_free()
+	return error
+
+
+func _test_ninja_follows_slope_height() -> Variant:
+	## Chase must ride the dune crust, not skim a flat Y across the height step.
+	var slot := 0
+	var trail := CustomLevelStore.trail_row(8)
+	var data := CustomLevelStore.default_level(slot)
+	data["objects"] = [
+		{"type": "ground", "x": 3, "y": trail},
+		{"type": "ground", "x": 3, "y": trail - 1},
+		{"type": "ground", "x": 4, "y": trail},
+		{"type": "ninja", "x": 3, "y": trail},
+		{"type": "goal", "x": 5, "y": trail},
+	]
+	var level := LevelController.new()
+	add_child(level)
+	CustomLevelBuilder.build(level, data)
+	WildWestTheme.apply_to_level(level)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	var merged := WildWestTheme._merge_segments(WildWestTheme._collect_ground_segments(level))
+	if merged.size() < 2:
+		level.queue_free()
+		return "Height-step trail should build adjacent dirt banks."
+	var span := WildWestTheme._slope_span(merged[0], merged[1])
+	if span.is_empty():
+		level.queue_free()
+		return "Expected a walkable dune between stacked dirt banks."
+	var ninja := level.find_child("Ninja0", true, false) as NinjaEnemy
+	var player := level.get_node_or_null("Player") as Player
+	if ninja == null or player == null:
+		level.queue_free()
+		return "Slope chase test needs the ninja and the cowboy."
+	var x_start := float(span["x_start"]) + 20.0
+	var x_mid := (float(span["x_start"]) + float(span["x_end"])) * 0.5
+	var start_surface := WildWestTheme.walk_surface_at(level, x_start)
+	var mid_surface := WildWestTheme.walk_surface_at(level, x_mid)
+	ninja.set_physics_process(false)
+	ninja._activated = true
+	ninja._state = NinjaEnemy.State.CHASE
+	ninja._set_dormant(false)
+	ninja.global_position = Vector2(x_start, float(start_surface["y"]))
+	player.set_physics_process(false)
+	player.global_position = Vector2(x_mid + 40.0, float(mid_surface["y"]))
+	ninja.set_physics_process(true)
+	var followed := false
+	for _i in range(90):
+		await get_tree().physics_frame
+		if absf(ninja.global_position.x - x_mid) <= 28.0:
+			var expected_y := float(WildWestTheme.walk_surface_at(level, ninja.global_position.x)["y"])
+			if absf(ninja.global_position.y - expected_y) <= 6.0:
+				followed = true
+				break
+	var error: Variant = null
+	if not followed:
+		var expected_y := float(WildWestTheme.walk_surface_at(level, ninja.global_position.x)["y"])
+		error = (
+			"Ninja should follow dune height while chasing (y=%.1f, surface %.1f, x=%.1f)."
+			% [ninja.global_position.y, expected_y, ninja.global_position.x]
+		)
+	level.queue_free()
 	return error
 
 

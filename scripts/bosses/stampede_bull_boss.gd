@@ -13,8 +13,8 @@ const BULL_RUN_TEX: Array[Texture2D] = [
 ]
 ## Keep the bull body clear of the solid arena walls.
 const WALL_CLEAR := 90.0
-## Sprite is centered; feet sit on baseline 182 of the 188px canvas → 88px below center.
-const BULL_FOOT_Y := -88.0
+## Sprite is centered; feet sit on baseline 222 of the 230px canvas → 107px below center.
+const BULL_FOOT_Y := -107.0
 const TIED_SPRITE_HEIGHT := 190.0
 const DOWN_SPRITE_HEIGHT := 118.0
 const RUN_FPS := 10.0
@@ -130,8 +130,9 @@ func _play_charge_run(delta: float) -> void:
 	_run_phase += delta * RUN_FPS
 	var idx := int(floor(_run_phase)) % BULL_RUN_TEX.size()
 	_sprite.texture = BULL_RUN_TEX[idx]
-	# Run frames are baked to the same body height as the stun/idle standing art.
+	# Run frames are baked to the same visible painted mass as standing.
 	_sprite.scale = Vector2.ONE
+	_sprite.position.x = 0.0
 	_sprite.position.y = BULL_FOOT_Y
 	_sprite.rotation = 0.0
 
@@ -198,6 +199,7 @@ func _animate_stun_idle(delta: float) -> void:
 	_sprite.texture = BULL_TEX
 	_sprite.scale = Vector2.ONE
 	_charge_bob += delta * 8.0
+	_sprite.position.x = 0.0
 	_sprite.position.y = BULL_FOOT_Y + sin(_charge_bob) * 2.0
 	_sprite.rotation = sin(_charge_bob) * 0.08
 	if _stars != null:
@@ -207,23 +209,26 @@ func _animate_stun_idle(delta: float) -> void:
 func _play_wall_impact() -> void:
 	if _sprite == null:
 		return
+	# Keep the bull's size fixed; a short recoil conveys the collision.
+	_sprite.scale = Vector2.ONE
 	var tween := create_tween()
-	tween.tween_property(_sprite, "scale", Vector2(0.78, 1.15), 0.08)
-	tween.tween_property(_sprite, "scale", Vector2(1.12, 0.85), 0.1)
-	tween.tween_property(_sprite, "scale", Vector2.ONE, 0.12)
+	tween.tween_property(_sprite, "position:x", -10.0 * _dir, 0.08)
+	tween.tween_property(_sprite, "position:x", 4.0 * _dir, 0.1)
+	tween.tween_property(_sprite, "position:x", 0.0, 0.12)
 
 
 func _play_hit_reaction() -> void:
 	if _sprite == null:
 		return
 	var kick := 0.35 if _dir >= 0.0 else -0.35
+	_sprite.scale = Vector2.ONE
 	_sprite.modulate = Color(1.4, 1.2, 0.6, 1)
 	var tween := create_tween()
-	tween.tween_property(_sprite, "scale", Vector2(1.25, 0.7), 0.08)
+	tween.tween_property(_sprite, "position:x", -14.0 * _dir, 0.08)
 	tween.tween_property(_sprite, "rotation", kick, 0.1)
-	tween.tween_property(_sprite, "scale", Vector2(0.9, 1.15), 0.1)
+	tween.tween_property(_sprite, "position:x", 5.0 * _dir, 0.1)
 	tween.tween_property(_sprite, "rotation", 0.0, 0.12)
-	tween.tween_property(_sprite, "scale", Vector2.ONE, 0.1)
+	tween.tween_property(_sprite, "position:x", 0.0, 0.1)
 	tween.tween_property(_sprite, "modulate", Color.WHITE, 0.15)
 
 
@@ -255,7 +260,7 @@ func _end_stun(from_lasso: bool) -> void:
 		_sprite.rotation = 0.0
 		_sprite.texture = BULL_TEX
 		_sprite.scale = Vector2.ONE
-		_sprite.position.y = BULL_FOOT_Y
+		_sprite.position = Vector2(0.0, BULL_FOOT_Y)
 	_run_phase = 0.0
 
 

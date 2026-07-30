@@ -69,10 +69,16 @@ func _ready() -> void:
 
 
 func _setup_sprite() -> void:
-	var existing := get_node_or_null("NinjaSprite") as AnimatedSprite2D
-	if existing != null:
-		existing.queue_free()
-	var old := get_node_or_null("Sprite2D") as Node
+	# Free every prior draw node. Leaving the scene Sprite2D hidden (instead of
+	# removed) sometimes showed it again beside the animated sprite — two ninjas
+	# facing opposite ways when one was flipped.
+	var stale: Array[Node] = []
+	for child in get_children():
+		if child is Sprite2D or child is AnimatedSprite2D:
+			if String(child.name) in ["NinjaSprite", "Sprite2D", "WalkSprite"]:
+				stale.append(child)
+	for child in stale:
+		child.free()
 	_sprite = AnimatedSprite2D.new()
 	_sprite.name = "NinjaSprite"
 	_sprite.sprite_frames = _make_sprite_frames()
@@ -82,8 +88,6 @@ func _setup_sprite() -> void:
 	_apply_facing(1.0)
 	_sprite.play(&"idle")
 	add_child(_sprite)
-	if old != null:
-		old.visible = false
 
 
 func _make_sprite_frames() -> SpriteFrames:
@@ -215,7 +219,7 @@ func _player_facing(player: Player) -> float:
 
 
 func _walk_surface_y(world_x: float, fallback_y: float) -> float:
-	var level := get_tree().current_scene
+	var level := _theme_level()
 	if level != null:
 		var surface := WildWestTheme.walk_surface_at(level, world_x)
 		if surface.has("y"):
@@ -223,11 +227,34 @@ func _walk_surface_y(world_x: float, fallback_y: float) -> float:
 	return fallback_y
 
 
+func _theme_level() -> Node:
+	## Prefer the owning level so slope height works in tests and nested scenes.
+	var node: Node = self
+	while node != null:
+		if node is LevelController:
+			return node
+		node = node.get_parent()
+	return get_tree().current_scene if get_tree() != null else null
+
+
+func _snap_feet_to_surface() -> void:
+	## Keep boots on dune crust / flat dirt — chase used to only move in X.
+	if _tied or _state == State.JUMP or _state == State.APPEAR:
+		return
+	var hit_y := _floor_hit_y(global_position.x, global_position.y)
+	if not is_inf(hit_y):
+		var theme_y := _walk_surface_y(global_position.x, hit_y)
+		global_position.y = theme_y if absf(theme_y - hit_y) <= 28.0 else hit_y
+		return
+	global_position.y = _walk_surface_y(global_position.x, global_position.y)
+
+
 func _handle_ground_player(player: Player, delta: float) -> void:
 	_facing = 1.0 if player.global_position.x >= global_position.x else -1.0
 	var dist := global_position.distance_to(player.global_position)
 	if dist <= MELEE_RANGE:
 		_begin_sword_attack(player)
+		_snap_feet_to_surface()
 		return
 	var landing := _find_gap_landing(_facing)
 	if (
@@ -245,6 +272,7 @@ func _handle_ground_player(player: Player, delta: float) -> void:
 	if FloorProbe.has_floor_ahead(self, _facing):
 		_apply_facing(_facing)
 		global_position.x += _facing * CHASE_SPEED * delta
+		_snap_feet_to_surface()
 		_set_move_animation(true)
 		return
 	if player.global_position.y > global_position.y + LEDGE_STEP_MIN:
@@ -252,6 +280,7 @@ func _handle_ground_player(player: Player, delta: float) -> void:
 		if not drop.is_empty():
 			_begin_gap_jump(drop)
 			return
+	_snap_feet_to_surface()
 	_set_move_animation(false)
 
 
@@ -392,6 +421,7 @@ func _finish_gap_jump(token: int, land: Vector2) -> void:
 	if token != _jump_token or _tied or _state != State.JUMP:
 		return
 	global_position = land
+	_snap_feet_to_surface()
 	_state = State.CHASE
 	_set_move_animation(true)
 
@@ -399,6 +429,7 @@ func _finish_gap_jump(token: int, land: Vector2) -> void:
 func _handle_flying_player(player: Player, delta: float) -> void:
 	_facing = 1.0 if player.global_position.x >= global_position.x else -1.0
 	_apply_facing(_facing)
+	_snap_feet_to_surface()
 	_set_move_animation(false)
 	_throw_timer -= delta
 	if _throw_timer > 0.0:
@@ -482,7 +513,11 @@ func _spawn_shuriken(player: Player) -> void:
 func _apply_facing(direction: float) -> void:
 	if _sprite == null:
 		return
+	# Mirror with flip_h only — never negate scale.x, or a tying squash tween can
+	# leave a second mirrored silhouette beside the live pose.
 	_sprite.flip_h = direction < 0.0
+	_sprite.scale.x = absf(_sprite.scale.x)
+	_sprite.scale.y = absf(_sprite.scale.y)
 
 
 func _set_move_animation(moving: bool) -> void:
