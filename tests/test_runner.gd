@@ -6855,6 +6855,75 @@ func _test_campaign_workshop() -> Variant:
 					)
 			if not saw_override or not saw_extra_before_five:
 				error = "Campaign order should replace built-ins and insert extras at the chosen position."
+			else:
+				# Hub must list the campaign in play order with marks and Add-before on extras.
+				var hub_packed: PackedScene = load("res://scenes/ui/custom_level_hub.tscn")
+				var hub := hub_packed.instantiate() as Control
+				add_child(hub)
+				await get_tree().process_frame
+				var trail_rows := hub.find_child("TrailRows", true, false) as VBoxContainer
+				if trail_rows == null:
+					error = "Campaign workshop needs a TrailRows list."
+				else:
+					var labels: PackedStringArray = []
+					var saw_extra_add_before := false
+					var extra_row_index := -1
+					var five_row_index := -1
+					for child in trail_rows.get_children():
+						if not (child is HBoxContainer):
+							continue
+						var row := child as HBoxContainer
+						var kind := str(row.get_meta("entry_kind", ""))
+						var label := row.get_child(0) as Label
+						if label != null:
+							labels.append(label.text)
+						if kind == "extra":
+							extra_row_index = labels.size() - 1
+							for button_node in row.get_children():
+								if button_node is Button and (button_node as Button).text == tr("Add before"):
+									saw_extra_add_before = true
+						elif int(row.get_meta("source_level", 0)) == 5:
+							five_row_index = labels.size() - 1
+					var joined := " | ".join(labels)
+					if extra_row_index < 0 or five_row_index < 0 or extra_row_index >= five_row_index:
+						error = "Workshop list must place self-made trails before their target campaign level (saw: %s)." % joined
+					elif not saw_extra_add_before:
+						error = "Self-made trails need an Add before action."
+					else:
+						var marked_extra := false
+						var marked_changed := false
+						for text in labels:
+							if "self-made" in text or "selbst gemacht" in text:
+								marked_extra = true
+							if "changed" in text or "geändert" in text:
+								marked_changed = true
+						if not marked_extra:
+							error = "Self-made trails should be marked in the workshop list."
+						elif not marked_changed:
+							error = "Changed campaign trails should be marked in the workshop list."
+						else:
+							# Adding before an existing self-made trail must land immediately before it.
+							var first_extra_slot := extra_slot
+							var draft := CustomLevelStore.new_extra_draft(5, first_extra_slot)
+							if draft.is_empty():
+								error = "Workshop should still have a free slot to add before a self-made trail."
+							elif not CustomLevelStore.save(int(draft["slot"]), draft):
+								error = "Could not save a trail inserted before another self-made trail."
+							else:
+								var ordered := CustomLevelStore.campaign_entries()
+								var first_idx := -1
+								var second_idx := -1
+								for i in range(ordered.size()):
+									var slot := int(ordered[i].get("custom_slot", -1))
+									if slot == int(draft["slot"]):
+										first_idx = i
+									elif slot == first_extra_slot:
+										second_idx = i
+								if first_idx < 0 or second_idx < 0 or first_idx >= second_idx:
+									error = "Add before a self-made trail should place the new trail immediately ahead of it."
+								CustomLevelStore.erase(int(draft["slot"]))
+				hub.queue_free()
+				await get_tree().process_frame
 	var preview := LevelPreview.new()
 	add_child(preview)
 	preview.show_level(imported)

@@ -51,25 +51,28 @@ func _build_ui() -> void:
 	title.add_theme_color_override(&"font_color", Color(0.35, 0.16, 0.05))
 	box.add_child(title)
 	var help := Label.new()
-	help.text = tr("Edit a copy of any campaign level, or insert a new trail before any level.")
+	help.text = tr(
+		"Self-made trails sit in campaign order. Changed campaign trails are marked. Add a trail before any row."
+	)
+	help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	help.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	help.add_theme_font_size_override(&"font_size", 20)
+	help.add_theme_font_size_override(&"font_size", 18)
 	box.add_child(help)
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.custom_minimum_size = Vector2(0, 160)
 	box.add_child(scroll)
 	var rows := VBoxContainer.new()
+	rows.name = "TrailRows"
 	rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	rows.add_theme_constant_override(&"separation", 8)
 	scroll.add_child(rows)
-	for level_number in range(1, CustomLevelStore.BUILTIN_COUNT + 1):
-		_add_builtin_row(rows, level_number)
+	var campaign_index := 1
 	for entry in CustomLevelStore.campaign_entries():
-		if int(entry.get("source_level", 0)) == 0:
-			_add_extra_row(rows, entry)
+		_add_campaign_row(rows, entry, campaign_index)
+		campaign_index += 1
 	rows.add_child(_make_button(
-		tr("+ Add a new level after Level 10"),
+		tr("+ Add a new trail at the end"),
 		Vector2(0, 48),
 		19,
 		func() -> void: _add_extra(CustomLevelStore.BUILTIN_COUNT + 1)
@@ -113,72 +116,88 @@ func _build_ui() -> void:
 		(rows.get_child(0) as Control).grab_focus()
 
 
-func _add_builtin_row(parent: VBoxContainer, level_number: int) -> void:
+func _add_campaign_row(parent: VBoxContainer, entry: Dictionary, campaign_index: int) -> void:
+	var entry_kind := str(entry.get("entry_kind", ""))
+	if entry_kind.is_empty():
+		if int(entry.get("source_level", 0)) == 0:
+			entry_kind = "extra"
+		elif str(entry.get("kind", "")) == "custom":
+			entry_kind = "override"
+		else:
+			entry_kind = "builtin"
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override(&"separation", 8)
+	row.set_meta("campaign_index", campaign_index)
+	row.set_meta("entry_kind", entry_kind)
+	row.set_meta("custom_slot", int(entry.get("custom_slot", -1)))
+	row.set_meta("source_level", int(entry.get("source_level", 0)))
 	parent.add_child(row)
 	var label := Label.new()
-	label.custom_minimum_size = Vector2(440, 48)
+	label.custom_minimum_size = Vector2(460, 48)
 	label.add_theme_font_size_override(&"font_size", 20)
-	var slot := CustomLevelStore.override_slot_for(level_number)
-	label.text = "%d: %s%s" % [
-		level_number,
-		CustomLevelStore.BUILTIN_NAMES[level_number - 1],
-		" (edited)" if CustomLevelStore.exists(slot) else "",
-	]
+	label.text = _row_label(entry, campaign_index, entry_kind)
+	if entry_kind == "extra":
+		label.add_theme_color_override(&"font_color", Color(0.18, 0.34, 0.12))
+	elif entry_kind == "override":
+		label.add_theme_color_override(&"font_color", Color(0.42, 0.22, 0.05))
+	else:
+		label.add_theme_color_override(&"font_color", Color(0.35, 0.16, 0.05))
 	row.add_child(label)
+	var edit_slot := int(entry.get("custom_slot", -1))
+	if entry_kind == "builtin":
+		edit_slot = CustomLevelStore.override_slot_for(int(entry.get("source_level", 1)))
 	row.add_child(_make_button(
-		tr("Edit level"),
+		tr("Edit level") if entry_kind != "extra" else tr("Edit"),
 		Vector2(190, 48),
 		0,
-		func() -> void: GameManager.edit_custom_level(slot)
+		func() -> void: GameManager.edit_custom_level(edit_slot)
 	))
 	row.add_child(_make_button(
 		tr("Add before"),
 		Vector2(190, 48),
 		0,
-		func() -> void: _add_extra(level_number)
+		func() -> void: _add_before_entry(entry, entry_kind)
 	))
-	if CustomLevelStore.exists(slot):
+	if entry_kind == "override":
 		row.add_child(_make_button(
 			tr("Restore original"),
 			Vector2(190, 48),
 			0,
 			func() -> void:
-				CustomLevelStore.erase(slot)
+				CustomLevelStore.erase(int(entry.get("custom_slot", -1)))
+				get_tree().reload_current_scene()
+		))
+	elif entry_kind == "extra":
+		row.add_child(_make_button(
+			tr("Remove"),
+			Vector2(190, 48),
+			0,
+			func() -> void:
+				CustomLevelStore.erase(int(entry.get("custom_slot", -1)))
 				get_tree().reload_current_scene()
 		))
 
 
-func _add_extra_row(parent: VBoxContainer, entry: Dictionary) -> void:
-	var slot := int(entry.get("custom_slot", -1))
-	if slot < 0:
+func _row_label(entry: Dictionary, campaign_index: int, entry_kind: String) -> String:
+	var title := str(entry.get("title", tr("Extra Trail")))
+	if entry_kind == "extra":
+		return "%d: %s (%s)" % [campaign_index, title, tr("self-made")]
+	if entry_kind == "override":
+		var source := int(entry.get("source_level", 0))
+		if source >= 1 and source <= CustomLevelStore.BUILTIN_COUNT:
+			title = CustomLevelStore.BUILTIN_NAMES[source - 1]
+		return "%d: %s (%s)" % [campaign_index, title, tr("changed")]
+	return "%d: %s" % [campaign_index, title]
+
+
+func _add_before_entry(entry: Dictionary, entry_kind: String) -> void:
+	if entry_kind == "extra":
+		_add_extra(
+			int(entry.get("insert_position", CustomLevelStore.BUILTIN_COUNT + 1)),
+			int(entry.get("custom_slot", -1))
+		)
 		return
-	var data := CustomLevelStore.load_level(slot)
-	var row := HBoxContainer.new()
-	parent.add_child(row)
-	var label := Label.new()
-	label.custom_minimum_size = Vector2(440, 44)
-	label.text = tr("Extra before position %d: %s") % [
-		int(data.get("insert_position", CustomLevelStore.BUILTIN_COUNT + 1)),
-		str(data.get("title", tr("Extra Trail"))),
-	]
-	label.add_theme_font_size_override(&"font_size", 18)
-	row.add_child(label)
-	row.add_child(_make_button(
-		tr("Edit"),
-		Vector2(190, 44),
-		0,
-		func() -> void: GameManager.edit_custom_level(slot)
-	))
-	row.add_child(_make_button(
-		tr("Remove"),
-		Vector2(190, 44),
-		0,
-		func() -> void:
-			CustomLevelStore.erase(slot)
-			get_tree().reload_current_scene()
-	))
+	_add_extra(int(entry.get("source_level", 1)))
 
 
 func _make_button(
@@ -196,8 +215,8 @@ func _make_button(
 	return button
 
 
-func _add_extra(insert_position: int) -> void:
-	var draft := CustomLevelStore.new_extra_draft(insert_position)
+func _add_extra(insert_position: int, before_custom_slot: int = -1) -> void:
+	var draft := CustomLevelStore.new_extra_draft(insert_position, before_custom_slot)
 	if not draft.is_empty():
 		GameManager.edit_new_custom_level(int(draft["slot"]), draft)
 

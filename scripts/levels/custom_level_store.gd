@@ -360,6 +360,7 @@ static func default_level(slot_index: int) -> Dictionary:
 		"style": STYLE_DESERT,
 		"source_level": 0,
 		"insert_position": BUILTIN_COUNT + 1,
+		"insert_order": clampi(slot_index, 0, SLOT_COUNT - 1),
 		"grid": 40,
 		"width": width,
 		"height": height,
@@ -615,6 +616,9 @@ static func merge_imported_trail(
 		1,
 		BUILTIN_COUNT + 1,
 	)
+	merged["insert_order"] = int(
+		current.get("insert_order", merged.get("insert_order", slot_index))
+	)
 	merged["slot"] = slot_index
 	return merged
 
@@ -626,16 +630,59 @@ static func erase(slot_index: int) -> void:
 static func override_slot_for(level_number: int) -> int:
 	return BUILTIN_SLOT_START + clampi(level_number, 1, BUILTIN_COUNT) - 1
 
-static func new_extra_draft(insert_position: int) -> Dictionary:
+static func new_extra_draft(insert_position: int, before_custom_slot: int = -1) -> Dictionary:
 	for slot in range(EXTRA_SLOT_START, SLOT_COUNT):
 		if exists(slot):
 			continue
+		var position := clampi(insert_position, 1, BUILTIN_COUNT + 1)
+		var order := _next_insert_order(position)
+		if before_custom_slot >= EXTRA_SLOT_START and exists(before_custom_slot):
+			var before_data := load_level(before_custom_slot)
+			if str(before_data.get("kind", "")) == "extra":
+				position = clampi(
+					int(before_data.get("insert_position", position)), 1, BUILTIN_COUNT + 1
+				)
+				order = int(before_data.get("insert_order", before_custom_slot))
+				_bump_insert_orders(position, order)
 		var data := default_level(slot)
 		data["kind"] = "extra"
-		data["insert_position"] = clampi(insert_position, 1, BUILTIN_COUNT + 1)
+		data["insert_position"] = position
+		data["insert_order"] = order
 		data["title"] = "Extra Trail"
 		return data
 	return {}
+
+static func _extra_insert_order(data: Dictionary, slot: int) -> int:
+	return int(data.get("insert_order", slot))
+
+static func _next_insert_order(position: int) -> int:
+	var max_order := -1
+	for slot in range(EXTRA_SLOT_START, SLOT_COUNT):
+		if not exists(slot):
+			continue
+		var extra := load_level(slot)
+		if str(extra.get("kind", "")) != "extra":
+			continue
+		if clampi(int(extra.get("insert_position", BUILTIN_COUNT + 1)), 1, BUILTIN_COUNT + 1) != position:
+			continue
+		max_order = maxi(max_order, _extra_insert_order(extra, slot))
+	return max_order + 1
+
+static func _bump_insert_orders(position: int, from_order: int) -> void:
+	## Make room so a new self-made trail can sit immediately before another extra.
+	for slot in range(EXTRA_SLOT_START, SLOT_COUNT):
+		if not exists(slot):
+			continue
+		var extra := load_level(slot)
+		if str(extra.get("kind", "")) != "extra":
+			continue
+		if clampi(int(extra.get("insert_position", BUILTIN_COUNT + 1)), 1, BUILTIN_COUNT + 1) != position:
+			continue
+		var order := _extra_insert_order(extra, slot)
+		if order < from_order:
+			continue
+		extra["insert_order"] = order + 1
+		save(slot, extra)
 
 static func campaign_entries() -> Array[Dictionary]:
 	var extras_by_position: Dictionary = {}
@@ -650,10 +697,22 @@ static func campaign_entries() -> Array[Dictionary]:
 			extras_by_position[position] = []
 		(extras_by_position[position] as Array).append({
 			"kind": "custom",
+			"entry_kind": "extra",
 			"source_level": 0,
 			"custom_slot": slot,
+			"insert_position": position,
+			"insert_order": _extra_insert_order(extra, slot),
 			"title": str(extra.get("title", "Extra Trail")),
 		})
+	for position in extras_by_position.keys():
+		var bucket: Array = extras_by_position[position]
+		bucket.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+			var order_a := int(a.get("insert_order", int(a.get("custom_slot", 0))))
+			var order_b := int(b.get("insert_order", int(b.get("custom_slot", 0))))
+			if order_a == order_b:
+				return int(a.get("custom_slot", 0)) < int(b.get("custom_slot", 0))
+			return order_a < order_b
+		)
 	var result: Array[Dictionary] = []
 	for level_number in range(1, BUILTIN_COUNT + 1):
 		for extra_entry in extras_by_position.get(level_number, []):
@@ -663,6 +722,7 @@ static func campaign_entries() -> Array[Dictionary]:
 			var override := load_level(override_slot)
 			result.append({
 				"kind": "custom",
+				"entry_kind": "override",
 				"source_level": level_number,
 				"custom_slot": override_slot,
 				"title": str(override.get("title", BUILTIN_NAMES[level_number - 1])),
@@ -670,6 +730,7 @@ static func campaign_entries() -> Array[Dictionary]:
 		else:
 			result.append({
 				"kind": "builtin",
+				"entry_kind": "builtin",
 				"source_level": level_number,
 				"custom_slot": -1,
 				"title": BUILTIN_NAMES[level_number - 1],
@@ -966,6 +1027,7 @@ static func sanitize(source: Dictionary, slot_index: int) -> Dictionary:
 	result["kind"] = str(source.get("kind", result["kind"]))
 	result["source_level"] = clampi(int(source.get("source_level", 0)), 0, BUILTIN_COUNT)
 	result["insert_position"] = clampi(int(source.get("insert_position", BUILTIN_COUNT + 1)), 1, BUILTIN_COUNT + 1)
+	result["insert_order"] = int(source.get("insert_order", slot_index))
 	result["width"] = clampi(int(source.get("width", result["width"])), MIN_WIDTH, MAX_WIDTH)
 	result["height"] = clampi(int(source.get("height", result["height"])), 6, 14)
 	result["version"] = VERSION
