@@ -435,6 +435,7 @@ func _wire_ui() -> void:
 		pause_menu.continue_pressed.connect(func() -> void: set_paused(false))
 		pause_menu.save_pressed.connect(_on_save_pressed)
 		pause_menu.load_pressed.connect(_on_load_pressed)
+		pause_menu.restart_level_pressed.connect(_on_restart_level_pressed)
 		pause_menu.restart_pressed.connect(_on_restart_pressed)
 		pause_menu.save_select_pressed.connect(_on_save_select_pressed)
 		pause_menu.settings_pressed.connect(_on_settings_pressed)
@@ -856,11 +857,18 @@ func _on_load_pressed() -> void:
 	GameManager.load_saved_run(level_number)
 
 
-func _on_restart_pressed() -> void:
+func _on_restart_level_pressed() -> void:
 	get_tree().paused = false
+	_paused = false
 	if is_custom_level:
 		GameManager.play_custom_level(GameManager.active_custom_slot, GameManager.custom_return_to_editor)
 		return
+	GameManager.restart_current_level(level_number)
+
+
+func _on_restart_pressed() -> void:
+	get_tree().paused = false
+	_paused = false
 	GameManager.restart_campaign_from_start()
 
 

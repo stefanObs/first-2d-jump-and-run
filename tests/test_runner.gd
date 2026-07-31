@@ -7572,18 +7572,28 @@ func _test_pause_save_controls() -> Variant:
 	for path in [
 		"Panel/Margin/VBox/SaveButton",
 		"Panel/Margin/VBox/LoadButton",
+		"Panel/Margin/VBox/RestartLevelButton",
 		"Panel/Margin/VBox/RestartButton",
 		"Panel/Margin/VBox/SaveSelectButton",
 	]:
 		if menu.get_node_or_null(path) == null:
 			error = "Pause menu missing %s." % path
 			break
+	var restart_level := menu.get_node_or_null("Panel/Margin/VBox/RestartLevelButton") as Button
+	if error == null and restart_level != null and restart_level.text != "Restart Level":
+		error = "Pause menu should offer Restart Level for the open trail."
 	var restart := menu.get_node_or_null("Panel/Margin/VBox/RestartButton") as Button
 	if error == null and restart != null and restart.text != "Restart Trail at Level 1":
 		error = "Restart action should clearly say it returns to Level 1."
 	var start_screen := menu.get_node_or_null("Panel/Margin/VBox/SaveSelectButton") as Button
 	if error == null and start_screen != null and start_screen.text != "Back to Start Screen":
 		error = "Pause menu should offer a clear return to the start screen."
+	if error == null:
+		(menu as PauseMenu).set_save_options(false, false)
+		if restart != null and restart.visible:
+			error = "Workshop playtests should hide Restart Trail at Level 1."
+		elif restart_level != null and not restart_level.visible:
+			error = "Restart Level should stay available during workshop playtests."
 	menu.queue_free()
 	GameManager.erase_slot(0)
 	GameManager.debug_set_slot(0, {
@@ -7602,6 +7612,25 @@ func _test_pause_save_controls() -> Variant:
 		error = "Restart from Start must clear the later-level checkpoint."
 	elif error == null and int(reset_slot.get("stars", 0)) != 12:
 		error = "Restarting at Level 1 should keep previously earned badges."
+	GameManager.debug_set_slot(0, {
+		"empty": false,
+		"current_level": 8,
+		"stars": 12,
+		"completed": false,
+		"resume": {"level_number": 8, "checkpoint_name": "CheckpointB"},
+	})
+	GameManager.active_slot_index = 0
+	## Prepare the same save mutations Restart Level uses, without swapping the test scene.
+	GameManager.clear_run_state()
+	var restarted := GameManager.get_slot(0)
+	if error == null and int(restarted.get("current_level", -1)) != 8:
+		error = "Restart Level must keep campaign progress on the open trail."
+	elif error == null and not (restarted.get("resume", {}) as Dictionary).is_empty():
+		error = "Restart Level must clear the mid-run camp save."
+	elif error == null and int(restarted.get("stars", 0)) != 12:
+		error = "Restart Level should keep previously earned badges."
+	elif error == null and not GameManager.has_method("restart_current_level"):
+		error = "GameManager needs restart_current_level for the pause action."
 	GameManager.erase_slot(0)
 	return error
 

@@ -374,6 +374,19 @@ func restart_campaign_from_start() -> void:
 	load_level(1)
 
 
+func restart_current_level(level_number: int) -> void:
+	## Reload the open trail from its start camp without wiping campaign progress.
+	clear_run_state()
+	if active_slot_index >= 0:
+		var slot := get_slot(active_slot_index)
+		slot["current_level"] = maxi(int(slot.get("current_level", 1)), clampi(level_number, 1, campaign_level_count()))
+		slot["completed"] = false
+		(_data["slots"] as Array)[active_slot_index] = slot
+		save_to_disk()
+		saves_changed.emit()
+	load_level(clampi(level_number, 1, maxi(campaign_level_count(), 1)))
+
+
 func reset_campaign_to_start() -> void:
 	## Return the active save to Level 1 without deleting earned badges or time.
 	## This makes "Restart from Start" genuinely restart the whole trail instead

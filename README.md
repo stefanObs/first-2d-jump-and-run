@@ -2,7 +2,7 @@
 
 Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, nonviolent lasso. **Classic mode** has no lives or game over; **Advanced Mode** (chosen in **Settings** before starting or continuing a slot) adds a three-life limit, badge milestones, and a game-over return to the start screen. Pick **Cowboy** or **Cowgirl** in Settings — the choice applies across all save slots. **German is the default language**; English is fully supported.
 
-**Content version:** `1.8.67` (see `content_version.txt`). Launchers reimport when this stamp changes.
+**Content version:** `1.8.68` (see `content_version.txt`). Launchers reimport when this stamp changes.
 
 This README is the **binding source of truth** for gameplay, level design, art, i18n, and audio. Agents and contributors must follow it (see [Agent / contributor rules](#agent--contributor-rules)).
 
@@ -106,7 +106,7 @@ The workshop palette offers only element variants used by campaign levels. **Haz
 
 ## Core gameplay
 
-- **Move:** arrows or A/D; **jump:** Space (coyote ~0.16s, buffer ~0.15s, variable height). On a **ladder**, Space / W / Up climbs up and S / Down climbs down (left/right steps off). Xbox: stick/D-pad, A jump/climb-up, X lasso, B back, Menu pause.
+- **Move:** arrows or A/D; **jump:** Space (coyote ~0.16s, buffer ~0.15s, variable height). On a **ladder**, Space / W / Up climbs up and S / Down climbs down (left/right steps off). Xbox: stick/D-pad, A jump/climb-up, X lasso, B back, Menu pause. Pause offers **Restart Level** (reload the open trail from its start camp; clears that level’s mid-run camp save) and, on campaign saves, **Restart Trail at Level 1**.
 - **Horse (Level 1 / Horse workshop theme):** `start_mounted` — faster run (~1.45×), jumps ~20% farther. Midnight Coach chase is mounted at that pace. Workshop **Horse** style forces this and bans chests/power-up stamps.
 - **Lasso:** Alt / F / L (Xbox X) — ties bandits, trail bulls, and ninjas (pass-through, seated rope pose). A downward jump stomp from above also ties + small bounce; side/upward/standing contact hurts. Trail bulls **charge the cowboy** when he is nearby. **Ninjas ambush** ~6 grid cells ahead of the cowboy, then slash with a sword; while the cowboy **flies with Wings**, they throw handcrafted **shuriken**. Bandits placed in mid-air (workshop or level layout) **fall to the walkable surface below** before patrolling.
 - **Modes** (one at a time; badge pickup adds ~5s): Wings / Magic Boots / Speed Star **30s**; Bubble Shield **7.5s** (blocks bandits, bounces cacti; **does not** save canyon falls).

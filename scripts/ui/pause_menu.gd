@@ -4,6 +4,7 @@ extends CanvasLayer
 signal continue_pressed
 signal save_pressed
 signal load_pressed
+signal restart_level_pressed
 signal restart_pressed
 signal save_select_pressed
 signal settings_pressed
@@ -13,6 +14,7 @@ const BUTTON_NAMES := [
 	"ContinueButton",
 	"SaveButton",
 	"LoadButton",
+	"RestartLevelButton",
 	"RestartButton",
 	"SaveSelectButton",
 	"SettingsButton",
@@ -69,12 +71,16 @@ func show_settings() -> void:
 func set_save_options(campaign_save_enabled: bool, can_load: bool) -> void:
 	var save_button := _button("SaveButton")
 	var load_button := _button("LoadButton")
+	var restart_trail := _button("RestartButton")
 	if save_button != null:
 		save_button.visible = campaign_save_enabled
 	if load_button != null:
 		load_button.visible = campaign_save_enabled
 		load_button.disabled = not can_load
 		load_button.text = "Load Game" if can_load else "Load Game (none yet)"
+	## Full-trail restart only makes sense on a campaign save, not a workshop playtest.
+	if restart_trail != null:
+		restart_trail.visible = campaign_save_enabled
 	_collect_buttons(false)
 	focus_first()
 
@@ -109,6 +115,7 @@ func _connect_buttons() -> void:
 	var continue_button := _button("ContinueButton")
 	var save_button := _button("SaveButton")
 	var load_button := _button("LoadButton")
+	var restart_level_button := _button("RestartLevelButton")
 	var restart_button := _button("RestartButton")
 	var select_button := _button("SaveSelectButton")
 	var settings_button := _button("SettingsButton")
@@ -118,6 +125,8 @@ func _connect_buttons() -> void:
 		save_button.pressed.connect(func() -> void: save_pressed.emit())
 	if load_button != null:
 		load_button.pressed.connect(func() -> void: load_pressed.emit())
+	if restart_level_button != null:
+		restart_level_button.pressed.connect(func() -> void: restart_level_pressed.emit())
 	if restart_button != null:
 		restart_button.pressed.connect(func() -> void: restart_pressed.emit())
 	if select_button != null:
