@@ -194,7 +194,7 @@ func _ready() -> void:
 	failures += await _run("Hand-drawn celebration art and cheerful music load", _test_art_and_music)
 	failures += await _run("Mid-trail save data persists and loads", _test_mid_trail_save)
 	failures += await _run("Saved camp and badges restore inside a level", _test_level_run_restore)
-	failures += await _run("Pause menu exposes save, load, and restart from start", _test_pause_save_controls)
+	failures += await _run("Pause menu exposes save, load, and restart actions", _test_pause_save_controls)
 	failures += await _run("Boss arenas expose lasso targets and solvable kingpin layout", _test_boss_arenas)
 	failures += await _run("Clouds are one-way platforms that stay above the floor", _test_one_way_cloud_platforms)
 	failures += await _run("Wind zones give a gentle capped push you can walk against", _test_wind_zone_force_overlap)
