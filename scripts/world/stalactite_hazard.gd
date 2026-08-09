@@ -81,12 +81,20 @@ func _apply_hang_look(fused: bool) -> void:
 		_sprite.z_index = 0
 
 
+func sync_ceiling_origin() -> void:
+	## Refresh hang seat after WildWestTheme snaps us onto the cave ceiling.
+	_origin = global_position
+	_probe_floor()
+
+
 func _probe_floor() -> void:
+	## Start clearly below the ceiling joint so the flight-ceiling solid is skipped.
+	var from := _origin + Vector2(0.0, maxf(_hang_h * 0.35, 28.0))
 	_floor_y = FloorProbe.hit_y(
 		self,
-		_origin + Vector2(0, 20),
+		from,
 		_origin + Vector2(0, MAX_FALL),
-		_origin.y + 280.0
+		_origin.y + 520.0
 	)
 
 

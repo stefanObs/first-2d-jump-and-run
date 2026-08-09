@@ -42,6 +42,7 @@ static func apply_to_level(level: Node) -> void:
 	# After actor styles: Hazard.apply_level_style would otherwise overwrite
 	# per-bank ridge tops with a temporary single-height canyon align.
 	_align_pits(level)
+	_carve_ground_lips_for_canyons(level)
 
 
 static func _apply_actor_styles(level: Node, style: String) -> void:
@@ -333,9 +334,13 @@ static func _snap_ceiling_hangings(level: Node, attach_points: Array, fallback_y
 		spike.fuse_with_ceiling = true
 		spike.global_position.y = _nearest_ceiling_attach_y(attach_points, spike.global_position.x, fallback_y) - 6.0
 		spike.call("_apply_hang_look", true)
+		if spike.has_method("sync_ceiling_origin"):
+			spike.call("sync_ceiling_origin")
 	for node in level.find_children("*", "AcidDrip", true, false):
 		var drip := node as Node2D
 		drip.global_position.y = _nearest_ceiling_attach_y(attach_points, drip.global_position.x, fallback_y) + 2.0
+		if drip.has_method("sync_ceiling_origin"):
+			drip.call("sync_ceiling_origin")
 
 
 static func _nearest_ceiling_attach_y(attach_points: Array, world_x: float, fallback_y: float) -> float:
@@ -639,9 +644,11 @@ static func _make_contiguous_floors(level: Node, style: String = LevelStyle.DESE
 
 	# Lip inset: desert sand crust stops at the inland edge of the ridge face so
 	# FloorSurface never paints over the cliff. Dirt/abyss stay under the opaque
-	# bank (not in the sky gap past the ridge lip).
-	const CANYON_SURFACE_INSET := 88.0
-	const CANYON_DIRT_INSET := 64.0
+	# bank (not in the sky gap past the ridge lip). Keep this modest — collision
+	# is carved by the same amount in `_carve_ground_lips_for_canyons` so feet
+	# cannot rest on the blue sky band without bloating jump gaps.
+	const CANYON_SURFACE_INSET := 12.0
+	const CANYON_DIRT_INSET := 10.0
 
 	for i in range(merged.size()):
 		var strip: Dictionary = merged[i]
@@ -1278,6 +1285,65 @@ static func _align_pits(level: Node) -> void:
 			float(edge_tops["left"]),
 			float(edge_tops["right"])
 		)
+
+
+static func _carve_ground_lips_for_canyons(level: Node) -> void:
+	## Shrink Ground* collision at canyon mouths so feet cannot rest on the blue
+	## sky band past the painted desert crust / ridge lip.
+	const LIP_INSET := 12.0
+	var merged := _cached_merged_segments(level)
+	if merged.size() < 2:
+		return
+	for i in range(merged.size() - 1):
+		if not _is_canyon_between(merged[i], merged[i + 1]):
+			continue
+		var left_right := float(merged[i]["right"])
+		var right_left := float(merged[i + 1]["left"])
+		_trim_ground_lip(level, left_right, true, LIP_INSET)
+		_trim_ground_lip(level, right_left, false, LIP_INSET)
+	# Collision extents changed — drop the walk-surface segment cache.
+	invalidate_walk_surface_cache()
+
+
+static func _trim_ground_lip(
+	level: Node, lip_x: float, left_bank: bool, inset: float
+) -> void:
+	for node in level.find_children("Ground*", "StaticBody2D", true, false):
+		if String(node.name).ends_with("Fill"):
+			continue
+		var body := node as StaticBody2D
+		if body == null:
+			continue
+		var shape_node := body.get_node_or_null("CollisionShape2D") as CollisionShape2D
+		if shape_node == null or shape_node.disabled or not (shape_node.shape is RectangleShape2D):
+			continue
+		var rect := (shape_node.shape as RectangleShape2D).duplicate() as RectangleShape2D
+		var center := shape_node.global_position
+		var half := rect.size * 0.5
+		var left := center.x - half.x
+		var right := center.x + half.x
+		if left_bank:
+			if absf(right - lip_x) > 3.0:
+				continue
+			var new_right := right - inset
+			var new_w := new_right - left
+			if new_w < 24.0:
+				shape_node.disabled = true
+				continue
+			rect.size = Vector2(new_w, rect.size.y)
+			shape_node.shape = rect
+			shape_node.global_position = Vector2((left + new_right) * 0.5, center.y)
+		else:
+			if absf(left - lip_x) > 3.0:
+				continue
+			var new_left := left + inset
+			var new_w := right - new_left
+			if new_w < 24.0:
+				shape_node.disabled = true
+				continue
+			rect.size = Vector2(new_w, rect.size.y)
+			shape_node.shape = rect
+			shape_node.global_position = Vector2((new_left + right) * 0.5, center.y)
 
 
 static func _gap_edge_tops(

@@ -46,12 +46,19 @@ func _ready() -> void:
 	set_physics_process(true)
 
 
+func sync_ceiling_origin() -> void:
+	## Refresh hang seat after WildWestTheme snaps us onto the cave ceiling.
+	_origin = global_position
+	_probe_floor()
+
+
 func _probe_floor() -> void:
+	var from := _origin + Vector2(0.0, 36.0)
 	_floor_y = FloorProbe.hit_y(
 		self,
-		_origin + Vector2(0, 12),
+		from,
 		_origin + Vector2(0, MAX_FALL),
-		_origin.y + 280.0
+		_origin.y + 520.0
 	)
 
 

@@ -161,6 +161,26 @@ func _ready() -> void:
 		"Moonlight Gulch springs and planks clear the gulch floor",
 		_test_level_09_gulch_clearance
 	)
+	failures += await _run(
+		"Moonlight Gulch workshop import keeps ledges and hop movers",
+		_test_level_09_workshop_parity
+	)
+	failures += await _run(
+		"Canyon lips are not walkable over blue sky",
+		_test_canyon_lips_not_walkable_over_sky
+	)
+	failures += await _run(
+		"Ninja keeps walking under a flying player between throws",
+		_test_ninja_walks_under_flyer
+	)
+	failures += await _run(
+		"Ceiling drips and stalactites hang from the cave ceiling",
+		_test_ceiling_hangings_from_ceiling
+	)
+	failures += await _run(
+		"Cowboy climb frames are not the cowgirl back view",
+		_test_cowboy_climb_not_cowgirl
+	)
 	failures += await _run("Canyon rafts are one-way jump-through platforms", _test_one_way_moving_platforms)
 	failures += await _run("Custom level store and builder work", _test_custom_level_builder)
 	failures += await _run("Ladder branches land on the upper ledge", _test_ladder_branch_upper_ledge)
@@ -4922,6 +4942,228 @@ func _test_level_09_raft_hop_boots() -> Variant:
 			return "Static platform %s can still bypass the raft hop to Magic Boots." % name_text
 
 	level.free()
+	return null
+
+
+func _test_level_09_workshop_parity() -> Variant:
+	var imported := CustomLevelStore.import_builtin(9)
+	var objects: Array = imported.get("objects", [])
+	var platforms := 0
+	var diagonal_movers := 0
+	var canyon_cells := 0
+	var springs := 0
+	var winds := 0
+	for value in objects:
+		var object := value as Dictionary
+		var type_name := str(object.get("type", ""))
+		match type_name:
+			"platform":
+				platforms += 1
+			"mover", "moving_cloud":
+				if absf(float(object.get("point_ay", 0.0))) > 1.0 \
+					or absf(float(object.get("point_by", 0.0))) > 1.0:
+					diagonal_movers += 1
+			"canyon":
+				canyon_cells += 1
+			"spring":
+				springs += 1
+			"wind":
+				winds += 1
+	if platforms < 8:
+		return "Level 9 workshop import should keep spring/hop ledges as platforms (got %d)." % platforms
+	if diagonal_movers < 4:
+		return "Level 9 workshop import should keep diagonal hop movers (got %d)." % diagonal_movers
+	if canyon_cells < 8:
+		return "Level 9 workshop import should fill canyon mouths across the gap (got %d cells)." % canyon_cells
+	if springs < 5:
+		return "Level 9 workshop import should keep gulch springs (got %d)." % springs
+	if winds < 2:
+		return "Level 9 workshop import should keep wind zones (got %d)." % winds
+	# Rebuild must restore diagonal travel on movers.
+	var level := LevelController.new()
+	level.is_custom_level = true
+	level.skip_auto_setup = true
+	add_child(level)
+	CustomLevelBuilder.build(level, imported, true)
+	var rebuilt_diagonal := 0
+	for node in level.find_children("*", "AnimatableBody2D", true, false):
+		if not (node is MovingPlatform):
+			continue
+		var mover := node as MovingPlatform
+		if absf(mover.point_a.y) > 1.0 or absf(mover.point_b.y) > 1.0:
+			rebuilt_diagonal += 1
+	level.queue_free()
+	if rebuilt_diagonal < 4:
+		return "Level 9 workshop rebuild should keep diagonal hop paths (got %d)." % rebuilt_diagonal
+	return null
+
+
+func _test_canyon_lips_not_walkable_over_sky() -> Variant:
+	var packed: PackedScene = load("res://scenes/levels/level_09.tscn")
+	if packed == null:
+		return "Missing Level 09 scene."
+	var level: Node = packed.instantiate()
+	add_child(level)
+	if level is LevelController:
+		(level as LevelController).setup_level()
+	await get_tree().process_frame
+	await get_tree().physics_frame
+	WildWestTheme.invalidate_walk_surface_cache()
+	var merged := WildWestTheme._cached_merged_segments(level)
+	var checked := 0
+	var host := level as Node2D
+	for i in range(merged.size() - 1):
+		if not WildWestTheme._is_canyon_between(merged[i], merged[i + 1]):
+			continue
+		var left_lip := float(merged[i]["right"])
+		var right_lip := float(merged[i + 1]["left"])
+		if right_lip - left_lip < 40.0:
+			continue
+		var bank_top := minf(float(merged[i]["top"]), float(merged[i + 1]["top"]))
+		for sample_x in [left_lip + 6.0, right_lip - 6.0]:
+			checked += 1
+			var hit_y := FloorProbe.hit_y(
+				host,
+				Vector2(sample_x, bank_top - 24.0),
+				Vector2(sample_x, bank_top + 64.0),
+				NAN
+			)
+			if not is_nan(hit_y) and absf(hit_y - bank_top) <= 20.0:
+				level.queue_free()
+				return "Canyon lip still walkable over sky at x=%.0f." % sample_x
+	level.queue_free()
+	if checked < 2:
+		return "Level 09 should expose canyon mouths for lip checks."
+	return null
+
+
+func _test_ninja_walks_under_flyer() -> Variant:
+	var left := StaticBody2D.new()
+	left.collision_layer = 1
+	left.position = Vector2(300, 420)
+	var left_shape := CollisionShape2D.new()
+	var left_rect := RectangleShape2D.new()
+	left_rect.size = Vector2(600, 40)
+	left_shape.shape = left_rect
+	left.add_child(left_shape)
+	add_child(left)
+
+	var packed: PackedScene = load("res://scenes/world/ninja_enemy.tscn")
+	if packed == null:
+		left.queue_free()
+		return "Missing ninja enemy scene."
+	var ninja := packed.instantiate() as NinjaEnemy
+	ninja.position = Vector2(200, 400)
+	add_child(ninja)
+	await get_tree().physics_frame
+	ninja._state = NinjaEnemy.State.CHASE
+	ninja._set_dormant(false)
+	ninja._throw_timer = 1.0
+	ninja._activated = true
+
+	var player := Player.new()
+	player.name = "Player"
+	player.position = Vector2(420, 220)
+	player.set_physics_process(false)
+	add_child(player)
+	player.get_modes().activate(ModeController.Mode.WINGS)
+	await get_tree().physics_frame
+
+	ninja.global_position = Vector2(200, 400)
+	ninja._snap_feet_to_surface()
+	var start_x := ninja.global_position.x
+	for _i in range(30):
+		await get_tree().physics_frame
+		if ninja._state == NinjaEnemy.State.CHASE:
+			ninja._handle_flying_player(player, 1.0 / 60.0)
+	var moved := absf(ninja.global_position.x - start_x)
+	player.queue_free()
+	ninja.queue_free()
+	left.queue_free()
+	if moved < 8.0:
+		return "Ninja should keep walking under a flying player between shuriken throws (moved %.1f)." % moved
+	return null
+
+
+func _test_ceiling_hangings_from_ceiling() -> Variant:
+	if CustomLevelStore.placement_row("acid_drip", 4, 7) != 0:
+		return "Acid drips must stamp on the ceiling row."
+	if CustomLevelStore.placement_row("stalactite", 3, 7) != 0:
+		return "Stalactites must stamp on the ceiling row."
+	var data := {
+		"width": 24,
+		"height": 8,
+		"grid": 40,
+		"style": "cave",
+		"spawn": [2, 7],
+		"objects": [
+			{"type": "ground", "x": 0, "y": 7},
+			{"type": "ground", "x": 1, "y": 7},
+			{"type": "ground", "x": 2, "y": 7},
+			{"type": "ground", "x": 3, "y": 7},
+			{"type": "ground", "x": 4, "y": 7},
+			{"type": "ground", "x": 5, "y": 7},
+			{"type": "acid_drip", "x": 3, "y": 0},
+			{"type": "stalactite", "x": 4, "y": 0},
+			{"type": "goal", "x": 5, "y": 6},
+		],
+	}
+	var level := LevelController.new()
+	level.is_custom_level = true
+	level.skip_auto_setup = true
+	add_child(level)
+	CustomLevelBuilder.build(level, data, true)
+	WildWestTheme.apply_to_level(level)
+	await get_tree().process_frame
+	await get_tree().physics_frame
+	var found_drip: AcidDrip = null
+	var found_spike: StalactiteHazard = null
+	for node in level.find_children("*", "Area2D", true, false):
+		if node is AcidDrip:
+			found_drip = node as AcidDrip
+		elif node is StalactiteHazard and (node as StalactiteHazard).drops:
+			found_spike = node as StalactiteHazard
+	if found_drip == null or found_spike == null:
+		level.queue_free()
+		return "Cave workshop should spawn acid drip and stalactite hangings."
+	if found_drip.global_position.y > 120.0:
+		level.queue_free()
+		return "Acid drip should hang from the cave ceiling after theme snap."
+	if found_spike.global_position.y > 120.0:
+		level.queue_free()
+		return "Stalactite should hang from the cave ceiling after theme snap."
+	var spike_origin: Vector2 = found_spike.get("_origin")
+	if absf(spike_origin.y - found_spike.global_position.y) > 1.0:
+		level.queue_free()
+		return "Stalactite origin must refresh after ceiling snap."
+	var floor_y: float = found_spike.get("_floor_y")
+	if is_nan(floor_y) or floor_y < found_spike.global_position.y + 80.0:
+		level.queue_free()
+		return "Stalactite floor probe must reach the trail/planks, not the flight ceiling."
+	level.queue_free()
+	return null
+
+
+func _test_cowboy_climb_not_cowgirl() -> Variant:
+	var cowboy := load("res://assets/player/climb_0.png") as Texture2D
+	var cowgirl := load("res://assets/player/cowgirl/climb_0.png") as Texture2D
+	if cowboy == null or cowgirl == null:
+		return "Missing climb frames."
+	var a := cowboy.get_image()
+	var b := cowgirl.get_image()
+	if a == null or b == null:
+		return "Climb frames must be readable images."
+	if a.get_width() != b.get_width() or a.get_height() != b.get_height():
+		return null
+	var diff := 0
+	var samples := 0
+	for y in range(0, a.get_height(), 2):
+		for x in range(0, a.get_width(), 2):
+			samples += 1
+			if a.get_pixel(x, y) != b.get_pixel(x, y):
+				diff += 1
+	if float(diff) / float(maxi(samples, 1)) < 0.08:
+		return "Cowboy climb_0.png still matches cowgirl climb art too closely."
 	return null
 
 

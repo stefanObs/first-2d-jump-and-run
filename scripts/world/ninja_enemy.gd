@@ -289,10 +289,7 @@ func _handle_ground_player(player: Player, delta: float) -> void:
 			_begin_gap_jump(ledge)
 			return
 	if FloorProbe.has_floor_ahead(self, _facing):
-		_apply_facing(_facing)
-		global_position.x += _facing * CHASE_SPEED * delta
-		_snap_feet_to_surface()
-		_set_move_animation(true)
+		_chase_along_trail(player, delta)
 		return
 	if player.global_position.y > global_position.y + LEDGE_STEP_MIN:
 		var drop := _find_drop_landing(_facing)
@@ -439,11 +436,16 @@ func _finish_gap_jump(token: int, land: Vector2) -> void:
 
 
 func _handle_flying_player(player: Player, delta: float) -> void:
-	_facing = 1.0 if player.global_position.x >= global_position.x else -1.0
-	_apply_facing(_facing)
-	_snap_feet_to_surface()
-	_set_move_animation(false)
+	## Keep chasing under a winged cowboy between throws — never freeze in place.
 	_throw_timer -= delta
+	var dx := player.global_position.x - global_position.x
+	_facing = 1.0 if dx >= 0.0 else -1.0
+	if _throw_timer > 0.0 or absf(dx) > 28.0:
+		_chase_along_trail(player, delta)
+	else:
+		_apply_facing(_facing)
+		_snap_feet_to_surface()
+		_set_move_animation(false)
 	if _throw_timer > 0.0:
 		return
 	if global_position.distance_to(player.global_position) > SHURIKEN_RANGE:
@@ -451,6 +453,26 @@ func _handle_flying_player(player: Player, delta: float) -> void:
 	if absf(player.global_position.y - global_position.y) > SHURIKEN_RANGE:
 		return
 	_begin_throw(player)
+
+
+func _chase_along_trail(player: Player, delta: float) -> void:
+	## Shared ground chase step used vs grounded and flying targets.
+	if (
+		_gap_is_imminent(_facing)
+		and signf(player.global_position.x - global_position.x) == _facing
+	):
+		var landing := _find_gap_landing(_facing)
+		if not landing.is_empty():
+			_begin_gap_jump(landing)
+			return
+	if FloorProbe.has_floor_ahead(self, _facing):
+		_apply_facing(_facing)
+		global_position.x += _facing * CHASE_SPEED * delta
+		_snap_feet_to_surface()
+		_set_move_animation(true)
+		return
+	_snap_feet_to_surface()
+	_set_move_animation(false)
 
 
 func _begin_sword_attack(player: Player) -> void:

@@ -72,7 +72,8 @@ static func normalize_style(value: Variant) -> String:
 
 static func placement_row(type_name: String, click_y: int, trail: int) -> int:
 	if is_ceiling_hanging(type_name):
-		return clampi(mini(click_y, 1), 0, trail)
+		## Tropfen / Stalaktiten always hang from the cave ceiling row.
+		return 0
 	if is_ground_standing(type_name) and click_y >= trail - 1:
 		return maxi(trail - 1, 0)
 	return clampi(click_y, 0, trail)
@@ -819,7 +820,25 @@ static func import_builtin(level_number: int) -> Dictionary:
 		max_x = maxi(max_x, cell_x + 3)
 		var type_name := _import_type_for(node)
 		if not type_name.is_empty():
-			_append_unique(objects, {"type": type_name, "x": cell_x, "y": cell_y})
+			var stamp := {"type": type_name, "x": cell_x, "y": cell_y}
+			if node is MovingPlatform:
+				var mover := node as MovingPlatform
+				stamp["point_ax"] = mover.point_a.x
+				stamp["point_ay"] = mover.point_a.y
+				stamp["point_bx"] = mover.point_b.x
+				stamp["point_by"] = mover.point_b.y
+				stamp["move_speed"] = mover.move_speed
+				stamp["start_at_point_b"] = mover.start_at_point_b
+			elif node is WindZone:
+				var wind := node as WindZone
+				stamp["push_right"] = wind.wind_force.x >= 0.0
+				stamp["wind_force_x"] = wind.wind_force.x
+				stamp["wind_force_y"] = wind.wind_force.y
+			elif node is SpringPad:
+				stamp["bounce_velocity"] = (node as SpringPad).bounce_velocity
+			elif is_ceiling_hanging(type_name):
+				stamp["y"] = 0
+			_append_unique(objects, stamp)
 	for child in level.get_children():
 		if not (child is StaticBody2D):
 			continue
@@ -837,7 +856,13 @@ static func import_builtin(level_number: int) -> Dictionary:
 			max_ground_y = maxi(max_ground_y, y)
 			for x in range(maxi(first_x, 0), mini(last_x + 1, 180)):
 				_append_unique(objects, {"type": "ground", "x": x, "y": y})
-		elif "plank" in body_name or "platform" in body_name:
+		elif (
+			"plank" in body_name
+			or "platform" in body_name
+			or "ledge" in body_name
+			or "hop" in body_name
+			or "reward" in body_name
+		):
 			_append_unique(objects, {
 				"type": "platform",
 				"x": maxi(0, int(round(center.x / grid))),
@@ -849,7 +874,11 @@ static func import_builtin(level_number: int) -> Dictionary:
 	var shift := trail - max_ground_y if max_ground_y > 0 else 0
 	if shift != 0:
 		for object in objects:
+			if is_ceiling_hanging(str(object.get("type", ""))):
+				object["y"] = 0
+				continue
 			object["y"] = clampi(int(object.get("y", 0)) + shift, 0, trail)
+	_fill_imported_canyon_gaps(objects, trail)
 	result["height"] = height
 	result["width"] = clampi(max_x, MIN_WIDTH, MAX_WIDTH)
 	# Walk-surface props stand one stamp row above dirt; snap near-trail imports there.
@@ -930,6 +959,31 @@ static func _import_type_for(node: Node) -> String:
 			return "pit"
 		return "canyon" if maxf(absf(body.scale.x), absf(body.scale.y)) > 1.35 else "cactus"
 	return ""
+
+static func _fill_imported_canyon_gaps(objects: Array, trail: int) -> void:
+	## Stamp every empty trail cell inside a ground gap so workshop canyons match campaign mouths.
+	var ground_xs: Dictionary = {}
+	for value in objects:
+		var object := value as Dictionary
+		if str(object.get("type", "")) != "ground":
+			continue
+		if int(object.get("y", -1)) != trail:
+			continue
+		ground_xs[int(object.get("x", -1))] = true
+	if ground_xs.is_empty():
+		return
+	var keys: Array = ground_xs.keys()
+	keys.sort()
+	for i in range(keys.size() - 1):
+		var left_x: int = keys[i]
+		var right_x: int = keys[i + 1]
+		if right_x - left_x <= 1:
+			continue
+		for x in range(left_x + 1, right_x):
+			if ground_xs.has(x):
+				continue
+			_append_unique(objects, {"type": "canyon", "x": x, "y": trail})
+
 
 static func append_ladder_branch(
 	objects: Array[Dictionary], trail: int, start_x: int = 28
@@ -1046,7 +1100,7 @@ static func sanitize(source: Dictionary, slot_index: int) -> Dictionary:
 				if is_ground_standing(type_name) and int(object.get("y", 0)) == trail:
 					object["y"] = maxi(trail - 1, 0)
 				if is_ceiling_hanging(type_name):
-					object["y"] = clampi(int(object.get("y", 0)), 0, mini(1, trail))
+					object["y"] = 0
 				objects.append(object)
 				if objects.size() >= 900:
 					break

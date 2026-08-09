@@ -51,6 +51,9 @@ const _TRAIL_CATEGORY_ID := "trail"
 var _hover_column: int = -1
 var _hover_row: int = -1
 var _syncing_scroll := false
+var _type_at_cache: Dictionary = {}
+var _type_cache_dirty := true
+var _last_highlight_key := ""
 var _export_dialog: FileDialog
 var _import_dialog: FileDialog
 const _EDGE_SCROLL_ZONE := 28.0
@@ -998,8 +1001,8 @@ func _process(delta: float) -> void:
 		delta_x = _edge_scroll_delta(_grid_scroll.get_local_mouse_position().x, _grid_scroll.size.x, delta)
 		if absf(delta_x) > 0.01:
 			_apply_horizontal_scroll(_grid_scroll.scroll_horizontal + delta_x)
-		if _hover_column >= 0:
-			_sync_preview_to_hover()
+			if _hover_column >= 0:
+				_sync_preview_to_hover()
 		return
 	if _preview == null:
 		return
@@ -1156,6 +1159,7 @@ func _has_type_at(objects: Array, x: int, y: int, type_name: String) -> bool:
 
 
 func _refresh_grid() -> void:
+	_mark_type_cache_dirty()
 	var width := int(_data.get("width", CustomLevelStore.DEFAULT_WIDTH))
 	var height := int(_data.get("height", 8))
 	var trail := _trail_y()
@@ -1191,6 +1195,13 @@ func _refresh_grid_highlights() -> void:
 		ghost_cells = CustomLevelStore.stamp_hover_cells(
 			_selected_type, _hover_column, _hover_row, trail, width
 		)
+	var highlight_key := "%d:%d:%s:%d" % [
+		_hover_column, _hover_row, _selected_type, ghost_cells.size()
+	]
+	if highlight_key == _last_highlight_key and not _type_cache_dirty:
+		return
+	_last_highlight_key = highlight_key
+	_ensure_type_cache()
 	var ghost_lookup := {}
 	for cell in ghost_cells:
 		ghost_lookup["%d,%d" % [cell.x, cell.y]] = true
@@ -1212,17 +1223,30 @@ func _refresh_grid_highlights() -> void:
 					cell.text = ghost_label
 
 
-func _display_type_at(x: int, y: int) -> String:
-	var ground := false
+func _mark_type_cache_dirty() -> void:
+	_type_cache_dirty = true
+	_last_highlight_key = ""
+
+
+func _ensure_type_cache() -> void:
+	if not _type_cache_dirty:
+		return
+	_type_at_cache.clear()
 	for value in _data.get("objects", []):
 		var object := value as Dictionary
-		if int(object.get("x", -1)) != x or int(object.get("y", -1)) != y:
-			continue
+		var key := "%d,%d" % [int(object.get("x", -1)), int(object.get("y", -1))]
 		var type_name := str(object.get("type", ""))
-		if type_name != "ground":
-			return type_name
-		ground = true
-	return "ground" if ground else ""
+		if type_name == "ground":
+			if not _type_at_cache.has(key):
+				_type_at_cache[key] = "ground"
+			continue
+		_type_at_cache[key] = type_name
+	_type_cache_dirty = false
+
+
+func _display_type_at(x: int, y: int) -> String:
+	_ensure_type_cache()
+	return str(_type_at_cache.get("%d,%d" % [x, y], ""))
 
 
 func _short_label(type_name: String) -> String:

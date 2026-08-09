@@ -30,6 +30,7 @@ var _ghost_overlay: Control
 var _ghost_root: Node2D
 var _rebuild_pending := false
 var _last_built_hash := ""
+var _ghost_key := ""
 
 func _ready() -> void:
 	custom_minimum_size = MIN_PREVIEW_SIZE
@@ -125,7 +126,7 @@ func _build_viewport() -> void:
 	_viewport = SubViewport.new()
 	_viewport.name = "LivePreviewViewport"
 	_viewport.size = Vector2i(320, 180)
-	_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	_viewport.handle_input_locally = false
 	_viewport.gui_disable_input = true
 	_viewport.physics_object_picking = false
@@ -218,6 +219,7 @@ func _rebuild_world() -> void:
 		_view_center_x = -1.0
 	_update_camera()
 	_update_ghost_world()
+	_request_preview_redraw()
 
 func _ensure_view_center() -> void:
 	if _view_center_x >= 0.0 or _data.is_empty():
@@ -237,6 +239,7 @@ func _update_camera() -> void:
 	var metrics := _view_metrics()
 	_camera.zoom = Vector2(metrics["zoom"], metrics["zoom"])
 	_camera.position = Vector2(_view_center_x, metrics["center_y"])
+	_request_preview_redraw()
 	_update_cursor_marker()
 
 func _update_cursor_marker() -> void:
@@ -392,19 +395,40 @@ func _aligned_ghost_world_rect() -> Rect2:
 		rect.position.y = floor_y - rect.size.y
 	return rect
 
+func _request_preview_redraw() -> void:
+	if _viewport == null:
+		return
+	_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+
+
 func _clear_ghost_root() -> void:
 	if _ghost_root != null and is_instance_valid(_ghost_root):
 		_ghost_root.queue_free()
 	_ghost_root = null
+	_ghost_key = ""
 
 func _update_ghost_world() -> void:
+	if _world == null or not is_instance_valid(_world):
+		_clear_ghost_root()
+		return
+	var world_rect := _aligned_ghost_world_rect()
+	var next_key := "%d:%d:%s:%.1f:%.1f:%.1f:%.1f" % [
+		_hover_column,
+		_hover_row,
+		_selected_type,
+		world_rect.position.x,
+		world_rect.position.y,
+		world_rect.size.x,
+		world_rect.size.y,
+	]
+	if next_key == _ghost_key and _ghost_root != null and is_instance_valid(_ghost_root):
+		return
+	_ghost_key = next_key
 	_clear_ghost_root()
+	_ghost_key = next_key
 	if _ghost_overlay != null:
 		for child in _ghost_overlay.get_children():
 			child.queue_free()
-	if _world == null or not is_instance_valid(_world):
-		return
-	var world_rect := _aligned_ghost_world_rect()
 	if world_rect.size.x <= 0.0:
 		return
 
@@ -412,6 +436,7 @@ func _update_ghost_world() -> void:
 	_ghost_root.name = "StampGhost"
 	_ghost_root.z_index = 120
 	_world.add_child(_ghost_root)
+	_request_preview_redraw()
 
 	var fill := Polygon2D.new()
 	fill.name = "GhostFill"

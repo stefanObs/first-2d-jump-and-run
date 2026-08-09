@@ -144,7 +144,9 @@ static func _spawn_object(
 				style
 			)
 		"spring":
-			_add_scene(level, SPRING, "Spring%d" % index, position)
+			var spring := _add_scene(level, SPRING, "Spring%d" % index, position) as SpringPad
+			if spring != null and object.has("bounce_velocity"):
+				spring.bounce_velocity = float(object.get("bounce_velocity"))
 		"bandit", "bounty_bandit":
 			var bandit := BANDIT.instantiate() as Opponent
 			if bandit != null:
@@ -222,10 +224,23 @@ static func _add_mover(
 		return
 	mover.name = ("MovingCloud%d" if type_name == "moving_cloud" else "Mover%d") % index
 	mover.position = position
-	var travel := float(object.get("travel", MOVER_TRAVEL))
-	mover.point_a = Vector2(-travel, 0.0)
-	mover.point_b = Vector2(travel, 0.0)
+	if object.has("point_ax") or object.has("point_bx"):
+		mover.point_a = Vector2(
+			float(object.get("point_ax", -MOVER_TRAVEL)),
+			float(object.get("point_ay", 0.0))
+		)
+		mover.point_b = Vector2(
+			float(object.get("point_bx", MOVER_TRAVEL)),
+			float(object.get("point_by", 0.0))
+		)
+	else:
+		var travel := float(object.get("travel", MOVER_TRAVEL))
+		var travel_y := float(object.get("travel_y", 0.0))
+		mover.point_a = Vector2(-travel, -travel_y)
+		mover.point_b = Vector2(travel, travel_y)
 	mover.start_at_point_b = bool(object.get("start_at_point_b", false))
+	if object.has("move_speed"):
+		mover.move_speed = float(object.get("move_speed"))
 	mover.visual_style = (
 		MovingPlatform.VisualStyle.CLOUD
 		if type_name == "moving_cloud"
@@ -268,7 +283,12 @@ static func _add_wind(level: Node, index: int, position: Vector2, object: Dictio
 		return
 	wind.name = "Wind%d" % index
 	wind.position = position
-	if not bool(object.get("push_right", true)):
+	if object.has("wind_force_x") or object.has("wind_force_y"):
+		wind.wind_force = Vector2(
+			float(object.get("wind_force_x", wind.wind_force.x)),
+			float(object.get("wind_force_y", wind.wind_force.y))
+		)
+	elif not bool(object.get("push_right", true)):
 		wind.wind_force.x = -absf(wind.wind_force.x)
 	else:
 		wind.wind_force.x = absf(wind.wind_force.x)

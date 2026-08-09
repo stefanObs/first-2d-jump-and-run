@@ -38,6 +38,7 @@ var _charge_bob: float = 0.0
 var _run_phase: float = 0.0
 var _stun_token: int = 0
 var _charge_grace: float = 0.0
+var _stun_impact_t: float = 0.0
 
 
 func _ready() -> void:
@@ -92,6 +93,7 @@ func get_heart_drop_position() -> Vector2:
 func _physics_process(delta: float) -> void:
 	if _won or _bull == null or not combat_ready:
 		return
+	_clamp_player_inside_arena()
 	if _charge_grace > 0.0:
 		_charge_grace = maxf(_charge_grace - delta, 0.0)
 	match _state:
@@ -166,12 +168,30 @@ func _aim_at_player() -> void:
 	_apply_facing()
 
 
+func _clamp_player_inside_arena() -> void:
+	## Soft fence: keep the cowboy between the arena walls so a bounce cannot
+	## land on top of a wall collider and get stuck outside the fight.
+	if player == null:
+		return
+	var min_x := _left_x + 36.0
+	var max_x := _right_x - 36.0
+	if player.global_position.x < min_x:
+		player.global_position.x = min_x
+		if player.velocity.x < 0.0:
+			player.velocity.x = 0.0
+	elif player.global_position.x > max_x:
+		player.global_position.x = max_x
+		if player.velocity.x > 0.0:
+			player.velocity.x = 0.0
+
+
 func _begin_stun() -> void:
 	if _state != State.CHARGE:
 		return
 	_state = State.STUN
 	_stun_token += 1
 	var token := _stun_token
+	_stun_impact_t = 0.55
 	# Step out of the wall first so the bull is not stuck inside it.
 	_pull_clear_of_walls()
 	# Keep charge direction (facing the wall) until stun ends; _end_stun() turns toward the player.
@@ -198,23 +218,39 @@ func _animate_stun_idle(delta: float) -> void:
 	_run_phase = 0.0
 	_sprite.texture = BULL_TEX
 	_sprite.scale = Vector2.ONE
-	_charge_bob += delta * 8.0
-	_sprite.position.x = 0.0
-	_sprite.position.y = BULL_FOOT_Y + sin(_charge_bob) * 2.0
-	_sprite.rotation = sin(_charge_bob) * 0.08
+	if _stun_impact_t > 0.0:
+		_stun_impact_t = maxf(_stun_impact_t - delta, 0.0)
+		var t := 1.0 - (_stun_impact_t / 0.55)
+		# Impact → recoil lean → settle into dazed bob so the stun reads clearly.
+		_sprite.position.x = sin(t * PI) * -18.0 * _dir
+		_sprite.position.y = BULL_FOOT_Y + absf(sin(t * PI)) * 10.0
+		_sprite.rotation = sin(t * PI) * 0.28 * _dir
+	else:
+		_charge_bob += delta * 8.0
+		_sprite.position.x = sin(_charge_bob * 1.4) * 3.0
+		_sprite.position.y = BULL_FOOT_Y + sin(_charge_bob) * 3.5
+		_sprite.rotation = sin(_charge_bob * 1.2) * 0.12
 	if _stars != null:
-		_stars.rotation += delta * 2.5
+		_stars.rotation += delta * 3.2
+		_stars.position.y = -120.0 + sin(_charge_bob * 2.0) * 4.0
 
 
 func _play_wall_impact() -> void:
 	if _sprite == null:
 		return
-	# Keep the bull's size fixed; a short recoil conveys the collision.
+	## Keep painted mass fixed (boss size tests); stun reads via lean / recoil / stars.
+	_sprite.texture = BULL_TEX
 	_sprite.scale = Vector2.ONE
+	_sprite.position = Vector2(-18.0 * _dir, BULL_FOOT_Y + 6.0)
+	_sprite.rotation = 0.26 * _dir
 	var tween := create_tween()
-	tween.tween_property(_sprite, "position:x", -10.0 * _dir, 0.08)
-	tween.tween_property(_sprite, "position:x", 4.0 * _dir, 0.1)
-	tween.tween_property(_sprite, "position:x", 0.0, 0.12)
+	tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(_sprite, "position:x", 12.0 * _dir, 0.12)
+	tween.parallel().tween_property(_sprite, "rotation", -0.2 * _dir, 0.12)
+	tween.parallel().tween_property(_sprite, "position:y", BULL_FOOT_Y - 4.0, 0.12)
+	tween.tween_property(_sprite, "position:x", 0.0, 0.16)
+	tween.parallel().tween_property(_sprite, "position:y", BULL_FOOT_Y, 0.16)
+	tween.parallel().tween_property(_sprite, "rotation", 0.0, 0.16)
 
 
 func _play_hit_reaction() -> void:

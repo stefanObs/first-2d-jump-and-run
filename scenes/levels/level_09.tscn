@@ -23,7 +23,7 @@
 [ext_resource type="PackedScene" path="res://scenes/world/ninja_enemy.tscn" id="ninja_enemy"]
 
 [sub_resource type="RectangleShape2D" id="GroundSeg"]
-size = Vector2(420, 64)
+size = Vector2(450, 64)
 
 [sub_resource type="RectangleShape2D" id="Block"]
 size = Vector2(160, 32)
@@ -393,15 +393,15 @@ mouse_filter = 2
 [node name="Ground" type="StaticBody2D" parent="."]
 position = Vector2(210, 352)
 [node name="Visual" type="ColorRect" parent="Ground"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = 32.0
 color = Color(0.86, 0.68, 0.38, 1)
 [node name="TopStripe" type="ColorRect" parent="Ground"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = -18.0
 color = Color(0.45, 0.72, 0.28, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground"]
@@ -411,15 +411,15 @@ shape = SubResource("GroundSeg")
 [node name="Ground1" type="StaticBody2D" parent="."]
 position = Vector2(640, 352)
 [node name="Visual" type="ColorRect" parent="Ground1"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = 32.0
 color = Color(0.86, 0.68, 0.38, 1)
 [node name="TopStripe" type="ColorRect" parent="Ground1"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = -18.0
 color = Color(0.45, 0.72, 0.28, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground1"]
@@ -429,15 +429,15 @@ shape = SubResource("GroundSeg")
 [node name="Ground2" type="StaticBody2D" parent="."]
 position = Vector2(1070, 352)
 [node name="Visual" type="ColorRect" parent="Ground2"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = 32.0
 color = Color(0.86, 0.68, 0.38, 1)
 [node name="TopStripe" type="ColorRect" parent="Ground2"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = -18.0
 color = Color(0.45, 0.72, 0.28, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground2"]
@@ -452,15 +452,15 @@ scale = Vector2(4.8, 1.8)
 [node name="Ground3" type="StaticBody2D" parent="."]
 position = Vector2(1650, 352)
 [node name="Visual" type="ColorRect" parent="Ground3"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = 32.0
 color = Color(0.86, 0.68, 0.38, 1)
 [node name="TopStripe" type="ColorRect" parent="Ground3"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = -18.0
 color = Color(0.45, 0.72, 0.28, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground3"]
@@ -470,15 +470,15 @@ shape = SubResource("GroundSeg")
 [node name="Ground4" type="StaticBody2D" parent="."]
 position = Vector2(2080, 312)
 [node name="Visual" type="ColorRect" parent="Ground4"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = 32.0
 color = Color(0.86, 0.68, 0.38, 1)
 [node name="TopStripe" type="ColorRect" parent="Ground4"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = -18.0
 color = Color(0.45, 0.72, 0.28, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground4"]
@@ -488,15 +488,15 @@ shape = SubResource("GroundSeg")
 [node name="Ground4Fill" type="StaticBody2D" parent="."]
 position = Vector2(2080, 352)
 [node name="Visual" type="ColorRect" parent="Ground4Fill"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = 32.0
 color = Color(0.72, 0.46, 0.22, 1)
 [node name="TopStripe" type="ColorRect" parent="Ground4Fill"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = -18.0
 color = Color(0.45, 0.72, 0.28, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground4Fill"]
@@ -507,15 +507,15 @@ shape = SubResource("GroundSeg")
 [node name="Ground5" type="StaticBody2D" parent="."]
 position = Vector2(2510, 312)
 [node name="Visual" type="ColorRect" parent="Ground5"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = 32.0
 color = Color(0.86, 0.68, 0.38, 1)
 [node name="TopStripe" type="ColorRect" parent="Ground5"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = -18.0
 color = Color(0.45, 0.72, 0.28, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground5"]
@@ -525,15 +525,15 @@ shape = SubResource("GroundSeg")
 [node name="Ground5Fill" type="StaticBody2D" parent="."]
 position = Vector2(2510, 352)
 [node name="Visual" type="ColorRect" parent="Ground5Fill"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = 32.0
 color = Color(0.72, 0.46, 0.22, 1)
 [node name="TopStripe" type="ColorRect" parent="Ground5Fill"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = -18.0
 color = Color(0.45, 0.72, 0.28, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground5Fill"]
@@ -549,15 +549,15 @@ scale = Vector2(4.8, 1.8)
 [node name="Ground6" type="StaticBody2D" parent="."]
 position = Vector2(3090, 352)
 [node name="Visual" type="ColorRect" parent="Ground6"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = 32.0
 color = Color(0.86, 0.68, 0.38, 1)
 [node name="TopStripe" type="ColorRect" parent="Ground6"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = -18.0
 color = Color(0.45, 0.72, 0.28, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground6"]
@@ -567,15 +567,15 @@ shape = SubResource("GroundSeg")
 [node name="Ground7" type="StaticBody2D" parent="."]
 position = Vector2(3520, 352)
 [node name="Visual" type="ColorRect" parent="Ground7"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = 32.0
 color = Color(0.86, 0.68, 0.38, 1)
 [node name="TopStripe" type="ColorRect" parent="Ground7"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = -18.0
 color = Color(0.45, 0.72, 0.28, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground7"]
@@ -585,15 +585,15 @@ shape = SubResource("GroundSeg")
 [node name="Ground8" type="StaticBody2D" parent="."]
 position = Vector2(3950, 352)
 [node name="Visual" type="ColorRect" parent="Ground8"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = 32.0
 color = Color(0.86, 0.68, 0.38, 1)
 [node name="TopStripe" type="ColorRect" parent="Ground8"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = -18.0
 color = Color(0.45, 0.72, 0.28, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground8"]
@@ -608,15 +608,15 @@ scale = Vector2(4.8, 1.8)
 [node name="Ground9" type="StaticBody2D" parent="."]
 position = Vector2(4530, 352)
 [node name="Visual" type="ColorRect" parent="Ground9"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = 32.0
 color = Color(0.86, 0.68, 0.38, 1)
 [node name="TopStripe" type="ColorRect" parent="Ground9"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = -18.0
 color = Color(0.45, 0.72, 0.28, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground9"]
@@ -626,15 +626,15 @@ shape = SubResource("GroundSeg")
 [node name="Ground10" type="StaticBody2D" parent="."]
 position = Vector2(4960, 352)
 [node name="Visual" type="ColorRect" parent="Ground10"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = 32.0
 color = Color(0.86, 0.68, 0.38, 1)
 [node name="TopStripe" type="ColorRect" parent="Ground10"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = -18.0
 color = Color(0.45, 0.72, 0.28, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground10"]
@@ -644,15 +644,15 @@ shape = SubResource("GroundSeg")
 [node name="Ground11" type="StaticBody2D" parent="."]
 position = Vector2(5390, 352)
 [node name="Visual" type="ColorRect" parent="Ground11"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = 32.0
 color = Color(0.86, 0.68, 0.38, 1)
 [node name="TopStripe" type="ColorRect" parent="Ground11"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = -18.0
 color = Color(0.45, 0.72, 0.28, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground11"]
@@ -667,15 +667,15 @@ scale = Vector2(4.8, 1.8)
 [node name="Ground12" type="StaticBody2D" parent="."]
 position = Vector2(5970, 352)
 [node name="Visual" type="ColorRect" parent="Ground12"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = 32.0
 color = Color(0.86, 0.68, 0.38, 1)
 [node name="TopStripe" type="ColorRect" parent="Ground12"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = -18.0
 color = Color(0.45, 0.72, 0.28, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground12"]
@@ -688,15 +688,15 @@ shape = SubResource("GroundSeg")
 [node name="Ground13" type="StaticBody2D" parent="."]
 position = Vector2(6400, 312)
 [node name="Visual" type="ColorRect" parent="Ground13"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = 32.0
 color = Color(0.86, 0.68, 0.38, 1)
 [node name="TopStripe" type="ColorRect" parent="Ground13"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = -18.0
 color = Color(0.45, 0.72, 0.28, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground13"]
@@ -706,15 +706,15 @@ shape = SubResource("GroundSeg")
 [node name="Ground13Fill" type="StaticBody2D" parent="."]
 position = Vector2(6400, 352)
 [node name="Visual" type="ColorRect" parent="Ground13Fill"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = 32.0
 color = Color(0.72, 0.46, 0.22, 1)
 [node name="TopStripe" type="ColorRect" parent="Ground13Fill"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = -18.0
 color = Color(0.45, 0.72, 0.28, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground13Fill"]
@@ -725,15 +725,15 @@ shape = SubResource("GroundSeg")
 [node name="Ground14" type="StaticBody2D" parent="."]
 position = Vector2(6830, 352)
 [node name="Visual" type="ColorRect" parent="Ground14"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = 32.0
 color = Color(0.86, 0.68, 0.38, 1)
 [node name="TopStripe" type="ColorRect" parent="Ground14"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = -18.0
 color = Color(0.45, 0.72, 0.28, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground14"]
@@ -743,15 +743,15 @@ shape = SubResource("GroundSeg")
 [node name="GroundEnd" type="StaticBody2D" parent="."]
 position = Vector2(6940, 352)
 [node name="Visual" type="ColorRect" parent="GroundEnd"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = 32.0
 color = Color(0.86, 0.68, 0.38, 1)
 [node name="TopStripe" type="ColorRect" parent="GroundEnd"]
-offset_left = -210.0
+offset_left = -225.0
 offset_top = -32.0
-offset_right = 210.0
+offset_right = 225.0
 offset_bottom = -18.0
 color = Color(0.45, 0.72, 0.28, 1)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="GroundEnd"]
