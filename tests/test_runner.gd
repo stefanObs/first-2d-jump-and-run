@@ -1212,15 +1212,27 @@ func _test_save_select_scene() -> Variant:
 		var previous_character := GameManager.get_player_character()
 		GameManager.set_setting("player_character", GameManager.PLAYER_COWBOY)
 		scene._refresh_character_pickers()
-		cowgirl_btn.pressed.emit()
-		if GameManager.get_player_character() != GameManager.PLAYER_COWGIRL:
-			error = "Tapping the cowgirl mascot should choose Cowgirl for the next run."
-		elif cowgirl_btn.scale.x <= cowboy_btn.scale.x:
-			error = "The chosen mascot should be visually highlighted."
+		var cowboy_mark := scene.get_node_or_null("Mascots/Cowboy/ChosenMark") as CanvasItem
+		var cowgirl_mark := scene.get_node_or_null("Mascots/Cowgirl/ChosenMark") as CanvasItem
+		var hint := scene.get_node_or_null("CharacterHint") as Label
+		if cowboy_mark == null or cowgirl_mark == null:
+			error = "Character pickers need a ChosenMark badge for the active rider."
+		elif not cowboy_mark.visible or cowgirl_mark.visible:
+			error = "Cowboy preselection should show only the cowboy ChosenMark."
+		elif hint == null or not ("Cowboy" in hint.text or "Cowgirl" in hint.text or "spielst" in hint.text.to_lower()):
+			error = "Character hint should name the currently chosen rider."
 		else:
-			cowboy_btn.pressed.emit()
-			if GameManager.get_player_character() != GameManager.PLAYER_COWBOY:
-				error = "Tapping the cowboy mascot should choose Cowboy for the next run."
+			cowgirl_btn.pressed.emit()
+			if GameManager.get_player_character() != GameManager.PLAYER_COWGIRL:
+				error = "Tapping the cowgirl mascot should choose Cowgirl for the next run."
+			elif not cowgirl_mark.visible or cowboy_mark.visible:
+				error = "Choosing Cowgirl should move the ChosenMark to the cowgirl."
+			elif cowgirl_btn.scale.x <= cowboy_btn.scale.x:
+				error = "The chosen mascot should be visually highlighted."
+			else:
+				cowboy_btn.pressed.emit()
+				if GameManager.get_player_character() != GameManager.PLAYER_COWBOY:
+					error = "Tapping the cowboy mascot should choose Cowboy for the next run."
 		GameManager.set_setting("player_character", previous_character)
 	scene.queue_free()
 	GameManager.erase_slot(0)

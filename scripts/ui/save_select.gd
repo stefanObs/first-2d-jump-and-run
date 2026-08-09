@@ -132,11 +132,18 @@ func _localize_static_labels() -> void:
 	if title_logo != null:
 		title_logo.tooltip_text = tr("Cowboy Trail")
 	if _character_hint != null:
+		# Concrete chosen rider is filled by _refresh_character_pickers().
 		_character_hint.text = tr("Pick Cowboy or Cowgirl")
 	if _cowboy_button != null:
 		_cowboy_button.tooltip_text = tr("Cowboy")
+		var cowboy_name := _cowboy_button.get_node_or_null("Name") as Label
+		if cowboy_name != null:
+			cowboy_name.text = tr("Cowboy")
 	if _cowgirl_button != null:
 		_cowgirl_button.tooltip_text = tr("Cowgirl")
+		var cowgirl_name := _cowgirl_button.get_node_or_null("Name") as Label
+		if cowgirl_name != null:
+			cowgirl_name.text = tr("Cowgirl")
 	if _settings_button != null:
 		_settings_button.tooltip_text = tr("Settings")
 	if _workshop_button != null:
@@ -242,30 +249,49 @@ func _pick_character(character: String) -> void:
 
 func _refresh_character_pickers() -> void:
 	var is_cowgirl := GameManager.get_player_character() == GameManager.PLAYER_COWGIRL
-	_style_character_picker(_cowboy_button, not is_cowgirl)
-	_style_character_picker(_cowgirl_button, is_cowgirl)
+	_style_character_picker(_cowboy_button, not is_cowgirl, tr("Cowboy"))
+	_style_character_picker(_cowgirl_button, is_cowgirl, tr("Cowgirl"))
+	if _character_hint != null:
+		var chosen := tr("Cowgirl") if is_cowgirl else tr("Cowboy")
+		_character_hint.text = tr("Playing as %s") % chosen
 
 
-func _style_character_picker(button: Button, selected: bool) -> void:
+func _style_character_picker(button: Button, selected: bool, display_name: String = "") -> void:
 	if button == null:
 		return
 	button.pivot_offset = button.custom_minimum_size * 0.5
-	button.scale = Vector2(1.1, 1.1) if selected else Vector2(0.92, 0.92)
-	button.modulate = Color(1, 1, 1, 1) if selected else Color(0.78, 0.74, 0.68, 0.88)
+	button.scale = Vector2(1.12, 1.12) if selected else Vector2(0.86, 0.86)
+	button.modulate = Color(1, 1, 1, 1) if selected else Color(0.55, 0.52, 0.48, 0.75)
 	var selected_style := StyleBoxFlat.new()
-	selected_style.bg_color = Color(0.86, 0.52, 0.22, 0.42)
-	selected_style.set_corner_radius_all(20)
-	selected_style.set_border_width_all(5)
-	selected_style.border_color = Color(0.82, 0.16, 0.14, 1.0)
+	selected_style.bg_color = Color(0.92, 0.58, 0.22, 0.55)
+	selected_style.set_corner_radius_all(22)
+	selected_style.set_border_width_all(7)
+	selected_style.border_color = Color(0.86, 0.12, 0.12, 1.0)
 	selected_style.content_margin_left = 4
 	selected_style.content_margin_right = 4
 	selected_style.content_margin_top = 4
 	selected_style.content_margin_bottom = 4
-	var idle := StyleBoxEmpty.new()
+	var idle := StyleBoxFlat.new()
+	idle.bg_color = Color(0.2, 0.12, 0.06, 0.28)
+	idle.set_corner_radius_all(22)
+	idle.set_border_width_all(3)
+	idle.border_color = Color(0.35, 0.22, 0.12, 0.7)
 	if selected:
 		_apply_button_styles(button, selected_style, selected_style)
 	else:
 		_apply_button_styles(button, idle, idle)
+	var mark := button.get_node_or_null("ChosenMark") as CanvasItem
+	if mark != null:
+		mark.visible = selected
+	var name_label := button.get_node_or_null("Name") as Label
+	if name_label != null:
+		if display_name != "":
+			name_label.text = display_name
+		name_label.add_theme_color_override(
+			&"font_color",
+			Color(1.0, 0.92, 0.45, 1.0) if selected else Color(0.78, 0.72, 0.62, 0.85)
+		)
+		name_label.add_theme_font_size_override(&"font_size", 18 if selected else 15)
 
 
 func _refresh_hearts_button() -> void:
