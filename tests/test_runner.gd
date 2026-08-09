@@ -1127,6 +1127,12 @@ func _test_save_select_scene() -> Variant:
 		error = "Save select needs cowboy and cowgirl mascots."
 	if error == null and scene.get_node_or_null("Mascots/Cowgirl") == null:
 		error = "Save select needs cowboy and cowgirl mascots."
+	var cowboy_btn := scene.get_node_or_null("Mascots/Cowboy") as Button
+	var cowgirl_btn := scene.get_node_or_null("Mascots/Cowgirl") as Button
+	if error == null and (cowboy_btn == null or cowgirl_btn == null):
+		error = "Cowboy/Cowgirl mascots must be clickable character pickers."
+	if error == null and scene.get_node_or_null("CharacterHint") == null:
+		error = "Save select needs a character-pick hint above the mascots."
 	if error == null and scene.get_node_or_null("HeartsButton") == null:
 		error = "Save select needs a hearts trail-mode toggle."
 	if error == null and scene.get_node_or_null("DebugStrip") == null:
@@ -1202,6 +1208,20 @@ func _test_save_select_scene() -> Variant:
 			settings_panel.closed.emit()
 			if settings_panel.visible:
 				error = "Closing settings should hide the settings panel again."
+	if error == null and cowboy_btn != null and cowgirl_btn != null:
+		var previous_character := GameManager.get_player_character()
+		GameManager.set_setting("player_character", GameManager.PLAYER_COWBOY)
+		scene._refresh_character_pickers()
+		cowgirl_btn.pressed.emit()
+		if GameManager.get_player_character() != GameManager.PLAYER_COWGIRL:
+			error = "Tapping the cowgirl mascot should choose Cowgirl for the next run."
+		elif cowgirl_btn.scale.x <= cowboy_btn.scale.x:
+			error = "The chosen mascot should be visually highlighted."
+		else:
+			cowboy_btn.pressed.emit()
+			if GameManager.get_player_character() != GameManager.PLAYER_COWBOY:
+				error = "Tapping the cowboy mascot should choose Cowboy for the next run."
+		GameManager.set_setting("player_character", previous_character)
 	scene.queue_free()
 	GameManager.erase_slot(0)
 	return error

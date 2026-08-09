@@ -37,6 +37,9 @@ var _sheet_pan_last: Vector2 = Vector2.ZERO
 var _hearts_button: Button
 var _settings_button: Button
 var _workshop_button: Button
+var _cowboy_button: Button
+var _cowgirl_button: Button
+var _character_hint: Label
 
 
 func _ready() -> void:
@@ -51,10 +54,14 @@ func _ready() -> void:
 	_hearts_button = get_node_or_null("HeartsButton") as Button
 	_settings_button = get_node_or_null("SettingsButton") as Button
 	_workshop_button = get_node_or_null("BuildTrailButton") as Button
+	_cowboy_button = get_node_or_null("Mascots/Cowboy") as Button
+	_cowgirl_button = get_node_or_null("Mascots/Cowgirl") as Button
+	_character_hint = get_node_or_null("CharacterHint") as Label
 	_localize_static_labels()
 	_style_screen()
 	_setup_element_reference()
 	_setup_chrome_buttons()
+	_setup_character_pickers()
 	if _delete_dialog != null:
 		_delete_dialog.confirmed.connect(_confirm_delete)
 		_style_delete_dialog()
@@ -110,6 +117,7 @@ func _ready() -> void:
 	InputManager.device_changed.connect(func(_d: Variant) -> void: _refresh_status_hint())
 	_refresh()
 	_refresh_hearts_button()
+	_refresh_character_pickers()
 	_refresh_status_hint()
 	_highlight()
 	_bob_title()
@@ -123,6 +131,12 @@ func _localize_static_labels() -> void:
 	var title_logo := get_node_or_null("TitleLogo") as TextureRect
 	if title_logo != null:
 		title_logo.tooltip_text = tr("Cowboy Trail")
+	if _character_hint != null:
+		_character_hint.text = tr("Pick Cowboy or Cowgirl")
+	if _cowboy_button != null:
+		_cowboy_button.tooltip_text = tr("Cowboy")
+	if _cowgirl_button != null:
+		_cowgirl_button.tooltip_text = tr("Cowgirl")
 	if _settings_button != null:
 		_settings_button.tooltip_text = tr("Settings")
 	if _workshop_button != null:
@@ -194,7 +208,64 @@ func _toggle_trail_mode() -> void:
 func _on_settings_changed() -> void:
 	_localize_static_labels()
 	_refresh_hearts_button()
+	_refresh_character_pickers()
 	_refresh()
+
+
+func _setup_character_pickers() -> void:
+	for button in [_cowboy_button, _cowgirl_button]:
+		if button == null:
+			continue
+		var empty := StyleBoxEmpty.new()
+		_apply_button_styles(button, empty, empty)
+	if _cowboy_button != null:
+		_cowboy_button.pressed.connect(func() -> void:
+			_pick_character(GameManager.PLAYER_COWBOY)
+		)
+	if _cowgirl_button != null:
+		_cowgirl_button.pressed.connect(func() -> void:
+			_pick_character(GameManager.PLAYER_COWGIRL)
+		)
+
+
+func _pick_character(character: String) -> void:
+	if _settings_open() or _element_reference_open():
+		return
+	if GameManager.get_player_character() == character:
+		_refresh_character_pickers()
+		return
+	GameManager.set_setting("player_character", character)
+	_refresh_character_pickers()
+	_refresh()
+	_flash_status(tr("Cowboy") if character == GameManager.PLAYER_COWBOY else tr("Cowgirl"))
+
+
+func _refresh_character_pickers() -> void:
+	var is_cowgirl := GameManager.get_player_character() == GameManager.PLAYER_COWGIRL
+	_style_character_picker(_cowboy_button, not is_cowgirl)
+	_style_character_picker(_cowgirl_button, is_cowgirl)
+
+
+func _style_character_picker(button: Button, selected: bool) -> void:
+	if button == null:
+		return
+	button.pivot_offset = button.custom_minimum_size * 0.5
+	button.scale = Vector2(1.1, 1.1) if selected else Vector2(0.92, 0.92)
+	button.modulate = Color(1, 1, 1, 1) if selected else Color(0.78, 0.74, 0.68, 0.88)
+	var selected_style := StyleBoxFlat.new()
+	selected_style.bg_color = Color(0.86, 0.52, 0.22, 0.42)
+	selected_style.set_corner_radius_all(20)
+	selected_style.set_border_width_all(5)
+	selected_style.border_color = Color(0.82, 0.16, 0.14, 1.0)
+	selected_style.content_margin_left = 4
+	selected_style.content_margin_right = 4
+	selected_style.content_margin_top = 4
+	selected_style.content_margin_bottom = 4
+	var idle := StyleBoxEmpty.new()
+	if selected:
+		_apply_button_styles(button, selected_style, selected_style)
+	else:
+		_apply_button_styles(button, idle, idle)
 
 
 func _refresh_hearts_button() -> void:
@@ -470,11 +541,42 @@ func _style_delete_dialog() -> void:
 	if _delete_dialog == null:
 		return
 	var panel := StyleBoxFlat.new()
-	panel.bg_color = Color(0.86, 0.58, 0.30, 1.0)
-	panel.set_border_width_all(4)
-	panel.border_color = Color(0.58, 0.18, 0.10, 1.0)
-	panel.set_corner_radius_all(12)
+	panel.bg_color = Color(0.78, 0.48, 0.22, 0.98)
+	panel.set_border_width_all(6)
+	panel.border_color = Color(0.45, 0.16, 0.08, 1.0)
+	panel.set_corner_radius_all(18)
+	panel.content_margin_left = 22
+	panel.content_margin_right = 22
+	panel.content_margin_top = 18
+	panel.content_margin_bottom = 18
 	_delete_dialog.add_theme_stylebox_override(&"panel", panel)
+	_delete_dialog.add_theme_color_override(&"title_color", Color(0.98, 0.9, 0.55, 1.0))
+	_delete_dialog.add_theme_font_size_override(&"title_font_size", 28)
+	_delete_dialog.add_theme_color_override(&"font_color", Color(0.98, 0.93, 0.78, 1.0))
+	_delete_dialog.add_theme_font_size_override(&"font_size", 22)
+	var ok := _delete_dialog.get_ok_button()
+	var cancel := _delete_dialog.get_cancel_button()
+	for btn in [ok, cancel]:
+		if btn == null:
+			continue
+		_apply_cream_button_fonts(btn)
+		var normal := _wood_style(Color(0.62, 0.32, 0.14, 1.0), 12, 10)
+		var hover := _wood_style(Color(0.78, 0.42, 0.18, 1.0), 12, 10)
+		_apply_button_styles(btn, normal, hover)
+		btn.custom_minimum_size = Vector2(140, 48)
+
+
+func _breathe_mascots() -> void:
+	# Selection highlight owns mascot scale; keep a gentle bob on the sprites only.
+	for path in ["Mascots/Cowboy/Sprite", "Mascots/Cowgirl/Sprite"]:
+		var sprite := get_node_or_null(path) as Control
+		if sprite == null:
+			continue
+		var base := sprite.position.y
+		var tween := create_tween()
+		tween.set_loops()
+		tween.tween_property(sprite, "position:y", base - 3.0, 1.05).set_trans(Tween.TRANS_SINE)
+		tween.tween_property(sprite, "position:y", base + 2.0, 1.05).set_trans(Tween.TRANS_SINE)
 
 
 func _ensure_star_dots(card: Button) -> void:
@@ -504,20 +606,6 @@ func _bob_title() -> void:
 	tween.tween_property(title, "position:y", base + 3.0, 0.95).set_trans(Tween.TRANS_SINE)
 
 
-func _breathe_mascots() -> void:
-	var mascots := get_node_or_null("Mascots") as Control
-	if mascots == null:
-		return
-	for child in mascots.get_children():
-		var node := child as Control
-		if node == null:
-			continue
-		var tween := create_tween()
-		tween.set_loops()
-		tween.tween_property(node, "scale", Vector2(1.04, 1.04), 1.1).set_trans(Tween.TRANS_SINE)
-		tween.tween_property(node, "scale", Vector2(1.0, 1.0), 1.1).set_trans(Tween.TRANS_SINE)
-
-
 func _settings_open() -> bool:
 	return _settings != null and _settings.visible
 
@@ -539,6 +627,7 @@ func _close_settings() -> void:
 	if _settings_dim != null:
 		_settings_dim.visible = false
 	_refresh_hearts_button()
+	_refresh_character_pickers()
 	_refresh_status_hint()
 	_highlight()
 
@@ -583,7 +672,8 @@ func _request_delete() -> void:
 	if _delete_dialog == null:
 		return
 	_delete_dialog.dialog_text = tr("Delete Save %d? This cannot be undone.") % (_index + 1)
-	_delete_dialog.popup_centered(Vector2i(460, 190))
+	_style_delete_dialog()
+	_delete_dialog.popup_centered(Vector2i(520, 220))
 
 
 func _confirm_delete() -> void:
