@@ -466,7 +466,7 @@ static func _make_endless_hills(level: Node, style: String = LevelStyle.DESERT) 
 
 static func _canyon_gap_ranges(level: Node) -> Array[Vector2]:
 	var gaps: Array[Vector2] = []
-	var merged := _merge_segments(_collect_ground_segments(level))
+	var merged := _cached_merged_segments(level)
 	for i in range(merged.size() - 1):
 		var left := float(merged[i]["right"])
 		var right := float(merged[i + 1]["left"])
@@ -764,9 +764,36 @@ static func _earth_underfill_color(style: String = LevelStyle.DESERT) -> Color:
 	return Color(0.42, 0.22, 0.14, 1.0)
 
 
+## Per-frame cache so many callers (ninjas, loot align, layout) share one ground scan.
+static var _merged_cache_id: int = 0
+static var _merged_cache_frame: int = -1
+static var _merged_cache: Array[Dictionary] = []
+## Test counter: how often `_collect_ground_segments` rebuilt the map.
+static var ground_collect_calls: int = 0
+
+
+static func invalidate_walk_surface_cache() -> void:
+	_merged_cache_id = 0
+	_merged_cache_frame = -1
+	_merged_cache.clear()
+
+
+static func _cached_merged_segments(level: Node) -> Array[Dictionary]:
+	if level == null:
+		return []
+	var id := level.get_instance_id()
+	var frame := Engine.get_process_frames()
+	if id == _merged_cache_id and frame == _merged_cache_frame:
+		return _merged_cache
+	_merged_cache = _merge_segments(_collect_ground_segments(level))
+	_merged_cache_id = id
+	_merged_cache_frame = frame
+	return _merged_cache
+
+
 static func walk_surface_at(level: Node, world_x: float) -> Dictionary:
 	## Walkable desert top Y and tangent angle (radians) at world X.
-	var merged := _merge_segments(_collect_ground_segments(level))
+	var merged := _cached_merged_segments(level)
 	if merged.is_empty():
 		return {"y": 320.0, "angle": 0.0}
 	for index in range(merged.size() - 1):
@@ -1235,7 +1262,7 @@ static func _disable_ground_fill_collision(level: Node) -> void:
 
 
 static func _align_pits(level: Node) -> void:
-	var merged := _merge_segments(_collect_ground_segments(level))
+	var merged := _cached_merged_segments(level)
 	for node in level.find_children("*", "Area2D", true, false):
 		if not (node is Hazard):
 			continue
@@ -1350,6 +1377,7 @@ static func _typical_floor_top(level: Node) -> float:
 
 
 static func _collect_ground_segments(level: Node) -> Array[Dictionary]:
+	ground_collect_calls += 1
 	var segments: Array[Dictionary] = []
 	for node in level.find_children("*", "PhysicsBody2D", true, false):
 		if not String(node.name).begins_with("Ground"):

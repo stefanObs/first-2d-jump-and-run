@@ -51,6 +51,10 @@ var _jump_lift: float = 0.0
 var _pose_tween: Tween
 var _jump_tween: Tween
 var _appear_tween: Tween
+var _player_ref: Player
+var _hint_near: int = -1
+var _ledge_scan_cooldown: float = 0.0
+static var _shared_frames: SpriteFrames
 
 
 func _ready() -> void:
@@ -91,6 +95,8 @@ func _setup_sprite() -> void:
 
 
 func _make_sprite_frames() -> SpriteFrames:
+	if _shared_frames != null:
+		return _shared_frames
 	var frames := SpriteFrames.new()
 	for anim_data in [
 		[&"idle", 1.0, true, ["res://assets/world/ninja_idle.png"]],
@@ -123,18 +129,22 @@ func _make_sprite_frames() -> SpriteFrames:
 			var tex: Texture2D = load(str(path))
 			if tex != null:
 				frames.add_frame(anim, tex)
-	return frames
+	_shared_frames = frames
+	return _shared_frames
 
 
 func _set_dormant(hidden: bool) -> void:
 	if hidden:
 		_state = State.DORMANT
 		modulate.a = 0.0
+		set_process(false)
+		_hint_near = -1
 		if _area != null:
 			_area.set_deferred("monitoring", false)
 			_area.set_deferred("monitorable", false)
 	else:
 		modulate.a = 1.0
+		set_process(true)
 		if _area != null:
 			_area.set_deferred("monitoring", true)
 			_area.set_deferred("monitorable", true)
@@ -155,9 +165,6 @@ func _physics_process(delta: float) -> void:
 		return
 	if _state == State.ATTACK or _state == State.THROW or _state == State.APPEAR:
 		return
-	_resolve_player_overlap()
-	if _tied:
-		return
 	if _state == State.JUMP:
 		return
 	var player := _find_player()
@@ -165,7 +172,13 @@ func _physics_process(delta: float) -> void:
 		if _state == State.CHASE:
 			_set_move_animation(false)
 		return
+	# Only poll overlaps when close enough for stomp/side contact.
+	if global_position.distance_squared_to(player.global_position) <= 6400.0:
+		_resolve_player_overlap()
+		if _tied:
+			return
 	_jump_reach = StarReachability.max_jump_height(player.jump_velocity, player.gravity)
+	_ledge_scan_cooldown = maxf(0.0, _ledge_scan_cooldown - delta)
 	if player.get_modes().is_flying():
 		_handle_flying_player(player, delta)
 	else:
@@ -243,6 +256,7 @@ func _snap_feet_to_surface() -> void:
 		return
 	var hit_y := _floor_hit_y(global_position.x, global_position.y)
 	if not is_inf(hit_y):
+		# Prefer the physics hit; only blend theme slope when it stays close.
 		var theme_y := _walk_surface_y(global_position.x, hit_y)
 		global_position.y = theme_y if absf(theme_y - hit_y) <= 28.0 else hit_y
 		return
@@ -256,15 +270,20 @@ func _handle_ground_player(player: Player, delta: float) -> void:
 		_begin_sword_attack(player)
 		_snap_feet_to_surface()
 		return
-	var landing := _find_gap_landing(_facing)
+	# Only run the expensive multi-ray gap scan when the lip is near.
 	if (
-		not landing.is_empty()
+		_gap_is_imminent(_facing)
 		and signf(player.global_position.x - global_position.x) == _facing
-		and _gap_is_imminent(_facing)
 	):
-		_begin_gap_jump(landing)
-		return
-	if player.global_position.y < global_position.y - LEDGE_STEP_MIN:
+		var landing := _find_gap_landing(_facing)
+		if not landing.is_empty():
+			_begin_gap_jump(landing)
+			return
+	if (
+		player.global_position.y < global_position.y - LEDGE_STEP_MIN
+		and _ledge_scan_cooldown <= 0.0
+	):
+		_ledge_scan_cooldown = 0.12
 		var ledge := _find_ledge_landing(_facing)
 		if not ledge.is_empty():
 			_begin_gap_jump(ledge)
@@ -322,16 +341,9 @@ func _find_gap_landing(direction: float) -> Dictionary:
 		if is_inf(hit_y):
 			found_gap = true
 		elif found_gap:
-			# Prefer the physics hit — theme walk_surface needs trail art strips and
-			# falls back to a desert default that rejects synthetic test floors.
-			var land_y := hit_y
-			var theme_y := _walk_surface_y(x, hit_y)
-			if absf(theme_y - hit_y) <= 28.0:
-				land_y = theme_y
-			# The downward probe already caps how far below a bank can be spotted,
-			# so only the climb needs a limit — and that limit is the cowboy's apex.
-			if start_y - land_y <= _jump_reach:
-				return {"x": x, "y": land_y}
+			# Physics hit is enough for gap landings; avoid theme scans per probe.
+			if start_y - hit_y <= _jump_reach:
+				return {"x": x, "y": hit_y}
 			return {}
 		x += dir * JUMP_PROBE_STEP
 	return {}
@@ -655,18 +667,26 @@ func _update_nearby_hint() -> void:
 	if _label == null:
 		return
 	var player := _find_player()
-	if player != null and global_position.distance_to(player.global_position) <= 180.0:
-		_label.text = "JUMP!"
+	var near := player != null and global_position.distance_to(player.global_position) <= 180.0
+	var mode := 1 if near else 0
+	if mode != _hint_near:
+		_hint_near = mode
+		if near:
+			_label.text = "JUMP!"
+			_label.add_theme_font_size_override(&"font_size", 16)
+		else:
+			_label.text = "NINJA"
+			_label.modulate = Color(1, 1, 1, 1)
+			_label.add_theme_font_size_override(&"font_size", 13)
+	if near:
 		_label.modulate = Color(1.0, 0.85 + sin(_hint_phase) * 0.15, 0.2, 1.0)
-		_label.add_theme_font_size_override(&"font_size", 16)
-	else:
-		_label.text = "NINJA"
-		_label.modulate = Color(1, 1, 1, 1)
-		_label.add_theme_font_size_override(&"font_size", 13)
 
 
 func _find_player() -> Player:
-	return PlayerLookup.find_in_tree(self)
+	if is_instance_valid(_player_ref):
+		return _player_ref
+	_player_ref = PlayerLookup.find_in_tree(self)
+	return _player_ref
 
 
 func _resolve_player_overlap() -> void:

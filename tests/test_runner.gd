@@ -93,6 +93,7 @@ func _ready() -> void:
 	failures += await _run("Ninja hops onto planks the cowboy can reach", _test_ninja_hops_onto_planks)
 	failures += await _run("Ninja shows only one facing sprite", _test_ninja_single_sprite)
 	failures += await _run("Ninja follows dune slope height while chasing", _test_ninja_follows_slope_height)
+	failures += await _run("Three chasing ninjas stay cheap per frame", _test_ninja_chase_performance)
 	failures += await _run("Ninja resets to dormancy on respawn", _test_ninja_respawn_restore)
 	failures += await _run("Shuriken sprite is handcrafted art", _test_shuriken_art)
 	failures += await _run("Side contact with a bandit sends the cowboy to camp", _test_side_contact_hurts)
@@ -3331,6 +3332,59 @@ func _test_ninja_follows_slope_height() -> Variant:
 		error = (
 			"Ninja should follow dune height while chasing (y=%.1f, surface %.1f, x=%.1f)."
 			% [ninja.global_position.y, expected_y, ninja.global_position.x]
+		)
+	level.queue_free()
+	return error
+
+
+func _test_ninja_chase_performance() -> Variant:
+	## Three visible chasing ninjas used to rebuild ground strips every snap/ray.
+	## Cache + gated gap scans must keep collect calls near one per physics frame.
+	var slot := 0
+	var trail := CustomLevelStore.trail_row(8)
+	var objects: Array = []
+	for x in range(0, 24):
+		objects.append({"type": "ground", "x": x, "y": trail})
+	objects.append({"type": "ninja", "x": 6, "y": trail})
+	objects.append({"type": "ninja", "x": 10, "y": trail})
+	objects.append({"type": "ninja", "x": 14, "y": trail})
+	objects.append({"type": "goal", "x": 22, "y": trail})
+	var data := CustomLevelStore.default_level(slot)
+	data["objects"] = objects
+	var level := LevelController.new()
+	add_child(level)
+	CustomLevelBuilder.build(level, data)
+	WildWestTheme.apply_to_level(level)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	var ninjas: Array[NinjaEnemy] = []
+	for child in level.find_children("*", "AnimatableBody2D", true, false):
+		if child is NinjaEnemy:
+			ninjas.append(child as NinjaEnemy)
+	var player := level.get_node_or_null("Player") as Player
+	if ninjas.size() < 3 or player == null:
+		level.queue_free()
+		return "Performance fixture needs three ninjas and the cowboy."
+	player.set_physics_process(false)
+	player.global_position = Vector2(ninjas[1].global_position.x + 180.0, ninjas[1].global_position.y)
+	for ninja in ninjas:
+		ninja.set_physics_process(false)
+		ninja._activated = true
+		ninja._state = NinjaEnemy.State.CHASE
+		ninja._set_dormant(false)
+		ninja.set_physics_process(true)
+	WildWestTheme.invalidate_walk_surface_cache()
+	WildWestTheme.ground_collect_calls = 0
+	var frames := 45
+	for _i in range(frames):
+		await get_tree().physics_frame
+	var collects := WildWestTheme.ground_collect_calls
+	var error: Variant = null
+	# Allow a small cushion for decorate/setup leftovers, but never near 3×frames.
+	if collects > frames + 8:
+		error = (
+			"Three chasing ninjas should reuse the walk-surface cache (collects=%d frames=%d)."
+			% [collects, frames]
 		)
 	level.queue_free()
 	return error
