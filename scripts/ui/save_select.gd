@@ -1,26 +1,29 @@
 extends Control
 
-## Handcrafted western title / three-slot save selection screen.
-## Title chrome uses a painted weathered saloon sign; slots keep handmade wood boards.
+## Kid-first title screen: giant numbered save doors, icon chrome, F1 debug strip.
+## Matches chibi cowboy/cowgirl art — thick outlines, warm wood, bandana-red focus.
 
 const TITLE_CREAM := Color(0.96, 0.86, 0.48, 1.0)
 const TITLE_CREAM_HOVER := Color(1.0, 0.92, 0.62, 1.0)
 const WOOD := Color(0.78, 0.48, 0.22, 0.96)
 const WOOD_HOVER := Color(0.90, 0.62, 0.30, 1.0)
-const SLOT_BOARD := preload("res://assets/ui/saloon_slot_board.png")
-## Canonical labeled collage of gameplay elements (class_name / node prefixes).
+const BANDANA_RED := Color(0.78, 0.16, 0.14, 1.0)
+const DOOR_FILL := Color(0.72, 0.42, 0.18, 0.98)
+const DOOR_FILL_HOVER := Color(0.84, 0.54, 0.26, 1.0)
+const STAR_TEX := preload("res://assets/world/star_badge.png")
 const ELEMENT_REFERENCE_PATH := "res://docs/element_name_reference.png"
 const SHEET_ZOOM_MIN := 1.0
 const SHEET_ZOOM_MAX := 4.0
 const SHEET_ZOOM_STEP := 0.25
+const MAX_STAR_DOTS := 3
 
 var _cards: Array[Button] = []
 var _index: int = 0
-var _prompt: Label
-var _hint: Label
+var _status_hint: Label
 var _delete_dialog: ConfirmationDialog
 var _settings: SettingsPanel
 var _settings_dim: ColorRect
+var _debug_strip: Control
 var _element_ref_button: Button
 var _translation_editor_button: Button
 var _element_ref_overlay: Control
@@ -31,32 +34,31 @@ var _sheet_zoom: float = 1.0
 var _sheet_base_size: Vector2 = Vector2.ZERO
 var _sheet_panning: bool = false
 var _sheet_pan_last: Vector2 = Vector2.ZERO
-var _mode_dropdown: OptionButton
-var _mode_label: Label
-var _mode_board: Control
-## Per-slot trail mode choice on save select (empty or existing saves).
-var _slot_mode_advanced: Array[bool] = [false, false, false]
-var _syncing_mode_dropdown := false
-var _last_mode_slot := -1
+var _hearts_button: Button
+var _settings_button: Button
+var _workshop_button: Button
 
 
 func _ready() -> void:
-	_prompt = get_node_or_null("PromptLabel") as Label
-	_hint = get_node_or_null("HintLabel") as Label
+	_status_hint = get_node_or_null("StatusHint") as Label
 	_delete_dialog = get_node_or_null("DeleteConfirmation") as ConfirmationDialog
 	_settings = get_node_or_null("SettingsPanel") as SettingsPanel
 	_settings_dim = get_node_or_null("SettingsDim") as ColorRect
-	_element_ref_button = get_node_or_null("ElementReferenceButton") as Button
+	_debug_strip = get_node_or_null("DebugStrip") as Control
+	_element_ref_button = get_node_or_null("DebugStrip/ElementReferenceButton") as Button
+	_translation_editor_button = get_node_or_null("DebugStrip/TranslationEditorButton") as Button
 	_element_ref_overlay = get_node_or_null("ElementReferenceOverlay") as Control
+	_hearts_button = get_node_or_null("HeartsButton") as Button
+	_settings_button = get_node_or_null("SettingsButton") as Button
+	_workshop_button = get_node_or_null("BuildTrailButton") as Button
 	_localize_static_labels()
 	_style_screen()
-	_setup_mode_dropdown()
 	_setup_element_reference()
+	_setup_chrome_buttons()
 	if _delete_dialog != null:
 		_delete_dialog.confirmed.connect(_confirm_delete)
 		_style_delete_dialog()
 	if _settings != null:
-		# SettingsPanel defaults to WHEN_PAUSED for the in-level menu.
 		_settings.process_mode = Node.PROCESS_MODE_ALWAYS
 		_settings.visible = false
 		_settings.closed.connect(_close_settings)
@@ -66,89 +68,67 @@ func _ready() -> void:
 			if event is InputEventMouseButton and (event as InputEventMouseButton).pressed:
 				_close_settings()
 		)
-	var builder := get_node_or_null("BuildTrailButton") as Button
-	if builder != null:
-		_style_action_button(builder)
-		builder.pressed.connect(func() -> void:
-			if _settings_open() or _element_reference_open():
-				return
-			AudioManager.ensure_gameplay_music()
-			GameManager.open_custom_level_hub()
-		)
-	_translation_editor_button = get_node_or_null("TranslationEditorButton") as Button
-	if _translation_editor_button != null:
-		_style_action_button(_translation_editor_button)
-		_translation_editor_button.visible = false
-		_translation_editor_button.pressed.connect(func() -> void:
-			if _settings_open() or _element_reference_open():
-				return
-			if not DebugLabels.is_enabled():
-				return
-			get_tree().change_scene_to_file("res://scenes/ui/translation_editor.tscn")
-		)
-	var settings_button := get_node_or_null("SettingsButton") as Button
-	if settings_button != null:
-		_style_action_button(settings_button)
-		settings_button.pressed.connect(_open_settings)
 	for i in range(3):
 		var card := get_node_or_null("Slots/Slot%d" % (i + 1)) as Button
-		if card != null:
-			_cards.append(card)
-			_style_slot_button(card)
-			var captured := i
-			card.pressed.connect(func() -> void:
-				if _settings_open() or _element_reference_open():
-					return
-				_select_slot(captured)
-			)
-			card.gui_input.connect(func(event: InputEvent) -> void:
-				if _settings_open() or _element_reference_open():
-					return
-				if (
-					event is InputEventMouseButton
-					and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_RIGHT
-					and (event as InputEventMouseButton).pressed
-				):
-					_index = captured
-					_highlight()
-					_request_delete()
-			)
-			card.mouse_entered.connect(func() -> void:
-				if _settings_open() or _element_reference_open():
-					return
+		if card == null:
+			continue
+		_cards.append(card)
+		_style_door_button(card)
+		_ensure_star_dots(card)
+		var captured := i
+		card.pressed.connect(func() -> void:
+			if _settings_open() or _element_reference_open():
+				return
+			_select_slot(captured)
+		)
+		card.gui_input.connect(func(event: InputEvent) -> void:
+			if _settings_open() or _element_reference_open():
+				return
+			if (
+				event is InputEventMouseButton
+				and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_RIGHT
+				and (event as InputEventMouseButton).pressed
+			):
 				_index = captured
 				_highlight()
-			)
-			card.focus_entered.connect(func() -> void:
-				if _settings_open() or _element_reference_open():
-					return
-				_index = captured
-				_highlight()
-			)
+				_request_delete()
+		)
+		card.mouse_entered.connect(func() -> void:
+			if _settings_open() or _element_reference_open():
+				return
+			_index = captured
+			_highlight()
+		)
+		card.focus_entered.connect(func() -> void:
+			if _settings_open() or _element_reference_open():
+				return
+			_index = captured
+			_highlight()
+		)
 	GameManager.saves_changed.connect(_refresh)
-	InputManager.device_changed.connect(func(_d: Variant) -> void: _refresh_prompts())
-	GameManager.settings_changed.connect(_refresh_mode_dropdown_labels)
+	GameManager.settings_changed.connect(_on_settings_changed)
+	InputManager.device_changed.connect(func(_d: Variant) -> void: _refresh_status_hint())
 	_refresh()
-	_refresh_prompts()
+	_refresh_hearts_button()
+	_refresh_status_hint()
 	_highlight()
 	_pulse_sun()
 	_bob_title()
+	_breathe_mascots()
+
+
 func _localize_static_labels() -> void:
 	var title := get_node_or_null("Title") as Label
 	if title != null:
 		title.text = tr("Cowboy Trail")
-	var subtitle := get_node_or_null("Subtitle") as Label
-	if subtitle != null:
-		subtitle.text = tr("Help Lucky Mario Luke on his quest to make the wild west a safer place.")
-	var builder := get_node_or_null("BuildTrailButton") as Button
-	if builder != null:
-		builder.text = tr("Campaign Workshop")
-	var settings_button := get_node_or_null("SettingsButton") as Button
-	if settings_button != null:
-		settings_button.text = tr("Settings")
-	var translation_editor := get_node_or_null("TranslationEditorButton") as Button
-	if translation_editor != null:
-		translation_editor.text = tr("Translation Editor")
+	if _settings_button != null:
+		_settings_button.tooltip_text = tr("Settings")
+	if _workshop_button != null:
+		_workshop_button.tooltip_text = tr("Campaign Workshop")
+	if _hearts_button != null:
+		_hearts_button.tooltip_text = tr("Trail mode")
+	if _translation_editor_button != null:
+		_translation_editor_button.text = tr("Translation Editor")
 	if _element_ref_button != null:
 		_element_ref_button.text = tr("Element Names")
 	var overlay_title := get_node_or_null("ElementReferenceOverlay/Panel/Margin/VBox/Title") as Label
@@ -173,99 +153,66 @@ func _localize_static_labels() -> void:
 		_delete_dialog.cancel_button_text = tr("Keep it")
 
 
-func _setup_mode_dropdown() -> void:
-	_mode_board = get_node_or_null("ModeBoard") as Control
-	_mode_label = get_node_or_null("ModeBoard/ModeRow/ModeLabel") as Label
-	_mode_dropdown = get_node_or_null("ModeBoard/ModeRow/ModeDropdown") as OptionButton
-	if _mode_board != null:
-		_mode_board.add_theme_stylebox_override(&"panel", _wood_style(WOOD, 10, 8))
-		_mode_board.visible = false
-	if _mode_label != null:
-		_mode_label.text = tr("Trail mode")
-		_apply_cream_outline(_mode_label, Color(0.94, 0.84, 0.52, 1.0), Color(0.24, 0.09, 0.04, 0.78), 2)
-	if _mode_dropdown == null:
-		return
-	_refresh_mode_dropdown_labels()
-	_style_mode_dropdown(_mode_dropdown)
-	if not _mode_dropdown.item_selected.is_connected(_on_mode_selected):
-		_mode_dropdown.item_selected.connect(_on_mode_selected)
-	_sync_mode_dropdown_for_slot(_index)
+func _setup_chrome_buttons() -> void:
+	if _workshop_button != null:
+		_style_icon_button(_workshop_button)
+		_workshop_button.pressed.connect(func() -> void:
+			if _settings_open() or _element_reference_open():
+				return
+			AudioManager.ensure_gameplay_music()
+			GameManager.open_custom_level_hub()
+		)
+	if _settings_button != null:
+		_style_icon_button(_settings_button)
+		_settings_button.pressed.connect(_open_settings)
+	if _hearts_button != null:
+		_style_door_button(_hearts_button, 14, 8)
+		_hearts_button.pressed.connect(_toggle_trail_mode)
+	if _translation_editor_button != null:
+		_style_action_button(_translation_editor_button)
+		_translation_editor_button.pressed.connect(func() -> void:
+			if _settings_open() or _element_reference_open():
+				return
+			if not DebugLabels.is_enabled():
+				return
+			get_tree().change_scene_to_file("res://scenes/ui/translation_editor.tscn")
+		)
 
 
-func _refresh_mode_dropdown_labels() -> void:
-	if _mode_label != null:
-		_mode_label.text = tr("Trail mode")
-	if _mode_dropdown == null:
+func _toggle_trail_mode() -> void:
+	if _settings_open() or _element_reference_open():
 		return
-	var advanced := _mode_for_slot(_index)
-	_with_mode_dropdown_sync(func() -> void:
-		_mode_dropdown.clear()
-		_mode_dropdown.add_item(tr("Classic"), 0)
-		_mode_dropdown.add_item(tr("Advanced Mode"), 1)
-		_mode_dropdown.select(1 if advanced else 0)
-		_mode_dropdown.disabled = false
+	GameManager.set_setting("advanced_mode", not GameManager.is_advanced_mode_setting())
+	_refresh_hearts_button()
+	_flash_status(
+		tr("Advanced Mode") if GameManager.is_advanced_mode_setting() else tr("Classic")
 	)
 
 
-func _style_mode_dropdown(dropdown: OptionButton) -> void:
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(0.86, 0.58, 0.30, 1.0)
-	normal.set_corner_radius_all(10)
-	normal.set_border_width_all(3)
-	normal.border_color = Color(0.58, 0.18, 0.10, 1.0)
-	normal.content_margin_left = 12
-	normal.content_margin_right = 12
-	normal.content_margin_top = 6
-	normal.content_margin_bottom = 6
-	var hover := normal.duplicate() as StyleBoxFlat
-	hover.bg_color = Color(0.95, 0.72, 0.38, 1.0)
-	dropdown.add_theme_stylebox_override(&"normal", normal)
-	dropdown.add_theme_stylebox_override(&"hover", hover)
-	dropdown.add_theme_stylebox_override(&"pressed", hover)
-	dropdown.add_theme_stylebox_override(&"focus", hover)
-	dropdown.add_theme_color_override(&"font_color", Color(0.28, 0.12, 0.04, 1))
-	dropdown.add_theme_color_override(&"font_hover_color", Color(0.45, 0.2, 0.06, 1))
-	dropdown.add_theme_font_size_override(&"font_size", 20)
+func _on_settings_changed() -> void:
+	_localize_static_labels()
+	_refresh_hearts_button()
+	_refresh()
 
 
-func _on_mode_selected(index: int) -> void:
-	if _syncing_mode_dropdown or index < 0 or _mode_dropdown == null:
+func _refresh_hearts_button() -> void:
+	if _hearts_button == null:
 		return
-	_slot_mode_advanced[_index] = index == 1
-
-
-func _sync_mode_dropdown_for_slot(slot_index: int) -> void:
-	if _mode_dropdown == null:
+	var advanced := GameManager.is_advanced_mode_setting()
+	var icons := _hearts_button.get_node_or_null("HeartIcons") as HBoxContainer
+	if icons == null:
 		return
-	var advanced := _slot_mode_advanced[slot_index]
-	_with_mode_dropdown_sync(func() -> void:
-		if _mode_dropdown.item_count >= 2:
-			_mode_dropdown.select(1 if advanced else 0)
-		_mode_dropdown.disabled = false
-	)
-
-
-func _with_mode_dropdown_sync(action: Callable) -> void:
-	if _mode_dropdown == null:
-		return
-	_syncing_mode_dropdown = true
-	var connected := _mode_dropdown.item_selected.is_connected(_on_mode_selected)
-	if connected:
-		_mode_dropdown.item_selected.disconnect(_on_mode_selected)
-	action.call()
-	if connected:
-		_mode_dropdown.item_selected.connect(_on_mode_selected)
-	_syncing_mode_dropdown = false
-
-
-func _mode_for_slot(slot_index: int) -> bool:
-	return _slot_mode_advanced[slot_index]
+	for i in range(icons.get_child_count()):
+		var heart := icons.get_child(i) as CanvasItem
+		if heart == null:
+			continue
+		heart.visible = advanced or i == 0
+		heart.modulate = Color(1, 1, 1, 1) if (advanced or i == 0) else Color(1, 1, 1, 0.35)
 
 
 func _setup_element_reference() -> void:
 	if _element_ref_button != null:
 		_style_action_button(_element_ref_button)
-		_element_ref_button.visible = false
 		_element_ref_button.pressed.connect(_open_element_reference)
 	if _element_ref_overlay != null:
 		_element_ref_overlay.visible = false
@@ -310,6 +257,8 @@ func _on_debug_labels_enabled_changed(is_enabled: bool) -> void:
 
 
 func _sync_element_reference_visibility(is_enabled: bool) -> void:
+	if _debug_strip != null:
+		_debug_strip.visible = is_enabled
 	if _element_ref_button != null:
 		_element_ref_button.visible = is_enabled
 	if _translation_editor_button != null:
@@ -319,12 +268,10 @@ func _sync_element_reference_visibility(is_enabled: bool) -> void:
 
 
 func translation_editor_unlocked() -> bool:
-	## Visible only while debug mode (DebugLabels / F1) is on.
 	return DebugLabels.is_enabled()
 
 
 func element_reference_unlocked() -> bool:
-	## Visible only while debug mode (DebugLabels / F1) is on.
 	return DebugLabels.is_enabled()
 
 
@@ -340,7 +287,6 @@ func nudge_element_reference_zoom(delta: float) -> void:
 	_apply_sheet_zoom(_sheet_zoom + delta)
 
 
-
 func _element_reference_open() -> bool:
 	return _element_ref_overlay != null and _element_ref_overlay.visible
 
@@ -353,7 +299,6 @@ func _open_element_reference() -> void:
 	_sheet_zoom = 1.0
 	_sheet_panning = false
 	_element_ref_overlay.visible = true
-	# Defer fit until SheetScroll has a real size after becoming visible.
 	call_deferred("_finish_open_element_reference")
 
 
@@ -370,7 +315,7 @@ func _close_element_reference() -> void:
 	_sheet_panning = false
 	if _element_ref_overlay != null:
 		_element_ref_overlay.visible = false
-	_refresh_prompts()
+	_refresh_status_hint()
 	_highlight()
 
 
@@ -453,24 +398,14 @@ func _on_sheet_gui_input(event: InputEvent) -> void:
 
 
 func _style_screen() -> void:
-	# Keep legacy Background node harmless if an older scene layout is loaded.
 	var legacy_bg := get_node_or_null("Background") as CanvasItem
 	if legacy_bg != null:
 		legacy_bg.visible = false
-	_style_title_lettering()
-
-
-func _style_title_lettering() -> void:
 	var title := get_node_or_null("Title") as Label
 	if title != null:
 		_apply_cream_outline(title, TITLE_CREAM, Color(0.22, 0.08, 0.03, 0.92), 5)
-	var subtitle := get_node_or_null("Subtitle") as Label
-	if subtitle != null:
-		_apply_cream_outline(subtitle, Color(0.94, 0.84, 0.52, 1.0), Color(0.24, 0.09, 0.04, 0.78), 3)
-	if _prompt != null:
-		_apply_cream_outline(_prompt, Color(0.94, 0.84, 0.52, 1.0), Color(0.24, 0.09, 0.04, 0.72), 0)
-	if _hint != null:
-		_apply_cream_outline(_hint, Color(0.90, 0.78, 0.48, 1.0), Color(0.24, 0.09, 0.04, 0.65), 0)
+	if _status_hint != null:
+		_apply_cream_outline(_status_hint, Color(0.94, 0.84, 0.52, 1.0), Color(0.24, 0.09, 0.04, 0.72), 2)
 
 
 func _apply_cream_outline(label: Label, fill: Color, outline: Color, outline_size: int) -> void:
@@ -480,19 +415,28 @@ func _apply_cream_outline(label: Label, fill: Color, outline: Color, outline_siz
 		label.add_theme_constant_override(&"outline_size", outline_size)
 
 
-func _style_slot_button(button: Button) -> void:
-	_apply_cream_button_fonts(button)
-	button.add_theme_font_size_override(&"font_size", 20)
-	button.alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var normal := _saloon_slot_style(1.0)
-	var hover := _saloon_slot_style(1.08)
+func _style_door_button(button: Button, radius: int = 18, pad: int = 12) -> void:
+	button.text = ""
+	button.flat = true
+	var normal := _door_style(DOOR_FILL, radius, pad, Color(0.42, 0.18, 0.08, 1.0), 5)
+	var hover := _door_style(DOOR_FILL_HOVER, radius, pad, BANDANA_RED, 6)
+	_apply_button_styles(button, normal, hover)
+
+
+func _style_icon_button(button: Button) -> void:
+	button.text = ""
+	button.flat = true
+	button.expand_icon = true
+	button.custom_minimum_size = Vector2(72, 72)
+	var normal := _door_style(DOOR_FILL, 16, 10, Color(0.42, 0.18, 0.08, 1.0), 4)
+	var hover := _door_style(DOOR_FILL_HOVER, 16, 10, BANDANA_RED, 5)
 	_apply_button_styles(button, normal, hover)
 
 
 func _style_action_button(button: Button) -> void:
 	_apply_cream_button_fonts(button)
-	var normal := _wood_style(WOOD, 10, 10)
-	var hover := _wood_style(WOOD_HOVER, 10, 10)
+	var normal := _wood_style(WOOD, 10, 8)
+	var hover := _wood_style(WOOD_HOVER, 10, 8)
 	_apply_button_styles(button, normal, hover)
 
 
@@ -512,36 +456,23 @@ func _apply_button_styles(button: Button, normal: StyleBox, hover: StyleBox) -> 
 	button.add_theme_stylebox_override(&"focus", hover)
 
 
-func _saloon_slot_style(modulate_boost: float) -> StyleBoxTexture:
-	var style := StyleBoxTexture.new()
-	style.texture = SLOT_BOARD
-	style.texture_margin_left = 28
-	style.texture_margin_right = 28
-	style.texture_margin_top = 28
-	style.texture_margin_bottom = 28
-	style.content_margin_left = 22
-	style.content_margin_right = 22
-	style.content_margin_top = 28
-	style.content_margin_bottom = 24
-	style.modulate_color = Color(modulate_boost, modulate_boost * 0.96, modulate_boost * 0.88, 1.0)
+func _door_style(
+	fill: Color, radius: int, pad: int, border: Color, border_width: int
+) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = fill
+	style.set_corner_radius_all(radius)
+	style.set_border_width_all(border_width)
+	style.border_color = border
+	style.content_margin_left = pad
+	style.content_margin_right = pad
+	style.content_margin_top = pad
+	style.content_margin_bottom = pad
 	return style
 
 
 func _wood_style(fill: Color, radius: int, pad_v: int) -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = fill
-	style.set_corner_radius_all(radius)
-	style.set_border_width_all(4)
-	# Weathered saloon rim — soft peeling red edge instead of plain brown.
-	style.border_color = Color(0.58, 0.18, 0.10, 1.0)
-	style.content_margin_left = 16
-	style.content_margin_right = 16
-	style.content_margin_top = pad_v
-	style.content_margin_bottom = pad_v
-	style.shadow_color = Color(0.25, 0.1, 0.03, 0.35)
-	style.shadow_size = 4
-	style.shadow_offset = Vector2(2, 3)
-	return style
+	return _door_style(fill, radius, 12, Color(0.58, 0.18, 0.10, 1.0), 4)
 
 
 func _style_delete_dialog() -> void:
@@ -553,6 +484,20 @@ func _style_delete_dialog() -> void:
 	panel.border_color = Color(0.58, 0.18, 0.10, 1.0)
 	panel.set_corner_radius_all(12)
 	_delete_dialog.add_theme_stylebox_override(&"panel", panel)
+
+
+func _ensure_star_dots(card: Button) -> void:
+	var stars := card.get_node_or_null("Stars") as HBoxContainer
+	if stars == null:
+		return
+	while stars.get_child_count() < MAX_STAR_DOTS:
+		var star := TextureRect.new()
+		star.custom_minimum_size = Vector2(28, 28)
+		star.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		star.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		star.texture = STAR_TEX
+		star.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		stars.add_child(star)
 
 
 func _pulse_sun() -> void:
@@ -567,31 +512,33 @@ func _pulse_sun() -> void:
 
 func _bob_title() -> void:
 	var title := get_node_or_null("Title") as Control
-	var board := get_node_or_null("TitleBoard") as Control
-	var hand_l := get_node_or_null("PointingHandLeft") as Control
-	var hand_r := get_node_or_null("PointingHandRight") as Control
+	var hat := get_node_or_null("TitleHat") as Control
 	if title == null:
 		return
 	var base := title.position.y
-	var board_base := board.position.y if board != null else 0.0
-	var hand_l_base := hand_l.position.y if hand_l != null else 0.0
-	var hand_r_base := hand_r.position.y if hand_r != null else 0.0
+	var hat_base := hat.position.y if hat != null else 0.0
 	var tween := create_tween()
 	tween.set_loops()
-	tween.tween_property(title, "position:y", base - 6.0, 0.9).set_trans(Tween.TRANS_SINE)
-	if board != null:
-		tween.parallel().tween_property(board, "position:y", board_base - 6.0, 0.9).set_trans(Tween.TRANS_SINE)
-	if hand_l != null:
-		tween.parallel().tween_property(hand_l, "position:y", hand_l_base - 5.0, 0.9).set_trans(Tween.TRANS_SINE)
-	if hand_r != null:
-		tween.parallel().tween_property(hand_r, "position:y", hand_r_base - 5.0, 0.9).set_trans(Tween.TRANS_SINE)
-	tween.tween_property(title, "position:y", base + 4.0, 0.9).set_trans(Tween.TRANS_SINE)
-	if board != null:
-		tween.parallel().tween_property(board, "position:y", board_base + 4.0, 0.9).set_trans(Tween.TRANS_SINE)
-	if hand_l != null:
-		tween.parallel().tween_property(hand_l, "position:y", hand_l_base + 3.0, 0.9).set_trans(Tween.TRANS_SINE)
-	if hand_r != null:
-		tween.parallel().tween_property(hand_r, "position:y", hand_r_base + 3.0, 0.9).set_trans(Tween.TRANS_SINE)
+	tween.tween_property(title, "position:y", base - 5.0, 0.95).set_trans(Tween.TRANS_SINE)
+	if hat != null:
+		tween.parallel().tween_property(hat, "position:y", hat_base - 5.0, 0.95).set_trans(Tween.TRANS_SINE)
+	tween.tween_property(title, "position:y", base + 3.0, 0.95).set_trans(Tween.TRANS_SINE)
+	if hat != null:
+		tween.parallel().tween_property(hat, "position:y", hat_base + 3.0, 0.95).set_trans(Tween.TRANS_SINE)
+
+
+func _breathe_mascots() -> void:
+	var mascots := get_node_or_null("Mascots") as Control
+	if mascots == null:
+		return
+	for child in mascots.get_children():
+		var node := child as Control
+		if node == null:
+			continue
+		var tween := create_tween()
+		tween.set_loops()
+		tween.tween_property(node, "scale", Vector2(1.04, 1.04), 1.1).set_trans(Tween.TRANS_SINE)
+		tween.tween_property(node, "scale", Vector2(1.0, 1.0), 1.1).set_trans(Tween.TRANS_SINE)
 
 
 func _settings_open() -> bool:
@@ -614,7 +561,8 @@ func _close_settings() -> void:
 		_settings.visible = false
 	if _settings_dim != null:
 		_settings_dim.visible = false
-	_refresh_prompts()
+	_refresh_hearts_button()
+	_refresh_status_hint()
 	_highlight()
 
 
@@ -653,8 +601,7 @@ func _select_slot(slot_index: int) -> void:
 
 func _request_delete() -> void:
 	if GameManager.is_slot_empty(_index):
-		if _hint != null:
-			_hint.text = tr("Save %d is already empty.") % (_index + 1)
+		_flash_status(tr("Save %d is already empty.") % (_index + 1))
 		return
 	if _delete_dialog == null:
 		return
@@ -664,46 +611,73 @@ func _request_delete() -> void:
 
 func _confirm_delete() -> void:
 	GameManager.erase_slot(_index)
-	_slot_mode_advanced[_index] = false
 	_refresh()
-	_refresh_prompts()
-	_sync_mode_dropdown_for_slot(_index)
+	_refresh_status_hint()
 
 
 func _refresh() -> void:
-	_sync_mode_dropdown_for_slot(_index)
+	var portrait_tex := _active_portrait_texture()
 	for i in range(_cards.size()):
+		var card := _cards[i]
 		var slot := GameManager.get_slot(i)
-		var title := tr("Save %d") % (i + 1)
-		if bool(slot.get("empty", true)):
-			_cards[i].text = "%s\n%s\n%s" % [title, tr("Empty"), tr("Press to start")]
-		else:
-			var level := int(slot.get("current_level", 1))
-			var stars := int(slot.get("stars", 0))
-			var seconds := int(slot.get("play_time_sec", 0.0))
-			var done := " " + tr("DONE") if bool(slot.get("completed", false)) else ""
-			_cards[i].text = "%s%s\n%s\n%s" % [
-				title,
-				done,
-				tr("Trail %s") % GameManager.level_name_for(level),
-				tr("Badges %d | Time %dm %ds") % [stars, seconds / 60, seconds % 60],
-			]
+		var number := card.get_node_or_null("Number") as Label
+		if number != null:
+			number.text = str(i + 1)
+		var portrait := card.get_node_or_null("Portrait") as TextureRect
+		var stars := card.get_node_or_null("Stars") as HBoxContainer
+		var empty := bool(slot.get("empty", true))
+		if portrait != null:
+			if empty:
+				portrait.texture = null
+				portrait.modulate = Color(1, 1, 1, 0.2)
+			else:
+				portrait.texture = portrait_tex
+				portrait.modulate = Color(1, 1, 1, 1)
+		if stars != null:
+			var badge_dots := 0 if empty else clampi(int(slot.get("stars", 0)), 0, MAX_STAR_DOTS)
+			if not empty and badge_dots == 0 and int(slot.get("current_level", 1)) > 1:
+				badge_dots = 1
+			for s in range(stars.get_child_count()):
+				var star := stars.get_child(s) as CanvasItem
+				if star != null:
+					star.visible = s < badge_dots
 
 
-func _refresh_prompts() -> void:
-	if _prompt:
-		_prompt.text = InputManager.menu_prompt_line()
-	if _hint:
-		_hint.text = tr("Delete save: right-click, Space, or controller Y")
+func _active_portrait_texture() -> Texture2D:
+	var path := "%sidle_0.png" % GameManager.get_player_asset_folder()
+	if ResourceLoader.exists(path):
+		return load(path) as Texture2D
+	return preload("res://assets/player/idle_0.png")
+
+
+func _refresh_status_hint() -> void:
+	if _status_hint == null:
+		return
+	_status_hint.text = ""
+
+
+func _flash_status(message: String) -> void:
+	if _status_hint == null:
+		return
+	_status_hint.text = message
 
 
 func _highlight() -> void:
 	for i in range(_cards.size()):
-		_cards[i].modulate = Color(1, 1, 0.55, 1) if i == _index else Color(1, 1, 1, 1)
-	if _index != _last_mode_slot:
-		if GameManager.is_slot_empty(_index):
-			_slot_mode_advanced[_index] = false
-		else:
-			_slot_mode_advanced[_index] = GameManager.slot_is_advanced(_index)
-		_last_mode_slot = _index
-	_sync_mode_dropdown_for_slot(_index)
+		var selected := i == _index
+		_cards[i].scale = Vector2(1.05, 1.05) if selected else Vector2.ONE
+		var normal := _door_style(
+			DOOR_FILL_HOVER if selected else DOOR_FILL,
+			18,
+			12,
+			BANDANA_RED if selected else Color(0.42, 0.18, 0.08, 1.0),
+			6 if selected else 5
+		)
+		var hover := _door_style(DOOR_FILL_HOVER, 18, 12, BANDANA_RED, 6)
+		_apply_button_styles(_cards[i], normal, hover)
+		var number := _cards[i].get_node_or_null("Number") as Label
+		if number != null:
+			number.add_theme_color_override(
+				&"font_color",
+				TITLE_CREAM_HOVER if selected else TITLE_CREAM
+			)

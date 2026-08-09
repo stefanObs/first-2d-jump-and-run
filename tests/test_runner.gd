@@ -1105,7 +1105,7 @@ func _test_save_select_scene() -> Variant:
 	if packed == null:
 		return "Missing save select scene."
 	GameManager.erase_slot(0)
-	GameManager.debug_set_slot(0, {"empty": false, "current_level": 4})
+	GameManager.debug_set_slot(0, {"empty": false, "current_level": 4, "stars": 2})
 	var scene := packed.instantiate()
 	add_child(scene)
 	var error: Variant = null
@@ -1116,53 +1116,63 @@ func _test_save_select_scene() -> Variant:
 	if error == null and scene.get_node_or_null("LanguageButton") != null:
 		error = "Save select should not show a top-level language button."
 	var skyline := scene.get_node_or_null("Skyline") as TextureRect
-	var title_board := scene.get_node_or_null("TitleBoard")
-	var prompt_board := scene.get_node_or_null("PromptBoard")
 	if error == null and (skyline == null or skyline.texture == null):
 		error = "Save select needs the desert skyline backdrop."
-	elif error == null and not (title_board is HandmadeSign):
-		error = "Save select title should use a HandmadeSign western board."
-	elif error == null and not (prompt_board is HandmadeSign):
-		error = "Save select prompts should use a HandmadeSign western board."
+	if error == null and scene.get_node_or_null("TitleHat") == null:
+		error = "Save select needs the hat emblem above the title."
+	if error == null and scene.get_node_or_null("Mascots/Cowboy") == null:
+		error = "Save select needs cowboy and cowgirl mascots."
+	if error == null and scene.get_node_or_null("Mascots/Cowgirl") == null:
+		error = "Save select needs cowboy and cowgirl mascots."
+	if error == null and scene.get_node_or_null("HeartsButton") == null:
+		error = "Save select needs a hearts trail-mode toggle."
+	if error == null and scene.get_node_or_null("DebugStrip") == null:
+		error = "Save select needs a debug strip for F1 tools."
 	var settings_button := scene.get_node_or_null("SettingsButton") as Button
 	var settings_panel := scene.get_node_or_null("SettingsPanel") as SettingsPanel
 	if error == null and (settings_button == null or settings_panel == null):
 		error = "Save select needs Settings access via SettingsButton + SettingsPanel."
 	if error == null and scene.get_node_or_null("BuildTrailButton") == null:
 		error = "Save select needs Campaign Workshop access."
-	if error == null and scene.get_node_or_null("TranslationEditorButton") == null:
+	if error == null and scene.get_node_or_null("DebugStrip/TranslationEditorButton") == null:
 		error = "Save select needs a Translation Editor button (debug-gated)."
 	var delete_dialog := scene.get_node_or_null("DeleteConfirmation") as ConfirmationDialog
 	if error == null and delete_dialog == null:
 		error = "Save deletion needs a confirmation dialog."
 	var first_card := scene.get_node_or_null("Slots/Slot1") as Button
-	if error == null and first_card != null and not first_card.text.contains("4: "):
-		error = "Save cards should show level names as '<number>: <name>'."
+	var number := scene.get_node_or_null("Slots/Slot1/Number") as Label
+	var portrait := scene.get_node_or_null("Slots/Slot1/Portrait") as TextureRect
+	var stars := scene.get_node_or_null("Slots/Slot1/Stars") as HBoxContainer
+	if error == null and (number == null or number.text != "1"):
+		error = "Save doors should show giant slot numbers 1–3."
+	if error == null and (portrait == null or portrait.texture == null):
+		error = "Filled save doors should show the active character portrait."
+	if error == null and stars != null:
+		var visible_stars := 0
+		for child in stars.get_children():
+			if child is CanvasItem and (child as CanvasItem).visible:
+				visible_stars += 1
+		if visible_stars != 2:
+			error = "Filled save doors should show capped star dots from progress."
 	if error == null and first_card != null:
 		var normal := first_card.get_theme_stylebox("normal")
-		if normal is StyleBoxTexture:
-			var tex_style := normal as StyleBoxTexture
-			if tex_style.texture == null:
-				error = "Save slot StyleBoxTexture needs a weathered saloon wood texture."
-		elif normal is StyleBoxFlat:
-			if (normal as StyleBoxFlat).bg_color.b > 0.55:
-				error = "Save slot buttons should look wooden, not default gray/blue."
-		else:
-			error = "Save slot buttons should use handmade wood StyleBox styling."
+		if not (normal is StyleBoxFlat):
+			error = "Save doors should use thick wood StyleBoxFlat styling."
+		elif (normal as StyleBoxFlat).bg_color.b > 0.55:
+			error = "Save doors should look wooden, not default gray/blue."
+		elif (normal as StyleBoxFlat).get_border_width(SIDE_LEFT) < 4:
+			error = "Save doors need a thick kid-readable outline."
 	var title_label := scene.get_node_or_null("Title") as Label
 	if error == null and title_label != null:
 		var cream := title_label.get_theme_color("font_color")
 		if cream.r < 0.85 or cream.g < 0.7 or cream.b > 0.65:
-			error = "Save select title should use faded cream/yellow saloon lettering."
-	var hand := scene.get_node_or_null("PointingHandRight") as TextureRect
-	if error == null and (hand == null or hand.texture == null):
-		error = "Save select should show a handpainted pointing-hand motif by the title."
-	if error == null and title_board is HandmadeSign:
-		var board := title_board as HandmadeSign
-		if board.board_style != HandmadeSign.BoardStyle.SALOON:
-			error = "Save select title board should use HandmadeSign SALOON weathering."
-		elif board.board_texture == null:
-			error = "Save select title board should use the painted saloon title texture."
+			error = "Save select title should use faded cream/yellow western lettering."
+	if error == null and scene.get_node_or_null("PointingHandRight") != null:
+		error = "Kid-first save select should not keep the pointing-hand motif."
+	if error == null and scene.get_node_or_null("TitleBoard") != null:
+		error = "Kid-first save select should drop the dense saloon title board."
+	if error == null and scene.get_node_or_null("PromptBoard") != null:
+		error = "Kid-first save select should drop the text-heavy prompt board."
 	if error == null:
 		scene._request_delete()
 		if GameManager.is_slot_empty(0):
@@ -1488,7 +1498,7 @@ func _test_element_reference_link() -> Variant:
 	add_child(scene)
 	await get_tree().process_frame
 	var error: Variant = null
-	var button := scene.get_node_or_null("ElementReferenceButton") as Button
+	var button := scene.get_node_or_null("DebugStrip/ElementReferenceButton") as Button
 	var overlay := scene.get_node_or_null("ElementReferenceOverlay") as Control
 	var sheet := scene.get_node_or_null("ElementReferenceOverlay/Panel/Margin/VBox/SheetScroll/Sheet") as TextureRect
 	var zoom_in := scene.get_node_or_null("ElementReferenceOverlay/Panel/Margin/VBox/ZoomBar/ZoomInButton") as Button
@@ -1554,7 +1564,7 @@ func _test_translation_editor_button_debug_gate() -> Variant:
 	add_child(scene)
 	await get_tree().process_frame
 	var error: Variant = null
-	var button := scene.get_node_or_null("TranslationEditorButton") as Button
+	var button := scene.get_node_or_null("DebugStrip/TranslationEditorButton") as Button
 	if button == null:
 		error = "Save select needs TranslationEditorButton."
 	elif button.visible or scene.translation_editor_unlocked():
