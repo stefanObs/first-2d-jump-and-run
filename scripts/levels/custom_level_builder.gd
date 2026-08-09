@@ -65,9 +65,13 @@ static func build(level: LevelController, data: Dictionary, preview: bool = fals
 		if LevelStyle.is_cave(style) and CustomLevelStore.is_cave_banned(type_name):
 			continue
 		if (
-			type_name == "bull"
-			and not CustomLevelStore.bull_stamp_allowed(
-				data.get("objects", []) as Array, int(object.get("x", 0)), trail
+			CustomLevelStore.is_ground_standing(type_name)
+			and not CustomLevelStore.ground_stamp_allowed(
+				data.get("objects", []) as Array,
+				type_name,
+				int(object.get("x", 0)),
+				trail,
+				width
 			)
 		):
 			continue

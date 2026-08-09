@@ -285,23 +285,125 @@ static func trail_column_is_solid_dirt(objects: Array, x: int, trail: int) -> bo
 
 static func bull_stamp_allowed(objects: Array, x: int, trail: int) -> bool:
 	## Trail bulls / cave lizards never stand on pits or canyon mouths.
-	return trail_column_is_solid_dirt(objects, x, trail)
+	return ground_stamp_allowed(objects, "bull", x, trail)
+
+
+static func ground_stamp_allowed(
+	objects: Array, type_name: String, anchor_x: int, trail: int, width: int = MAX_WIDTH
+) -> bool:
+	## Ground-standing stamps need solid dirt under every trail column they cover.
+	if not is_ground_standing(type_name):
+		return true
+	var cells := stamp_cells_for_anchor(type_name, anchor_x, maxi(trail - 1, 0), trail, width)
+	if cells.is_empty():
+		return trail_column_is_solid_dirt(objects, anchor_x, trail)
+	var seen := {}
+	for cell in cells:
+		var col := cell.x
+		if seen.has(col):
+			continue
+		seen[col] = true
+		if not trail_column_is_solid_dirt(objects, col, trail):
+			return false
+	return true
+
+
+static func stamp_cells_for_anchor(
+	type_name: String, anchor_x: int, anchor_y: int, trail: int, width: int = MAX_WIDTH
+) -> Array[Vector2i]:
+	## Occupied grid cells for a stamp whose stored x/y is the footprint anchor (top-left /
+	## standing row). Ladder grows upward from the standing row.
+	var cells: Array[Vector2i] = []
+	if type_name in ["erase", "ground", "canyon"]:
+		cells.append(Vector2i(anchor_x, anchor_y))
+		return cells
+	if type_name == "pit":
+		var span := pit_column_span({"type": "pit", "x": anchor_x, "y": trail})
+		for col in range(span.x, span.y + 1):
+			cells.append(Vector2i(col, trail))
+		return cells
+	var footprint := stamp_footprint(type_name)
+	var start_col := clampi(anchor_x, 0, maxi(width - int(footprint.x), 0))
+	for dx in range(int(footprint.x)):
+		for dy in range(int(footprint.y)):
+			var row := anchor_y + dy
+			if type_name == "ladder":
+				row = anchor_y - dy
+			if row < 0 or row > trail:
+				continue
+			cells.append(Vector2i(start_col + dx, row))
+	return cells
+
+
+static func stamp_cells_for_object(
+	object: Dictionary, trail: int, width: int = MAX_WIDTH
+) -> Array[Vector2i]:
+	return stamp_cells_for_anchor(
+		str(object.get("type", "")),
+		int(object.get("x", 0)),
+		int(object.get("y", 0)),
+		trail,
+		width
+	)
+
+
+static func stamps_overlap(
+	a: Dictionary, b: Dictionary, trail: int, width: int = MAX_WIDTH
+) -> bool:
+	var a_type := str(a.get("type", ""))
+	var b_type := str(b.get("type", ""))
+	if a_type == "ground" or b_type == "ground":
+		return false
+	var a_cells := stamp_cells_for_object(a, trail, width)
+	var lookup := {}
+	for cell in a_cells:
+		lookup["%d,%d" % [cell.x, cell.y]] = true
+	for cell in stamp_cells_for_object(b, trail, width):
+		if lookup.has("%d,%d" % [cell.x, cell.y]):
+			return true
+	return false
+
+
+static func remove_overlapping_stamps(
+	objects: Array, incoming: Dictionary, trail: int, width: int = MAX_WIDTH
+) -> void:
+	## Clear any non-ground stamp whose footprint intersects the incoming stamp.
+	for i in range(objects.size() - 1, -1, -1):
+		var existing := objects[i] as Dictionary
+		if str(existing.get("type", "")) == "ground":
+			continue
+		if stamps_overlap(existing, incoming, trail, width):
+			objects.remove_at(i)
 
 
 static func remove_bulls_at_columns(objects: Array, columns: Array, trail: int) -> void:
+	remove_ground_standing_at_columns(objects, columns, trail)
+
+
+static func remove_ground_standing_at_columns(
+	objects: Array, columns: Array, trail: int
+) -> void:
 	var blocked := {}
 	for col in columns:
 		blocked[int(col)] = true
 	if blocked.is_empty():
 		return
+	var stand_y := maxi(trail - 1, 0)
 	for i in range(objects.size() - 1, -1, -1):
 		var object := objects[i] as Dictionary
-		if str(object.get("type", "")) != "bull":
+		var type_name := str(object.get("type", ""))
+		if not is_ground_standing(type_name):
 			continue
-		if int(object.get("y", -1)) != maxi(trail - 1, 0):
+		if int(object.get("y", -1)) != stand_y and type_name != "ladder":
 			continue
 		if blocked.has(int(object.get("x", -1))):
 			objects.remove_at(i)
+			continue
+		## Wide stamps (belt / fence / door) that only overlap the gap on a shoulder cell.
+		for cell in stamp_cells_for_object(object, trail):
+			if blocked.has(cell.x):
+				objects.remove_at(i)
+				break
 
 
 ## Trail columns whose crust the cowboy actually drops through — the ones whose
@@ -1105,7 +1207,8 @@ static func sanitize(source: Dictionary, slot_index: int) -> Dictionary:
 				if objects.size() >= 900:
 					break
 		realign_ladder_ledges(objects, trail)
-		_strip_bulls_off_gaps(objects, trail)
+		_strip_ground_standing_off_gaps(objects, trail, int(result["width"]))
+		_strip_overlapping_stamps(objects, trail, int(result["width"]))
 		if bool(result["start_mounted"]):
 			strip_mounted_banned_stamps(objects)
 		if LevelStyle.is_cave(str(result["style"])):
@@ -1134,13 +1237,44 @@ static func strip_cave_banned_stamps(objects: Array) -> void:
 
 
 static func _strip_bulls_off_gaps(objects: Array, trail: int) -> void:
-	## Drop trail-bull / cave-lizard stamps that landed on a pit mouth or canyon.
+	## Compat alias — all ground-standing stamps are stripped off gaps.
+	_strip_ground_standing_off_gaps(objects, trail)
+
+
+static func _strip_ground_standing_off_gaps(
+	objects: Array, trail: int, width: int = MAX_WIDTH
+) -> void:
+	## Drop cactus/bandit/bull/spring/… stamps that landed on a pit mouth or canyon.
 	for i in range(objects.size() - 1, -1, -1):
 		var object := objects[i] as Dictionary
-		if str(object.get("type", "")) != "bull":
+		var type_name := str(object.get("type", ""))
+		if not is_ground_standing(type_name):
 			continue
-		if not bull_stamp_allowed(objects, int(object.get("x", 0)), trail):
+		if not ground_stamp_allowed(objects, type_name, int(object.get("x", 0)), trail, width):
 			objects.remove_at(i)
+
+
+static func _strip_overlapping_stamps(
+	objects: Array, trail: int, width: int = MAX_WIDTH
+) -> void:
+	## Keep the later stamp when two non-ground footprints share a cell.
+	var i := 0
+	while i < objects.size():
+		var current := objects[i] as Dictionary
+		if str(current.get("type", "")) == "ground":
+			i += 1
+			continue
+		var removed_earlier := false
+		for j in range(i + 1, objects.size()):
+			var later := objects[j] as Dictionary
+			if str(later.get("type", "")) == "ground":
+				continue
+			if stamps_overlap(current, later, trail, width):
+				objects.remove_at(i)
+				removed_earlier = true
+				break
+		if not removed_earlier:
+			i += 1
 
 
 static func _valid_object(object: Dictionary, trail: int) -> bool:

@@ -26,6 +26,9 @@ const SHOOT_UP_MIN := 80.0
 @export var vertical_patrol: bool = false
 @export var bounty_bandit: bool = false
 
+const FALL_GRAVITY := 1350.0
+const FALL_PROBE_DOWN := 900.0
+
 var _origin: Vector2
 var _going_to_b: bool = true
 var _area: Area2D
@@ -40,6 +43,8 @@ var _shot_generation: int = 0
 var _revolver: RevolverOverlay
 var _pose_tween: Tween
 var _level_style: String = LevelStyle.DESERT
+var _falling: bool = false
+var _fall_vel: float = 0.0
 
 
 func apply_level_style(style: String) -> void:
@@ -66,6 +71,8 @@ func _ready() -> void:
 	add_child(_revolver)
 	if _area != null:
 		_area.body_entered.connect(_on_body_entered)
+	## Mid-air stamps fall onto the next standable crust, then patrol.
+	call_deferred("_begin_airborne_fall")
 
 
 func _setup_sprite() -> void:
@@ -168,8 +175,35 @@ func _process(delta: float) -> void:
 	_update_nearby_hint()
 
 
+func _begin_airborne_fall() -> void:
+	if _tied or vertical_patrol:
+		_falling = false
+		return
+	var floor_y := FloorProbe.nearest_floor_y(
+		self, global_position, 8.0, FALL_PROBE_DOWN, INF
+	)
+	if is_nan(floor_y) or floor_y <= global_position.y + 6.0:
+		_falling = false
+		_origin = global_position
+		return
+	_falling = true
+	_fall_vel = 0.0
+
+
 func _physics_process(delta: float) -> void:
 	if _tied:
+		return
+	if _falling:
+		_fall_vel += FALL_GRAVITY * delta
+		global_position.y += _fall_vel * delta
+		var floor_y := FloorProbe.nearest_floor_y(
+			self, global_position, 8.0, 96.0 + _fall_vel * delta, INF
+		)
+		if not is_nan(floor_y) and global_position.y >= floor_y:
+			global_position.y = floor_y
+			_falling = false
+			_fall_vel = 0.0
+			_origin = global_position
 		return
 	_resolve_player_overlap()
 	if _tied:

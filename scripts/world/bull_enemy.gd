@@ -146,7 +146,10 @@ func _process(delta: float) -> void:
 
 
 func _snap_to_floor_once() -> void:
-	var hit_y := _probe_floor_y(GROUND_PROBE_DOWN + 120.0)
+	## Prefer the crust under the spawn post — never teleport to a distant lower bank.
+	var hit_y := _probe_floor_y_at(global_position, GROUND_PROBE_DOWN, 40.0)
+	if is_nan(hit_y):
+		hit_y = _probe_floor_y_at(global_position, GROUND_PROBE_DOWN + 120.0, 120.0)
 	if not is_nan(hit_y):
 		global_position.y = hit_y
 		_origin.y = global_position.y
@@ -246,21 +249,12 @@ func _edge_ahead(direction: float) -> bool:
 	return is_nan(_probe_floor_y_at(probe, GROUND_PROBE_DOWN))
 
 
-func _probe_floor_y_at(world_pos: Vector2, down_reach: float) -> float:
-	var world := get_world_2d()
-	if world == null:
-		return NAN
-	var from := world_pos + Vector2(0.0, -GROUND_PROBE_UP)
-	var query := PhysicsRayQueryParameters2D.create(
-		from,
-		world_pos + Vector2(0.0, down_reach),
-		1
+func _probe_floor_y_at(
+	world_pos: Vector2, down_reach: float, max_drop: float = INF
+) -> float:
+	return FloorProbe.nearest_floor_y(
+		self, world_pos, GROUND_PROBE_UP, down_reach, max_drop
 	)
-	query.exclude = [get_rid()]
-	var hit := world.direct_space_state.intersect_ray(query)
-	if hit.is_empty():
-		return NAN
-	return float((hit["position"] as Vector2).y)
 
 
 func _probe_floor_y(down_reach: float) -> float:
@@ -273,7 +267,9 @@ func _integrate_gravity(next: Vector2, delta: float) -> Vector2:
 		next.y += _vel_y * delta
 		return next
 	var reach := GROUND_PROBE_DOWN + maxf(_vel_y, 0.0) * delta
-	var hit_y := _probe_floor_y_at(next, reach)
+	## While grounded, refuse teleports onto a much lower bank/plank.
+	var max_drop := 36.0 if _was_grounded else INF
+	var hit_y := _probe_floor_y_at(next, reach, max_drop)
 	if not is_nan(hit_y):
 		next.y = hit_y
 		_vel_y = 0.0

@@ -899,20 +899,11 @@ func _wire_grid_cell(cell: Button, cell_x: int, cell_y: int) -> void:
 
 
 func _object_occupies_cell(object: Dictionary, x: int, y: int, trail: int) -> bool:
-	var ox := int(object.get("x", -1))
-	var oy := int(object.get("y", -1))
-	var type_name := str(object.get("type", ""))
-	match type_name:
-		"pit":
-			if y != trail:
-				return false
-			var span := CustomLevelStore.pit_column_span(object)
-			return x >= span.x and x <= span.y
-		"platform":
-			var footprint := CustomLevelStore.stamp_footprint("platform")
-			return y == oy and x >= ox and x < ox + int(footprint.x)
-		_:
-			return ox == x and oy == y
+	var width := int(_data.get("width", CustomLevelStore.DEFAULT_WIDTH))
+	for cell in CustomLevelStore.stamp_cells_for_object(object, trail, width):
+		if cell.x == x and cell.y == y:
+			return true
+	return false
 
 
 func _remove_at(x: int, y: int) -> void:
@@ -1057,14 +1048,14 @@ func _place(x: int, y: int) -> void:
 	elif _selected_type == "canyon":
 		_erase_at(objects, x, trail, true)
 		objects.append({"type": "canyon", "x": x, "y": trail})
-		CustomLevelStore.remove_bulls_at_columns(objects, [x], trail)
+		CustomLevelStore.remove_ground_standing_at_columns(objects, [x], trail)
 	elif _selected_type == "pit":
 		if y != trail or not CustomLevelStore.pit_fits_on_dirt(objects, x, trail):
 			return
 		_remove_pit_footprint(objects, x, trail)
 		objects.append({"type": "pit", "x": x, "y": trail})
 		var hole := CustomLevelStore.pit_hole_columns({"objects": objects}, trail)
-		CustomLevelStore.remove_bulls_at_columns(objects, hole.keys(), trail)
+		CustomLevelStore.remove_ground_standing_at_columns(objects, hole.keys(), trail)
 	elif _selected_type == "ground":
 		var target_y := y if y <= trail else trail
 		if not _has_type_at(objects, x, target_y, "ground"):
@@ -1082,14 +1073,28 @@ func _place(x: int, y: int) -> void:
 				):
 					objects.remove_at(i)
 	else:
-		if _selected_type == "bull" and not CustomLevelStore.bull_stamp_allowed(objects, x, trail):
+		var width := int(_data.get("width", CustomLevelStore.DEFAULT_WIDTH))
+		var hover_cells := CustomLevelStore.stamp_hover_cells(
+			_selected_type, x, y, trail, width
+		)
+		var store_x := x
+		var store_y := place_y
+		if not hover_cells.is_empty():
+			store_x = hover_cells[0].x
+			for cell in hover_cells:
+				store_x = mini(store_x, cell.x)
+			store_y = place_y
+		if CustomLevelStore.is_ground_standing(_selected_type) and not CustomLevelStore.ground_stamp_allowed(
+			objects, _selected_type, store_x, trail, width
+		):
 			return
-		_remove_foreground_at(objects, x, place_y)
+		var incoming := {"type": _selected_type, "x": store_x, "y": store_y}
+		CustomLevelStore.remove_overlapping_stamps(objects, incoming, trail, width)
 		if _selected_type == "goal":
 			for i in range(objects.size() - 1, -1, -1):
 				if str(objects[i].get("type", "")) == "goal":
 					objects.remove_at(i)
-		objects.append({"type": _selected_type, "x": x, "y": place_y})
+		objects.append(incoming)
 	if objects == before:
 		return
 	_data["objects"] = objects

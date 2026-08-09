@@ -81,6 +81,14 @@ func _ready() -> void:
 	failures += await _run("Bulls turn at pit and canyon edges", _test_bull_turns_at_gap)
 	failures += await _run("Bulls turn after the cowboy jumps over", _test_bull_turns_after_jump_over)
 	failures += await _run("Bulls never stamp on pits or canyons", _test_bull_stamp_avoids_gaps)
+	failures += await _run(
+		"Ground stamps never sit on pits or canyons",
+		_test_ground_stamps_avoid_gaps
+	)
+	failures += await _run(
+		"Workshop stamps cannot overlap footprints",
+		_test_workshop_stamps_no_overlap
+	)
 	failures += await _run("Lasso ties trail bulls", _test_lasso_ties_bull)
 	failures += await _run("Jumping on a bull head ties it", _test_stomp_ties_bull)
 	failures += await _run("Side contact with a bull sends the cowboy to camp", _test_bull_side_contact_hurts)
@@ -2865,6 +2873,74 @@ func _test_bull_stamp_avoids_gaps() -> Variant:
 	return null
 
 
+func _test_ground_stamps_avoid_gaps() -> Variant:
+	var trail := CustomLevelStore.trail_row(8)
+	var objects: Array = []
+	for x in range(30):
+		if x >= 10 and x <= 12:
+			objects.append({"type": "canyon", "x": x, "y": trail})
+		else:
+			objects.append({"type": "ground", "x": x, "y": trail})
+	objects.append({"type": "pit", "x": 20, "y": trail})
+	for type_name in ["cactus", "bandit", "spring", "checkpoint", "ninja", "fence", "conveyor"]:
+		if CustomLevelStore.ground_stamp_allowed(objects, type_name, 11, trail):
+			return "%s stamp must be rejected on a canyon column." % type_name
+		if CustomLevelStore.ground_stamp_allowed(objects, type_name, 20, trail):
+			return "%s stamp must be rejected on a pit mouth column." % type_name
+		if not CustomLevelStore.ground_stamp_allowed(objects, type_name, 4, trail):
+			return "%s stamp should be allowed on solid dirt." % type_name
+		objects.append({"type": type_name, "x": 11, "y": trail - 1})
+		objects.append({"type": type_name, "x": 4, "y": trail - 1})
+	var cleaned := CustomLevelStore.sanitize(
+		{"objects": objects, "height": 8, "width": 30, "title": "Gap Props"},
+		CustomLevelStore.EXTRA_SLOT_START
+	)
+	for value in cleaned.get("objects", []):
+		var object := value as Dictionary
+		var type_name := str(object.get("type", ""))
+		if not CustomLevelStore.is_ground_standing(type_name):
+			continue
+		if int(object.get("x", -1)) in [11, 20]:
+			return "Sanitize left %s on a canyon/pit column." % type_name
+	return null
+
+
+func _test_workshop_stamps_no_overlap() -> Variant:
+	var trail := CustomLevelStore.trail_row(8)
+	var objects: Array = []
+	for x in range(24):
+		objects.append({"type": "ground", "x": x, "y": trail})
+	objects.append({"type": "spring", "x": 8, "y": trail - 1})
+	objects.append({"type": "cactus", "x": 8, "y": trail - 1})
+	objects.append({"type": "conveyor", "x": 12, "y": trail - 1})
+	objects.append({"type": "fence", "x": 13, "y": trail - 1})
+	var cleaned := CustomLevelStore.sanitize(
+		{"objects": objects, "height": 8, "width": 24, "title": "Overlap"},
+		CustomLevelStore.EXTRA_SLOT_START
+	)
+	var spring_count := 0
+	var cactus_count := 0
+	var conveyor_count := 0
+	var fence_count := 0
+	for value in cleaned.get("objects", []):
+		match str((value as Dictionary).get("type", "")):
+			"spring":
+				spring_count += 1
+			"cactus":
+				cactus_count += 1
+			"conveyor":
+				conveyor_count += 1
+			"fence":
+				fence_count += 1
+	if spring_count != 0 or cactus_count != 1:
+		return "Later same-cell stamp should replace the earlier one (spring=%d cactus=%d)." % [
+			spring_count, cactus_count
+		]
+	if conveyor_count != 0 or fence_count != 1:
+		return "Overlapping conveyor/fence footprints should keep only the later stamp."
+	return null
+
+
 func _test_lasso_ties_bull() -> Variant:
 	var packed: PackedScene = load("res://scenes/world/bull_enemy.tscn")
 	if packed == null:
@@ -3725,12 +3801,15 @@ func _test_cave_trails_have_no_doors() -> Variant:
 	var trail := CustomLevelStore.trail_row(8)
 	var doc := CustomLevelStore.default_level(0)
 	doc["style"] = CustomLevelStore.STYLE_CAVE
-	doc["objects"] = [
-		{"type": "ground", "x": 2, "y": trail},
+	var cave_objects: Array = []
+	for x in range(2, 16):
+		cave_objects.append({"type": "ground", "x": x, "y": trail})
+	cave_objects.append_array([
 		{"type": "conveyor", "x": 6, "y": trail - 1, "push_right": true},
 		{"type": "timed_door", "x": 10, "y": trail - 1},
 		{"type": "goal", "x": 14, "y": trail - 1},
-	]
+	])
+	doc["objects"] = cave_objects
 	var clean := CustomLevelStore.sanitize(doc, 0)
 	for value in clean.get("objects", []):
 		if str((value as Dictionary).get("type", "")) == "timed_door":
@@ -6232,8 +6311,10 @@ func _test_horse_theme_bans_items_and_chests() -> Variant:
 	var data := CustomLevelStore.default_level(CustomLevelStore.EXTRA_SLOT_START)
 	data["start_mounted"] = true
 	data["style"] = CustomLevelStore.STYLE_DESERT
-	data["objects"] = [
-		{"type": "ground", "x": 2, "y": trail},
+	var horse_objects: Array = []
+	for x in range(0, 16):
+		horse_objects.append({"type": "ground", "x": x, "y": trail})
+	horse_objects.append_array([
 		{"type": "chest", "x": 4, "y": trail - 1},
 		{"type": "wings", "x": 5, "y": trail - 1},
 		{"type": "boots", "x": 6, "y": trail - 1},
@@ -6242,7 +6323,8 @@ func _test_horse_theme_bans_items_and_chests() -> Variant:
 		{"type": "star", "x": 9, "y": trail - 1},
 		{"type": "checkpoint", "x": 10, "y": trail - 1},
 		{"type": "goal", "x": 12, "y": trail - 1},
-	]
+	])
+	data["objects"] = horse_objects
 	var cleaned := CustomLevelStore.sanitize(data, CustomLevelStore.EXTRA_SLOT_START)
 	if not bool(cleaned.get("start_mounted", false)):
 		return "Horse theme sanitize should keep start_mounted."
@@ -6635,10 +6717,19 @@ func _test_workshop_stamp_catalog() -> Variant:
 	editor.queue_free()
 	if style_dropdown == null or style_dropdown.item_count < 3:
 		return "Workshop editor needs a Desert/Cave/Horse level style picker."
-	for type_name in ["bounty_bandit", "carrion", "pit", "chest", "bull", "ninja"]:
+	var required_desert := [
+		"ground", "canyon", "platform", "ladder", "spring", "conveyor", "timed_door", "fence",
+		"mover", "moving_cloud", "blink_cloud", "wind",
+		"star", "chest", "checkpoint",
+		"cactus", "pit", "rattlesnake",
+		"bandit", "bounty_bandit", "bull", "ninja", "carrion",
+		"wings", "boots", "shield",
+		"goal", "erase",
+	]
+	for type_name in required_desert:
 		if type_name not in palette_types:
 			return "Workshop palette missing %s stamp." % type_name
-	for unused_type in ["scorpion", "speed", "stalactite_static"]:
+	for unused_type in ["scorpion", "speed", "stalactite_static", "ladder_ledge"]:
 		if unused_type in palette_types:
 			return "Workshop should not offer unused stamp %s." % unused_type
 	var desert_categories := LevelStyle.tool_categories(LevelStyle.DESERT)
@@ -6754,14 +6845,10 @@ func _test_workshop_stamp_catalog() -> Variant:
 	if motion_error != null:
 		return motion_error
 	var data := CustomLevelStore.default_level(0)
-	data["objects"] = [
-		{"type": "ground", "x": 2, "y": trail},
-		{"type": "ground", "x": 10, "y": trail},
-		{"type": "ground", "x": 12, "y": trail},
-		{"type": "ground", "x": 14, "y": trail},
-		{"type": "ground", "x": 18, "y": trail},
-		{"type": "ground", "x": 22, "y": trail},
-		{"type": "ground", "x": 26, "y": trail},
+	var catalog_objects: Array = []
+	for x in range(0, 32):
+		catalog_objects.append({"type": "ground", "x": x, "y": trail})
+	catalog_objects.append_array([
 		{"type": "bounty_bandit", "x": 2, "y": trail - 1},
 		{"type": "carrion", "x": 6, "y": trail - 3},
 		{"type": "chest", "x": 10, "y": trail - 1},
@@ -6770,7 +6857,8 @@ func _test_workshop_stamp_catalog() -> Variant:
 		{"type": "conveyor", "x": 18, "y": trail - 1, "push_right": true},
 		{"type": "timed_door", "x": 22, "y": trail - 1},
 		{"type": "fence", "x": 26, "y": trail - 1},
-	]
+	])
+	data["objects"] = catalog_objects
 	var level := LevelController.new()
 	CustomLevelBuilder.build(level, data)
 	var bounty := level.find_child("Opponent0", true, false) as Opponent

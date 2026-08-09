@@ -205,7 +205,17 @@ func _appear_in_front_of(player: Player) -> void:
 	var token := _appear_token
 	var facing := _player_facing(player)
 	var spawn_x := player.global_position.x + facing * SPAWN_AHEAD
-	var spawn_y := _walk_surface_y(spawn_x, player.global_position.y)
+	## Prefer solid crust near the cowboy's height — theme dirt alone can drop onto a lower bank.
+	var probe_from := Vector2(spawn_x, player.global_position.y - 8.0)
+	var physics_y := FloorProbe.nearest_floor_y(self, probe_from, 8.0, 160.0, 80.0)
+	var theme_y := _walk_surface_y(spawn_x, player.global_position.y)
+	var spawn_y := theme_y
+	if not is_nan(physics_y):
+		spawn_y = (
+			theme_y
+			if absf(theme_y - physics_y) <= 28.0
+			else physics_y
+		)
 	global_position = Vector2(spawn_x, spawn_y)
 	_facing = -facing
 	_apply_facing(_facing)
@@ -260,7 +270,10 @@ func _snap_feet_to_surface() -> void:
 		var theme_y := _walk_surface_y(global_position.x, hit_y)
 		global_position.y = theme_y if absf(theme_y - hit_y) <= 28.0 else hit_y
 		return
-	global_position.y = _walk_surface_y(global_position.x, global_position.y)
+	## No nearby physics floor — do not yank onto a distant lower bank via theme.
+	var theme_y := _walk_surface_y(global_position.x, global_position.y)
+	if absf(theme_y - global_position.y) <= 40.0:
+		global_position.y = theme_y
 
 
 func _handle_ground_player(player: Player, delta: float) -> void:

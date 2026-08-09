@@ -45,6 +45,7 @@ static func validate_level_node(level: Node) -> PackedStringArray:
 	errors.append_array(_validate_cactus_clear_of_canyons(level))
 	errors.append_array(_validate_rattlesnakes_clear_of_canyons(level))
 	errors.append_array(_validate_bulls_clear_of_pits_and_canyons(level))
+	errors.append_array(_validate_ground_standing_clear_of_gaps(level))
 	errors.append_array(_validate_canyon_up_needs_spring(level))
 	errors.append_array(_validate_timed_doors_clear_of_canyons(level))
 	errors.append_array(_validate_no_doors_in_caves(level))
@@ -589,12 +590,50 @@ static func _validate_rattlesnakes_clear_of_canyons(level: Node) -> PackedString
 
 static func _validate_bulls_clear_of_pits_and_canyons(level: Node) -> PackedStringArray:
 	## Trail bulls / cave lizards must stand on solid dirt — never over a pit or canyon mouth.
+	return _validate_actors_clear_of_gaps(level, "bull", Vector2(72, 64), "Bull")
+
+
+static func _validate_ground_standing_clear_of_gaps(level: Node) -> PackedStringArray:
+	## Bandits, ninjas, springs, camps, goals, items, belts, and doors never sit in a mouth.
 	var errors: PackedStringArray = []
-	var bulls: Array[Node2D] = []
-	for node in level.find_children("*", "AnimatableBody2D", true, false):
-		if node is BullEnemy:
-			bulls.append(node as Node2D)
-	if bulls.is_empty():
+	errors.append_array(_validate_actors_clear_of_gaps(level, "foe", Vector2(48, 64), "Ground foe"))
+	errors.append_array(_validate_actors_clear_of_gaps(level, "prop", Vector2(56, 64), "Ground prop"))
+	return errors
+
+
+static func _actor_matches_gap_kind(node: Node, kind: String) -> bool:
+	match kind:
+		"bull":
+			return node is BullEnemy
+		"foe":
+			return node is Opponent or node is NinjaEnemy
+		"prop":
+			return (
+				node is SpringPad
+				or node is Checkpoint
+				or node is TreasureChest
+				or node is ModeItem
+				or node is Goal
+				or node is ConveyorBelt
+				or node is TimedDoor
+				or node is Ladder
+			)
+		_:
+			return false
+
+
+static func _validate_actors_clear_of_gaps(
+	level: Node,
+	kind: String,
+	fallback_size: Vector2,
+	label: String
+) -> PackedStringArray:
+	var errors: PackedStringArray = []
+	var actors: Array[Node2D] = []
+	for node in level.find_children("*", "Node2D", true, false):
+		if _actor_matches_gap_kind(node, kind):
+			actors.append(node as Node2D)
+	if actors.is_empty():
 		return errors
 
 	var gaps := _ground_canyon_gaps(level)
@@ -612,26 +651,26 @@ static func _validate_bulls_clear_of_pits_and_canyons(level: Node) -> PackedStri
 			"name": node.name,
 		})
 
-	for bull in bulls:
-		var bull_rect := _approx_rect(bull, Vector2(72, 64))
-		var bull_left := bull_rect.position.x
-		var bull_right := bull_rect.end.x
+	for actor in actors:
+		var actor_rect := _approx_rect(actor, fallback_size)
+		var actor_left := actor_rect.position.x
+		var actor_right := actor_rect.end.x
 		for gap in gaps:
 			var gap_left := float(gap["left"])
 			var gap_right := float(gap["right"])
-			if bull_right > gap_left and bull_left < gap_right:
+			if actor_right > gap_left and actor_left < gap_right:
 				errors.append(
-					"Bull %s sits inside canyon gap %.0f..%.0f; move it onto solid dirt."
-					% [bull.name, gap_left, gap_right]
+					"%s %s sits inside canyon gap %.0f..%.0f; move it onto solid dirt."
+					% [label, actor.name, gap_left, gap_right]
 				)
 				break
 		for pit in pit_spans:
 			var pit_left := float(pit["left"])
 			var pit_right := float(pit["right"])
-			if bull_right > pit_left and bull_left < pit_right:
+			if actor_right > pit_left and actor_left < pit_right:
 				errors.append(
-					"Bull %s sits over pit %s; move it onto solid dirt."
-					% [bull.name, str(pit["name"])]
+					"%s %s sits over pit %s; move it onto solid dirt."
+					% [label, actor.name, str(pit["name"])]
 				)
 				break
 	return errors
