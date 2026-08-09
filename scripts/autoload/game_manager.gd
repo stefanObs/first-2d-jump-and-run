@@ -63,9 +63,20 @@ func is_advanced_mode() -> bool:
 	return slot_is_advanced(active_slot_index)
 
 
+func normalize_player_character(value: Variant) -> String:
+	return PLAYER_COWGIRL if String(value) == PLAYER_COWGIRL else PLAYER_COWBOY
+
+
+func slot_player_character(slot_index: int) -> String:
+	_validate_slot(slot_index)
+	return normalize_player_character(get_slot(slot_index).get("player_character", PLAYER_COWBOY))
+
+
 func get_player_character() -> String:
-	var character := String(get_settings().get("player_character", PLAYER_COWBOY))
-	return PLAYER_COWGIRL if character == PLAYER_COWGIRL else PLAYER_COWBOY
+	## During a run, the active save slot owns the rider; on the title screen, settings do.
+	if active_slot_index >= 0:
+		return slot_player_character(active_slot_index)
+	return normalize_player_character(get_settings().get("player_character", PLAYER_COWBOY))
 
 
 func get_player_asset_folder() -> String:
@@ -94,8 +105,10 @@ func prepare_slot_for_start(slot_index: int) -> void:
 	_ensure_data()
 	var slot: Dictionary = get_slot(slot_index)
 	var advanced_mode := is_advanced_mode_setting()
+	var character := normalize_player_character(get_settings().get("player_character", PLAYER_COWBOY))
 	var was_advanced := bool(slot.get("advanced_mode", false))
 	slot["advanced_mode"] = advanced_mode
+	slot["player_character"] = character
 	if bool(slot.get("empty", true)):
 		slot["lives"] = ADVANCED_START_LIVES if advanced_mode else 0
 		slot["lifetime_badges"] = 0
@@ -106,6 +119,53 @@ func prepare_slot_for_start(slot_index: int) -> void:
 	else:
 		slot["lives"] = 0
 	(_data["slots"] as Array)[slot_index] = slot
+
+
+func apply_play_settings_from_slot(slot_index: int) -> void:
+	## Title-screen focus: filled doors restore their rider and trail mode into Settings.
+	_validate_slot(slot_index)
+	_ensure_data()
+	var slot: Dictionary = get_slot(slot_index)
+	if bool(slot.get("empty", true)):
+		return
+	var character := normalize_player_character(slot.get("player_character", PLAYER_COWBOY))
+	var advanced := bool(slot.get("advanced_mode", false))
+	var settings: Dictionary = _data["settings"]
+	var dirty := false
+	if normalize_player_character(settings.get("player_character", PLAYER_COWBOY)) != character:
+		settings["player_character"] = character
+		dirty = true
+	if bool(settings.get("advanced_mode", false)) != advanced:
+		settings["advanced_mode"] = advanced
+		dirty = true
+	if not dirty:
+		return
+	_data["settings"] = settings
+	save_to_disk()
+	settings_changed.emit()
+
+
+func commit_play_settings_to_slot(slot_index: int) -> void:
+	## Keep a focused filled door in sync when the title-screen picks change.
+	_validate_slot(slot_index)
+	_ensure_data()
+	var slot: Dictionary = get_slot(slot_index)
+	if bool(slot.get("empty", true)):
+		return
+	var character := normalize_player_character(get_settings().get("player_character", PLAYER_COWBOY))
+	var advanced := is_advanced_mode_setting()
+	var dirty := false
+	if normalize_player_character(slot.get("player_character", PLAYER_COWBOY)) != character:
+		slot["player_character"] = character
+		dirty = true
+	if bool(slot.get("advanced_mode", false)) != advanced:
+		slot["advanced_mode"] = advanced
+		dirty = true
+	if not dirty:
+		return
+	(_data["slots"] as Array)[slot_index] = slot
+	save_to_disk()
+	saves_changed.emit()
 
 
 func lose_life() -> bool:
@@ -557,6 +617,7 @@ func _empty_slot() -> Dictionary:
 		"completed": false,
 		"resume": {},
 		"advanced_mode": false,
+		"player_character": PLAYER_COWBOY,
 		"lives": 0,
 		"lifetime_badges": 0,
 		"badge_life_tier": 0,

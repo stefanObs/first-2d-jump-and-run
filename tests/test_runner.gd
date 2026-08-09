@@ -35,6 +35,10 @@ func _ready() -> void:
 	failures += await _run("German text and language settings work", _test_localization_settings)
 	failures += await _run("Settings language dropdown persists and supports controller use", _test_settings_language_dropdown)
 	failures += await _run("Settings stores player character choice", _test_settings_player_character)
+	failures += await _run(
+		"Save slots remember rider and trail mode",
+		_test_slot_remembers_character_and_trail_mode
+	)
 	failures += await _run("Translation CSV parses and round-trips safely", _test_translation_csv_round_trip)
 	failures += await _run("Translation placeholders render and validate", _test_translation_placeholders)
 	failures += await _run("Translation editor loads and exports portably", _test_translation_editor)
@@ -4619,9 +4623,9 @@ func _test_cave_camp_transparent() -> Variant:
 
 
 func _test_filled_slot_advanced_mode_select() -> Variant:
+	GameManager.active_slot_index = -1
 	GameManager.erase_slot(0)
 	var previous := bool(GameManager.get_settings().get("advanced_mode", false))
-	GameManager.set_setting("advanced_mode", true)
 	var slot := GameManager.get_slot(0)
 	slot["empty"] = false
 	slot["advanced_mode"] = false
@@ -4638,6 +4642,8 @@ func _test_filled_slot_advanced_mode_select() -> Variant:
 	add_child(scene)
 	await get_tree().process_frame
 	scene._index = 0
+	## Focusing a Classic save restores Classic; switch to Advanced after that sync.
+	GameManager.set_setting("advanced_mode", true)
 	var dropdown := scene.get_node_or_null("SettingsPanel/Margin/VBox/TrailModeDropdown") as OptionButton
 	if dropdown == null or dropdown.disabled:
 		scene.queue_free()
@@ -4694,6 +4700,7 @@ func _test_filled_slot_advanced_mode_select() -> Variant:
 
 
 func _test_settings_player_character() -> Variant:
+	GameManager.active_slot_index = -1
 	var previous := String(GameManager.get_settings().get("player_character", GameManager.PLAYER_COWBOY))
 	GameManager.set_setting("player_character", GameManager.PLAYER_COWGIRL)
 	if GameManager.get_player_character() != GameManager.PLAYER_COWGIRL:
@@ -4708,10 +4715,114 @@ func _test_settings_player_character() -> Variant:
 		GameManager.set_setting("player_character", previous)
 		return "Persisted settings should contain the selected player character."
 	GameManager.load_from_disk()
+	GameManager.active_slot_index = -1
 	if GameManager.get_player_character() != GameManager.PLAYER_COWGIRL:
 		GameManager.set_setting("player_character", previous)
 		return "Reloading settings should restore the selected player character."
 	GameManager.set_setting("player_character", previous)
+	return null
+
+
+func _test_slot_remembers_character_and_trail_mode() -> Variant:
+	GameManager.active_slot_index = -1
+	GameManager.erase_slot(0)
+	GameManager.erase_slot(1)
+	var previous_character := String(
+		GameManager.get_settings().get("player_character", GameManager.PLAYER_COWBOY)
+	)
+	var previous_advanced := bool(GameManager.get_settings().get("advanced_mode", false))
+	GameManager.set_setting("player_character", GameManager.PLAYER_COWGIRL)
+	GameManager.set_setting("advanced_mode", true)
+	GameManager.prepare_slot_for_start(0)
+	var started := GameManager.get_slot(0)
+	started["empty"] = false
+	started["current_level"] = 1
+	GameManager.debug_set_slot(0, started)
+	GameManager.active_slot_index = 0
+	if GameManager.slot_player_character(0) != GameManager.PLAYER_COWGIRL:
+		GameManager.active_slot_index = -1
+		GameManager.set_setting("player_character", previous_character)
+		GameManager.set_setting("advanced_mode", previous_advanced)
+		GameManager.erase_slot(0)
+		return "Starting a save should store the chosen rider on that slot."
+	if not GameManager.slot_is_advanced(0):
+		GameManager.active_slot_index = -1
+		GameManager.set_setting("player_character", previous_character)
+		GameManager.set_setting("advanced_mode", previous_advanced)
+		GameManager.erase_slot(0)
+		return "Starting a save should store Advanced Mode on that slot."
+	if GameManager.get_player_character() != GameManager.PLAYER_COWGIRL:
+		GameManager.active_slot_index = -1
+		GameManager.set_setting("player_character", previous_character)
+		GameManager.set_setting("advanced_mode", previous_advanced)
+		GameManager.erase_slot(0)
+		return "An active save should play as the rider stored on that slot."
+	GameManager.active_slot_index = -1
+	if GameManager.slot_player_character(0) != GameManager.PLAYER_COWGIRL:
+		GameManager.set_setting("player_character", previous_character)
+		GameManager.set_setting("advanced_mode", previous_advanced)
+		GameManager.erase_slot(0)
+		return "Slot 0 should still remember Cowgirl before the second save is prepared."
+	GameManager.set_setting("player_character", GameManager.PLAYER_COWBOY)
+	GameManager.set_setting("advanced_mode", false)
+	GameManager.prepare_slot_for_start(1)
+	if GameManager.slot_player_character(1) != GameManager.PLAYER_COWBOY:
+		GameManager.set_setting("player_character", previous_character)
+		GameManager.set_setting("advanced_mode", previous_advanced)
+		GameManager.erase_slot(0)
+		GameManager.erase_slot(1)
+		return "A second save should keep its own cowboy pick."
+	if GameManager.slot_player_character(0) != GameManager.PLAYER_COWGIRL:
+		GameManager.set_setting("player_character", previous_character)
+		GameManager.set_setting("advanced_mode", previous_advanced)
+		GameManager.erase_slot(0)
+		GameManager.erase_slot(1)
+		return "Preparing another save must not overwrite slot 0's rider."
+	GameManager.apply_play_settings_from_slot(0)
+	GameManager.active_slot_index = -1
+	if GameManager.get_player_character() != GameManager.PLAYER_COWGIRL:
+		GameManager.set_setting("player_character", previous_character)
+		GameManager.set_setting("advanced_mode", previous_advanced)
+		GameManager.erase_slot(0)
+		GameManager.erase_slot(1)
+		return "Focusing a filled save should restore its rider into Settings."
+	if not GameManager.is_advanced_mode_setting():
+		GameManager.set_setting("player_character", previous_character)
+		GameManager.set_setting("advanced_mode", previous_advanced)
+		GameManager.erase_slot(0)
+		GameManager.erase_slot(1)
+		return "Focusing a filled save should restore its trail mode into Settings."
+	var packed: PackedScene = load("res://scenes/ui/save_select.tscn")
+	if packed == null:
+		GameManager.set_setting("player_character", previous_character)
+		GameManager.set_setting("advanced_mode", previous_advanced)
+		GameManager.erase_slot(0)
+		GameManager.erase_slot(1)
+		return "Missing save select scene."
+	var scene := packed.instantiate()
+	add_child(scene)
+	await get_tree().process_frame
+	var cowboy_btn := scene.get_node_or_null("Mascots/Cowboy") as Button
+	if cowboy_btn == null:
+		scene.queue_free()
+		GameManager.set_setting("player_character", previous_character)
+		GameManager.set_setting("advanced_mode", previous_advanced)
+		GameManager.erase_slot(0)
+		GameManager.erase_slot(1)
+		return "Missing cowboy mascot button."
+	var normal_style := cowboy_btn.get_theme_stylebox("normal")
+	if normal_style is StyleBoxFlat and (normal_style as StyleBoxFlat).border_color.r > 0.7:
+		scene.queue_free()
+		GameManager.set_setting("player_character", previous_character)
+		GameManager.set_setting("advanced_mode", previous_advanced)
+		GameManager.erase_slot(0)
+		GameManager.erase_slot(1)
+		return "Chosen rider should not use a red selection border."
+	scene.queue_free()
+	GameManager.set_setting("player_character", previous_character)
+	GameManager.set_setting("advanced_mode", previous_advanced)
+	GameManager.erase_slot(0)
+	GameManager.erase_slot(1)
 	return null
 
 

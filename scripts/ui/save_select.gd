@@ -105,23 +105,39 @@ func _ready() -> void:
 				return
 			_index = captured
 			_highlight()
+			_sync_play_settings_from_focused_slot()
 		)
 		card.focus_entered.connect(func() -> void:
 			if _settings_open() or _element_reference_open():
 				return
 			_index = captured
 			_highlight()
+			_sync_play_settings_from_focused_slot()
 		)
 	GameManager.saves_changed.connect(_refresh)
 	GameManager.settings_changed.connect(_on_settings_changed)
-	InputManager.device_changed.connect(func(_d: Variant) -> void: _refresh_status_hint())
+	InputManager.device_changed.connect(_on_input_device_changed)
 	_refresh()
 	_refresh_hearts_button()
 	_refresh_character_pickers()
 	_refresh_status_hint()
 	_highlight()
+	_sync_play_settings_from_focused_slot()
 	_bob_title()
 	_breathe_mascots()
+
+
+func _exit_tree() -> void:
+	if GameManager.saves_changed.is_connected(_refresh):
+		GameManager.saves_changed.disconnect(_refresh)
+	if GameManager.settings_changed.is_connected(_on_settings_changed):
+		GameManager.settings_changed.disconnect(_on_settings_changed)
+	if InputManager.device_changed.is_connected(_on_input_device_changed):
+		InputManager.device_changed.disconnect(_on_input_device_changed)
+
+
+func _on_input_device_changed(_device: Variant) -> void:
+	_refresh_status_hint()
 
 
 func _localize_static_labels() -> void:
@@ -207,6 +223,7 @@ func _toggle_trail_mode() -> void:
 		return
 	GameManager.set_setting("advanced_mode", not GameManager.is_advanced_mode_setting())
 	_refresh_hearts_button()
+	_commit_play_settings_to_focused_slot()
 	_flash_status(
 		tr("Advanced Mode") if GameManager.is_advanced_mode_setting() else tr("Classic")
 	)
@@ -217,6 +234,9 @@ func _on_settings_changed() -> void:
 	_refresh_hearts_button()
 	_refresh_character_pickers()
 	_refresh()
+	## Only push rider/mode onto a filled door when the player edits Settings.
+	if _settings_open():
+		_commit_play_settings_to_focused_slot()
 
 
 func _setup_character_pickers() -> void:
@@ -242,6 +262,7 @@ func _pick_character(character: String) -> void:
 		_refresh_character_pickers()
 		return
 	GameManager.set_setting("player_character", character)
+	_commit_play_settings_to_focused_slot()
 	_refresh_character_pickers()
 	_refresh()
 	_flash_status(tr("Cowboy") if character == GameManager.PLAYER_COWBOY else tr("Cowgirl"))
@@ -262,24 +283,9 @@ func _style_character_picker(button: Button, selected: bool, display_name: Strin
 	button.pivot_offset = button.custom_minimum_size * 0.5
 	button.scale = Vector2(1.12, 1.12) if selected else Vector2(0.86, 0.86)
 	button.modulate = Color(1, 1, 1, 1) if selected else Color(0.55, 0.52, 0.48, 0.75)
-	var selected_style := StyleBoxFlat.new()
-	selected_style.bg_color = Color(0.92, 0.58, 0.22, 0.55)
-	selected_style.set_corner_radius_all(22)
-	selected_style.set_border_width_all(7)
-	selected_style.border_color = Color(0.86, 0.12, 0.12, 1.0)
-	selected_style.content_margin_left = 4
-	selected_style.content_margin_right = 4
-	selected_style.content_margin_top = 4
-	selected_style.content_margin_bottom = 4
-	var idle := StyleBoxFlat.new()
-	idle.bg_color = Color(0.2, 0.12, 0.06, 0.28)
-	idle.set_corner_radius_all(22)
-	idle.set_border_width_all(3)
-	idle.border_color = Color(0.35, 0.22, 0.12, 0.7)
-	if selected:
-		_apply_button_styles(button, selected_style, selected_style)
-	else:
-		_apply_button_styles(button, idle, idle)
+	## No painted border/fill — selection is scale + ChosenMark (same look as first boot).
+	var empty := StyleBoxEmpty.new()
+	_apply_button_styles(button, empty, empty)
 	var mark := button.get_node_or_null("ChosenMark") as CanvasItem
 	if mark != null:
 		mark.visible = selected
@@ -678,17 +684,39 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed(&"ui_right") or event.is_action_pressed(&"move_right"):
 		_index = wrapi(_index + 1, 0, _cards.size())
 		_highlight()
+		_sync_play_settings_from_focused_slot()
 	elif event.is_action_pressed(&"ui_left") or event.is_action_pressed(&"move_left"):
 		_index = wrapi(_index - 1, 0, _cards.size())
 		_highlight()
+		_sync_play_settings_from_focused_slot()
 	elif event.is_action_pressed(&"confirm") or event.is_action_pressed(&"jump"):
 		_select_slot(_index)
 
 
 func _select_slot(slot_index: int) -> void:
 	AudioManager.ensure_gameplay_music()
+	_index = slot_index
+	## Commit the title-screen rider / trail-mode picks onto this save, then run.
 	GameManager.prepare_slot_for_start(slot_index)
 	GameManager.start_or_continue_slot(slot_index)
+
+
+func _sync_play_settings_from_focused_slot() -> void:
+	if _index < 0 or _index >= 3:
+		return
+	if GameManager.is_slot_empty(_index):
+		return
+	GameManager.apply_play_settings_from_slot(_index)
+
+
+func _commit_play_settings_to_focused_slot() -> void:
+	if not is_inside_tree():
+		return
+	if _index < 0 or _index >= 3:
+		return
+	if GameManager.is_slot_empty(_index):
+		return
+	GameManager.commit_play_settings_to_slot(_index)
 
 
 func _request_delete() -> void:
@@ -709,7 +737,6 @@ func _confirm_delete() -> void:
 
 
 func _refresh() -> void:
-	var portrait_tex := _active_portrait_texture()
 	for i in range(_cards.size()):
 		var card := _cards[i]
 		var slot := GameManager.get_slot(i)
@@ -724,7 +751,9 @@ func _refresh() -> void:
 				portrait.texture = PORTRAIT_EMPTY
 				portrait.modulate = Color(1, 1, 1, 1)
 			else:
-				portrait.texture = portrait_tex
+				portrait.texture = _portrait_for_character(
+					GameManager.slot_player_character(i)
+				)
 				portrait.modulate = Color(1, 1, 1, 1)
 		if stars != null:
 			var badge_dots := 0 if empty else clampi(int(slot.get("stars", 0)), 0, MAX_STAR_DOTS)
@@ -736,8 +765,8 @@ func _refresh() -> void:
 					star.visible = s < badge_dots
 
 
-func _active_portrait_texture() -> Texture2D:
-	if GameManager.get_player_character() == GameManager.PLAYER_COWGIRL:
+func _portrait_for_character(character: String) -> Texture2D:
+	if character == GameManager.PLAYER_COWGIRL:
 		return PORTRAIT_COWGIRL
 	return PORTRAIT_COWBOY
 
