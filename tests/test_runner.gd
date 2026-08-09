@@ -1116,10 +1116,13 @@ func _test_save_select_scene() -> Variant:
 	if error == null and scene.get_node_or_null("LanguageButton") != null:
 		error = "Save select should not show a top-level language button."
 	var skyline := scene.get_node_or_null("Skyline") as TextureRect
-	if error == null and (skyline == null or skyline.texture == null):
-		error = "Save select needs the desert skyline backdrop."
-	if error == null and scene.get_node_or_null("TitleHat") == null:
-		error = "Save select needs the hat emblem above the title."
+	var backdrop := scene.get_node_or_null("Backdrop") as TextureRect
+	if error == null and (backdrop == null or backdrop.texture == null):
+		error = "Save select needs the painted desert backdrop."
+	if error == null and skyline == null:
+		error = "Save select should keep a Skyline node for compatibility."
+	if error == null and scene.get_node_or_null("TitleLogo") == null and scene.get_node_or_null("TitleHat") == null:
+		error = "Save select needs the hat/title emblem above the doors."
 	if error == null and scene.get_node_or_null("Mascots/Cowboy") == null:
 		error = "Save select needs cowboy and cowgirl mascots."
 	if error == null and scene.get_node_or_null("Mascots/Cowgirl") == null:
@@ -1143,8 +1146,14 @@ func _test_save_select_scene() -> Variant:
 	var number := scene.get_node_or_null("Slots/Slot1/Number") as Label
 	var portrait := scene.get_node_or_null("Slots/Slot1/Portrait") as TextureRect
 	var stars := scene.get_node_or_null("Slots/Slot1/Stars") as HBoxContainer
+	var door_art := scene.get_node_or_null("Slots/Slot1/DoorArt") as TextureRect
+	var select_ring := scene.get_node_or_null("Slots/Slot1/SelectRing") as TextureRect
 	if error == null and (number == null or number.text != "1"):
 		error = "Save doors should show giant slot numbers 1–3."
+	if error == null and (door_art == null or door_art.texture == null):
+		error = "Save doors need painted arched wood DoorArt."
+	if error == null and (select_ring == null or select_ring.texture == null):
+		error = "Save doors need a bandana SelectRing for focus."
 	if error == null and (portrait == null or portrait.texture == null):
 		error = "Filled save doors should show the active character portrait."
 	if error == null and stars != null:
@@ -1156,14 +1165,16 @@ func _test_save_select_scene() -> Variant:
 			error = "Filled save doors should show capped star dots from progress."
 	if error == null and first_card != null:
 		var normal := first_card.get_theme_stylebox("normal")
-		if not (normal is StyleBoxFlat):
-			error = "Save doors should use thick wood StyleBoxFlat styling."
-		elif (normal as StyleBoxFlat).bg_color.b > 0.55:
-			error = "Save doors should look wooden, not default gray/blue."
-		elif (normal as StyleBoxFlat).get_border_width(SIDE_LEFT) < 4:
-			error = "Save doors need a thick kid-readable outline."
+		if normal != null and not (normal is StyleBoxEmpty):
+			if normal is StyleBoxFlat and (normal as StyleBoxFlat).bg_color.a > 0.2:
+				error = "Painted doors should not cover DoorArt with opaque StyleBoxFlat fills."
+	if error == null:
+		scene._index = 0
+		scene._highlight()
+		if select_ring != null and not select_ring.visible:
+			error = "Focused save door should show the bandana SelectRing."
 	var title_label := scene.get_node_or_null("Title") as Label
-	if error == null and title_label != null:
+	if error == null and title_label != null and title_label.visible:
 		var cream := title_label.get_theme_color("font_color")
 		if cream.r < 0.85 or cream.g < 0.7 or cream.b > 0.65:
 			error = "Save select title should use faded cream/yellow western lettering."

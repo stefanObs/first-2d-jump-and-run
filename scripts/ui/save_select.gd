@@ -7,10 +7,10 @@ const TITLE_CREAM := Color(0.96, 0.86, 0.48, 1.0)
 const TITLE_CREAM_HOVER := Color(1.0, 0.92, 0.62, 1.0)
 const WOOD := Color(0.78, 0.48, 0.22, 0.96)
 const WOOD_HOVER := Color(0.90, 0.62, 0.30, 1.0)
-const BANDANA_RED := Color(0.78, 0.16, 0.14, 1.0)
-const DOOR_FILL := Color(0.72, 0.42, 0.18, 0.98)
-const DOOR_FILL_HOVER := Color(0.84, 0.54, 0.26, 1.0)
 const STAR_TEX := preload("res://assets/world/star_badge.png")
+const PORTRAIT_EMPTY := preload("res://assets/ui/menu_portrait_empty.png")
+const PORTRAIT_COWBOY := preload("res://assets/ui/menu_portrait_cowboy.png")
+const PORTRAIT_COWGIRL := preload("res://assets/ui/menu_portrait_cowgirl.png")
 const ELEMENT_REFERENCE_PATH := "res://docs/element_name_reference.png"
 const SHEET_ZOOM_MIN := 1.0
 const SHEET_ZOOM_MAX := 4.0
@@ -112,7 +112,6 @@ func _ready() -> void:
 	_refresh_hearts_button()
 	_refresh_status_hint()
 	_highlight()
-	_pulse_sun()
 	_bob_title()
 	_breathe_mascots()
 
@@ -121,6 +120,9 @@ func _localize_static_labels() -> void:
 	var title := get_node_or_null("Title") as Label
 	if title != null:
 		title.text = tr("Cowboy Trail")
+	var title_logo := get_node_or_null("TitleLogo") as TextureRect
+	if title_logo != null:
+		title_logo.tooltip_text = tr("Cowboy Trail")
 	if _settings_button != null:
 		_settings_button.tooltip_text = tr("Settings")
 	if _workshop_button != null:
@@ -155,7 +157,7 @@ func _localize_static_labels() -> void:
 
 func _setup_chrome_buttons() -> void:
 	if _workshop_button != null:
-		_style_icon_button(_workshop_button)
+		_style_circle_chrome(_workshop_button)
 		_workshop_button.pressed.connect(func() -> void:
 			if _settings_open() or _element_reference_open():
 				return
@@ -163,10 +165,10 @@ func _setup_chrome_buttons() -> void:
 			GameManager.open_custom_level_hub()
 		)
 	if _settings_button != null:
-		_style_icon_button(_settings_button)
+		_style_circle_chrome(_settings_button)
 		_settings_button.pressed.connect(_open_settings)
 	if _hearts_button != null:
-		_style_door_button(_hearts_button, 14, 8)
+		_style_circle_chrome(_hearts_button)
 		_hearts_button.pressed.connect(_toggle_trail_mode)
 	if _translation_editor_button != null:
 		_style_action_button(_translation_editor_button)
@@ -401,11 +403,8 @@ func _style_screen() -> void:
 	var legacy_bg := get_node_or_null("Background") as CanvasItem
 	if legacy_bg != null:
 		legacy_bg.visible = false
-	var title := get_node_or_null("Title") as Label
-	if title != null:
-		_apply_cream_outline(title, TITLE_CREAM, Color(0.22, 0.08, 0.03, 0.92), 5)
 	if _status_hint != null:
-		_apply_cream_outline(_status_hint, Color(0.94, 0.84, 0.52, 1.0), Color(0.24, 0.09, 0.04, 0.72), 2)
+		_apply_cream_outline(_status_hint, Color(0.96, 0.9, 0.7, 1.0), Color(0.24, 0.09, 0.04, 0.8), 2)
 
 
 func _apply_cream_outline(label: Label, fill: Color, outline: Color, outline_size: int) -> void:
@@ -415,22 +414,20 @@ func _apply_cream_outline(label: Label, fill: Color, outline: Color, outline_siz
 		label.add_theme_constant_override(&"outline_size", outline_size)
 
 
-func _style_door_button(button: Button, radius: int = 18, pad: int = 12) -> void:
+func _style_door_button(button: Button, _radius: int = 18, _pad: int = 12) -> void:
 	button.text = ""
 	button.flat = true
-	var normal := _door_style(DOOR_FILL, radius, pad, Color(0.42, 0.18, 0.08, 1.0), 5)
-	var hover := _door_style(DOOR_FILL_HOVER, radius, pad, BANDANA_RED, 6)
-	_apply_button_styles(button, normal, hover)
+	button.pivot_offset = button.custom_minimum_size * 0.5
+	var empty := StyleBoxEmpty.new()
+	_apply_button_styles(button, empty, empty)
 
 
-func _style_icon_button(button: Button) -> void:
+func _style_circle_chrome(button: Button) -> void:
 	button.text = ""
 	button.flat = true
-	button.expand_icon = true
-	button.custom_minimum_size = Vector2(72, 72)
-	var normal := _door_style(DOOR_FILL, 16, 10, Color(0.42, 0.18, 0.08, 1.0), 4)
-	var hover := _door_style(DOOR_FILL_HOVER, 16, 10, BANDANA_RED, 5)
-	_apply_button_styles(button, normal, hover)
+	button.icon = null
+	var empty := StyleBoxEmpty.new()
+	_apply_button_styles(button, empty, empty)
 
 
 func _style_action_button(button: Button) -> void:
@@ -456,23 +453,17 @@ func _apply_button_styles(button: Button, normal: StyleBox, hover: StyleBox) -> 
 	button.add_theme_stylebox_override(&"focus", hover)
 
 
-func _door_style(
-	fill: Color, radius: int, pad: int, border: Color, border_width: int
-) -> StyleBoxFlat:
+func _wood_style(fill: Color, radius: int, _pad_v: int) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = fill
 	style.set_corner_radius_all(radius)
-	style.set_border_width_all(border_width)
-	style.border_color = border
-	style.content_margin_left = pad
-	style.content_margin_right = pad
-	style.content_margin_top = pad
-	style.content_margin_bottom = pad
+	style.set_border_width_all(4)
+	style.border_color = Color(0.58, 0.18, 0.10, 1.0)
+	style.content_margin_left = 12
+	style.content_margin_right = 12
+	style.content_margin_top = 12
+	style.content_margin_bottom = 12
 	return style
-
-
-func _wood_style(fill: Color, radius: int, pad_v: int) -> StyleBoxFlat:
-	return _door_style(fill, radius, 12, Color(0.58, 0.18, 0.10, 1.0), 4)
 
 
 func _style_delete_dialog() -> void:
@@ -500,31 +491,17 @@ func _ensure_star_dots(card: Button) -> void:
 		stars.add_child(star)
 
 
-func _pulse_sun() -> void:
-	var sun := get_node_or_null("Sun") as CanvasItem
-	if sun == null:
-		return
-	var tween := create_tween()
-	tween.set_loops()
-	tween.tween_property(sun, "modulate", Color(1.0, 1.0, 0.85, 1.0), 1.2)
-	tween.tween_property(sun, "modulate", Color(1.0, 0.88, 0.55, 1.0), 1.2)
-
-
 func _bob_title() -> void:
-	var title := get_node_or_null("Title") as Control
-	var hat := get_node_or_null("TitleHat") as Control
+	var title := get_node_or_null("TitleLogo") as Control
+	if title == null:
+		title = get_node_or_null("Title") as Control
 	if title == null:
 		return
 	var base := title.position.y
-	var hat_base := hat.position.y if hat != null else 0.0
 	var tween := create_tween()
 	tween.set_loops()
 	tween.tween_property(title, "position:y", base - 5.0, 0.95).set_trans(Tween.TRANS_SINE)
-	if hat != null:
-		tween.parallel().tween_property(hat, "position:y", hat_base - 5.0, 0.95).set_trans(Tween.TRANS_SINE)
 	tween.tween_property(title, "position:y", base + 3.0, 0.95).set_trans(Tween.TRANS_SINE)
-	if hat != null:
-		tween.parallel().tween_property(hat, "position:y", hat_base + 3.0, 0.95).set_trans(Tween.TRANS_SINE)
 
 
 func _breathe_mascots() -> void:
@@ -628,8 +605,8 @@ func _refresh() -> void:
 		var empty := bool(slot.get("empty", true))
 		if portrait != null:
 			if empty:
-				portrait.texture = null
-				portrait.modulate = Color(1, 1, 1, 0.2)
+				portrait.texture = PORTRAIT_EMPTY
+				portrait.modulate = Color(1, 1, 1, 1)
 			else:
 				portrait.texture = portrait_tex
 				portrait.modulate = Color(1, 1, 1, 1)
@@ -644,10 +621,9 @@ func _refresh() -> void:
 
 
 func _active_portrait_texture() -> Texture2D:
-	var path := "%sidle_0.png" % GameManager.get_player_asset_folder()
-	if ResourceLoader.exists(path):
-		return load(path) as Texture2D
-	return preload("res://assets/player/idle_0.png")
+	if GameManager.get_player_character() == GameManager.PLAYER_COWGIRL:
+		return PORTRAIT_COWGIRL
+	return PORTRAIT_COWBOY
 
 
 func _refresh_status_hint() -> void:
@@ -665,19 +641,13 @@ func _flash_status(message: String) -> void:
 func _highlight() -> void:
 	for i in range(_cards.size()):
 		var selected := i == _index
-		_cards[i].scale = Vector2(1.05, 1.05) if selected else Vector2.ONE
-		var normal := _door_style(
-			DOOR_FILL_HOVER if selected else DOOR_FILL,
-			18,
-			12,
-			BANDANA_RED if selected else Color(0.42, 0.18, 0.08, 1.0),
-			6 if selected else 5
-		)
-		var hover := _door_style(DOOR_FILL_HOVER, 18, 12, BANDANA_RED, 6)
-		_apply_button_styles(_cards[i], normal, hover)
+		_cards[i].scale = Vector2(1.04, 1.04) if selected else Vector2.ONE
+		var ring := _cards[i].get_node_or_null("SelectRing") as CanvasItem
+		if ring != null:
+			ring.visible = selected
 		var number := _cards[i].get_node_or_null("Number") as Label
 		if number != null:
 			number.add_theme_color_override(
 				&"font_color",
-				TITLE_CREAM_HOVER if selected else TITLE_CREAM
+				Color(1.0, 0.95, 0.75, 1.0) if selected else Color(1, 1, 1, 1)
 			)

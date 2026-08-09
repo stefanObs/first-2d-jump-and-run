@@ -1,16 +1,19 @@
-[gd_scene load_steps=12 format=3 uid="uid://csaveselect01"]
+[gd_scene load_steps=16 format=3 uid="uid://csaveselect01"]
 
 [ext_resource type="Script" path="res://scripts/ui/save_select.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/ui/settings_panel.gd" id="3"]
-[ext_resource type="Texture2D" path="res://assets/world/transition_desert_skyline.png" id="4"]
-[ext_resource type="Texture2D" path="res://assets/world/sun.png" id="5"]
-[ext_resource type="Texture2D" path="res://assets/world/horizon_hills_strip.png" id="6"]
-[ext_resource type="Texture2D" path="res://assets/ui/menu_icon_hat.png" id="7"]
-[ext_resource type="Texture2D" path="res://assets/ui/menu_icon_gear.png" id="8"]
-[ext_resource type="Texture2D" path="res://assets/ui/menu_icon_hammer.png" id="9"]
-[ext_resource type="Texture2D" path="res://assets/ui/menu_icon_heart.png" id="10"]
-[ext_resource type="Texture2D" path="res://assets/player/idle_0.png" id="11"]
-[ext_resource type="Texture2D" path="res://assets/player/cowgirl/idle_0.png" id="12"]
+[ext_resource type="Texture2D" path="res://assets/ui/menu_backdrop_desert.png" id="4"]
+[ext_resource type="Texture2D" path="res://assets/ui/menu_title_logo.png" id="5"]
+[ext_resource type="Texture2D" path="res://assets/ui/menu_save_door.png" id="6"]
+[ext_resource type="Texture2D" path="res://assets/ui/menu_door_select_ring.png" id="7"]
+[ext_resource type="Texture2D" path="res://assets/ui/menu_button_circle.png" id="8"]
+[ext_resource type="Texture2D" path="res://assets/ui/menu_icon_gear.png" id="9"]
+[ext_resource type="Texture2D" path="res://assets/ui/menu_icon_hammer.png" id="10"]
+[ext_resource type="Texture2D" path="res://assets/ui/menu_icon_heart.png" id="11"]
+[ext_resource type="Texture2D" path="res://assets/ui/menu_portrait_empty.png" id="12"]
+[ext_resource type="Texture2D" path="res://assets/player/idle_0.png" id="13"]
+[ext_resource type="Texture2D" path="res://assets/player/cowgirl/idle_0.png" id="14"]
+[ext_resource type="Texture2D" path="res://assets/world/star_badge.png" id="15"]
 
 [node name="SaveSelect" type="Control"]
 layout_mode = 3
@@ -21,7 +24,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1")
 
-[node name="Skyline" type="TextureRect" parent="."]
+[node name="Backdrop" type="TextureRect" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -33,57 +36,30 @@ texture = ExtResource("4")
 expand_mode = 1
 stretch_mode = 6
 
-[node name="WarmWash" type="ColorRect" parent="."]
+[node name="Skyline" type="TextureRect" parent="."]
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
 mouse_filter = 2
-color = Color(0.95, 0.45, 0.12, 0.14)
-
-[node name="Hills" type="TextureRect" parent="."]
-layout_mode = 1
-anchors_preset = 12
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = -200.0
-grow_horizontal = 2
-grow_vertical = 0
-mouse_filter = 2
-texture = ExtResource("6")
-expand_mode = 1
-stretch_mode = 6
-modulate = Color(1, 0.92, 0.78, 0.85)
-
-[node name="Sun" type="TextureRect" parent="."]
-layout_mode = 0
-offset_left = 48.0
-offset_top = 56.0
-offset_right = 156.0
-offset_bottom = 164.0
-mouse_filter = 2
-texture = ExtResource("5")
-expand_mode = 1
-stretch_mode = 5
 
 [node name="DebugStrip" type="HBoxContainer" parent="."]
 visible = false
+z_index = 20
 layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -420.0
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 16.0
 offset_top = 8.0
-offset_right = 420.0
+offset_right = -16.0
 offset_bottom = 52.0
 theme_override_constants/separation = 10
 alignment = 2
 
 [node name="DebugBadge" type="Label" parent="DebugStrip"]
 layout_mode = 2
+size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.96, 0.86, 0.48, 1)
 theme_override_colors/font_outline_color = Color(0.22, 0.08, 0.03, 0.9)
 theme_override_constants/outline_size = 3
@@ -105,21 +81,27 @@ theme_override_colors/font_color = Color(0.96, 0.86, 0.48, 1)
 theme_override_font_sizes/font_size = 16
 text = "Translation Editor"
 
-[node name="TitleHat" type="TextureRect" parent="."]
+[node name="TitleLogo" type="TextureRect" parent="."]
 layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -48.0
-offset_top = 18.0
-offset_right = 48.0
-offset_bottom = 98.0
+offset_left = -250.0
+offset_top = 4.0
+offset_right = 250.0
+offset_bottom = 150.0
 mouse_filter = 2
-texture = ExtResource("7")
+texture = ExtResource("5")
 expand_mode = 1
 stretch_mode = 5
 
+[node name="TitleHat" type="TextureRect" parent="."]
+visible = false
+layout_mode = 0
+mouse_filter = 2
+
 [node name="Title" type="Label" parent="."]
+visible = false
 layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
@@ -129,39 +111,36 @@ offset_top = 92.0
 offset_right = 280.0
 offset_bottom = 148.0
 theme_override_colors/font_color = Color(0.96, 0.86, 0.48, 1)
-theme_override_colors/font_outline_color = Color(0.22, 0.08, 0.03, 0.92)
-theme_override_constants/outline_size = 5
 theme_override_font_sizes/font_size = 42
 text = "Cowboy Trail"
 horizontal_alignment = 1
-vertical_alignment = 1
 
 [node name="Mascots" type="HBoxContainer" parent="."]
 layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -140.0
+offset_left = -150.0
 offset_top = 148.0
-offset_right = 140.0
-offset_bottom = 268.0
-theme_override_constants/separation = 36
+offset_right = 150.0
+offset_bottom = 278.0
+theme_override_constants/separation = 40
 alignment = 1
 mouse_filter = 2
 
 [node name="Cowboy" type="TextureRect" parent="Mascots"]
-custom_minimum_size = Vector2(96, 110)
+custom_minimum_size = Vector2(110, 130)
 layout_mode = 2
 mouse_filter = 2
-texture = ExtResource("11")
+texture = ExtResource("13")
 expand_mode = 1
 stretch_mode = 5
 
 [node name="Cowgirl" type="TextureRect" parent="Mascots"]
-custom_minimum_size = Vector2(96, 110)
+custom_minimum_size = Vector2(110, 130)
 layout_mode = 2
 mouse_filter = 2
-texture = ExtResource("12")
+texture = ExtResource("14")
 expand_mode = 1
 stretch_mode = 5
 
@@ -172,33 +151,62 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -420.0
-offset_top = -10.0
-offset_right = 420.0
-offset_bottom = 230.0
-theme_override_constants/separation = 36
+offset_left = -460.0
+offset_top = -20.0
+offset_right = 460.0
+offset_bottom = 320.0
+theme_override_constants/separation = 40
 alignment = 1
 
 [node name="Slot1" type="Button" parent="Slots"]
-custom_minimum_size = Vector2(220, 240)
+custom_minimum_size = Vector2(260, 340)
 layout_mode = 2
 focus_mode = 2
 flat = true
+
+[node name="DoorArt" type="TextureRect" parent="Slots/Slot1"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("6")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="SelectRing" type="TextureRect" parent="Slots/Slot1"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -10.0
+offset_top = -10.0
+offset_right = 10.0
+offset_bottom = 10.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("7")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Number" type="Label" parent="Slots/Slot1"]
 layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -60.0
-offset_top = 18.0
-offset_right = 60.0
+offset_left = -50.0
+offset_top = 28.0
+offset_right = 50.0
 offset_bottom = 110.0
 mouse_filter = 2
-theme_override_colors/font_color = Color(0.96, 0.86, 0.48, 1)
-theme_override_colors/font_outline_color = Color(0.22, 0.08, 0.03, 0.95)
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.15, 0.05, 0.02, 0.95)
 theme_override_constants/outline_size = 8
-theme_override_font_sizes/font_size = 72
+theme_override_font_sizes/font_size = 64
 text = "1"
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -210,11 +218,12 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -44.0
-offset_top = 8.0
-offset_right = 44.0
-offset_bottom = 96.0
+offset_left = -54.0
+offset_top = -18.0
+offset_right = 54.0
+offset_bottom = 90.0
 mouse_filter = 2
+texture = ExtResource("12")
 expand_mode = 1
 stretch_mode = 5
 
@@ -226,33 +235,62 @@ anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
 offset_left = -54.0
-offset_top = -42.0
+offset_top = -78.0
 offset_right = 54.0
-offset_bottom = -14.0
+offset_bottom = -48.0
 theme_override_constants/separation = 4
 alignment = 1
 mouse_filter = 2
 
 [node name="Slot2" type="Button" parent="Slots"]
-custom_minimum_size = Vector2(220, 240)
+custom_minimum_size = Vector2(260, 340)
 layout_mode = 2
 focus_mode = 2
 flat = true
+
+[node name="DoorArt" type="TextureRect" parent="Slots/Slot2"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("6")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="SelectRing" type="TextureRect" parent="Slots/Slot2"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -10.0
+offset_top = -10.0
+offset_right = 10.0
+offset_bottom = 10.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("7")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Number" type="Label" parent="Slots/Slot2"]
 layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -60.0
-offset_top = 18.0
-offset_right = 60.0
+offset_left = -50.0
+offset_top = 28.0
+offset_right = 50.0
 offset_bottom = 110.0
 mouse_filter = 2
-theme_override_colors/font_color = Color(0.96, 0.86, 0.48, 1)
-theme_override_colors/font_outline_color = Color(0.22, 0.08, 0.03, 0.95)
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.15, 0.05, 0.02, 0.95)
 theme_override_constants/outline_size = 8
-theme_override_font_sizes/font_size = 72
+theme_override_font_sizes/font_size = 64
 text = "2"
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -264,11 +302,12 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -44.0
-offset_top = 8.0
-offset_right = 44.0
-offset_bottom = 96.0
+offset_left = -54.0
+offset_top = -18.0
+offset_right = 54.0
+offset_bottom = 90.0
 mouse_filter = 2
+texture = ExtResource("12")
 expand_mode = 1
 stretch_mode = 5
 
@@ -280,33 +319,62 @@ anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
 offset_left = -54.0
-offset_top = -42.0
+offset_top = -78.0
 offset_right = 54.0
-offset_bottom = -14.0
+offset_bottom = -48.0
 theme_override_constants/separation = 4
 alignment = 1
 mouse_filter = 2
 
 [node name="Slot3" type="Button" parent="Slots"]
-custom_minimum_size = Vector2(220, 240)
+custom_minimum_size = Vector2(260, 340)
 layout_mode = 2
 focus_mode = 2
 flat = true
+
+[node name="DoorArt" type="TextureRect" parent="Slots/Slot3"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("6")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="SelectRing" type="TextureRect" parent="Slots/Slot3"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -10.0
+offset_top = -10.0
+offset_right = 10.0
+offset_bottom = 10.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("7")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Number" type="Label" parent="Slots/Slot3"]
 layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -60.0
-offset_top = 18.0
-offset_right = 60.0
+offset_left = -50.0
+offset_top = 28.0
+offset_right = 50.0
 offset_bottom = 110.0
 mouse_filter = 2
-theme_override_colors/font_color = Color(0.96, 0.86, 0.48, 1)
-theme_override_colors/font_outline_color = Color(0.22, 0.08, 0.03, 0.95)
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.15, 0.05, 0.02, 0.95)
 theme_override_constants/outline_size = 8
-theme_override_font_sizes/font_size = 72
+theme_override_font_sizes/font_size = 64
 text = "3"
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -318,11 +386,12 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -44.0
-offset_top = 8.0
-offset_right = 44.0
-offset_bottom = 96.0
+offset_left = -54.0
+offset_top = -18.0
+offset_right = 54.0
+offset_bottom = 90.0
 mouse_filter = 2
+texture = ExtResource("12")
 expand_mode = 1
 stretch_mode = 5
 
@@ -334,91 +403,154 @@ anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
 offset_left = -54.0
-offset_top = -42.0
+offset_top = -78.0
 offset_right = 54.0
-offset_bottom = -14.0
+offset_bottom = -48.0
 theme_override_constants/separation = 4
 alignment = 1
 mouse_filter = 2
 
 [node name="SettingsButton" type="Button" parent="."]
+custom_minimum_size = Vector2(88, 88)
 layout_mode = 1
 anchors_preset = 2
 anchor_top = 1.0
 anchor_bottom = 1.0
 offset_left = 28.0
-offset_top = -108.0
-offset_right = 100.0
-offset_bottom = -36.0
-focus_mode = 2
-flat = true
-icon = ExtResource("8")
-expand_icon = true
-
-[node name="HeartsButton" type="Button" parent="."]
-layout_mode = 1
-anchors_preset = 2
-anchor_top = 1.0
-anchor_bottom = 1.0
-offset_left = 116.0
-offset_top = -108.0
-offset_right = 260.0
-offset_bottom = -36.0
+offset_top = -120.0
+offset_right = 116.0
+offset_bottom = -32.0
 focus_mode = 2
 flat = true
 
-[node name="HeartIcons" type="HBoxContainer" parent="HeartsButton"]
+[node name="Plate" type="TextureRect" parent="SettingsButton"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 10.0
-offset_top = 12.0
-offset_right = -10.0
-offset_bottom = -12.0
-theme_override_constants/separation = 4
+mouse_filter = 2
+texture = ExtResource("8")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Icon" type="TextureRect" parent="SettingsButton"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -28.0
+offset_top = -28.0
+offset_right = 28.0
+offset_bottom = 28.0
+mouse_filter = 2
+texture = ExtResource("9")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="HeartsButton" type="Button" parent="."]
+custom_minimum_size = Vector2(108, 88)
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 128.0
+offset_top = -120.0
+offset_right = 236.0
+offset_bottom = -32.0
+focus_mode = 2
+flat = true
+
+[node name="Plate" type="TextureRect" parent="HeartsButton"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+texture = ExtResource("8")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="HeartIcons" type="HBoxContainer" parent="HeartsButton"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -48.0
+offset_top = -22.0
+offset_right = 48.0
+offset_bottom = 22.0
+theme_override_constants/separation = 2
 alignment = 1
 mouse_filter = 2
 
 [node name="Heart1" type="TextureRect" parent="HeartsButton/HeartIcons"]
-custom_minimum_size = Vector2(36, 36)
+custom_minimum_size = Vector2(28, 28)
 layout_mode = 2
 mouse_filter = 2
-texture = ExtResource("10")
+texture = ExtResource("11")
 expand_mode = 1
 stretch_mode = 5
 
 [node name="Heart2" type="TextureRect" parent="HeartsButton/HeartIcons"]
-custom_minimum_size = Vector2(36, 36)
+custom_minimum_size = Vector2(28, 28)
 layout_mode = 2
 mouse_filter = 2
-texture = ExtResource("10")
+texture = ExtResource("11")
 expand_mode = 1
 stretch_mode = 5
 
 [node name="Heart3" type="TextureRect" parent="HeartsButton/HeartIcons"]
-custom_minimum_size = Vector2(36, 36)
+custom_minimum_size = Vector2(28, 28)
 layout_mode = 2
 mouse_filter = 2
-texture = ExtResource("10")
+texture = ExtResource("11")
 expand_mode = 1
 stretch_mode = 5
 
 [node name="BuildTrailButton" type="Button" parent="."]
+custom_minimum_size = Vector2(88, 88)
 layout_mode = 1
 anchors_preset = 3
 anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -100.0
-offset_top = -108.0
+offset_left = -116.0
+offset_top = -120.0
 offset_right = -28.0
-offset_bottom = -36.0
+offset_bottom = -32.0
 focus_mode = 2
 flat = true
-icon = ExtResource("9")
-expand_icon = true
+
+[node name="Plate" type="TextureRect" parent="BuildTrailButton"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+texture = ExtResource("8")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Icon" type="TextureRect" parent="BuildTrailButton"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -28.0
+offset_top = -28.0
+offset_right = 28.0
+offset_bottom = 28.0
+mouse_filter = 2
+texture = ExtResource("10")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="StatusHint" type="Label" parent="."]
 layout_mode = 1
@@ -431,8 +563,8 @@ offset_left = -360.0
 offset_top = -34.0
 offset_right = 360.0
 offset_bottom = -6.0
-theme_override_colors/font_color = Color(0.94, 0.84, 0.52, 1)
-theme_override_colors/font_outline_color = Color(0.24, 0.09, 0.04, 0.72)
+theme_override_colors/font_color = Color(0.96, 0.9, 0.7, 1)
+theme_override_colors/font_outline_color = Color(0.24, 0.09, 0.04, 0.8)
 theme_override_constants/outline_size = 2
 theme_override_font_sizes/font_size = 16
 horizontal_alignment = 1
