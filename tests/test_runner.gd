@@ -1080,6 +1080,7 @@ func _test_save_slots() -> Variant:
 	if int(updated.get("stars", 0)) != 2:
 		return "Stars should be stored."
 	GameManager.save_to_disk()
+	GameManager.flush_save_to_disk()
 	var path := GameManager.save_path()
 	if not str(path).contains("savegames"):
 		return "Saves should live under a savegames folder, got: %s" % path
@@ -1710,6 +1711,7 @@ func _test_settings_language_dropdown() -> Variant:
 			error = "Selecting English should update GameManager immediately."
 	if error == null:
 		panel._select_language(1)
+		GameManager.flush_save_to_disk()
 		var save_json: Variant = JSON.parse_string(FileAccess.get_file_as_string(GameManager.save_path()))
 		if not TranslationServer.get_locale().begins_with("de"):
 			error = "Selecting Deutsch should update TranslationServer immediately."
@@ -4707,6 +4709,7 @@ func _test_settings_player_character() -> Variant:
 		GameManager.set_setting("player_character", previous)
 		return "Settings should store Cowgirl as the active player character."
 	GameManager.save_to_disk()
+	GameManager.flush_save_to_disk()
 	var save_json: Variant = JSON.parse_string(FileAccess.get_file_as_string(GameManager.save_path()))
 	if typeof(save_json) != TYPE_DICTIONARY:
 		GameManager.set_setting("player_character", previous)

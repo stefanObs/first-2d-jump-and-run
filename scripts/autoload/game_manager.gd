@@ -32,6 +32,8 @@ var campaign_custom_active: bool = false
 var _campaign_load_pending: bool = false
 var _horse_arrival_pending: bool = false
 var _data: Dictionary = {}
+var _save_dirty: bool = false
+var _save_flush_queued: bool = false
 
 
 func _ready() -> void:
@@ -40,6 +42,16 @@ func _ready() -> void:
 	CUSTOM_LEVEL_STORE.migrate_extra_slot_shift()
 	load_from_disk()
 	_apply_settings()
+
+
+func _notification(what: int) -> void:
+	## Flush before quit so a camp touch that only queued a write still lands.
+	if (
+		what == NOTIFICATION_WM_CLOSE_REQUEST
+		or what == NOTIFICATION_PREDELETE
+		or what == NOTIFICATION_EXIT_TREE
+	):
+		flush_save_to_disk()
 
 
 func get_slot(slot_index: int) -> Dictionary:
@@ -280,6 +292,7 @@ func complete_level(level_number: int, stars_found: int) -> void:
 
 
 func load_level(level_number: int) -> void:
+	flush_save_to_disk()
 	var entries := campaign_entries()
 	var index := clampi(level_number, 1, entries.size()) - 1
 	var entry := entries[index]
@@ -296,6 +309,12 @@ func load_level(level_number: int) -> void:
 	get_tree().change_scene_to_file(str(entry.get("scene", LEVEL_SCENES[0])))
 
 
+func return_to_save_select() -> void:
+	flush_save_to_disk()
+	active_slot_index = -1
+	get_tree().change_scene_to_file("res://scenes/ui/save_select.tscn")
+
+
 func consume_campaign_context() -> Dictionary:
 	if not _campaign_load_pending:
 		return {}
@@ -306,11 +325,6 @@ func consume_campaign_context() -> Dictionary:
 		"count": campaign_level_count(),
 		"custom": campaign_custom_active,
 	}
-
-
-func return_to_save_select() -> void:
-	active_slot_index = -1
-	get_tree().change_scene_to_file("res://scenes/ui/save_select.tscn")
 
 
 
@@ -391,7 +405,8 @@ func save_run_state(
 	var slot := get_slot(active_slot_index)
 	slot["empty"] = false
 	slot["resume"] = {
-		"level_number": clampi(level_number, 1, campaign_level_count()),
+		## level_number is already the live trail index — avoid rebuilding campaign_entries() here.
+		"level_number": maxi(level_number, 1),
 		"checkpoint_name": checkpoint_name,
 		"collected_badges": collected_badges.duplicate(),
 		"stars_found": maxi(stars_found, 0),
@@ -401,6 +416,7 @@ func save_run_state(
 		"mode_remaining": maxf(mode_remaining, 0.0),
 	}
 	(_data["slots"] as Array)[active_slot_index] = slot
+	## Defer the disk write so camp activation does not hitch the gameplay frame.
 	save_to_disk()
 	saves_changed.emit()
 	return true
@@ -523,16 +539,37 @@ func save_path() -> String:
 
 
 func save_to_disk() -> void:
+	## Mark dirty and write on the next idle frame so camp touches stay smooth.
+	_ensure_data()
+	_save_dirty = true
+	if _save_flush_queued:
+		return
+	_save_flush_queued = true
+	call_deferred("flush_save_to_disk")
+
+
+func flush_save_to_disk() -> void:
+	_save_flush_queued = false
+	if not _save_dirty:
+		return
+	_save_dirty = false
 	_ensure_data()
 	var path := save_path()
 	var file := FileAccess.open(path, FileAccess.WRITE)
 	if file == null:
 		push_error("Could not write save file: %s" % path)
+		## Keep dirty so a later flush / quit can retry.
+		_save_dirty = true
+		if not _save_flush_queued:
+			_save_flush_queued = true
+			call_deferred("flush_save_to_disk")
 		return
-	file.store_string(JSON.stringify(_data, "\t"))
+	## Compact JSON — pretty tabs made every camp save hitch on the main thread.
+	file.store_string(JSON.stringify(_data))
 
 
 func load_from_disk() -> void:
+	flush_save_to_disk()
 	var path := save_path()
 	if not FileAccess.file_exists(path):
 		_data = _default_data()
@@ -550,7 +587,8 @@ func load_from_disk() -> void:
 	# Older save formats are intentionally incompatible — start fresh.
 	if incoming_version < SAVE_VERSION:
 		_data = _default_data()
-		save_to_disk()
+		_save_dirty = true
+		flush_save_to_disk()
 		saves_changed.emit()
 		return
 	_data = _migrate_save(raw)

@@ -11,6 +11,8 @@ const TEX_INACTIVE := preload("res://assets/world/checkpoint_inactive.png")
 const TEX_ACTIVE := preload("res://assets/world/checkpoint_active.png")
 const TEX_CAVE_INACTIVE := preload("res://assets/world/checkpoint_cave_inactive.png")
 const TEX_CAVE_ACTIVE := preload("res://assets/world/checkpoint_cave_active.png")
+const REACH_X := 64.0
+const NEARBY_X := 220.0
 
 var _sprite: Sprite2D
 var _label: Label
@@ -18,6 +20,7 @@ var _pulse: float = 0.0
 var _pop_time: float = 0.0
 var _sprite_base_y: float = -40.0
 var _level_style: String = LevelStyle.DESERT
+var _cached_player: Player
 
 
 func apply_level_style(style: String) -> void:
@@ -46,39 +49,36 @@ func _process(delta: float) -> void:
 			scale = Vector2(s, s)
 		return
 
-	# Activate by reaching the camp's place on the trail (not only flag body).
-	if _player_reached_camp():
+	var player := _player()
+	if player == null:
+		return
+	var dx := absf(player.global_position.x - global_position.x)
+	## Activate by reaching the camp's place on the trail (not only flag body).
+	if dx <= REACH_X:
 		activate()
 		return
-
-	var nearby := _player_nearby(220.0)
-	if _label != null and nearby:
+	## Far camps skip label/modulate work — one cached player, no second tree walk.
+	if dx > NEARBY_X:
+		if _label != null:
+			var idle_text := "LANTERN" if LevelStyle.is_cave(_level_style) else "CAMP"
+			if _label.text != idle_text:
+				_label.text = idle_text
+			_label.modulate = Color(1, 1, 1, 1)
+		if _sprite != null:
+			_sprite.modulate = Color(1, 1, 1, 1)
+		return
+	if _label != null:
 		_label.text = "CAMP!"
 		_label.modulate = Color(1.0, 0.9 + sin(_pulse) * 0.1, 0.3, 1.0)
-	elif _label != null:
-		_label.text = "CAMP"
-		_label.modulate = Color(1, 1, 1, 1)
-	if _sprite != null and nearby:
+	if _sprite != null:
 		_sprite.modulate = Color(1.0, 0.85 + absf(sin(_pulse)) * 0.15, 0.7, 1.0)
-	elif _sprite != null:
-		_sprite.modulate = Color(1, 1, 1, 1)
 
 
-func _player_reached_camp() -> bool:
-	var player := _find_player()
-	if player == null:
-		return false
-	# Reaching the flag's horizontal point is enough, even on a high jump.
-	var dx := absf(player.global_position.x - global_position.x)
-	return dx <= 64.0
-
-
-func _find_player() -> Node2D:
-	return PlayerLookup.find_in_tree(self)
-
-
-func _player_nearby(radius: float) -> bool:
-	return PlayerLookup.any_in_radius(self, radius)
+func _player() -> Player:
+	if _cached_player != null and is_instance_valid(_cached_player):
+		return _cached_player
+	_cached_player = PlayerLookup.find_in_tree(self) as Player
+	return _cached_player
 
 
 func activate() -> void:
@@ -105,6 +105,7 @@ func get_respawn_position() -> Vector2:
 
 func _on_body_entered(body: Node2D) -> void:
 	if body is Player:
+		_cached_player = body as Player
 		activate()
 
 
