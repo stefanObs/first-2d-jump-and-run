@@ -8234,6 +8234,24 @@ func _test_art_and_music() -> Variant:
 		return "Country start/finale theme did not load."
 	if load("res://scenes/ui/startup_loading.tscn") == null:
 		return "Game needs a visible startup loading scene."
+	var loading_packed: PackedScene = load("res://scenes/ui/startup_loading.tscn")
+	var loading := loading_packed.instantiate() as Control
+	add_child(loading)
+	await get_tree().process_frame
+	var track := loading.get_node_or_null("ProgressTrack") as Control
+	var fill := loading.get_node_or_null("ProgressTrack/ProgressFill") as ColorRect
+	if track == null or fill == null:
+		loading.queue_free()
+		return "Startup loading needs a ProgressTrack with ProgressFill."
+	## Advance a bit without waiting for the full boot handoff.
+	loading.set_process(false)
+	loading._elapsed = 0.6
+	loading._set_progress(0.55)
+	await get_tree().process_frame
+	if fill.size.x < 40.0:
+		loading.queue_free()
+		return "Startup progress bar should visibly fill while saddling up."
+	loading.queue_free()
 	var project_text := FileAccess.get_file_as_string("res://project.godot")
 	if (
 		not project_text.contains("startup_loading.tscn")
