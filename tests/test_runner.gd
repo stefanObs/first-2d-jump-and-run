@@ -107,6 +107,7 @@ func _ready() -> void:
 	failures += await _run("Ninja follows dune slope height while chasing", _test_ninja_follows_slope_height)
 	failures += await _run("Three chasing ninjas stay cheap per frame", _test_ninja_chase_performance)
 	failures += await _run("Ninja resets to dormancy on respawn", _test_ninja_respawn_restore)
+	failures += await _run("Workshop preview shows stamped ninjas", _test_workshop_preview_shows_ninja)
 	failures += await _run("Shuriken sprite is handcrafted art", _test_shuriken_art)
 	failures += await _run("Side contact with a bandit sends the cowboy to camp", _test_side_contact_hurts)
 	failures += await _run("Upward contact with a bandit sends the cowboy to camp", _test_upward_contact_hurts)
@@ -3653,6 +3654,55 @@ func _test_ninja_respawn_restore() -> Variant:
 
 	player.queue_free()
 	ninja.queue_free()
+	return error
+
+
+func _test_workshop_preview_shows_ninja() -> Variant:
+	## Live preview must show the stamped ninja; play builds stay invisible until ambush.
+	var data := CustomLevelStore.default_level(0)
+	var trail := CustomLevelStore.trail_row(int(data.get("height", 8)))
+	var objects: Array = data.get("objects", []).duplicate(true)
+	objects.append({"type": "ninja", "x": 10, "y": trail - 1})
+	data["objects"] = objects
+	var preview := LevelPreview.new()
+	add_child(preview)
+	preview.show_level(data)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var error: Variant = null
+	var marker: NinjaEnemy = null
+	if preview._world != null:
+		for node in preview._world.get_children():
+			if node is NinjaEnemy:
+				marker = node as NinjaEnemy
+				break
+	if marker == null:
+		error = "Workshop preview should spawn a ninja at the stamp."
+	elif not marker.editor_marker:
+		error = "Preview ninjas should be editor markers."
+	elif marker.modulate.a < 0.9:
+		error = "Preview ninjas should stay visible at the stamp (a=%.2f)." % marker.modulate.a
+	elif marker._state != NinjaEnemy.State.DORMANT:
+		error = "Preview ninjas must stay dormant (no ambush)."
+	preview.queue_free()
+
+	var play_level := LevelController.new()
+	play_level.skip_auto_setup = true
+	add_child(play_level)
+	CustomLevelBuilder.build(play_level, data, false)
+	await get_tree().process_frame
+	var play_ninja: NinjaEnemy = null
+	for node in play_level.get_children():
+		if node is NinjaEnemy:
+			play_ninja = node as NinjaEnemy
+			break
+	if error == null and play_ninja == null:
+		error = "Play build should still place a ninja."
+	elif error == null and play_ninja.editor_marker:
+		error = "Play-test / campaign ninjas must not use the editor marker."
+	elif error == null and play_ninja.modulate.a > 0.05:
+		error = "Play ninjas should stay hidden until ambush (a=%.2f)." % play_ninja.modulate.a
+	play_level.queue_free()
 	return error
 
 

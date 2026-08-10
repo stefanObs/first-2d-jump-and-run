@@ -31,6 +31,10 @@ const LEDGE_SCAN_RUN := 140.0
 ## Smallest arc a hop may use, so short steps still look like jumps.
 const JUMP_ARC_MIN := 26.0
 
+## Workshop live preview only: keep the idle sprite at the stamp so kids see the ambush post.
+## Real levels and play-test leave this false — dormancy stays fully hidden until ambush.
+@export var editor_marker: bool = false
+
 var _anchor: Vector2
 var _facing: float = 1.0
 var _area: Area2D
@@ -68,6 +72,12 @@ func _ready() -> void:
 		_label.visible = false
 	_setup_sprite()
 	_set_dormant(true)
+	if editor_marker:
+		## Marker stays idle at the stamp; never ambush or take damage in the preview.
+		set_physics_process(false)
+		set_process(false)
+		collision_layer = 0
+		collision_mask = 0
 	if _area != null:
 		_area.body_entered.connect(_on_body_entered)
 
@@ -136,7 +146,8 @@ func _make_sprite_frames() -> SpriteFrames:
 func _set_dormant(hidden: bool) -> void:
 	if hidden:
 		_state = State.DORMANT
-		modulate.a = 0.0
+		## Editor markers stay readable; gameplay dormancy stays invisible.
+		modulate.a = 1.0 if editor_marker else 0.0
 		set_process(false)
 		_hint_near = -1
 		if _area != null:
@@ -186,7 +197,7 @@ func _physics_process(delta: float) -> void:
 
 
 func _try_activate() -> void:
-	if _activated:
+	if editor_marker or _activated:
 		return
 	var player := _find_player()
 	if player == null:

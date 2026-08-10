@@ -78,7 +78,7 @@ static func build(level: LevelController, data: Dictionary, preview: bool = fals
 		var index := int(counters.get(type_name, 0))
 		counters[type_name] = index + 1
 		var position := CustomLevelStore.object_world_position(object, grid, trail)
-		if _spawn_object(level, type_name, index, position, object, grid, trail, style):
+		if _spawn_object(level, type_name, index, position, object, grid, trail, style, preview):
 			has_goal = true
 
 	for run_index in range(canyon_runs.size()):
@@ -102,7 +102,8 @@ static func _spawn_object(
 	object: Dictionary,
 	grid: float,
 	trail: int,
-	style: String
+	style: String,
+	preview: bool = false
 ) -> bool:
 	match type_name:
 		"platform", "ladder_ledge":
@@ -162,7 +163,12 @@ static func _spawn_object(
 		"bull":
 			_add_styled(level, BULL, "Bull%d" % index, position, style)
 		"ninja":
-			_add_scene(level, NINJA, "Ninja%d" % index, position)
+			var ninja := NINJA.instantiate() as NinjaEnemy
+			if ninja != null:
+				ninja.name = "Ninja%d" % index
+				ninja.position = position
+				ninja.editor_marker = preview
+				level.add_child(ninja)
 		"rattlesnake", "scorpion":
 			var snake := _add_styled(level, RATTLESNAKE, "Rattlesnake%d" % index, position, style) as Rattlesnake
 			if snake != null and type_name == "scorpion":
