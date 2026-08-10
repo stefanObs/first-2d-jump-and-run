@@ -68,8 +68,8 @@ func _ready() -> void:
 
 
 func _style_readable() -> void:
-    ## Saloon plank board — matches start-screen wood chrome.
-    add_theme_stylebox_override(&"panel", MenuChrome.slot_board_style())
+    ## Solid wood panel with bandana rim — matches start-screen chrome.
+    add_theme_stylebox_override(&"panel", MenuChrome.panel_style())
     for path in [
         "Margin/VBox/Title",
         "Margin/VBox/MusicLabel",

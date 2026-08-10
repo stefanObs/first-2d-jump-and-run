@@ -81,20 +81,13 @@ func _build_ui() -> void:
     var list_panel := PanelContainer.new()
     list_panel.name = "TrailPanel"
     list_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-    list_panel.add_theme_stylebox_override(&"panel", MenuChrome.slot_board_style())
+    list_panel.add_theme_stylebox_override(&"panel", MenuChrome.panel_style())
     box.add_child(list_panel)
-
-    var list_margin := MarginContainer.new()
-    list_margin.add_theme_constant_override(&"margin_left", 8)
-    list_margin.add_theme_constant_override(&"margin_top", 8)
-    list_margin.add_theme_constant_override(&"margin_right", 8)
-    list_margin.add_theme_constant_override(&"margin_bottom", 8)
-    list_panel.add_child(list_margin)
 
     var scroll := ScrollContainer.new()
     scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
     scroll.custom_minimum_size = Vector2(0, 160)
-    list_margin.add_child(scroll)
+    list_panel.add_child(scroll)
 
     var rows := VBoxContainer.new()
     rows.name = "TrailRows"

@@ -140,7 +140,7 @@ func _style_panel() -> void:
         dim.color = MenuChrome.DIM
     var panel := get_node_or_null("Panel") as PanelContainer
     if panel != null:
-        panel.add_theme_stylebox_override(&"panel", MenuChrome.slot_board_style())
+        panel.add_theme_stylebox_override(&"panel", MenuChrome.panel_style())
     var title := get_node_or_null("Panel/Margin/VBox/Title") as Label
     if title != null:
         MenuChrome.apply_ink_label(title)
