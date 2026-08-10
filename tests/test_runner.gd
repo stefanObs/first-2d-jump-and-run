@@ -136,6 +136,8 @@ func _ready() -> void:
 	failures += await _run("Cave floor tiles are solid without holes", _test_cave_floor_tiles_solid)
 	failures += await _run("Cave sky wash tucks under the floor", _test_cave_sky_meets_floor)
 	failures += await _run("Cave camp sprites have transparent backgrounds", _test_cave_camp_transparent)
+	failures += await _run("Cave skeleton feet sit on the ground", _test_skeleton_feet_on_ground)
+	failures += await _run("Tied skeleton bow gap is transparent", _test_skeleton_tied_bow_transparent)
 	failures += await _run("Filled save can pick Advanced Mode", _test_filled_slot_advanced_mode_select)
 	failures += await _run("Bandits play walk animation while moving", _test_bandit_walk_animation)
 	failures += await _run("Cave skeletons loft arrows at flyers above", _test_skeleton_shoots_up_at_flyer)
@@ -4895,6 +4897,68 @@ func _test_bandit_walk_animation() -> Variant:
 		return "Stationary bandits must return to the idle pose."
 	bandit.queue_free()
 	ground.queue_free()
+	return null
+
+
+func _test_skeleton_feet_on_ground() -> Variant:
+	## Idle/walk frames must paint boots on the bottom row so STAND_FOOT_OFFSET lands on dirt.
+	for path in [
+		"res://assets/world/skeleton.png",
+		"res://assets/world/skeleton_walk_0.png",
+		"res://assets/world/skeleton_crystal.png",
+	]:
+		var tex := load(path) as Texture2D
+		if tex == null:
+			return "Missing skeleton asset: %s" % path
+		var img := tex.get_image()
+		if img == null:
+			return "Could not read pixels for %s" % path
+		if img.get_format() != Image.FORMAT_RGBA8:
+			img.convert(Image.FORMAT_RGBA8)
+		var bottom := img.get_height() - 1
+		var solid_on_bottom := 0
+		for x in range(img.get_width()):
+			if img.get_pixel(x, bottom).a > 0.35:
+				solid_on_bottom += 1
+		if solid_on_bottom < 3:
+			return "%s boots should reach the bottom row (found %d solid pixels)." % [
+				path.get_file(), solid_on_bottom
+			]
+	return null
+
+
+func _test_skeleton_tied_bow_transparent() -> Variant:
+	## The pocket between boots and bow must stay see-through (no white/gray plate).
+	for path in [
+		"res://assets/world/skeleton_tied.png",
+		"res://assets/world/skeleton_crystal_tied.png",
+	]:
+		var tex := load(path) as Texture2D
+		if tex == null:
+			return "Missing tied skeleton asset: %s" % path
+		var img := tex.get_image()
+		if img == null:
+			return "Could not read pixels for %s" % path
+		if img.get_format() != Image.FORMAT_RGBA8:
+			img.convert(Image.FORMAT_RGBA8)
+		var bright_fill := 0
+		var probes := [
+			Vector2i(40, 70), Vector2i(42, 71), Vector2i(38, 72), Vector2i(36, 69), Vector2i(44, 70),
+		]
+		for probe in probes:
+			if probe.x >= img.get_width() or probe.y >= img.get_height():
+				continue
+			var c := img.get_pixel(probe.x, probe.y)
+			if c.a < 0.2:
+				continue
+			var avg := (c.r + c.g + c.b) / 3.0
+			var chroma := maxf(c.r, maxf(c.g, c.b)) - minf(c.r, minf(c.g, c.b))
+			if avg >= 0.55 and chroma <= 0.12:
+				bright_fill += 1
+		if bright_fill > 0:
+			return "%s still has a bright fill between boots and bow (%d probe hits)." % [
+				path.get_file(), bright_fill
+			]
 	return null
 
 
