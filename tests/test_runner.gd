@@ -3858,6 +3858,7 @@ func _test_wing_chasm_hands_out_wings_at_camp() -> Variant:
 	var high_stars := 0
 	var bandits := 0
 	var bounty_bandits := 0
+	var checkpoints := 0
 	for value in data.get("objects", []):
 		var object := value as Dictionary
 		var x := int(object.get("x", 0))
@@ -3875,6 +3876,8 @@ func _test_wing_chasm_hands_out_wings_at_camp() -> Variant:
 				bandits += 1
 			"bounty_bandit":
 				bounty_bandits += 1
+			"checkpoint":
+				checkpoints += 1
 	if first_wings < 0:
 		return "Wing Chasm must stamp the wings item."
 	if first_wings > spawn_x + 6:
@@ -3887,6 +3890,8 @@ func _test_wing_chasm_hands_out_wings_at_camp() -> Variant:
 		return "Wing Chasm should stamp bow skeletons on the solid trail (found %d)." % bandits
 	if bounty_bandits < 1:
 		return "Wing Chasm should stamp a crystal skeleton after the late belt."
+	if checkpoints < 3:
+		return "Wing Chasm should offer three lantern camps along the trail (found %d)." % checkpoints
 
 	var level := LevelController.new()
 	level.level_number = 15

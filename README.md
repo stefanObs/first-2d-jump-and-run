@@ -2,7 +2,7 @@
 
 Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, nonviolent lasso. **Classic mode** has no lives or game over; **Advanced Mode** (hearts icon on the start screen, or **Settings**, before starting or continuing a slot) adds a three-life limit, badge milestones, and a game-over return to the start screen. Pick **Cowboy** or **Cowgirl** on the start screen (or in Settings) — each **save slot** stores its own rider and Classic/Advanced trail mode; focusing a filled door restores that slot’s picks, and starting/continuing commits the current picks to that slot. **German is the default language**; English is fully supported.
 
-**Content version:** `1.8.78` (see `content_version.txt`). Launchers reimport when this stamp changes.
+**Content version:** `1.8.79` (see `content_version.txt`). Launchers reimport when this stamp changes.
 
 This README is the **binding source of truth** for gameplay, level design, art, i18n, and audio. Agents and contributors must follow it (see [Agent / contributor rules](#agent--contributor-rules)).
 
@@ -82,7 +82,7 @@ godot --headless --path . res://tests/test_moving_platform_obstruction.tscn
 12. Bat Gallery — bats, drips, ledges, springs, first cave conveyor gate  
 13. Acid Veins — pink drip gauntlet, fungus, canyon hop with approach spring, conveyor gate  
 14. Ladder Grotto — ladder branches, lizards, springs, reverse belt, ceiling drips  
-15. Wing Chasm — Wings waiting at camp; fly the high badge line over two cave chasms (fresh wings mid-trail); bow skeletons on the solid trail  
+15. Wing Chasm — Wings waiting at camp; three lantern camps; fly the high badge line over two cave chasms (fresh wings mid-trail); bow skeletons on the solid trail  
 16. Dragon Gate — cave finale with belts, ladders, springs, drips, and fences before the Cave Dragon  
 
 **Bosses** (after clearing the listed level; same tools as the trail; classic mode uses **5 hearts** per fight; Advanced Mode uses campaign lives instead; nonviolent win):
@@ -146,7 +146,7 @@ Agents **must** honor these when editing levels or trail systems:
 - Pink drips and falling stalactites always hang from the **cave ceiling** (workshop stamps snap to ceiling seats); drips splash on the floor/planks then respawn; falling stalactites pull free, fall until they **hit** trail or plank tops, then shatter; **Bubble does not block** drips/spikes. Bats can bounce off Bubble.
 - Cave floors use dense cool stone + pink flecks; cowboy-style rock ceiling **panels** with fixed **low/high** side heights (3 variants of each start→end combo) chained only when adjacent edges match; solid fill stays **above** the panel tops; sparse décor stalactites (static, non-harmful) fuse into seat nubs until a live falling tooth releases (none on Dragon Gate / Cave Dragon); deep cave wash **tucks under the floor** (no gap); no desert sun/mesa hills.
 - **Wings cannot pass the ceiling** (`FlightCeilingCave`); touching the rock while flying (`CaveCeilingHazard`) respawns at camp.
-- **Wing Chasm** (level 15) is the cave flying trail: the Wings stamp sits at camp, ahead of the first badge, with two more pairs mid-trail so flight can be refreshed. Its high badge line is an optional reward route — planks, springs and a ladder branch still carry the whole trail on foot. Bow skeletons patrol the solid dirt between the chasms, with a crystal skeleton after the late conveyor.
+- **Wing Chasm** (level 15) is the cave flying trail: the Wings stamp sits at camp, ahead of the first badge, with two more pairs mid-trail so flight can be refreshed. **Three lantern camps** break up the run (before the first chasm, mid-trail, and with the late wings). Its high badge line is an optional reward route — planks, springs and a ladder branch still carry the whole trail on foot. Bow skeletons patrol the solid dirt between the chasms, with a crystal skeleton after the late conveyor.
 - **Ladders** (workshop Trail stamp): 3-cell climb; Space/Up climbs up, S/Down climbs down. Upper one-way planks must sit on the climb-top row so the cowboy can step onto the higher path; drop off the ledge end back to dirt (no second “down” ladder required). Sample branches appear on new trails and on cave workshop imports. **Conveyor**, **Timed Gate**, and **Fence** Trail stamps work in desert and cave; cave campaign levels 11–16 place sheriff badges along the trail plus extra ladders/planks, fences, **springs**, and (from Bat Gallery on) belts that end on solid ground.
 
 ### Canyon art

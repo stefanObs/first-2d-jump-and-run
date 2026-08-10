@@ -252,6 +252,7 @@ static func _level_15() -> Dictionary:
 	# Bow skeleton on the solid approach before the first chasm.
 	_add(objects, "bandit", 27, trail - 1)
 	_add(objects, "spring", 30, trail - 1)
+	_add(objects, "checkpoint", 31, trail - 1)
 	# First chasm: planks carry the walking route, open air rewards the flight.
 	CustomLevelStore.append_platform_run(objects, trail, 34, 4, 2)
 	_add(objects, "star", 37, 2)
@@ -275,8 +276,9 @@ static func _level_15() -> Dictionary:
 	_add_badge(objects, 94, trail)
 	_add(objects, "ninja", 97, trail - 1)
 	_add(objects, "star", 100, 2)
-	# Last pair of wings for the run to the goal.
+	# Last pair of wings for the run to the goal, plus a late lantern camp.
 	_add(objects, "wings", 103, trail - 1)
+	_add(objects, "checkpoint", 105, trail - 1)
 	_add(objects, "acid_drip", 106, 0)
 	_add_badge(objects, 108, trail)
 	CustomLevelStore.append_conveyor_belt(objects, trail, 110, true)
