@@ -2,7 +2,7 @@
 
 Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, nonviolent lasso. **Classic mode** has no lives or game over; **Advanced Mode** (hearts icon on the start screen, or **Settings**, before starting or continuing a slot) adds a three-life limit, badge milestones, and a game-over return to the start screen. Pick **Cowboy** or **Cowgirl** on the start screen (or in Settings) — each **save slot** stores its own rider and Classic/Advanced trail mode; focusing a filled door restores that slot’s picks, and starting/continuing commits the current picks to that slot. **German is the default language**; English is fully supported.
 
-**Content version:** `1.8.77` (see `content_version.txt`). Launchers reimport when this stamp changes.
+**Content version:** `1.8.78` (see `content_version.txt`). Launchers reimport when this stamp changes.
 
 This README is the **binding source of truth** for gameplay, level design, art, i18n, and audio. Agents and contributors must follow it (see [Agent / contributor rules](#agent--contributor-rules)).
 

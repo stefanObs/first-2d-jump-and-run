@@ -221,6 +221,8 @@ func _ready() -> void:
 	failures += await _run("Workshop right click removes stamp", _test_workshop_right_click_remove)
 	failures += await _run("Workshop preview click places stamp", _test_workshop_preview_places_stamp)
 	failures += await _run("Airborne bandits fall to walkable ground", _test_airborne_bandit_falls)
+	failures += await _run("Buried bandits lift onto the floor", _test_buried_bandit_lifts)
+	failures += await _run("Level 10 bandits stand on the walk surface", _test_level_10_bandits_on_floor)
 	failures += await _run("Campaign workshop edits and inserts levels", _test_campaign_workshop)
 	failures += await _run("Campaign workshop back navigation stays reachable", _test_workshop_back_navigation)
 	failures += await _run("Trail share pack export and import round-trip", _test_trail_share_pack)
@@ -4017,20 +4019,36 @@ func _test_bandits_stand_on_desert() -> Variant:
 	if packed == null:
 		return "Missing opponent scene."
 	var desert_top := 320.0
+	var floor := StaticBody2D.new()
+	floor.collision_layer = 1
+	floor.collision_mask = 0
+	var shape := CollisionShape2D.new()
+	var rect := RectangleShape2D.new()
+	rect.size = Vector2(800, 64)
+	shape.shape = rect
+	shape.position = Vector2(0, 32)
+	floor.add_child(shape)
+	floor.position = Vector2(400.0, desert_top)
+	add_child(floor)
 	var bandit := packed.instantiate() as Opponent
 	bandit.position = Vector2(400.0, desert_top)
 	add_child(bandit)
 	await get_tree().process_frame
+	await get_tree().physics_frame
+	await get_tree().physics_frame
 	if not bandit.has_method("foot_contact_y"):
 		bandit.queue_free()
+		floor.queue_free()
 		return "Opponent must expose foot_contact_y for desert grounding checks."
 	var stand_feet: float = bandit.call("foot_contact_y")
 	if absf(stand_feet - desert_top) > 2.5:
 		bandit.queue_free()
+		floor.queue_free()
 		return "Standing bandits must stand on the desert (feet y=%.1f, floor=%.1f)." % [stand_feet, desert_top]
 	var walk := bandit.get_node_or_null("WalkSprite") as AnimatedSprite2D
 	if walk == null or walk.offset != Opponent.STAND_FOOT_OFFSET:
 		bandit.queue_free()
+		floor.queue_free()
 		return "Standing bandits must use the desert foot offset."
 	bandit.tie_up(false)
 	# Wait out the short tying flourish before measuring the seated pose.
@@ -4038,8 +4056,10 @@ func _test_bandits_stand_on_desert() -> Variant:
 	var tied_feet: float = bandit.call("foot_contact_y")
 	if walk.offset != Opponent.TIED_FOOT_OFFSET:
 		bandit.queue_free()
+		floor.queue_free()
 		return "Tied bandits must keep the desert seat offset."
 	bandit.queue_free()
+	floor.queue_free()
 	if absf(tied_feet - desert_top) > 2.5:
 		return "Tied bandits must sit on the desert (feet y=%.1f, floor=%.1f)." % [tied_feet, desert_top]
 	# Kingpin arena guards share the Opponent scene on the same desert line.
@@ -7416,6 +7436,67 @@ func _test_airborne_bandit_falls() -> Variant:
 	bandit.queue_free()
 	floor.queue_free()
 	return null
+
+
+func _test_buried_bandit_lifts() -> Variant:
+	var floor := StaticBody2D.new()
+	floor.collision_layer = 1
+	floor.collision_mask = 0
+	var shape := CollisionShape2D.new()
+	var rect := RectangleShape2D.new()
+	rect.size = Vector2(400, 80)
+	shape.shape = rect
+	shape.position = Vector2(0, 40)
+	floor.add_child(shape)
+	## Collision top at y=300.
+	floor.position = Vector2(200, 300)
+	add_child(floor)
+	var packed: PackedScene = load("res://scenes/world/opponent.tscn")
+	if packed == null:
+		floor.queue_free()
+		return "Missing opponent scene."
+	var bandit := packed.instantiate() as Opponent
+	## Start inside the dirt block, below the walk crust.
+	bandit.global_position = Vector2(200, 340)
+	add_child(bandit)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	if bandit._falling:
+		bandit.queue_free()
+		floor.queue_free()
+		return "A buried bandit should lift onto the floor, not keep falling."
+	if absf(bandit.global_position.y - 300.0) > 6.0:
+		bandit.queue_free()
+		floor.queue_free()
+		return "Buried bandit should stand on the floor surface (y=%.1f)." % bandit.global_position.y
+	bandit.queue_free()
+	floor.queue_free()
+	return null
+
+
+func _test_level_10_bandits_on_floor() -> Variant:
+	var packed: PackedScene = load("res://scenes/levels/level_10.tscn")
+	if packed == null:
+		return "Missing level 10 scene."
+	var level := packed.instantiate() as LevelController
+	add_child(level)
+	await get_tree().process_frame
+	await get_tree().physics_frame
+	var error: Variant = null
+	for node in level.find_children("*", "AnimatableBody2D", true, false):
+		if not (node is Opponent):
+			continue
+		var bandit := node as Opponent
+		var surface := WildWestTheme.walk_surface_at(level, bandit.global_position.x)
+		var floor_y := float(surface.get("y", bandit.global_position.y))
+		if absf(bandit.global_position.y - floor_y) > 8.0:
+			error = "%s should stand on the walk surface (y=%.1f, floor=%.1f)." % [
+				bandit.name, bandit.global_position.y, floor_y
+			]
+			break
+	level.queue_free()
+	return error
 
 
 func _editor_tool_count(editor: Node) -> int:

@@ -38,6 +38,7 @@ static func apply_to_level(level: Node) -> void:
 	_retuck_cave_sky_to_floor(level, style)
 	_align_cacti(level)
 	_align_chests(level)
+	_align_ground_foes(level)
 	_apply_actor_styles(level, style)
 	# After actor styles: Hazard.apply_level_style would otherwise overwrite
 	# per-bank ridge tops with a temporary single-height canyon align.
@@ -1254,6 +1255,22 @@ static func _align_chests(level: Node) -> void:
 			CHEST_TILT_BLEND,
 			CHEST_MAX_TILT
 		)
+
+
+static func _align_ground_foes(level: Node) -> void:
+	## Bandits stamped inside/under dirt get lifted to the trail crust (not onto
+	## movers hovering above the bank).
+	for node in level.find_children("*", "AnimatableBody2D", true, false):
+		if not (node is Opponent):
+			continue
+		var bandit := node as Opponent
+		if bandit.is_tied() or bandit.vertical_patrol:
+			continue
+		var surface := walk_surface_at(level, bandit.global_position.x)
+		var floor_y := float(surface["y"])
+		## Only correct burial or small drift — leave intentional aerial stamps to fall.
+		if bandit.global_position.y > floor_y + 6.0 or absf(bandit.global_position.y - floor_y) <= 24.0:
+			bandit.snap_feet_to_surface(floor_y)
 
 
 static func _disable_ground_fill_collision(level: Node) -> void:

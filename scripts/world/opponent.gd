@@ -175,16 +175,43 @@ func _process(delta: float) -> void:
 	_update_nearby_hint()
 
 
+func snap_feet_to_surface(floor_y: float) -> void:
+	## Place feet on the walk crust. Used after trail floors are dressed, and when
+	## a stamp lands inside/under the dirt.
+	if _tied or vertical_patrol:
+		return
+	_kill_pose_tween()
+	_falling = false
+	_fall_vel = 0.0
+	global_position.y = floor_y
+	_origin = global_position
+
+
 func _begin_airborne_fall() -> void:
 	if _tied or vertical_patrol:
 		_falling = false
 		return
+	## Prefer the trail crust under/at the feet. A tall cast alone would grab
+	## movers overhead; a short cast alone misses when fully buried in dirt.
+	var above_y := FloorProbe.crust_y_above(self, global_position, 220.0)
+	if not is_nan(above_y) and above_y < global_position.y - 6.0:
+		snap_feet_to_surface(above_y)
+		return
 	var floor_y := FloorProbe.nearest_floor_y(
-		self, global_position, 8.0, FALL_PROBE_DOWN, INF
+		self, global_position, 24.0, FALL_PROBE_DOWN, INF
 	)
-	if is_nan(floor_y) or floor_y <= global_position.y + 6.0:
+	if is_nan(floor_y):
+		if not is_nan(above_y):
+			snap_feet_to_surface(above_y)
+			return
 		_falling = false
 		_origin = global_position
+		return
+	if floor_y < global_position.y - 6.0:
+		snap_feet_to_surface(floor_y)
+		return
+	if floor_y <= global_position.y + 6.0:
+		snap_feet_to_surface(floor_y)
 		return
 	_falling = true
 	_fall_vel = 0.0

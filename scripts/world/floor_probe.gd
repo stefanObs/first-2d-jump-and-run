@@ -93,3 +93,39 @@ static func nearest_floor_y(
 			continue
 		return hit_y
 	return NAN
+
+
+static func crust_y_above(
+	host: Node2D,
+	world_pos: Vector2,
+	up_reach: float = 200.0,
+	mask: int = 1
+) -> float:
+	## Cast from above through every solid and return the lowest crust that is still
+	## at/above the actor (the dirt roof when feet are buried). Ignores higher
+	## movers so trail bandits are not yanked onto planks overhead.
+	var world := host.get_world_2d()
+	if world == null:
+		return NAN
+	var skip: Array = [host.get_rid()]
+	var space := world.direct_space_state
+	var from := world_pos + Vector2(0.0, -up_reach)
+	var to := world_pos + Vector2(0.0, 4.0)
+	var best := NAN
+	for _attempt in range(16):
+		var query := PhysicsRayQueryParameters2D.create(from, to, mask)
+		query.collide_with_areas = false
+		query.exclude = skip
+		var hit := space.intersect_ray(query)
+		if hit.is_empty():
+			break
+		var collider: Object = hit.get("collider")
+		if collider is CollisionObject2D:
+			skip.append((collider as CollisionObject2D).get_rid())
+		if collider is Node and _is_flight_ceiling(collider as Node):
+			continue
+		var hit_y := float((hit["position"] as Vector2).y)
+		if hit_y <= world_pos.y + 1.0:
+			if is_nan(best) or hit_y > best:
+				best = hit_y
+	return best
