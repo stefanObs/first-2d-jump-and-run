@@ -29,6 +29,19 @@ func _dialog_open() -> bool:
     )
 
 
+func _fit_title_on_board(label: Label, max_width: float, max_size: int, min_size: int) -> void:
+    var font := label.get_theme_font(&"font")
+    if font == null:
+        label.add_theme_font_size_override(&"font_size", mini(24, max_size))
+        return
+    for size in range(max_size, min_size - 1, -1):
+        var text_w := font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+        if text_w <= max_width:
+            label.add_theme_font_size_override(&"font_size", size)
+            return
+    label.add_theme_font_size_override(&"font_size", min_size)
+
+
 func _build_ui() -> void:
     MenuChrome.add_desert_backdrop(self, true)
 
@@ -46,15 +59,22 @@ func _build_ui() -> void:
     back.name = "BackButtonTop"
     box.add_child(back)
 
+    var title_row := CenterContainer.new()
+    title_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    box.add_child(title_row)
+
     var title_board := TextureRect.new()
     title_board.name = "TitleBoard"
     title_board.texture = load(MenuChrome.TITLE_BOARD_PATH) as Texture2D
     title_board.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
     title_board.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-    title_board.custom_minimum_size = Vector2(0, 110)
-    title_board.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    ## Match the 720×280 art aspect so the painted plank fills the control
+    ## (otherwise KEEP_ASPECT shrinks the board while the label stays full-width).
+    var board_w := 820.0
+    var board_h := board_w * (280.0 / 720.0)
+    title_board.custom_minimum_size = Vector2(board_w, board_h)
     title_board.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    box.add_child(title_board)
+    title_row.add_child(title_board)
 
     var title := Label.new()
     title.name = "Title"
@@ -62,11 +82,14 @@ func _build_ui() -> void:
     title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
     title.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    title.offset_top = -6.0
-    title.offset_bottom = -6.0
-    title.add_theme_font_size_override(&"font_size", 34)
+    title.offset_left = 120.0
+    title.offset_right = -120.0
+    title.offset_top = -12.0
+    title.offset_bottom = -12.0
+    title.clip_text = true
     MenuChrome.apply_ink_label(title)
     title_board.add_child(title)
+    _fit_title_on_board(title, board_w - 280.0, 26, 17)
 
     var help := Label.new()
     help.text = tr(

@@ -2,7 +2,7 @@
 
 Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, nonviolent lasso. **Classic mode** has no lives or game over; **Advanced Mode** (hearts button on the start screen, or **Settings**) has four badge paces — **★5 / ★10 / ★15 / ★30** sheriff badges for each extra life. ★5 and ★10 start with **5 hearts**; ★15 and ★30 start with **3**. Cycle the hearts button or pick a row in Settings before starting or continuing a slot. Pick **Cowboy** or **Cowgirl** on the start screen (or in Settings) — each **save slot** stores its own rider and Classic/Advanced trail mode; focusing a filled door restores that slot’s picks, and starting/continuing commits the current picks to that slot. **German is the default language**; English is fully supported.
 
-**Content version:** `1.8.89` (see `content_version.txt`). Launchers reimport when this stamp changes.
+**Content version:** `1.8.90` (see `content_version.txt`). Launchers reimport when this stamp changes.
 
 This README is the **binding source of truth** for gameplay, level design, art, i18n, and audio. Agents and contributors must follow it (see [Agent / contributor rules](#agent--contributor-rules)).
 
