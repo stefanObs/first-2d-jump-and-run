@@ -68,6 +68,19 @@ static func panel_style() -> StyleBoxFlat:
     return style
 
 
+static func settings_panel_style() -> StyleBoxFlat:
+    ## Compact wood chrome so Trail Options fits a 720p frame.
+    var style := wood_style(WOOD_PANEL, 14)
+    style.content_margin_left = 12
+    style.content_margin_right = 12
+    style.content_margin_top = 10
+    style.content_margin_bottom = 10
+    style.shadow_color = Color(0.18, 0.06, 0.02, 0.4)
+    style.shadow_size = 8
+    style.shadow_offset = Vector2(0, 4)
+    return style
+
+
 static func row_style() -> StyleBoxFlat:
     var style := StyleBoxFlat.new()
     style.bg_color = Color(1.0, 0.90, 0.68, 1.0)
