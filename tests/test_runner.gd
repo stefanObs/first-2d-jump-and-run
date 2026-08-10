@@ -6550,7 +6550,7 @@ func _test_cave_levels_belts_fences_ladders() -> Variant:
 	var expected := {
 		11: {"ladders": 2, "platforms": 3, "fences": 3, "conveyors": 0, "doors": 0, "drips": 3, "springs": 2, "stars": 10},
 		12: {"ladders": 2, "platforms": 3, "fences": 2, "conveyors": 1, "doors": 0, "drips": 5, "springs": 3, "stars": 10},
-		13: {"ladders": 1, "platforms": 7, "fences": 2, "conveyors": 1, "doors": 0, "drips": 6, "springs": 3, "stars": 10},
+		13: {"ladders": 1, "platforms": 5, "fences": 2, "conveyors": 1, "doors": 0, "drips": 6, "springs": 3, "stars": 10},
 		14: {"ladders": 3, "platforms": 6, "fences": 3, "conveyors": 1, "doors": 0, "drips": 5, "springs": 4, "stars": 12},
 		15: {"ladders": 1, "platforms": 8, "fences": 2, "conveyors": 1, "doors": 0, "drips": 4, "springs": 3, "stars": 14},
 		16: {"ladders": 2, "platforms": 6, "fences": 3, "conveyors": 1, "doors": 0, "drips": 5, "springs": 4, "stars": 12},
@@ -7388,9 +7388,9 @@ func _test_workshop_preview_ghost_size() -> Variant:
 			% [str(expected), str(ghost.size)]
 		)
 	var cells := preview._ghost_cell_rects_screen()
-	if cells.size() != 2:
+	if cells.size() != 4:
 		preview.queue_free()
-		return "Platform ghost should outline two grid cells."
+		return "Platform ghost should outline four grid cells (campaign plank width)."
 	preview.set_selected_type("spring")
 	preview.set_hover_cell(12, trail)
 	await get_tree().process_frame

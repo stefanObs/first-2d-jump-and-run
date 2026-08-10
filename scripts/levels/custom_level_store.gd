@@ -81,7 +81,8 @@ static func placement_row(type_name: String, click_y: int, trail: int) -> int:
 static func stamp_footprint(type_name: String) -> Vector2:
 	match type_name:
 		"platform", "ladder_ledge":
-			return Vector2(2.0, 1.0)
+			## Match campaign Block planks (160px ≈ 4 grid cells).
+			return Vector2(4.0, 1.0)
 		"pit":
 			return Vector2(PIT_PIXEL_SIZE.x / GRID_SIZE, 1.0)
 		"ladder":
@@ -101,7 +102,8 @@ static func stamp_world_size(type_name: String, style: String = STYLE_DESERT) ->
 	var resolved := normalize_style(style)
 	match type_name:
 		"platform", "ladder_ledge":
-			return Vector2(GRID_SIZE * 2.0, 24.0)
+			## Same collision box as campaign `Block` planks (not the old half-width stamp).
+			return Vector2(GRID_SIZE * 4.0, 32.0)
 		"pit":
 			return PIT_PIXEL_SIZE
 		"chest":
@@ -209,12 +211,16 @@ static func stamp_visual_world_rect(
 			return Rect2()
 		var center := pit_world_position({"type": "pit", "x": hover_col, "y": trail}, grid, trail)
 		return Rect2(center - size * 0.5, size)
-	if type_name == "platform":
+	if type_name == "platform" or type_name == "ladder_ledge":
 		var cells := stamp_hover_cells(type_name, hover_col, hover_row, trail, width)
 		if cells.is_empty():
 			return Rect2()
 		var left_col := cells[0].x
-		return Rect2(float(left_col) * grid, float(trail) * grid - size.y, size.x, size.y)
+		for cell in cells:
+			left_col = mini(left_col, cell.x)
+		var plank_row := placement_row(type_name, hover_row, trail)
+		var center_y := float(plank_row) * grid
+		return Rect2(float(left_col) * grid, center_y - size.y * 0.5, size.x, size.y)
 	var place_row := placement_row(type_name, hover_row, trail)
 	var object := {"type": type_name, "x": hover_col, "y": place_row}
 	var anchor := object_world_position(object, grid, trail)
@@ -433,13 +439,15 @@ static func object_world_position(object: Dictionary, grid: float, trail: int) -
 	var type_name := str(object.get("type", ""))
 	var cell_x := float(object.get("x", 0))
 	var cell_y := float(object.get("y", 0))
-	var world_x := (cell_x + 0.5) * grid
+	var footprint_w := stamp_footprint(type_name).x
+	## Multi-cell stamps store the left column; center on the full footprint.
+	var world_x := (cell_x + footprint_w * 0.5) * grid
 	if is_ceiling_hanging(type_name):
-		return Vector2(world_x, cell_y * grid + 8.0)
+		return Vector2((cell_x + 0.5) * grid, cell_y * grid + 8.0)
 	if is_ground_standing(type_name):
-		return Vector2(world_x, (cell_y + 1.0) * grid)
+		return Vector2((cell_x + 0.5) * grid, (cell_y + 1.0) * grid)
 	if type_name == "carrion" or type_name == "bat":
-		return Vector2(world_x, (cell_y + 0.5) * grid)
+		return Vector2((cell_x + 0.5) * grid, (cell_y + 0.5) * grid)
 	return Vector2(world_x, cell_y * grid)
 
 static func default_level(slot_index: int) -> Dictionary:
@@ -965,9 +973,11 @@ static func import_builtin(level_number: int) -> Dictionary:
 			or "hop" in body_name
 			or "reward" in body_name
 		):
+			## Store the left footprint column so rebuild centers match campaign planks.
+			var left_x := center.x - rect.size.x * 0.5
 			_append_unique(objects, {
 				"type": "platform",
-				"x": maxi(0, int(round(center.x / grid))),
+				"x": maxi(0, int(floor(left_x / grid + 0.001))),
 				"y": clampi(int(round(center.y / grid)), 0, 15),
 			})
 	# Fit height so the deepest ground sits on the single trail row.
@@ -1095,7 +1105,7 @@ static func append_ladder_branch(
 	## trail surface, so climb_top world Y is that row's world Y; plank center matches climb_top.
 	var upper := maxi(trail - LADDER_HEIGHT_CELLS, 0)
 	_append_unique(objects, {"type": "ladder", "x": start_x, "y": maxi(trail - 1, 0)})
-	for x in range(start_x, start_x + 16, 2):
+	for x in range(start_x, start_x + 16, 4):
 		_append_unique(objects, {"type": "ladder_ledge", "x": x, "y": upper})
 	_append_unique(objects, {"type": "star", "x": start_x + 6, "y": maxi(upper - 1, 0)})
 
@@ -1109,8 +1119,9 @@ static func append_platform_run(
 ) -> void:
 	## Floating plank/crystal-ledge run for hop routes (not tied to a ladder).
 	var y := maxi(trail - height_cells, 0)
+	var stride := int(stamp_footprint("platform").x)
 	for i in range(maxi(count, 1)):
-		_append_unique(objects, {"type": "platform", "x": start_x + i * 2, "y": y})
+		_append_unique(objects, {"type": "platform", "x": start_x + i * stride, "y": y})
 
 
 static func append_conveyor_belt(

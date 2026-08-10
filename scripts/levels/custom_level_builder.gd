@@ -111,7 +111,7 @@ static func _spawn_object(
 				level,
 				("Platform%d" if type_name == "platform" else "LadderLedge%d") % index,
 				position,
-				Vector2(grid * 2.0, 24),
+				CustomLevelStore.stamp_world_size(type_name, style),
 				Color(0.55, 0.32, 0.14),
 				false,
 				true
