@@ -20,6 +20,9 @@ alwaysApply: true
    - Uncapped runaway wind
    - Generic flat UI that breaks the handmade western style
    - Workshop placement ghosts at grid-cell size instead of final stamp size
+   - Half-width workshop planks / crystal ledges (**80×24** / 2 cells) instead of campaign **160×32** / 4 cells
+   - Invisible ninja stamps in the workshop live preview (preview must show the idle marker; play stays hidden until ambush)
+   - Text-only workshop / trail-editor action chrome without kid-readable picture icons
    - Removing workshop right-click erase or chevron grid collapse
    - Treasure chests smaller than the documented ~109% player-height scale
    - Player idle flicker from alternating mismatched idle pose frames

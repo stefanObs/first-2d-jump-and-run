@@ -64,7 +64,7 @@ Ceiling stamps place on the top rows; ground props still sit one row above dirt.
 
 ## Path splits (ladders)
 
-Stamp a **ladder**, run **one-way crystal ledges** along the climb top, then **drop off the end** back to the dirt trail. Lower dirt stays walkable the whole time — kids can take the high ledge or stay low. Workshop defaults and cave imports include sample up-ladder branches (no down ladder). Cave arc levels also place floating crystal plank runs, ranch fences, spring pads on solid ground, and single conveyor belts on solid ground (no gates).
+Stamp a **ladder**, run **one-way crystal ledges** along the climb top (each ledge is the campaign **160×32 / 4-cell** plank box, same as desert wood planks), then **drop off the end** back to the dirt trail. Lower dirt stays walkable the whole time — kids can take the high ledge or stay low. Workshop defaults and cave imports include sample up-ladder branches (no down ladder). Cave arc levels also place floating crystal plank runs, ranch fences, spring pads on solid ground, and single conveyor belts on solid ground (no gates).
 
 ## Hazards & enemies
 
@@ -75,13 +75,13 @@ Stamp a **ladder**, run **one-way crystal ledges** along the climb top, then **d
 - **Poison fungus:** cactus rules (hurt / Bubble bounce) with mushroom art; loops a short **spore-puff** animation painted in the same cel-shaded style as the toadstool (idle → gather → puff → settle) so toxic wisps and soft spore motes feel like part of the mushroom, not a separate overlay.
 - **Scorpions:** rattlesnake raise/strike timing with a tail sting pose. The workshop exposes the campaign-used `rattlesnake` stamp: desert shows a rattlesnake and cave remaps it to scorpion art. Legacy imported `scorpion` stamps still build, but are not offered in the dropdown.
 - **Bow skeletons:** bandit patrol + shoot cadence, but spawn **arrows** instead of revolver bullets; when the cowboy is **flying above** them they play a shoot-up aim pose and loft arrows upward; lasso/stomp still ties. Idle/walk/tied/shoot-up frames share one body height on a transparent canvas; tied pose keeps stand scale and sits on the dirt.
-- **Ninjas:** ambush appears ~12 columns ahead of the cowboy; chase leaps pits/canyons and **hops up onto crystal ledges / planks** with a crouch→airborne jump anim. Their hop apex equals the cowboy's own jump height, so every plank he can reach they can follow him onto (and they step back down off a lip instead of stalling).
+- **Ninjas:** ambush appears ~12 columns ahead of the cowboy; chase leaps pits/canyons and **hops up onto crystal ledges / planks** with a crouch→airborne jump anim. Their hop apex equals the cowboy's own jump height, so every plank he can reach they can follow him onto (and they step back down off a lip instead of stalling). Workshop live preview sets `NinjaEnemy.editor_marker` so the idle sprite stays visible at the stamp; **in play / play-test** dormancy stays fully hidden until ambush (do not change gameplay visibility).
 - **Floor holes:** same pit rules (128×64), cave mouth art.
 
 ## Own extras (shipped with the style)
 
 1. **Lantern camp** — checkpoint with a warm lantern instead of desert bedrolls.
-2. **Crystal ledge** — platform art: cool stone plank with crystal flecks (replaces wood plank look).
+2. **Crystal ledge** — platform art: cool stone plank with crystal flecks (replaces wood plank look). Same **160×32** collision / stamp footprint as desert campaign `Block` planks (`CustomLevelStore.stamp_world_size("platform")`) — never the old half-width 80×24 workshop stamp.
 3. **Glow shard** (optional future pickup) — brief silhouette of drip/stalactite danger columns; not required for v1 playability.
 4. **Cave wash backdrop** — no sun/mesas; deep opaque `cave_sky` wash that **tucks under** the trail floor crust (no Background gap above the dirt) + hanging rock ceiling. Cowboy-outlined panels (`cave_ceiling_{ll,lh,hl,hh}_*.png`, catalog `cave_ceiling_segments.json`) lock each side to a fixed **low** or **high** lip; 3 variants per combo (12 total). Adjacent panels only chain when heights match (`prev.end == next.start`). Solid `cave_ceiling_fill` closes the sky gap **only above** the segment tops. Sparse droppable stalactites sit on attach seats and **read as part of the rock** until the release animation (**Dragon Gate** / **Cave Dragon** keep a clean band). Rock band is solid (`FlightCeilingCave`); touching it while flying respawns at camp.
 5. **Mineral vein floor** — dense cool stone crust with pink crystal flecks; underfill dirt is a **fully opaque** readable slate tile (not near-black; no transparent side margins / sky holes when tiled); deep `FloorAbyss` slate under the bank. Cave canyon gaps use cool-slate ridge faces (`cave_canyon_rim_left.png`) matching this palette.

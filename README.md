@@ -2,7 +2,7 @@
 
 Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, nonviolent lasso. **Classic mode** has no lives or game over; **Advanced Mode** (hearts button on the start screen, or **Settings**) has four badge paces — **★5 / ★10 / ★15 / ★30** sheriff badges for each extra life. ★5 and ★10 start with **5 hearts**; ★15 and ★30 start with **3**. Cycle the hearts button or pick a row in Settings before starting or continuing a slot. Pick **Cowboy** or **Cowgirl** on the start screen (or in Settings) — each **save slot** stores its own rider and Classic/Advanced trail mode; focusing a filled door restores that slot’s picks, and starting/continuing commits the current picks to that slot. **German is the default language**; English is fully supported.
 
-**Content version:** `1.8.95` (see `content_version.txt`). Launchers reimport when this stamp changes.
+**Content version:** `1.8.96` (see `content_version.txt`). Launchers reimport when this stamp changes.
 
 This README is the **binding source of truth** for gameplay, level design, art, i18n, and audio. Agents and contributors must follow it (see [Agent / contributor rules](#agent--contributor-rules)).
 
@@ -218,7 +218,7 @@ Safe stars, forward-only solvability, reachable platforms/stars, visible themed 
 9. Run the headless test runner (and obstruction test when touching movers) for layout/gameplay changes.
 10. If a change **requires** altering a documented rule, **update this README in the same change**.
 11. **Dune slopes:** dense earth under the crust continuing far below the bank; no black/sky holes below the curved face.
-12. **Workshop editor:** placement ghosts and preview icons use **final in-game stamp size** (`CustomLevelStore.stamp_visual_world_rect`); right-click removes stamps; **▼ / ▶** chevron collapses the stamp grid for the session; stamps do not overlap; ground-standing stamps never sit on canyon/pit mouths.
+12. **Workshop editor:** placement ghosts and preview icons use **final in-game stamp size** (`CustomLevelStore.stamp_visual_world_rect`) — planks / crystal ledges are **160×32** (4 cells), matching campaign `Block` planks; right-click removes stamps; **▼ / ▶** chevron collapses the stamp grid for the session; stamps do not overlap; ground-standing stamps never sit on canyon/pit mouths; hub + trail-editor action buttons keep **kid-readable picture icons**; ninja stamps stay visible as idle markers in the live preview only (`editor_marker`), not in play.
 13. **Treasure chests:** keep ~109% player-height gameplay scale unless this README and tests change together.
 14. **Player idle:** one idle frame only (gentle breathe); no alternating mismatched idle poses.
 
