@@ -26,6 +26,7 @@ func _ready() -> void:
 	hud = find_child("Hud", true, false) as Hud
 	_hearts = max_hearts
 	WildWestTheme.apply_to_level(self)
+	AudioManager.play_trail_music(maxi(source_level, 1))
 	if player != null:
 		WildWestTheme.configure_player_camera(self, player)
 		player.set_input_enabled(false)

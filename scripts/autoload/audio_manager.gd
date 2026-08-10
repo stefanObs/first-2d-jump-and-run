@@ -1,15 +1,20 @@
 extends Node
 
 ## Persistent music player with independent Music and SFX volume buses.
-## Plays the country theme once at boot, then loops the trail tune.
-## The finale theme reuses the country song for the sunset ride.
+## Boot plays the country theme once, then levels loop one of three trail tunes
+## (rotating by campaign level for variety). Finale reuses the country song.
 
-const TRAIL_PATH := "res://assets/audio/cheerful_cowboy_trail.wav"
+const TRAIL_PATHS: PackedStringArray = [
+	"res://assets/audio/cheerful_cowboy_trail.wav",
+	"res://assets/audio/trail_lasso_lady.ogg",
+	"res://assets/audio/trail_spaghetti_western.ogg",
+]
 const COUNTRY_PATH := "res://assets/audio/country_version.mp3"
 
 var _music_player: AudioStreamPlayer
-var _trail_stream: AudioStream
+var _trail_streams: Array[AudioStream] = []
 var _country_stream: AudioStream
+var _trail_index: int = -1
 var _mode: StringName = &"none"
 var _intro_played: bool = false
 var _sfx_players: Array[AudioStreamPlayer] = []
@@ -31,13 +36,8 @@ func _ready() -> void:
 		player.bus = &"SFX"
 		add_child(player)
 		_sfx_players.append(player)
-	_trail_stream = load(TRAIL_PATH) as AudioStream
+	_load_trail_streams()
 	_country_stream = load(COUNTRY_PATH) as AudioStream
-	if _trail_stream is AudioStreamWAV:
-		var wav := _trail_stream as AudioStreamWAV
-		wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
-		wav.loop_begin = 0
-		wav.loop_end = wav.data.size() / 2
 	if _country_stream is AudioStreamMP3:
 		(_country_stream as AudioStreamMP3).loop = false
 	_music_player.finished.connect(_on_music_finished)
@@ -46,26 +46,65 @@ func _ready() -> void:
 	play_boot_intro()
 
 
+func _load_trail_streams() -> void:
+	_trail_streams.clear()
+	for path in TRAIL_PATHS:
+		var stream := load(path) as AudioStream
+		if stream == null:
+			push_warning("Missing trail music: %s" % path)
+			continue
+		_configure_trail_loop(stream)
+		_trail_streams.append(stream)
+
+
+func _configure_trail_loop(stream: AudioStream) -> void:
+	if stream is AudioStreamWAV:
+		var wav := stream as AudioStreamWAV
+		wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		wav.loop_begin = 0
+		wav.loop_end = wav.data.size() / (4 if wav.stereo else 2)
+	elif stream is AudioStreamOggVorbis:
+		(stream as AudioStreamOggVorbis).loop = true
+
+
+func trail_track_count() -> int:
+	return _trail_streams.size()
+
+
+func trail_track_index_for_level(level_number: int) -> int:
+	var count := trail_track_count()
+	if count <= 0:
+		return 0
+	return posmod(maxi(level_number, 1) - 1, count)
+
+
+func current_trail_track_index() -> int:
+	return _trail_index
+
+
 func play_boot_intro() -> void:
-	## Once per launch: country theme, then trail loop.
+	## Once per launch: country theme, then first trail loop.
 	if _intro_played:
 		return
 	if _country_stream == null:
-		play_trail_music()
+		play_trail_music(1)
 		return
 	_intro_played = true
 	_mode = &"intro"
+	_trail_index = -1
 	_music_player.stream = _country_stream
 	_music_player.play()
 
 
-func play_trail_music() -> void:
-	if _trail_stream == null:
+func play_trail_music(level_number: int = 1) -> void:
+	if _trail_streams.is_empty():
 		return
-	if _mode == &"trail" and _music_player.playing:
+	var index := trail_track_index_for_level(level_number)
+	if _mode == &"trail" and _music_player.playing and _trail_index == index:
 		return
 	_mode = &"trail"
-	_music_player.stream = _trail_stream
+	_trail_index = index
+	_music_player.stream = _trail_streams[index]
 	_music_player.play()
 
 
@@ -74,6 +113,7 @@ func play_finale_theme() -> void:
 	if _country_stream == null:
 		return
 	_mode = &"finale"
+	_trail_index = -1
 	_music_player.stream = _country_stream
 	_music_player.play()
 
@@ -82,16 +122,23 @@ func is_finale_playing() -> bool:
 	return _mode == &"finale" and _music_player.playing
 
 
-func ensure_gameplay_music() -> void:
+func ensure_gameplay_music(level_number: int = -1) -> void:
 	## Leave the boot intro early when the player starts a trail.
-	if _mode == &"intro":
-		play_trail_music()
+	var level := level_number
+	if level < 1:
+		level = GameManager.get_current_level_number() if GameManager.active_slot_index >= 0 else 1
+	if _mode == &"intro" or _mode == &"none" or _mode == &"finale":
+		play_trail_music(level)
+		return
+	if _mode == &"trail":
+		play_trail_music(level)
 
 
 func stop_music() -> void:
 	if _music_player != null:
 		_music_player.stop()
 	_mode = &"none"
+	_trail_index = -1
 
 
 func play_sfx(effect: StringName) -> void:
@@ -205,7 +252,7 @@ func _make_effect(effect: StringName) -> AudioStreamWAV:
 
 func _on_music_finished() -> void:
 	if _mode == &"intro":
-		play_trail_music()
+		play_trail_music(1)
 
 
 func _ensure_bus(bus_name: StringName) -> void:

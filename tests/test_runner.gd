@@ -8212,6 +8212,23 @@ func _test_art_and_music() -> Variant:
 	var music: AudioStream = load("res://assets/audio/cheerful_cowboy_trail.wav")
 	if music == null:
 		return "Cheerful trail music did not load."
+	if load("res://assets/audio/trail_lasso_lady.ogg") == null:
+		return "Lasso Lady trail music did not load."
+	if load("res://assets/audio/trail_spaghetti_western.ogg") == null:
+		return "Spaghetti Western trail music did not load."
+	if AudioManager.trail_track_count() < 3:
+		return "AudioManager should expose three rotating trail tracks."
+	if AudioManager.trail_track_index_for_level(1) != 0:
+		return "Level 1 should use trail track 0."
+	if AudioManager.trail_track_index_for_level(2) != 1:
+		return "Level 2 should use trail track 1."
+	if AudioManager.trail_track_index_for_level(3) != 2:
+		return "Level 3 should use trail track 2."
+	if AudioManager.trail_track_index_for_level(4) != 0:
+		return "Level 4 should wrap back to trail track 0."
+	AudioManager.play_trail_music(2)
+	if AudioManager.current_trail_track_index() != 1:
+		return "play_trail_music should select the level's rotated track."
 	var country: AudioStream = load("res://assets/audio/country_version.mp3")
 	if country == null:
 		return "Country start/finale theme did not load."

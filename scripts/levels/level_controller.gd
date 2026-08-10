@@ -125,6 +125,9 @@ func setup_level() -> void:
 		set_meta("level_style", style)
 	_wire_world_objects()
 	_wire_ui()
+	## Rotate trail music by campaign position so neighboring levels feel fresh.
+	if not skip_auto_setup:
+		AudioManager.play_trail_music(level_number)
 
 	if player != null and spawn_point != null:
 		player.respawn_at(spawn_point.global_position)
