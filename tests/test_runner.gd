@@ -1573,6 +1573,22 @@ func _test_advanced_mode_game_over_scene() -> Variant:
 	if scene.get_script() == null:
 		scene.queue_free()
 		return "Game over scene needs its controller script."
+	var root := scene.get_node_or_null("Root") as Control
+	var backdrop := scene.get_node_or_null("Root/Backdrop") as TextureRect
+	var board := scene.get_node_or_null("Root/TitleBoard") as TextureRect
+	var stamp := scene.get_node_or_null("Root/TitleBoard/Stamp") as Label
+	if root == null or backdrop == null or board == null or stamp == null:
+		scene.queue_free()
+		return "Game over should use the start-screen desert backdrop and saloon title board."
+	if backdrop.texture == null or not String(backdrop.texture.resource_path).ends_with("menu_backdrop_desert.png"):
+		scene.queue_free()
+		return "Game over backdrop should reuse menu_backdrop_desert.png."
+	if board.texture == null or not String(board.texture.resource_path).ends_with("saloon_title_board.png"):
+		scene.queue_free()
+		return "Game over title should sit on saloon_title_board.png."
+	if stamp.text not in ["GAME OVER", "SPIEL VORBEI"]:
+		scene.queue_free()
+		return "Game over stamp should show the localized GAME OVER title."
 	scene.queue_free()
 	return null
 

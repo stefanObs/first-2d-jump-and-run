@@ -2,7 +2,7 @@
 
 Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, nonviolent lasso. **Classic mode** has no lives or game over; **Advanced Mode** (hearts button on the start screen, or **Settings**) has four badge paces — **★5 / ★10 / ★15 / ★30** sheriff badges for each extra life. ★5 and ★10 start with **5 hearts**; ★15 and ★30 start with **3**. Cycle the hearts button or pick a row in Settings before starting or continuing a slot. Pick **Cowboy** or **Cowgirl** on the start screen (or in Settings) — each **save slot** stores its own rider and Classic/Advanced trail mode; focusing a filled door restores that slot’s picks, and starting/continuing commits the current picks to that slot. **German is the default language**; English is fully supported.
 
-**Content version:** `1.8.82` (see `content_version.txt`). Launchers reimport when this stamp changes.
+**Content version:** `1.8.83` (see `content_version.txt`). Launchers reimport when this stamp changes.
 
 This README is the **binding source of truth** for gameplay, level design, art, i18n, and audio. Agents and contributors must follow it (see [Agent / contributor rules](#agent--contributor-rules)).
 
@@ -191,7 +191,7 @@ Safe stars, forward-only solvability, reachable platforms/stars, visible themed 
 
 - Warm **handmade / hand-painted** western look matching trail tiles (sky, ground, props).
 - HUD / doors / prompts: irregular **western wood signs** (`HandmadeSign`), not generic flat UI cards.
-- Start screen, settings, pause, save select: stay **handcrafted** and trail-themed (polish may continue; do not regress to stock Godot chrome or mismatched stock art). Save select is **kid-first** and matches the painted proposal look: full desert-sunset backdrop, hat title logo, clickable cowboy/cowgirl mascots (chosen rider is highlighted and sets the next run’s character), three arched wooden **1 / 2 / 3** doors (horseshoe when empty, sharp character portrait + star dots when filled), bandana-red focus ring, circular wood chrome for settings / hearts / workshop, styled delete-save confirm, and an F1 **debug strip**. Prefer picture-first doors over dense saloon text boards or pointing-hand motifs. Boot loading may still use painted saloon boards.
+- Start screen, settings, pause, save select, and **Advanced Mode game over**: stay **handcrafted** and trail-themed (polish may continue; do not regress to stock Godot chrome or mismatched stock art). Save select is **kid-first** and matches the painted proposal look: full desert-sunset backdrop, hat title logo, clickable cowboy/cowgirl mascots (chosen rider is highlighted and sets the next run’s character), three arched wooden **1 / 2 / 3** doors (horseshoe when empty, sharp character portrait + star dots when filled), bandana-red focus ring, circular wood chrome for settings / hearts / workshop, styled delete-save confirm, and an F1 **debug strip**. Game over reuses that desert backdrop and a saloon title board (no flat black/red wash). Prefer picture-first doors over dense saloon text boards or pointing-hand motifs. Boot loading may still use painted saloon boards.
 - Between-level horse transitions use a dedicated hand-painted desert skyline.
 
 ---
