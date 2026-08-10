@@ -7575,9 +7575,13 @@ func _test_campaign_workshop() -> Variant:
 							continue
 						var row := child as HBoxContainer
 						var kind := str(row.get_meta("entry_kind", ""))
-						var label := row.get_child(0) as Label
-						if label != null:
-							labels.append(label.text)
+						var title_label: Label = null
+						for node in row.get_children():
+							if node is Label:
+								title_label = node as Label
+								break
+						if title_label != null:
+							labels.append(title_label.text)
 						if kind == "extra":
 							extra_row_index = labels.size() - 1
 							for button_node in row.get_children():
@@ -7593,15 +7597,37 @@ func _test_campaign_workshop() -> Variant:
 					else:
 						var marked_extra := false
 						var marked_changed := false
-						for text in labels:
-							if "self-made" in text or "selbst gemacht" in text:
-								marked_extra = true
-							if "changed" in text or "geändert" in text:
-								marked_changed = true
+						for child in trail_rows.get_children():
+							if not (child is HBoxContainer):
+								continue
+							var kind := str((child as HBoxContainer).get_meta("entry_kind", ""))
+							var badge_text := ""
+							for node in (child as HBoxContainer).get_children():
+								if node is PanelContainer:
+									var badge_label := (node as PanelContainer).get_child(0) as Label
+									if badge_label != null:
+										badge_text = badge_label.text
+										break
+							if kind == "extra":
+								if (
+									"Homemade" in badge_text
+									or "Eigenbau" in badge_text
+									or "self-made" in badge_text
+									or "selbst gemacht" in badge_text
+								):
+									marked_extra = true
+							elif kind == "override":
+								if (
+									"Changed" in badge_text
+									or "Geändert" in badge_text
+									or "changed" in badge_text
+									or "geändert" in badge_text
+								):
+									marked_changed = true
 						if not marked_extra:
-							error = "Self-made trails should be marked in the workshop list."
+							error = "Self-made trails should show a Homemade/Eigenbau badge."
 						elif not marked_changed:
-							error = "Changed campaign trails should be marked in the workshop list."
+							error = "Changed campaign trails should show a Changed/Geändert badge."
 						else:
 							# Adding before an existing self-made trail must land immediately before it.
 							var first_extra_slot := extra_slot

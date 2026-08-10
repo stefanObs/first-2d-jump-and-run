@@ -132,12 +132,17 @@ func _add_campaign_row(parent: VBoxContainer, entry: Dictionary, campaign_index:
 	row.set_meta("custom_slot", int(entry.get("custom_slot", -1)))
 	row.set_meta("source_level", int(entry.get("source_level", 0)))
 	parent.add_child(row)
+	if entry_kind == "extra":
+		row.add_child(_make_kind_badge(tr("self-made"), Color(0.22, 0.48, 0.18), Color(0.86, 0.95, 0.72)))
+	elif entry_kind == "override":
+		row.add_child(_make_kind_badge(tr("changed"), Color(0.48, 0.28, 0.08), Color(0.96, 0.86, 0.62)))
 	var label := Label.new()
-	label.custom_minimum_size = Vector2(460, 48)
+	label.custom_minimum_size = Vector2(360, 48)
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	label.add_theme_font_size_override(&"font_size", 20)
 	label.text = _row_label(entry, campaign_index, entry_kind)
 	if entry_kind == "extra":
-		label.add_theme_color_override(&"font_color", Color(0.18, 0.34, 0.12))
+		label.add_theme_color_override(&"font_color", Color(0.12, 0.32, 0.08))
 	elif entry_kind == "override":
 		label.add_theme_color_override(&"font_color", Color(0.42, 0.22, 0.05))
 	else:
@@ -181,13 +186,37 @@ func _add_campaign_row(parent: VBoxContainer, entry: Dictionary, campaign_index:
 func _row_label(entry: Dictionary, campaign_index: int, entry_kind: String) -> String:
 	var title := str(entry.get("title", tr("Extra Trail")))
 	if entry_kind == "extra":
-		return "%d: %s (%s)" % [campaign_index, title, tr("self-made")]
+		## Badge already says Eigenbau / homemade — keep the name front and center.
+		return "%d: %s" % [campaign_index, title]
 	if entry_kind == "override":
 		var source := int(entry.get("source_level", 0))
 		if source >= 1 and source <= CustomLevelStore.BUILTIN_COUNT:
 			title = CustomLevelStore.BUILTIN_NAMES[source - 1]
-		return "%d: %s (%s)" % [campaign_index, title, tr("changed")]
+		return "%d: %s" % [campaign_index, title]
 	return "%d: %s" % [campaign_index, title]
+
+
+func _make_kind_badge(text: String, ink: Color, fill: Color) -> PanelContainer:
+	var badge := PanelContainer.new()
+	badge.custom_minimum_size = Vector2(128, 40)
+	var style := StyleBoxFlat.new()
+	style.bg_color = fill
+	style.set_corner_radius_all(10)
+	style.set_border_width_all(2)
+	style.border_color = ink
+	style.content_margin_left = 10
+	style.content_margin_right = 10
+	style.content_margin_top = 6
+	style.content_margin_bottom = 6
+	badge.add_theme_stylebox_override(&"panel", style)
+	var label := Label.new()
+	label.text = text
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override(&"font_size", 15)
+	label.add_theme_color_override(&"font_color", ink)
+	badge.add_child(label)
+	return badge
 
 
 func _add_before_entry(entry: Dictionary, entry_kind: String) -> void:

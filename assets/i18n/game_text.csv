@@ -256,9 +256,9 @@ Edit,Edit,Bearbeiten
 Remove,Remove,Entfernen
 + Add a new level after Level 10,+ Add a new level after Level 10,+ Neues Level nach Level 10 hinzufügen
 + Add a new trail at the end,+ Add a new trail at the end,+ Neuen Pfad am Ende hinzufügen
-self-made,self-made,selbst gemacht
-changed,changed,geändert
-Self-made trails sit in campaign order. Changed campaign trails are marked. Add a trail before any row.,Self-made trails sit in campaign order. Changed campaign trails are marked. Add a trail before any row.,Selbst gemachte Pfade stehen an der richtigen Kampagnen-Stelle. Geänderte Kampagnen-Pfade sind markiert. Vor jeder Zeile kannst du einen Pfad einfügen.
+self-made,★ Homemade,★ Eigenbau
+changed,Changed,Geändert
+Self-made trails sit in campaign order. Changed campaign trails are marked. Add a trail before any row.,Self-made trails sit in campaign order. Changed campaign trails are marked. Add a trail before any row.,Eigenbau-Pfade stehen an der richtigen Kampagnen-Stelle (grüner ★-Badge). Geänderte Kampagnen-Pfade sind orange markiert. Vor jeder Zeile kannst du einen Pfad einfügen.
 Back to Cowboy Trail,Back to Cowboy Trail,Zurück zum Cowboy-Pfad
 + Length,+ Length,+ Länge
 − Length,− Length,− Länge
