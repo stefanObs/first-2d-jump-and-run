@@ -118,6 +118,39 @@ def icon_add_trail() -> Image.Image:
     return img
 
 
+def icon_save() -> Image.Image:
+    img, d = _canvas()
+    # Western journal / save book.
+    d.rounded_rectangle((22, 16, 74, 80), radius=6, fill=WOOD, outline=INK, width=4)
+    d.rectangle((30, 24, 66, 72), fill=CREAM, outline=INK, width=2)
+    d.line((34, 36, 62, 36), fill=INK, width=3)
+    d.line((34, 48, 62, 48), fill=INK, width=3)
+    d.line((34, 60, 54, 60), fill=INK, width=3)
+    d.ellipse((58, 58, 70, 70), fill=BANDANA, outline=INK, width=2)
+    return img
+
+
+def icon_play() -> Image.Image:
+    img, d = _canvas()
+    # Play triangle on a trail disk.
+    d.ellipse((12, 12, 84, 84), fill=WOOD, outline=INK, width=4)
+    tip = [(38, 28), (70, 48), (38, 68)]
+    _outline_poly(d, tip, CREAM)
+    return img
+
+
+def icon_scroll_left() -> Image.Image:
+    img, d = _canvas()
+    tip = [(66, 20), (26, 48), (66, 76), (66, 60), (46, 48), (66, 36)]
+    _outline_poly(d, tip, WOOD)
+    return img
+
+
+def icon_scroll_right() -> Image.Image:
+    img = icon_scroll_left().transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+    return img
+
+
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     mapping = {
@@ -129,6 +162,10 @@ def main() -> None:
         "menu_icon_export.png": icon_export,
         "menu_icon_import.png": icon_import,
         "menu_icon_add_trail.png": icon_add_trail,
+        "menu_icon_save.png": icon_save,
+        "menu_icon_play.png": icon_play,
+        "menu_icon_scroll_left.png": icon_scroll_left,
+        "menu_icon_scroll_right.png": icon_scroll_right,
     }
     for name, builder in mapping.items():
         builder().save(OUT / name)

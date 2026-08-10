@@ -150,3 +150,40 @@ static func style_check_button(button: CheckButton) -> void:
     button.add_theme_color_override(&"font_outline_color", Color(1.0, 0.92, 0.72, 0.55))
     button.add_theme_constant_override(&"outline_size", 2)
     button.add_theme_font_size_override(&"font_size", 22)
+
+
+static func apply_button_icon(button: Button, icon_path: String, max_width: int = 36) -> void:
+    if icon_path.is_empty() or not ResourceLoader.exists(icon_path):
+        return
+    button.icon = load(icon_path) as Texture2D
+    button.expand_icon = true
+    button.add_theme_constant_override(&"icon_max_width", max_width)
+    button.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
+    if button.tooltip_text.is_empty() and not button.text.is_empty():
+        button.tooltip_text = button.text
+
+
+static func style_compact_icon_button(button: Button, font_size: int = 13) -> void:
+    ## Smaller wood chrome for dense editor toolbars.
+    style_wood_button(button, font_size)
+    var normal := wood_style(WOOD, 8)
+    normal.content_margin_left = 6
+    normal.content_margin_right = 8
+    normal.content_margin_top = 4
+    normal.content_margin_bottom = 4
+    var hover := wood_style(WOOD_HOVER, 8)
+    hover.content_margin_left = 6
+    hover.content_margin_right = 8
+    hover.content_margin_top = 4
+    hover.content_margin_bottom = 4
+    var disabled := wood_style(Color(0.62, 0.42, 0.24, 0.9), 8)
+    disabled.border_color = Color(0.45, 0.28, 0.14, 1.0)
+    disabled.content_margin_left = 6
+    disabled.content_margin_right = 8
+    disabled.content_margin_top = 4
+    disabled.content_margin_bottom = 4
+    button.add_theme_stylebox_override(&"normal", normal)
+    button.add_theme_stylebox_override(&"hover", hover)
+    button.add_theme_stylebox_override(&"pressed", hover)
+    button.add_theme_stylebox_override(&"focus", hover)
+    button.add_theme_stylebox_override(&"disabled", disabled)

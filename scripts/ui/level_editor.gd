@@ -137,7 +137,8 @@ func _build_ui() -> void:
 		heading,
 		tr("Back to Campaign Workshop"),
 		_return_to_hub,
-		"BackButtonTop"
+		"BackButtonTop",
+		"res://assets/ui/menu_icon_back.png"
 	)
 	var title := Label.new()
 	title.text = (
@@ -166,21 +167,26 @@ func _build_ui() -> void:
 	_level_style_dropdown.item_selected.connect(_on_style_selected)
 	heading.add_child(_level_style_dropdown)
 	_style_dropdown(_level_style_dropdown)
+	_apply_style_dropdown_icons()
 	var length_box := HBoxContainer.new()
 	length_box.add_theme_constant_override(&"separation", 4)
 	heading.add_child(length_box)
 	_length_minus = Button.new()
 	_length_minus.name = "LengthMinusButton"
 	_length_minus.text = tr("− Length")
-	_length_minus.custom_minimum_size = Vector2(92, 30)
-	_length_minus.add_theme_font_size_override(&"font_size", 12)
+	_length_minus.tooltip_text = tr("− Length")
+	_length_minus.custom_minimum_size = Vector2(110, 34)
+	MenuChrome.apply_button_icon(_length_minus, "res://assets/ui/menu_icon_remove.png", 28)
+	MenuChrome.style_compact_icon_button(_length_minus, 12)
 	_length_minus.pressed.connect(func() -> void: _change_length(-CustomLevelStore.WIDTH_STEP))
 	length_box.add_child(_length_minus)
 	_length_plus = Button.new()
 	_length_plus.name = "LengthPlusButton"
 	_length_plus.text = tr("+ Length")
-	_length_plus.custom_minimum_size = Vector2(92, 30)
-	_length_plus.add_theme_font_size_override(&"font_size", 12)
+	_length_plus.tooltip_text = tr("+ Length")
+	_length_plus.custom_minimum_size = Vector2(110, 34)
+	MenuChrome.apply_button_icon(_length_plus, "res://assets/ui/menu_icon_add.png", 28)
+	MenuChrome.style_compact_icon_button(_length_plus, 12)
 	_length_plus.pressed.connect(func() -> void: _change_length(CustomLevelStore.WIDTH_STEP))
 	length_box.add_child(_length_plus)
 	_update_length_buttons()
@@ -273,8 +279,8 @@ func _build_ui() -> void:
 	_grid_collapse_toggle = Button.new()
 	_grid_collapse_toggle.name = "GridCollapseToggle"
 	_grid_collapse_toggle.focus_mode = Control.FOCUS_NONE
-	_grid_collapse_toggle.custom_minimum_size = Vector2(28, 24)
-	_grid_collapse_toggle.add_theme_font_size_override(&"font_size", 14)
+	_grid_collapse_toggle.custom_minimum_size = Vector2(32, 28)
+	MenuChrome.style_compact_icon_button(_grid_collapse_toggle, 14)
 	_grid_collapse_toggle.pressed.connect(_toggle_grid_collapsed)
 	_grid_header.add_child(_grid_collapse_toggle)
 
@@ -310,14 +316,24 @@ func _build_ui() -> void:
 	grid_scroll_row.name = "GridScrollRow"
 	grid_scroll_row.add_theme_constant_override(&"separation", 4)
 	_editor_pane.add_child(grid_scroll_row)
-	_grid_scroll_left = _make_scroll_arrow(grid_scroll_row, "◀", func() -> void: _nudge_horizontal_scroll(-_CELL_WIDTH * 2.0))
+	_grid_scroll_left = _make_scroll_arrow(
+		grid_scroll_row,
+		"res://assets/ui/menu_icon_scroll_left.png",
+		tr("Scroll left"),
+		func() -> void: _nudge_horizontal_scroll(-_CELL_WIDTH * 2.0)
+	)
 	_h_scroll = HScrollBar.new()
 	_h_scroll.name = "TrailScrollBar"
 	_h_scroll.custom_minimum_size = Vector2(0, 16)
 	_h_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_h_scroll.value_changed.connect(_on_h_scroll_changed)
 	grid_scroll_row.add_child(_h_scroll)
-	_grid_scroll_right = _make_scroll_arrow(grid_scroll_row, "▶", func() -> void: _nudge_horizontal_scroll(_CELL_WIDTH * 2.0))
+	_grid_scroll_right = _make_scroll_arrow(
+		grid_scroll_row,
+		"res://assets/ui/menu_icon_scroll_right.png",
+		tr("Scroll right"),
+		func() -> void: _nudge_horizontal_scroll(_CELL_WIDTH * 2.0)
+	)
 	call_deferred("_sync_scroll_range")
 	set_process(true)
 
@@ -329,18 +345,29 @@ func _build_ui() -> void:
 
 	var actions := HBoxContainer.new()
 	actions.alignment = BoxContainer.ALIGNMENT_CENTER
-	actions.add_theme_constant_override(&"separation", 10)
+	actions.add_theme_constant_override(&"separation", 8)
 	root.add_child(actions)
-	_save_button = _add_action(actions, tr("Save Trail"), _save, "SaveButton")
-	_reset_button = _add_action(actions, tr("Reset Changes"), _request_reset, "ResetButton")
-	_add_action(actions, tr("Export Trail"), _open_export_dialog, "ExportTrailButton")
-	_add_action(actions, tr("Import Trail"), _open_import_dialog, "ImportTrailButton")
-	_add_action(actions, tr("Play Test"), _play_test, "PlayTestButton")
+	_save_button = _add_action(
+		actions, tr("Save Trail"), _save, "SaveButton", "res://assets/ui/menu_icon_save.png"
+	)
+	_reset_button = _add_action(
+		actions, tr("Reset Changes"), _request_reset, "ResetButton", "res://assets/ui/menu_icon_restore.png"
+	)
+	_add_action(
+		actions, tr("Export Trail"), _open_export_dialog, "ExportTrailButton", "res://assets/ui/menu_icon_export.png"
+	)
+	_add_action(
+		actions, tr("Import Trail"), _open_import_dialog, "ImportTrailButton", "res://assets/ui/menu_icon_import.png"
+	)
+	_add_action(
+		actions, tr("Play Test"), _play_test, "PlayTestButton", "res://assets/ui/menu_icon_play.png"
+	)
 	_add_action(
 		actions,
 		tr("Back to Campaign Workshop"),
 		_return_to_hub,
-		"BackButton"
+		"BackButton",
+		"res://assets/ui/menu_icon_back.png"
 	)
 
 	var preview_label := Label.new()
@@ -357,7 +384,8 @@ func _build_ui() -> void:
 	root.add_child(preview_scroll_row)
 	_preview_scroll_left = _make_scroll_arrow(
 		preview_scroll_row,
-		"◀",
+		"res://assets/ui/menu_icon_scroll_left.png",
+		tr("Pan preview left"),
 		func() -> void: _nudge_preview_scroll(-_CELL_WIDTH * 2.0)
 	)
 	var preview_scroll_hint := Label.new()
@@ -367,7 +395,8 @@ func _build_ui() -> void:
 	preview_scroll_row.add_child(preview_scroll_hint)
 	_preview_scroll_right = _make_scroll_arrow(
 		preview_scroll_row,
-		"▶",
+		"res://assets/ui/menu_icon_scroll_right.png",
+		tr("Pan preview right"),
 		func() -> void: _nudge_preview_scroll(_CELL_WIDTH * 2.0)
 	)
 
@@ -760,14 +789,19 @@ func _fit_grid_layout() -> void:
 
 
 func _add_action(
-	parent: Control, text: String, action: Callable, node_name: String
+	parent: Control,
+	text: String,
+	action: Callable,
+	node_name: String,
+	icon_path: String = ""
 ) -> Button:
 	var button := Button.new()
 	button.name = node_name
 	button.text = text
-	button.custom_minimum_size = Vector2(150, 36)
-	button.add_theme_font_size_override(&"font_size", 14)
-	button.add_theme_color_override(&"font_color", Color(0.35, 0.16, 0.05))
+	button.tooltip_text = text
+	button.custom_minimum_size = Vector2(158, 40)
+	MenuChrome.apply_button_icon(button, icon_path, 32)
+	MenuChrome.style_compact_icon_button(button, 13)
 	button.pressed.connect(action)
 	parent.add_child(button)
 	return button
@@ -801,15 +835,32 @@ func _update_length_buttons() -> void:
 		_length_plus.disabled = width >= CustomLevelStore.MAX_WIDTH
 
 
-func _make_scroll_arrow(parent: Control, label: String, action: Callable) -> Button:
+func _make_scroll_arrow(parent: Control, icon_path: String, tooltip: String, action: Callable) -> Button:
 	var button := Button.new()
-	button.text = label
 	button.focus_mode = Control.FOCUS_NONE
-	button.custom_minimum_size = Vector2(28, 24)
-	button.add_theme_font_size_override(&"font_size", 14)
+	button.tooltip_text = tooltip
+	button.custom_minimum_size = Vector2(36, 28)
+	MenuChrome.apply_button_icon(button, icon_path, 24)
+	MenuChrome.style_compact_icon_button(button, 12)
+	## Icon-only scroll chrome — keep text empty so kids read the arrow picture.
+	button.text = ""
 	button.pressed.connect(action)
 	parent.add_child(button)
 	return button
+
+
+func _apply_style_dropdown_icons() -> void:
+	if _level_style_dropdown == null:
+		return
+	var desert := "res://assets/world/trail_desert_tile.png"
+	var cave := "res://assets/world/cave_floor_tile.png"
+	var horse := "res://assets/ui/menu_icon_hat.png"
+	if ResourceLoader.exists(desert):
+		_level_style_dropdown.set_item_icon(0, load(desert) as Texture2D)
+	if ResourceLoader.exists(cave):
+		_level_style_dropdown.set_item_icon(1, load(cave) as Texture2D)
+	if ResourceLoader.exists(horse):
+		_level_style_dropdown.set_item_icon(2, load(horse) as Texture2D)
 
 
 func _nudge_horizontal_scroll(delta: float) -> void:

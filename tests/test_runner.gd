@@ -7946,6 +7946,20 @@ func _test_workshop_back_navigation() -> Variant:
 	if not editor_back.pressed.is_connected(editor._return_to_hub):
 		editor.queue_free()
 		return "Trail editor back button should return to the campaign workshop."
+	var save_btn := editor.find_child("SaveButton", true, false) as Button
+	var play_btn := editor.find_child("PlayTestButton", true, false) as Button
+	var length_plus := editor.find_child("LengthPlusButton", true, false) as Button
+	if (
+		editor_back.icon == null
+		or save_btn == null
+		or save_btn.icon == null
+		or play_btn == null
+		or play_btn.icon == null
+		or length_plus == null
+		or length_plus.icon == null
+	):
+		editor.queue_free()
+		return "Trail editor chrome buttons should show kid-readable icons."
 	editor.queue_free()
 	return null
 
