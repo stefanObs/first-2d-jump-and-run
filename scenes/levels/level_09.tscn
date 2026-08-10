@@ -814,12 +814,12 @@ position = Vector2(840, 150)
 
 
 [node name="Spring1" parent="." instance=ExtResource("11_spring")]
-position = Vector2(1500, 320)
+position = Vector2(1600, 320)
 bounce_velocity = -820.0
 
 
 [node name="SpringLedge1" type="StaticBody2D" parent="."]
-position = Vector2(1940, 200)
+position = Vector2(1780, 200)
 [node name="Visual" type="ColorRect" parent="SpringLedge1"]
 offset_left = -110.0
 offset_top = -16.0
@@ -837,11 +837,11 @@ shape = SubResource("BlockWide")
 
 
 [node name="SpringStar1" parent="." instance=ExtResource("9_star")]
-position = Vector2(1940, 150)
+position = Vector2(1780, 150)
 
 
 [node name="Spring2" parent="." instance=ExtResource("11_spring")]
-position = Vector2(3120, 320)
+position = Vector2(3420, 320)
 bounce_velocity = -820.0
 
 
@@ -868,7 +868,7 @@ position = Vector2(3500, 150)
 
 
 [node name="Spring3" parent="." instance=ExtResource("11_spring")]
-position = Vector2(4380, 320)
+position = Vector2(4520, 320)
 bounce_velocity = -820.0
 
 
@@ -1218,7 +1218,7 @@ position = Vector2(140, 280)
 [node name="PauseMenu" parent="." instance=ExtResource("8_pause")]
 
 [node name="BullEnemy0" parent="." instance=ExtResource("bull_enemy")]
-position = Vector2(1750, 320)
+position = Vector2(1480, 320)
 
 [node name="NinjaEnemy0" parent="." instance=ExtResource("ninja_enemy")]
 position = Vector2(3400, 320)

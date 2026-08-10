@@ -2,7 +2,7 @@
 
 Child-friendly 2D western cowboy platformer (Godot **4.4**). Aimed at kids ~6: forgiving jumps, nonviolent lasso. **Classic mode** has no lives or game over; **Advanced Mode** (hearts icon on the start screen, or **Settings**, before starting or continuing a slot) adds a three-life limit, badge milestones, and a game-over return to the start screen. Pick **Cowboy** or **Cowgirl** on the start screen (or in Settings) — each **save slot** stores its own rider and Classic/Advanced trail mode; focusing a filled door restores that slot’s picks, and starting/continuing commits the current picks to that slot. **German is the default language**; English is fully supported.
 
-**Content version:** `1.8.80` (see `content_version.txt`). Launchers reimport when this stamp changes.
+**Content version:** `1.8.81` (see `content_version.txt`). Launchers reimport when this stamp changes.
 
 This README is the **binding source of truth** for gameplay, level design, art, i18n, and audio. Agents and contributors must follow it (see [Agent / contributor rules](#agent--contributor-rules)).
 
@@ -76,7 +76,7 @@ godot --headless --path . res://tests/test_moving_platform_obstruction.tscn
 6. Windy Mesa — Magic Boots, gentle wind, longer jumps  
 7. Sky Ranch — Wings flying trail  
 8. Rail Yard — Bubble Shields, conveyors, timed gates  
-9. Moonlight Gulch — Magic Boots + earlier tricks; the raised final plank is optional, with no forced spring and enough clearance to continue underneath without flying
+9. Moonlight Gulch — Magic Boots + earlier tricks; spring pads sit under the high star boards (not stranded past the trail bull); the raised final plank is optional, with no forced spring and enough clearance to continue underneath without flying
 10. Rainbow Saloon — desert finale before the cavern arc  
 11. Crystal Mouth — cave remaps, ladder path splits, springs, ranch fences, first pink drops  
 12. Bat Gallery — bats, drips, ledges, springs, first cave conveyor gate  

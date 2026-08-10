@@ -5513,6 +5513,22 @@ func _test_level_09_gulch_clearance() -> Variant:
 		level.queue_free()
 		return "Level 09 final ground route must not force the cowboy onto Spring5."
 
+	# Star boards SpringLedge0–4 need a spring within fair bounce reach (not stranded
+	# across a slope/bull gap like the old Spring1 at x=1500 → ledge 1940).
+	for index in range(5):
+		var spring_node := level.get_node_or_null("Spring%d" % index) as Node2D
+		var ledge_node := level.get_node_or_null("SpringLedge%d" % index) as Node2D
+		if spring_node == null or ledge_node == null:
+			level.queue_free()
+			return "Level 09 is missing Spring%d / SpringLedge%d." % [index, index]
+		var horiz := absf(ledge_node.global_position.x - spring_node.global_position.x)
+		if horiz > 280.0:
+			level.queue_free()
+			return (
+				"Spring%d is %.0fpx from SpringLedge%d — keep pads under the star boards."
+				% [index, horiz, index]
+			)
+
 	for node in level.find_children("*", "Area2D", true, false):
 		if not (node is SpringPad):
 			continue
