@@ -313,13 +313,19 @@ func _refresh_hearts_button() -> void:
 		art.name = "ModeArt"
 		art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		art.offset_left = 12
-		art.offset_top = 8
-		art.offset_right = -12
-		art.offset_bottom = -8
+		## Keep art inside the wooden plate rim (rivets sit on the outer ring).
+		art.offset_left = 18
+		art.offset_top = 14
+		art.offset_right = -18
+		art.offset_bottom = -14
 		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		_hearts_button.add_child(art)
+	else:
+		art.offset_left = 18
+		art.offset_top = 14
+		art.offset_right = -18
+		art.offset_bottom = -14
 	var path := GameManager.trail_mode_icon_path(badges_per_life)
 	if ResourceLoader.exists(path):
 		art.texture = load(path) as Texture2D
