@@ -4943,7 +4943,7 @@ func _test_skeleton_tied_bow_transparent() -> Variant:
 			img.convert(Image.FORMAT_RGBA8)
 		var bright_fill := 0
 		var probes := [
-			Vector2i(40, 70), Vector2i(42, 71), Vector2i(38, 72), Vector2i(36, 69), Vector2i(44, 70),
+			Vector2i(40, 72), Vector2i(42, 71), Vector2i(38, 72), Vector2i(34, 71), Vector2i(44, 70),
 		]
 		for probe in probes:
 			if probe.x >= img.get_width() or probe.y >= img.get_height():
