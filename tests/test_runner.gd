@@ -8400,6 +8400,7 @@ func _test_pause_save_controls() -> Variant:
 		"Panel/Margin/VBox/RestartLevelButton",
 		"Panel/Margin/VBox/RestartButton",
 		"Panel/Margin/VBox/SaveSelectButton",
+		"Panel/Margin/VBox/QuitButton",
 	]:
 		if menu.get_node_or_null(path) == null:
 			error = "Pause menu missing %s." % path
@@ -8413,6 +8414,9 @@ func _test_pause_save_controls() -> Variant:
 	var start_screen := menu.get_node_or_null("Panel/Margin/VBox/SaveSelectButton") as Button
 	if error == null and start_screen != null and start_screen.text != "Back to Start Screen":
 		error = "Pause menu should offer a clear return to the start screen."
+	var quit_button := menu.get_node_or_null("Panel/Margin/VBox/QuitButton") as Button
+	if error == null and quit_button != null and quit_button.text not in ["Quit", "Beenden"]:
+		error = "Pause menu should offer Quit/Beenden."
 	if error == null:
 		(menu as PauseMenu).set_save_options(false, false)
 		if restart != null and restart.visible:

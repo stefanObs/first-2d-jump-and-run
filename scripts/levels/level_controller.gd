@@ -442,6 +442,7 @@ func _wire_ui() -> void:
 		pause_menu.restart_pressed.connect(_on_restart_pressed)
 		pause_menu.save_select_pressed.connect(_on_save_select_pressed)
 		pause_menu.settings_pressed.connect(_on_settings_pressed)
+		pause_menu.quit_pressed.connect(_on_quit_pressed)
 		pause_menu.set_save_options(
 			not is_custom_level,
 			not is_custom_level and GameManager.has_run_state(level_number)
@@ -890,6 +891,17 @@ func _on_save_select_pressed() -> void:
 func _on_settings_pressed() -> void:
 	if pause_menu != null:
 		pause_menu.show_settings()
+
+
+func _on_quit_pressed() -> void:
+	get_tree().paused = false
+	_paused = false
+	if not is_custom_level:
+		GameManager.add_play_time(_play_time)
+		_play_time = 0.0
+		_save_run_state(false)
+	GameManager.flush_save_to_disk()
+	get_tree().quit()
 
 
 func _on_device_changed(_device: Variant) -> void:
