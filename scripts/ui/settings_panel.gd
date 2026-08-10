@@ -269,12 +269,17 @@ func _load_values() -> void:
 			_character.add_item(tr("Cowgirl"), 1)
 		_character.select(1 if is_cowgirl else 0)
 	if _trail_mode:
-		var advanced := bool(settings.get("advanced_mode", false))
-		if _trail_mode.item_count < 2:
-			_trail_mode.clear()
-			_trail_mode.add_item(tr("Classic"), 0)
-			_trail_mode.add_item(tr("Advanced Mode"), 1)
-		_trail_mode.select(1 if advanced else 0)
+		var badges_per_life := GameManager.get_badges_per_life_setting()
+		_trail_mode.clear()
+		_trail_mode.add_item(tr("Classic"), 0)
+		for tier in GameManager.ADVANCED_BADGE_TIERS:
+			_trail_mode.add_item(tr("Advanced ★%d") % tier, tier)
+		var select_index := 0
+		for i in range(_trail_mode.item_count):
+			if int(_trail_mode.get_item_id(i)) == badges_per_life:
+				select_index = i
+				break
+		_trail_mode.select(select_index)
 
 
 func _select_language(item_index: int) -> void:
@@ -294,7 +299,7 @@ func _select_character(item_index: int) -> void:
 func _select_trail_mode(item_index: int) -> void:
 	if _trail_mode == null or item_index < 0:
 		return
-	GameManager.set_setting("advanced_mode", item_index == 1)
+	GameManager.set_badges_per_life_setting(int(_trail_mode.get_item_id(item_index)))
 
 
 func _activate() -> void:

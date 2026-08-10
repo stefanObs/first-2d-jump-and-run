@@ -1289,12 +1289,18 @@ func _test_settings_trail_mode_dropdown() -> Variant:
 	var error: Variant = null
 	if dropdown == null or label == null:
 		error = "Settings needs a trail mode label and dropdown."
-	elif dropdown.item_count < 2:
-		error = "Trail mode dropdown needs Classic and Advanced choices."
+	elif dropdown.item_count < 5:
+		error = "Trail mode dropdown needs Classic plus ★5/★10/★15/★30 Advanced choices."
 	elif dropdown.get_item_text(0) not in ["Classic", "Klassisch"]:
 		error = "Classic mode label missing from settings trail mode dropdown."
-	elif dropdown.get_item_text(1) not in ["Advanced Mode", "Fortgeschrittenen-Modus"]:
-		error = "Advanced Mode label missing from settings trail mode dropdown."
+	else:
+		var ids: Array[int] = []
+		for i in range(dropdown.item_count):
+			ids.append(int(dropdown.get_item_id(i)))
+		for tier in GameManager.ADVANCED_BADGE_TIERS:
+			if tier not in ids:
+				error = "Trail mode dropdown missing Advanced ★%d." % tier
+				break
 	scene.queue_free()
 	return error
 
@@ -1379,11 +1385,11 @@ func _test_settings_trail_mode_selection() -> Variant:
 		GameManager.set_setting("advanced_mode", previous)
 		GameManager.erase_slot(0)
 		return "Trail mode dropdown should include Classic as the default/normal choice."
-	if dropdown.get_item_text(1) not in ["Advanced Mode", "Fortgeschrittenen-Modus"]:
+	if dropdown.get_item_id(1) != 5:
 		scene.queue_free()
 		GameManager.set_setting("advanced_mode", previous)
 		GameManager.erase_slot(0)
-		return "Trail mode dropdown should include Advanced Mode."
+		return "Trail mode dropdown should include Advanced ★5 after Classic."
 	scene.queue_free()
 	GameManager.set_setting("advanced_mode", previous)
 	GameManager.erase_slot(0)
@@ -1418,17 +1424,18 @@ func _test_settings_trail_mode_refresh() -> Variant:
 	GameManager.set_setting("advanced_mode", true)
 	var panel := scene.get_node_or_null("SettingsPanel") as SettingsPanel
 	panel._load_values()
-	if dropdown.selected != 1:
+	var selected_id := int(dropdown.get_item_id(dropdown.selected))
+	if selected_id != 30:
 		scene.queue_free()
 		GameManager.set_setting("advanced_mode", previous)
 		GameManager.erase_slot(0)
-		return "Advanced Mode should stay selected after settings refresh."
+		return "Legacy Advanced Mode should select the ★30 pace after settings refresh."
 	GameManager.prepare_slot_for_start(0)
-	if not GameManager.slot_is_advanced(0):
+	if not GameManager.slot_is_advanced(0) or GameManager.slot_badges_per_life(0) != 30:
 		scene.queue_free()
 		GameManager.set_setting("advanced_mode", previous)
 		GameManager.erase_slot(0)
-		return "Advanced Mode should apply after refresh and prepare."
+		return "Advanced Mode should apply ★30 after refresh and prepare."
 	scene.queue_free()
 	GameManager.set_setting("advanced_mode", previous)
 	GameManager.erase_slot(0)
@@ -1437,19 +1444,21 @@ func _test_settings_trail_mode_refresh() -> Variant:
 
 func _test_advanced_mode_lives() -> Variant:
 	GameManager.erase_slot(0)
-	GameManager.set_setting("advanced_mode", true)
+	GameManager.set_badges_per_life_setting(30)
 	GameManager.prepare_slot_for_start(0)
 	GameManager.active_slot_index = 0
 	if GameManager.get_lives() != 3:
-		return "Advanced Mode should start with three lives."
+		return "Advanced ★30 should start with three lives."
 	if not GameManager.is_advanced_mode():
 		return "Prepared slot should be in Advanced Mode."
+	if GameManager.active_badges_per_life() != 30:
+		return "Prepared slot should remember the ★30 badge pace."
 	GameManager.register_badges_collected(29)
 	if GameManager.get_lives() != 3:
-		return "Twenty-nine badges should not grant a life yet."
+		return "Twenty-nine badges should not grant a life yet at ★30 pace."
 	GameManager.register_badges_collected(1)
 	if GameManager.get_lives() != 4:
-		return "Thirty total badges should grant one extra life."
+		return "Thirty total badges should grant one extra life at ★30 pace."
 	GameManager.register_badges_collected(30)
 	if GameManager.get_lives() != 5:
 		return "Sixty total badges should grant another extra life."
@@ -1459,6 +1468,28 @@ func _test_advanced_mode_lives() -> Variant:
 	if GameManager.get_lives() != 5:
 		return "Advanced life totals should persist in the save slot."
 	GameManager.erase_slot(0)
+	GameManager.set_badges_per_life_setting(5)
+	GameManager.prepare_slot_for_start(0)
+	GameManager.active_slot_index = 0
+	if GameManager.get_lives() != 5:
+		return "Advanced ★5 should start with five lives."
+	GameManager.register_badges_collected(5)
+	if GameManager.get_lives() != 6:
+		return "Five badges should grant a life at ★5 pace."
+	GameManager.erase_slot(0)
+	GameManager.set_badges_per_life_setting(10)
+	GameManager.prepare_slot_for_start(0)
+	GameManager.active_slot_index = 0
+	if GameManager.get_lives() != 5:
+		return "Advanced ★10 should start with five lives."
+	GameManager.erase_slot(0)
+	GameManager.set_badges_per_life_setting(15)
+	GameManager.prepare_slot_for_start(0)
+	GameManager.active_slot_index = 0
+	if GameManager.get_lives() != 3:
+		return "Advanced ★15 should start with three lives."
+	GameManager.erase_slot(0)
+	GameManager.set_badges_per_life_setting(0)
 	return null
 
 

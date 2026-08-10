@@ -4,8 +4,11 @@ extends Node
 
 const SAVE_VERSION := 4
 const SLOT_COUNT := 3
+## Legacy default when an older Advanced save has no badges_per_life field.
 const ADVANCED_START_LIVES := 3
 const BADGES_PER_LIFE := 30
+## Classic = 0. Advanced tiers = sheriff badges needed for +1 life.
+const ADVANCED_BADGE_TIERS: Array[int] = [5, 10, 15, 30]
 const PLAYER_COWBOY := "cowboy"
 const PLAYER_COWGIRL := "cowgirl"
 const CUSTOM_LEVEL_STORE := preload("res://scripts/levels/custom_level_store.gd")
@@ -65,8 +68,16 @@ func is_slot_empty(slot_index: int) -> bool:
 
 
 func slot_is_advanced(slot_index: int) -> bool:
+	return slot_badges_per_life(slot_index) > 0
+
+
+func slot_badges_per_life(slot_index: int) -> int:
 	_validate_slot(slot_index)
-	return bool(get_slot(slot_index).get("advanced_mode", false))
+	var slot := get_slot(slot_index)
+	return normalize_badges_per_life(
+		slot.get("badges_per_life", -1),
+		bool(slot.get("advanced_mode", false))
+	)
 
 
 func is_advanced_mode() -> bool:
@@ -75,8 +86,60 @@ func is_advanced_mode() -> bool:
 	return slot_is_advanced(active_slot_index)
 
 
+func active_badges_per_life() -> int:
+	if active_slot_index < 0:
+		return 0
+	return slot_badges_per_life(active_slot_index)
+
+
 func normalize_player_character(value: Variant) -> String:
 	return PLAYER_COWGIRL if String(value) == PLAYER_COWGIRL else PLAYER_COWBOY
+
+
+func normalize_badges_per_life(value: Variant, advanced_fallback: bool = false) -> int:
+	var amount := int(value) if value != null else -1
+	if amount == 0:
+		return 0
+	if amount in ADVANCED_BADGE_TIERS:
+		return amount
+	## Older saves only stored advanced_mode=true → keep the classic 30-badge pace.
+	if advanced_fallback:
+		return BADGES_PER_LIFE
+	return 0
+
+
+func advanced_start_lives(badges_per_life: int = -1) -> int:
+	var amount := badges_per_life if badges_per_life >= 0 else get_badges_per_life_setting()
+	if amount <= 0:
+		return 0
+	## Easier Advanced paces start with a fuller heart belt.
+	if amount == 5 or amount == 10:
+		return 5
+	return ADVANCED_START_LIVES
+
+
+func trail_mode_label(badges_per_life: int = -1) -> String:
+	var amount := badges_per_life if badges_per_life >= 0 else get_badges_per_life_setting()
+	if amount <= 0:
+		return tr("Classic")
+	return tr("Advanced ★%d") % amount
+
+
+func trail_mode_icon_path(badges_per_life: int = -1) -> String:
+	var amount := badges_per_life if badges_per_life >= 0 else get_badges_per_life_setting()
+	if amount <= 0:
+		return "res://assets/ui/menu_trail_mode_classic.png"
+	return "res://assets/ui/menu_trail_mode_%d.png" % amount
+
+
+func cycle_badges_per_life(current: int) -> int:
+	var normalized := normalize_badges_per_life(current)
+	if normalized <= 0:
+		return ADVANCED_BADGE_TIERS[0]
+	var index := ADVANCED_BADGE_TIERS.find(normalized)
+	if index < 0 or index >= ADVANCED_BADGE_TIERS.size() - 1:
+		return 0
+	return ADVANCED_BADGE_TIERS[index + 1]
 
 
 func slot_player_character(slot_index: int) -> String:
@@ -103,33 +166,60 @@ func get_mounted_horse_texture(frame: String) -> Texture2D:
 
 
 func is_advanced_mode_setting() -> bool:
-	return bool(get_settings().get("advanced_mode", false))
+	return get_badges_per_life_setting() > 0
+
+
+func get_badges_per_life_setting() -> int:
+	var settings := get_settings()
+	return normalize_badges_per_life(
+		settings.get("badges_per_life", -1),
+		bool(settings.get("advanced_mode", false))
+	)
+
+
+func set_badges_per_life_setting(value: int) -> void:
+	var amount := normalize_badges_per_life(value)
+	_ensure_data()
+	var settings: Dictionary = _data["settings"]
+	settings["badges_per_life"] = amount
+	settings["advanced_mode"] = amount > 0
+	_data["settings"] = settings
+	_apply_settings()
+	save_to_disk()
+	settings_changed.emit()
 
 
 func get_lives() -> int:
 	if not is_advanced_mode() or active_slot_index < 0:
 		return 0
-	return int(get_slot(active_slot_index).get("lives", ADVANCED_START_LIVES))
+	return int(get_slot(active_slot_index).get("lives", advanced_start_lives(active_badges_per_life())))
 
 
 func prepare_slot_for_start(slot_index: int) -> void:
 	_validate_slot(slot_index)
 	_ensure_data()
 	var slot: Dictionary = get_slot(slot_index)
-	var advanced_mode := is_advanced_mode_setting()
+	var badges_per_life := get_badges_per_life_setting()
+	var advanced_mode := badges_per_life > 0
 	var character := normalize_player_character(get_settings().get("player_character", PLAYER_COWBOY))
-	var was_advanced := bool(slot.get("advanced_mode", false))
+	var was_advanced := slot_badges_per_life(slot_index) > 0
+	var start_lives := advanced_start_lives(badges_per_life)
 	slot["advanced_mode"] = advanced_mode
+	slot["badges_per_life"] = badges_per_life
 	slot["player_character"] = character
 	if bool(slot.get("empty", true)):
-		slot["lives"] = ADVANCED_START_LIVES if advanced_mode else 0
+		slot["lives"] = start_lives
 		slot["lifetime_badges"] = 0
 		slot["badge_life_tier"] = 0
 	elif advanced_mode:
+		var lifetime := int(slot.get("lifetime_badges", 0))
+		## Avoid a sudden pile of free lives when switching badge pace.
+		slot["badge_life_tier"] = lifetime / badges_per_life
 		if not was_advanced or int(slot.get("lives", 0)) <= 0:
-			slot["lives"] = ADVANCED_START_LIVES
+			slot["lives"] = start_lives
 	else:
 		slot["lives"] = 0
+		slot["badge_life_tier"] = 0
 	(_data["slots"] as Array)[slot_index] = slot
 
 
@@ -141,14 +231,15 @@ func apply_play_settings_from_slot(slot_index: int) -> void:
 	if bool(slot.get("empty", true)):
 		return
 	var character := normalize_player_character(slot.get("player_character", PLAYER_COWBOY))
-	var advanced := bool(slot.get("advanced_mode", false))
+	var badges_per_life := slot_badges_per_life(slot_index)
 	var settings: Dictionary = _data["settings"]
 	var dirty := false
 	if normalize_player_character(settings.get("player_character", PLAYER_COWBOY)) != character:
 		settings["player_character"] = character
 		dirty = true
-	if bool(settings.get("advanced_mode", false)) != advanced:
-		settings["advanced_mode"] = advanced
+	if get_badges_per_life_setting() != badges_per_life:
+		settings["badges_per_life"] = badges_per_life
+		settings["advanced_mode"] = badges_per_life > 0
 		dirty = true
 	if not dirty:
 		return
@@ -165,13 +256,14 @@ func commit_play_settings_to_slot(slot_index: int) -> void:
 	if bool(slot.get("empty", true)):
 		return
 	var character := normalize_player_character(get_settings().get("player_character", PLAYER_COWBOY))
-	var advanced := is_advanced_mode_setting()
+	var badges_per_life := get_badges_per_life_setting()
 	var dirty := false
 	if normalize_player_character(slot.get("player_character", PLAYER_COWBOY)) != character:
 		slot["player_character"] = character
 		dirty = true
-	if bool(slot.get("advanced_mode", false)) != advanced:
-		slot["advanced_mode"] = advanced
+	if slot_badges_per_life(slot_index) != badges_per_life:
+		slot["badges_per_life"] = badges_per_life
+		slot["advanced_mode"] = badges_per_life > 0
 		dirty = true
 	if not dirty:
 		return
@@ -185,7 +277,7 @@ func lose_life() -> bool:
 	if not is_advanced_mode() or active_slot_index < 0:
 		return true
 	var slot: Dictionary = get_slot(active_slot_index)
-	var lives := maxi(int(slot.get("lives", ADVANCED_START_LIVES)) - 1, 0)
+	var lives := maxi(int(slot.get("lives", advanced_start_lives())) - 1, 0)
 	slot["lives"] = lives
 	(_data["slots"] as Array)[active_slot_index] = slot
 	save_to_disk()
@@ -197,12 +289,13 @@ func register_badges_collected(count: int) -> void:
 	if not is_advanced_mode() or active_slot_index < 0 or count <= 0:
 		return
 	var slot: Dictionary = get_slot(active_slot_index)
+	var badges_per_life := maxi(slot_badges_per_life(active_slot_index), 1)
 	var total := int(slot.get("lifetime_badges", 0)) + count
 	slot["lifetime_badges"] = total
-	var tier := total / BADGES_PER_LIFE
+	var tier := total / badges_per_life
 	var awarded := int(slot.get("badge_life_tier", 0))
 	if tier > awarded:
-		slot["lives"] = int(slot.get("lives", ADVANCED_START_LIVES)) + (tier - awarded)
+		slot["lives"] = int(slot.get("lives", advanced_start_lives(badges_per_life))) + (tier - awarded)
 		slot["badge_life_tier"] = tier
 		lives_changed.emit(int(slot["lives"]))
 	(_data["slots"] as Array)[active_slot_index] = slot
@@ -226,7 +319,7 @@ func start_or_continue_slot(slot_index: int) -> void:
 		(_data["slots"] as Array)[slot_index] = slot
 		save_to_disk()
 	elif is_advanced_mode() and int(slot.get("lives", 0)) <= 0:
-		slot["lives"] = ADVANCED_START_LIVES
+		slot["lives"] = advanced_start_lives(slot_badges_per_life(slot_index))
 		(_data["slots"] as Array)[slot_index] = slot
 		save_to_disk()
 	else:
@@ -527,7 +620,21 @@ func get_settings() -> Dictionary:
 func set_setting(key: String, value: Variant) -> void:
 	_ensure_data()
 	var settings: Dictionary = _data["settings"]
-	settings[key] = value
+	if key == "advanced_mode":
+		## Legacy callers: true keeps/chooses ★30 Advanced, false returns to Classic.
+		if bool(value):
+			var current := normalize_badges_per_life(settings.get("badges_per_life", 0))
+			settings["badges_per_life"] = current if current > 0 else BADGES_PER_LIFE
+			settings["advanced_mode"] = true
+		else:
+			settings["badges_per_life"] = 0
+			settings["advanced_mode"] = false
+	elif key == "badges_per_life":
+		var amount := normalize_badges_per_life(value)
+		settings["badges_per_life"] = amount
+		settings["advanced_mode"] = amount > 0
+	else:
+		settings[key] = value
 	_data["settings"] = settings
 	_apply_settings()
 	save_to_disk()
@@ -642,6 +749,7 @@ func _default_data() -> Dictionary:
 			"language": "de",
 			"player_character": PLAYER_COWBOY,
 			"advanced_mode": false,
+			"badges_per_life": 0,
 		},
 	}
 
@@ -655,6 +763,7 @@ func _empty_slot() -> Dictionary:
 		"completed": false,
 		"resume": {},
 		"advanced_mode": false,
+		"badges_per_life": 0,
 		"player_character": PLAYER_COWBOY,
 		"lives": 0,
 		"lifetime_badges": 0,
@@ -668,6 +777,11 @@ func _migrate_save(raw: Dictionary) -> Dictionary:
 	if raw.has("settings") and typeof(raw["settings"]) == TYPE_DICTIONARY:
 		var merged: Dictionary = data["settings"]
 		merged.merge(raw["settings"] as Dictionary, true)
+		merged["badges_per_life"] = normalize_badges_per_life(
+			merged.get("badges_per_life", -1),
+			bool(merged.get("advanced_mode", false))
+		)
+		merged["advanced_mode"] = int(merged["badges_per_life"]) > 0
 		data["settings"] = merged
 	if raw.has("slots") and typeof(raw["slots"]) == TYPE_ARRAY:
 		var slots: Array = data["slots"]
@@ -676,6 +790,11 @@ func _migrate_save(raw: Dictionary) -> Dictionary:
 			if typeof(incoming[i]) == TYPE_DICTIONARY:
 				var slot: Dictionary = _empty_slot()
 				slot.merge(incoming[i] as Dictionary, true)
+				slot["badges_per_life"] = normalize_badges_per_life(
+					slot.get("badges_per_life", -1),
+					bool(slot.get("advanced_mode", false))
+				)
+				slot["advanced_mode"] = int(slot["badges_per_life"]) > 0
 				slots[i] = slot
 		data["slots"] = slots
 	data["version"] = SAVE_VERSION

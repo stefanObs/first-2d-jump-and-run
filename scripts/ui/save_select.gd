@@ -221,12 +221,11 @@ func _setup_chrome_buttons() -> void:
 func _toggle_trail_mode() -> void:
 	if _settings_open() or _element_reference_open():
 		return
-	GameManager.set_setting("advanced_mode", not GameManager.is_advanced_mode_setting())
+	var next := GameManager.cycle_badges_per_life(GameManager.get_badges_per_life_setting())
+	GameManager.set_badges_per_life_setting(next)
 	_refresh_hearts_button()
 	_commit_play_settings_to_focused_slot()
-	_flash_status(
-		tr("Advanced Mode") if GameManager.is_advanced_mode_setting() else tr("Classic")
-	)
+	_flash_status(GameManager.trail_mode_label(next))
 
 
 func _on_settings_changed() -> void:
@@ -303,16 +302,28 @@ func _style_character_picker(button: Button, selected: bool, display_name: Strin
 func _refresh_hearts_button() -> void:
 	if _hearts_button == null:
 		return
-	var advanced := GameManager.is_advanced_mode_setting()
-	var icons := _hearts_button.get_node_or_null("HeartIcons") as HBoxContainer
-	if icons == null:
-		return
-	for i in range(icons.get_child_count()):
-		var heart := icons.get_child(i) as CanvasItem
-		if heart == null:
-			continue
-		heart.visible = advanced or i == 0
-		heart.modulate = Color(1, 1, 1, 1) if (advanced or i == 0) else Color(1, 1, 1, 0.35)
+	var badges_per_life := GameManager.get_badges_per_life_setting()
+	_hearts_button.tooltip_text = "%s — %s" % [tr("Trail mode"), GameManager.trail_mode_label(badges_per_life)]
+	var icons := _hearts_button.get_node_or_null("HeartIcons") as CanvasItem
+	if icons != null:
+		icons.visible = false
+	var art := _hearts_button.get_node_or_null("ModeArt") as TextureRect
+	if art == null:
+		art = TextureRect.new()
+		art.name = "ModeArt"
+		art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		art.offset_left = 12
+		art.offset_top = 8
+		art.offset_right = -12
+		art.offset_bottom = -8
+		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		_hearts_button.add_child(art)
+	var path := GameManager.trail_mode_icon_path(badges_per_life)
+	if ResourceLoader.exists(path):
+		art.texture = load(path) as Texture2D
+	art.modulate = Color(1, 1, 1, 1)
 
 
 func _setup_element_reference() -> void:
