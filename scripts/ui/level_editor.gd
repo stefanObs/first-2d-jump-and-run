@@ -330,6 +330,9 @@ func _build_ui() -> void:
 	_grid.columns = int(_data.get("width", CustomLevelStore.DEFAULT_WIDTH))
 	_grid.add_theme_constant_override(&"h_separation", 2)
 	_grid.add_theme_constant_override(&"v_separation", 2)
+	## Keep the stamp strip at its cell width so ScrollContainer can pan it.
+	_grid.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	_grid.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	_grid_scroll.add_child(_grid)
 	var width := int(_data.get("width", CustomLevelStore.DEFAULT_WIDTH))
 	var height := int(_data.get("height", 8))
@@ -758,6 +761,9 @@ func _apply_grid_collapsed_state() -> void:
 		)
 	if _grid_scroll != null:
 		_grid_scroll.visible = not collapsed
+		_grid_scroll.mouse_filter = (
+			Control.MOUSE_FILTER_IGNORE if collapsed else Control.MOUSE_FILTER_STOP
+		)
 	if _grid_scroll_row != null:
 		_grid_scroll_row.visible = not collapsed
 	if _h_scroll != null:
@@ -814,6 +820,7 @@ func _fit_grid_layout() -> void:
 		_grid_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	for cell in _cells:
 		cell.custom_minimum_size = Vector2(_CELL_WIDTH, cell_h)
+	call_deferred("_sync_scroll_range")
 
 
 func _add_action(
@@ -896,29 +903,27 @@ func _apply_style_dropdown_icons() -> void:
 func _nudge_horizontal_scroll(delta: float) -> void:
 	if _grid_scroll == null:
 		return
-	_apply_horizontal_scroll(_grid_scroll.scroll_horizontal + delta)
+	_apply_horizontal_scroll(_grid_scroll.scroll_horizontal + delta, true)
 
 
 func _nudge_preview_scroll(delta_screen: float) -> void:
 	if _preview == null:
 		return
 	_preview.pan_view_screen(delta_screen)
-	var max_scroll := _horizontal_scroll_max()
-	if max_scroll > 0.0 and _grid_scroll != null:
-		_apply_horizontal_scroll(_grid_scroll.scroll_horizontal + delta_screen)
+	_sync_grid_scroll_from_preview()
 
 
 func _scroll_column_into_view(column: int) -> void:
-	if _grid_scroll == null or column < 0:
+	if not _stamp_grid_is_interactive() or column < 0:
 		return
 	var target := column * (_CELL_WIDTH + float(_grid.get_theme_constant(&"h_separation", "GridContainer")))
 	var margin := _CELL_WIDTH * 1.5
 	var view_left := float(_grid_scroll.scroll_horizontal)
 	var view_right := view_left + _grid_scroll.size.x
 	if target < view_left + margin:
-		_apply_horizontal_scroll(target - margin)
+		_apply_horizontal_scroll(target - margin, false)
 	elif target + _CELL_WIDTH > view_right - margin:
-		_apply_horizontal_scroll(target + _CELL_WIDTH - _grid_scroll.size.x + margin)
+		_apply_horizontal_scroll(target + _CELL_WIDTH - _grid_scroll.size.x + margin, false)
 
 
 func _set_hover_cell(column: int, row: int) -> void:
@@ -927,7 +932,7 @@ func _set_hover_cell(column: int, row: int) -> void:
 	if _preview != null:
 		_preview.set_hover_cell(column, row)
 	_refresh_grid_highlights()
-	if _grid_scroll != null and _grid_scroll.get_global_rect().has_point(get_global_mouse_position()):
+	if _mouse_over_stamp_grid():
 		_scroll_column_into_view(column)
 
 
@@ -1009,43 +1014,99 @@ func _remove_at(x: int, y: int) -> void:
 	_set_hover_cell(x, y)
 
 
+func _grid_content_width() -> float:
+	if _grid == null:
+		return 0.0
+	var width := int(_data.get("width", CustomLevelStore.DEFAULT_WIDTH))
+	var h_sep := float(_grid.get_theme_constant(&"h_separation", "GridContainer"))
+	var estimated := _CELL_WIDTH * float(width) + h_sep * float(maxi(width - 1, 0))
+	return maxf(_grid.get_combined_minimum_size().x, maxf(_grid.size.x, estimated))
+
+
 func _horizontal_scroll_max() -> float:
 	if _grid_scroll == null or _grid == null:
 		return 0.0
-	var content_w := _grid.size.x
-	if content_w <= 0.0:
-		var width := int(_data.get("width", CustomLevelStore.DEFAULT_WIDTH))
-		var h_sep := float(_grid.get_theme_constant(&"h_separation", "GridContainer"))
-		content_w = _CELL_WIDTH * float(width) + h_sep * float(maxi(width - 1, 0))
-	return maxf(content_w - _grid_scroll.size.x, 0.0)
+	var visible := _grid_scroll.size.x
+	if visible <= 1.0:
+		visible = _grid_scroll.get_combined_minimum_size().x
+	return maxf(_grid_content_width() - maxf(visible, 1.0), 0.0)
 
 
-func _apply_horizontal_scroll(value: float) -> void:
+func _stamp_grid_is_interactive() -> bool:
+	return (
+		_grid_scroll != null
+		and _grid_scroll.visible
+		and _grid_scroll.is_visible_in_tree()
+	)
+
+
+func _mouse_over_stamp_grid() -> bool:
+	return (
+		_stamp_grid_is_interactive()
+		and _grid_scroll.get_global_rect().has_point(get_global_mouse_position())
+	)
+
+
+func _apply_horizontal_scroll(value: float, sync_preview: bool = false) -> void:
 	if _grid_scroll == null:
 		return
 	var clamped := clampf(value, 0.0, _horizontal_scroll_max())
 	_syncing_scroll = true
 	_grid_scroll.scroll_horizontal = int(clamped)
 	if _h_scroll != null:
-		_h_scroll.value = clamped
+		_h_scroll.set_value_no_signal(clamped)
 	_syncing_scroll = false
+	if sync_preview:
+		_sync_preview_from_grid_scroll()
+
+
+func _sync_preview_from_grid_scroll() -> void:
+	if _preview == null or _data.is_empty():
+		return
+	var max_scroll := _horizontal_scroll_max()
+	if max_scroll <= 0.01 or _grid_scroll == null:
+		return
+	var grid := float(_data.get("grid", 40))
+	var width := maxi(int(_data.get("width", 1)), 1)
+	var min_x := grid * 0.5
+	var max_x := (float(width) - 0.5) * grid
+	var t := clampf(float(_grid_scroll.scroll_horizontal) / max_scroll, 0.0, 1.0)
+	_preview.set_view_center_world_x(lerpf(min_x, max_x, t))
+
+
+func _sync_grid_scroll_from_preview() -> void:
+	if _preview == null or _grid_scroll == null or _data.is_empty():
+		return
+	var max_scroll := _horizontal_scroll_max()
+	if max_scroll <= 0.01:
+		return
+	var grid := float(_data.get("grid", 40))
+	var width := maxi(int(_data.get("width", 1)), 1)
+	var min_x := grid * 0.5
+	var max_x := (float(width) - 0.5) * grid
+	if max_x <= min_x:
+		return
+	var t := inverse_lerp(min_x, max_x, _preview.get_view_center_world_x())
+	_apply_horizontal_scroll(clampf(t, 0.0, 1.0) * max_scroll, false)
 
 
 func _sync_scroll_range() -> void:
 	if _grid_scroll == null or _h_scroll == null or _grid == null:
 		return
-	var max_val := _horizontal_scroll_max()
+	var content_w := _grid_content_width()
+	var visible := maxf(_grid_scroll.size.x, 1.0)
 	_h_scroll.min_value = 0.0
-	_h_scroll.max_value = max_val
-	_h_scroll.page = _grid_scroll.size.x
+	## Godot ScrollBar: max is content size, page is the visible slice.
+	_h_scroll.max_value = maxf(content_w, visible)
+	_h_scroll.page = visible
 	_h_scroll.step = 1.0
-	_apply_horizontal_scroll(_grid_scroll.scroll_horizontal)
+	_apply_horizontal_scroll(_grid_scroll.scroll_horizontal, false)
 
 
 func _on_h_scroll_changed(value: float) -> void:
 	if _syncing_scroll or _grid_scroll == null:
 		return
-	_apply_horizontal_scroll(value)
+	_apply_horizontal_scroll(value, true)
 
 
 func _edge_scroll_delta(local_x: float, pane_width: float, delta: float) -> float:
@@ -1060,10 +1121,10 @@ func _edge_scroll_delta(local_x: float, pane_width: float, delta: float) -> floa
 
 func _process(delta: float) -> void:
 	var delta_x := 0.0
-	if _grid_scroll != null and _grid_scroll.get_global_rect().has_point(get_global_mouse_position()):
+	if _mouse_over_stamp_grid():
 		delta_x = _edge_scroll_delta(_grid_scroll.get_local_mouse_position().x, _grid_scroll.size.x, delta)
 		if absf(delta_x) > 0.01:
-			_apply_horizontal_scroll(_grid_scroll.scroll_horizontal + delta_x)
+			_apply_horizontal_scroll(_grid_scroll.scroll_horizontal + delta_x, true)
 		return
 	if _preview == null:
 		return
@@ -1077,9 +1138,7 @@ func _process(delta: float) -> void:
 	if absf(delta_x) <= 0.01:
 		return
 	_preview.pan_view_screen(delta_x)
-	var max_scroll := _horizontal_scroll_max()
-	if max_scroll > 0.0:
-		_apply_horizontal_scroll(_grid_scroll.scroll_horizontal + delta_x)
+	_sync_grid_scroll_from_preview()
 
 
 func _on_grid_scroll_gui(event: InputEvent) -> void:

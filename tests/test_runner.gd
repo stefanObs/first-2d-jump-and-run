@@ -241,6 +241,7 @@ func _ready() -> void:
 	failures += await _run("Workshop preview ghost matches stamp size", _test_workshop_preview_ghost_size)
 	failures += await _run("Workshop hover outlines placed stamps", _test_workshop_hover_outlines_placed_stamp)
 	failures += await _run("Workshop stamp grid can collapse", _test_workshop_grid_collapse)
+	failures += await _run("Workshop trail editor pans the live preview", _test_workshop_editor_scrolls_preview)
 	failures += await _run("Workshop right click removes stamp", _test_workshop_right_click_remove)
 	failures += await _run("Workshop preview click places stamp", _test_workshop_preview_places_stamp)
 	failures += await _run("Workshop preview keeps pan after trail edits", _test_workshop_preview_keeps_pan)
@@ -8463,6 +8464,68 @@ func _test_workshop_grid_collapse() -> Variant:
 		editor.queue_free()
 		return "Expanding the stamp grid should restore the grid and slide bar."
 	editor.queue_free()
+	return null
+
+
+func _test_workshop_editor_scrolls_preview() -> Variant:
+	GameManager.workshop_grid_collapsed = false
+	var editor_packed: PackedScene = load("res://scenes/ui/level_editor.tscn")
+	if editor_packed == null:
+		return "Missing level editor scene."
+	var editor := editor_packed.instantiate()
+	add_child(editor)
+	editor.size = Vector2(1280.0, 720.0)
+	var preview := editor.find_child("LevelPreview", true, false) as LevelPreview
+	for _wait in range(30):
+		await get_tree().process_frame
+		if preview != null and preview._camera != null:
+			break
+	if preview == null or preview._camera == null:
+		editor.queue_free()
+		GameManager.workshop_grid_collapsed = false
+		return "Live preview camera should exist before testing scroll."
+	editor._fit_grid_layout()
+	editor._sync_scroll_range()
+	await get_tree().process_frame
+	var max_scroll: float = editor._horizontal_scroll_max()
+	if max_scroll <= 0.0:
+		editor.queue_free()
+		GameManager.workshop_grid_collapsed = false
+		return "A 180-column stamp grid should scroll sideways at 1280×720."
+	if editor._stamp_grid_is_interactive() != true:
+		editor.queue_free()
+		GameManager.workshop_grid_collapsed = false
+		return "The expanded stamp grid should accept edge scroll."
+	var center_before: float = preview.get_view_center_world_x()
+	editor._apply_horizontal_scroll(max_scroll * 0.5, true)
+	await get_tree().process_frame
+	if absf(preview.get_view_center_world_x() - center_before) < 8.0:
+		editor.queue_free()
+		GameManager.workshop_grid_collapsed = false
+		return "The slide bar should pan the live preview along the trail."
+	var after_bar: float = preview.get_view_center_world_x()
+	editor._sync_scroll_range()
+	await get_tree().process_frame
+	if absf(preview.get_view_center_world_x() - after_bar) > 0.5:
+		editor.queue_free()
+		GameManager.workshop_grid_collapsed = false
+		return "Refreshing the scroll range should keep the live preview pan."
+	editor._toggle_grid_collapsed()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if editor._stamp_grid_is_interactive():
+		editor.queue_free()
+		GameManager.workshop_grid_collapsed = false
+		return "A collapsed stamp grid must not steal live-preview edge pan."
+	var collapsed_before: float = preview.get_view_center_world_x()
+	editor._nudge_preview_scroll(160.0)
+	await get_tree().process_frame
+	if preview.get_view_center_world_x() <= collapsed_before + 0.5:
+		editor.queue_free()
+		GameManager.workshop_grid_collapsed = false
+		return "Preview pan arrows should still move the live view when the grid is collapsed."
+	editor.queue_free()
+	GameManager.workshop_grid_collapsed = false
 	return null
 
 

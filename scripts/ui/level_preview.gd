@@ -92,21 +92,33 @@ func set_view_center_column(column: int) -> void:
 	var width: int = metrics["width"]
 	var grid: float = metrics["grid"]
 	var clamped := clampi(column, 0, width - 1)
-	_view_center_x = (float(clamped) + 0.5) * grid
+	set_view_center_world_x((float(clamped) + 0.5) * grid)
+
+
+func set_view_center_world_x(world_x: float) -> void:
+	if _data.is_empty():
+		return
+	var metrics := _view_metrics()
+	var grid: float = metrics["grid"]
+	var width: int = metrics["width"]
+	var min_x := grid * 0.5
+	var max_x := (float(width) - 0.5) * grid
+	_view_center_x = clampf(world_x, min_x, max_x)
 	_update_camera()
+
+
+func get_view_center_world_x() -> float:
+	_ensure_view_center()
+	return _view_center_x
+
 
 func pan_view_screen(delta_screen_px: float) -> void:
 	if _camera == null or _data.is_empty() or absf(delta_screen_px) <= 0.01:
 		return
 	var metrics := _view_metrics()
-	var grid: float = metrics["grid"]
-	var width: int = metrics["width"]
 	var zoom: float = metrics["zoom"]
 	_ensure_view_center()
-	var min_x := grid * 0.5
-	var max_x := (float(width) - 0.5) * grid
-	_view_center_x = clampf(_view_center_x + delta_screen_px / zoom, min_x, max_x)
-	_update_camera()
+	set_view_center_world_x(_view_center_x + delta_screen_px / zoom)
 
 func get_hover_column() -> int:
 	return _hover_column
@@ -530,6 +542,8 @@ func _aligned_placed_world_rect() -> Rect2:
 func _request_preview_redraw() -> void:
 	if _viewport == null:
 		return
+	## Toggle so a camera-only pan still dirties UPDATE_ONCE viewports.
+	_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 
 
