@@ -53,6 +53,12 @@ static func _add_badge(objects: Array[Dictionary], x: int, trail: int, height: i
 	_add(objects, "star", x, maxi(trail - height, 0))
 
 
+static func _add_camps(objects: Array[Dictionary], trail: int, columns: Array) -> void:
+	## Three lantern camps along the dirt — never on canyon/pit mouths or other ground stamps.
+	for column in columns:
+		_add(objects, "checkpoint", int(column), trail - 1)
+
+
 static func _level_11() -> Dictionary:
 	## Crystal Mouth — introduce cave remaps + ladder splits + ranch fence décor.
 	var data := _base("Crystal Mouth", 100, 10)
@@ -73,7 +79,7 @@ static func _level_11() -> Dictionary:
 	_add(objects, "acid_drip", 48, 0)
 	CustomLevelStore.append_platform_run(objects, trail, 50, 3, 2)
 	_add_badge(objects, 52, trail, 3)
-	_add(objects, "checkpoint", 60, trail - 1)
+	_add_camps(objects, trail, [16, 60, 82])
 	CustomLevelStore.append_fence_run(objects, trail, 64, 1)
 	_add_badge(objects, 66, trail)
 	_add(objects, "rattlesnake", 68, trail - 1)
@@ -113,7 +119,7 @@ static func _level_12() -> Dictionary:
 	CustomLevelStore.append_platform_run(objects, trail, 52, 3, 2)
 	_add_badge(objects, 54, trail, 3)
 	_add(objects, "bull", 60, trail - 1)
-	_add(objects, "checkpoint", 64, trail - 1)
+	_add_camps(objects, trail, [10, 64, 80])
 	_add_badge(objects, 66, trail)
 	CustomLevelStore.append_conveyor_belt(objects, trail, 68, true)
 	_add(objects, "acid_drip", 78, 0)
@@ -161,7 +167,7 @@ static func _level_13() -> Dictionary:
 	_add(objects, "acid_drip", 44, 1)
 	_add(objects, "rattlesnake", 48, trail - 1)
 	_add_badge(objects, 52, trail)
-	_add(objects, "checkpoint", 55, trail - 1)
+	_add_camps(objects, trail, [12, 55, 76])
 	CustomLevelStore.append_ladder_branch(objects, trail, 62)
 	_add_badge(objects, 72, trail)
 	_add(objects, "acid_drip", 78, 0)
@@ -208,7 +214,7 @@ static func _level_14() -> Dictionary:
 	_add(objects, "spring", 74, trail - 1)
 	CustomLevelStore.append_platform_run(objects, trail, 76, 3, 2)
 	_add_badge(objects, 78, trail, 3)
-	_add(objects, "checkpoint", 84, trail - 1)
+	_add_camps(objects, trail, [24, 84, 116])
 	_add_badge(objects, 86, trail)
 	CustomLevelStore.append_conveyor_belt(objects, trail, 92, false)
 	_add(objects, "acid_drip", 96, 1)
@@ -240,6 +246,8 @@ static func _level_15() -> Dictionary:
 			objects.append({"type": "ground", "x": x, "y": trail})
 	# Wings sit two hops from the spawn post, before the first badge.
 	_add(objects, "wings", 5, trail - 1)
+	## Three lantern camps: before the first chasm, mid-trail, and with the late wings.
+	_add_camps(objects, trail, [31, 54, 105])
 	CustomLevelStore.append_fence_run(objects, trail, 8, 1)
 	_add_badge(objects, 11, trail)
 	# High badge line: walkers see it, only the flying cowboy collects it.
@@ -251,14 +259,12 @@ static func _level_15() -> Dictionary:
 	# Bow skeleton on the solid approach before the first chasm.
 	_add(objects, "bandit", 27, trail - 1)
 	_add(objects, "spring", 30, trail - 1)
-	_add(objects, "checkpoint", 31, trail - 1)
 	# First chasm: planks carry the walking route, open air rewards the flight.
 	CustomLevelStore.append_platform_run(objects, trail, 34, 4, 2)
 	_add(objects, "star", 37, 2)
 	_add_badge(objects, 44, trail)
 	_add(objects, "bat", 47, trail - 6)
 	_add(objects, "star", 50, 3)
-	_add(objects, "checkpoint", 54, trail - 1)
 	# Fresh wings before the first pair runs dry.
 	_add(objects, "wings", 57, trail - 1)
 	_add(objects, "acid_drip", 60, 0)
@@ -277,7 +283,6 @@ static func _level_15() -> Dictionary:
 	_add(objects, "star", 100, 2)
 	# Last pair of wings for the run to the goal, plus a late lantern camp.
 	_add(objects, "wings", 103, trail - 1)
-	_add(objects, "checkpoint", 105, trail - 1)
 	_add(objects, "acid_drip", 106, 0)
 	_add_badge(objects, 108, trail)
 	CustomLevelStore.append_conveyor_belt(objects, trail, 110, true)
@@ -316,7 +321,7 @@ static func _level_16() -> Dictionary:
 	_add_badge(objects, 50, trail, 3)
 	_add(objects, "bull", 56, trail - 1)
 	_add_badge(objects, 58, trail)
-	_add(objects, "checkpoint", 60, trail - 1)
+	_add_camps(objects, trail, [18, 60, 86])
 	CustomLevelStore.append_conveyor_belt(objects, trail, 66, true)
 	_add(objects, "acid_drip", 74, 0)
 	_add_badge(objects, 76, trail)

@@ -288,15 +288,19 @@ static func _validate_goal_reachable_without_items(level: Node) -> PackedStringA
 
 static func _validate_checkpoints(level: Node) -> PackedStringArray:
 	var errors: PackedStringArray = []
+	var camps: Array[Node2D] = []
 	for node in level.find_children("*", "Area2D", true, false):
 		if not (node is Checkpoint):
 			continue
 		var checkpoint := node as Node2D
+		camps.append(checkpoint)
 		var pos := checkpoint.global_position
 		var surface := WildWestTheme.walk_surface_at(level, pos.x)
 		var floor_y := float(surface["y"])
 		if pos.y > floor_y + 16.0 or pos.y < floor_y - 96.0:
 			errors.append("Checkpoint %s is not safely supported by ground." % checkpoint.name)
+	if camps.size() < 3:
+		errors.append("Need at least 3 camps (found %d)." % camps.size())
 	return errors
 
 

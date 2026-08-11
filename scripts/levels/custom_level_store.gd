@@ -461,7 +461,9 @@ static func default_level(slot_index: int) -> Dictionary:
 	objects.append({"type": "cactus", "x": 11, "y": trail - 1})
 	objects.append({"type": "pit", "x": 18, "y": trail})
 	append_ladder_branch(objects, trail, 28)
+	objects.append({"type": "checkpoint", "x": width / 4, "y": trail - 1})
 	objects.append({"type": "checkpoint", "x": width / 2, "y": trail - 1})
+	objects.append({"type": "checkpoint", "x": (width * 3) / 4, "y": trail - 1})
 	objects.append({"type": "goal", "x": width - 3, "y": trail - 1})
 	return {
 		"version": VERSION,
