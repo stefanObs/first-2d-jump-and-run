@@ -107,7 +107,7 @@ func _ready() -> void:
 	failures += await _run("Lasso ties trail bulls", _test_lasso_ties_bull)
 	failures += await _run("Jumping on a bull head ties it", _test_stomp_ties_bull)
 	failures += await _run("Side contact with a bull sends the cowboy to camp", _test_bull_side_contact_hurts)
-	failures += await _run("Ninja ambushes in front of the player", _test_ninja_ambush_spawn)
+	failures += await _run("Ninja ambushes from his stamp", _test_ninja_ambush_spawn)
 	failures += await _run("Ninja sword attack hurts the cowboy", _test_ninja_sword_hurts)
 	failures += await _run("Lasso ties ninjas", _test_lasso_ties_ninja)
 	failures += await _run("Tied ninjas sit on dirt or a plank", _test_tied_ninja_sits_on_support)
@@ -3603,7 +3603,7 @@ func _test_ninja_ambush_spawn() -> Variant:
 		floor.queue_free()
 		return "Missing ninja enemy scene."
 	var ninja := packed.instantiate() as NinjaEnemy
-	ninja.position = Vector2(300, 400)
+	ninja.position = Vector2(700, 400)
 	add_child(ninja)
 	var player := Player.new()
 	player.position = Vector2(340, 400)
@@ -3613,13 +3613,13 @@ func _test_ninja_ambush_spawn() -> Variant:
 	await get_tree().physics_frame
 	for _i in range(20):
 		await get_tree().physics_frame
+		if ninja.modulate.a >= 0.5:
+			break
 	var error: Variant = null
 	if ninja.modulate.a < 0.5:
 		error = "Ninja should appear when the player enters ambush range."
-	elif ninja.global_position.x <= player.global_position.x + 120.0:
-		error = "Ninja should spawn ahead of the player (got x=%.1f vs player x=%.1f)." % [
-			ninja.global_position.x, player.global_position.x
-		]
+	elif absf(ninja.global_position.x - 700.0) > 8.0:
+		error = "Ninja should appear at his stamp (got x=%.1f, stamp 700)." % ninja.global_position.x
 	player.queue_free()
 	ninja.queue_free()
 	floor.queue_free()
@@ -4144,19 +4144,18 @@ func _test_ninja_respawn_restore() -> Variant:
 		player.add_to_group("player")
 	add_child(player)
 
-	# Force an ambush appear in front of the cowboy.
+	# Force an ambush at the stamp, then move him as if he had chased.
 	ninja._activated = true
-	ninja._appear_in_front_of(player)
+	ninja._appear_at_post(player)
 	if ninja._state != NinjaEnemy.State.APPEAR and ninja._state != NinjaEnemy.State.CHASE:
 		player.queue_free()
 		ninja.queue_free()
 		return "Ninja should be appearing or chasing before the respawn restore."
-	if ninja.global_position.distance_to(anchor) < 40.0:
+	if ninja.global_position.distance_to(anchor) > 8.0:
 		player.queue_free()
 		ninja.queue_free()
-		return "Ambush should move the ninja off his stamp post before restore (got %s)." % str(
-			ninja.global_position
-		)
+		return "Ambush should start at the stamp post (got %s)." % str(ninja.global_position)
+	ninja.global_position = Vector2(520, 400)
 
 	# Keep the cowboy out of ambush range so restore is not immediately re-triggered.
 	player.global_position = Vector2(5000, 400)

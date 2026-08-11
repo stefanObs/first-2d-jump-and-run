@@ -1,7 +1,7 @@
 class_name NinjaEnemy
 extends AnimatableBody2D
 
-## Ambush foe: pops in ahead of the cowboy, charges with a sword, throws stars at flyers.
+## Ambush foe: pops in at his stamp, charges with a sword, throws stars at flyers.
 
 signal hurt_player(player: Player)
 signal captured(ninja: NinjaEnemy)
@@ -11,7 +11,6 @@ enum State { DORMANT, APPEAR, CHASE, JUMP, ATTACK, THROW, TIED }
 const STAND_SCALE := 1.15
 ## Tied art is the same 64×80 frame as idle — keep standing size so he does not shrink.
 const STAND_FOOT_OFFSET := Vector2(0, -40)
-const SPAWN_AHEAD := 480.0
 const TRIGGER_RANGE := 1040.0
 const CHASE_SPEED := 170.0
 const MELEE_RANGE := 34.0
@@ -207,28 +206,16 @@ func _try_activate() -> void:
 	if global_position.distance_to(_anchor) > TRIGGER_RANGE + 40.0:
 		return
 	_activated = true
-	_appear_in_front_of(player)
+	_appear_at_post(player)
 
 
-func _appear_in_front_of(player: Player) -> void:
+func _appear_at_post(player: Player) -> void:
 	_state = State.APPEAR
 	_appear_token += 1
 	var token := _appear_token
-	var facing := _player_facing(player)
-	var spawn_x := player.global_position.x + facing * SPAWN_AHEAD
-	## Prefer solid crust near the cowboy's height — theme dirt alone can drop onto a lower bank.
-	var probe_from := Vector2(spawn_x, player.global_position.y - 8.0)
-	var physics_y := FloorProbe.nearest_floor_y(self, probe_from, 8.0, 160.0, 80.0)
-	var theme_y := _walk_surface_y(spawn_x, player.global_position.y)
-	var spawn_y := theme_y
-	if not is_nan(physics_y):
-		spawn_y = (
-			theme_y
-			if absf(theme_y - physics_y) <= 28.0
-			else physics_y
-		)
-	global_position = Vector2(spawn_x, spawn_y)
-	_facing = -facing
+	## Start on the WYSIWYG stamp — do not teleport ahead of the cowboy.
+	global_position = _anchor
+	_facing = 1.0 if player.global_position.x >= global_position.x else -1.0
 	_apply_facing(_facing)
 	_set_dormant(false)
 	modulate.a = 0.0
@@ -241,15 +228,6 @@ func _appear_in_front_of(player: Player) -> void:
 		_state = State.CHASE
 		_set_move_animation(true)
 	)
-
-
-func _player_facing(player: Player) -> float:
-	if absf(player.velocity.x) > 8.0:
-		return 1.0 if player.velocity.x >= 0.0 else -1.0
-	var sprite := player.get_node_or_null("Sprite2D") as Sprite2D
-	if sprite != null:
-		return -1.0 if sprite.flip_h else 1.0
-	return 1.0 if player.global_position.x >= _anchor.x else -1.0
 
 
 func _walk_surface_y(world_x: float, fallback_y: float) -> float:
