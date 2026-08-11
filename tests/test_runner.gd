@@ -235,6 +235,7 @@ func _ready() -> void:
 	failures += await _run("Saved camp and badges restore inside a level", _test_level_run_restore)
 	failures += await _run("Pause menu exposes save, load, and restart actions", _test_pause_save_controls)
 	failures += await _run("Boss arenas expose lasso targets and solvable kingpin layout", _test_boss_arenas)
+	failures += await _run("Cave Dragon body contact costs a heart or life", _test_dragon_body_contact_hurts)
 	failures += await _run("Clouds are one-way platforms that stay above the floor", _test_one_way_cloud_platforms)
 	failures += await _run("Wind zones give a gentle capped push you can walk against", _test_wind_zone_force_overlap)
 	failures += await _run("HUD uses handmade western sign boards", _test_handmade_hud_signs)
@@ -1695,6 +1696,82 @@ func _test_advanced_boss_skips_hearts() -> Variant:
 		error = "Boss heart counter should remain unused in Advanced Mode."
 	arena.queue_free()
 	GameManager.erase_slot(0)
+	return error
+
+
+func _test_dragon_body_contact_hurts() -> Variant:
+	var previous_advanced := bool(GameManager.get_settings().get("advanced_mode", false))
+	GameManager.set_setting("advanced_mode", false)
+	var packed: PackedScene = load("res://scenes/bosses/boss_cave_dragon.tscn")
+	if packed == null:
+		GameManager.set_setting("advanced_mode", previous_advanced)
+		return "Missing Cave Dragon boss scene."
+	var error: Variant = null
+	var fly := packed.instantiate()
+	add_child(fly)
+	await get_tree().process_frame
+	fly.combat_ready = true
+	fly.set("_hit_cooldown", 0.0)
+	fly.set("_recovering", false)
+	fly.set("_state", 0)
+	var fly_player := fly.get("player") as Player
+	if fly_player == null:
+		error = "Cave Dragon arena needs a player."
+	else:
+		fly_player.set("_invulnerable_remaining", 0.0)
+		var hearts_before := int(fly.get("_hearts"))
+		fly.call("_hurt_from_contact", fly_player)
+		await get_tree().process_frame
+		if int(fly.get("_hearts")) != hearts_before - 1:
+			error = "Flying into the Cave Dragon should cost a boss heart."
+	fly.queue_free()
+	if error == null:
+		var land := packed.instantiate()
+		add_child(land)
+		await get_tree().process_frame
+		land.combat_ready = true
+		land.set("_hit_cooldown", 0.0)
+		land.set("_recovering", false)
+		land.set("_state", 2)
+		var land_player := land.get("player") as Player
+		var dragon_body := land.get_node_or_null("Dragon") as Node2D
+		if land_player == null or dragon_body == null:
+			error = "Landed Cave Dragon contact test needs player and dragon."
+		else:
+			land_player.set("_invulnerable_remaining", 0.0)
+			land_player.global_position = dragon_body.global_position + Vector2(0.0, -80.0)
+			land_player.velocity = Vector2(0.0, 220.0)
+			var hearts_land := int(land.get("_hearts"))
+			land.call("_on_hurt_body", land_player)
+			await get_tree().process_frame
+			if int(land.get("_hearts")) != hearts_land - 1:
+				error = "Touching the landed Cave Dragon should hurt, including a jump onto him."
+		land.queue_free()
+	if error == null:
+		GameManager.erase_slot(0)
+		GameManager.set_setting("advanced_mode", true)
+		GameManager.prepare_slot_for_start(0)
+		GameManager.active_slot_index = 0
+		var lives_before := GameManager.get_lives()
+		var adv := packed.instantiate()
+		add_child(adv)
+		await get_tree().process_frame
+		adv.combat_ready = true
+		adv.set("_hit_cooldown", 0.0)
+		adv.set("_recovering", false)
+		adv.set("_state", 0)
+		var adv_player := adv.get("player") as Player
+		if adv_player == null:
+			error = "Advanced Cave Dragon arena needs a player."
+		else:
+			adv_player.set("_invulnerable_remaining", 0.0)
+			adv.call("_hurt_from_contact", adv_player)
+			await get_tree().process_frame
+			if GameManager.get_lives() != lives_before - 1:
+				error = "Dragon body contact in Advanced Mode should cost a campaign life."
+		adv.queue_free()
+		GameManager.erase_slot(0)
+	GameManager.set_setting("advanced_mode", previous_advanced)
 	return error
 
 

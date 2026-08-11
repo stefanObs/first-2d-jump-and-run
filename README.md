@@ -92,7 +92,7 @@ godot --headless --path . res://tests/test_moving_platform_obstruction.tscn
 | Level 3 | Stampede Bull | Bounce past horns; lasso glowing back ring 3× while stunned |
 | Level 7 | Midnight Coach | Horse chase; lasso door handles 1→2→3 |
 | Level 10 | Outlaw Kingpin | Lasso both guards, then the kingpin once. He paces a long stretch of the yard (springs spread along it for vaulting), pausing a beat at each turn; his walk cycle is driven by ground covered, and the frames share the standing pose's height and foot line so halting to shoot never pops his size |
-| Level 16 | Cave Dragon | Starts on the floor, takes off into L↔R flight spitting straight flameballs that die on the floor (2×2), land for lasso; repeat; ropes on the flying frames match the floor tied stages (neck, then neck+torso); 3rd lasso ties the mouth |
+| Level 16 | Cave Dragon | Starts on the floor, takes off into L↔R flight spitting straight flameballs that die on the floor (2×2), land for lasso; repeat; ropes on the flying frames match the floor tied stages (neck, then neck+torso); 3rd lasso ties the mouth. **Touching the dragon body** (fly, land, or takeoff) hurts like a cactus: respawn drop-back and lose a boss heart (Classic) or a campaign life (Advanced) |
 
 After Kingpin the campaign continues into the cave (levels 11–16). After the Cave Dragon: horizon victory ride, fade, dedication **VOM PAPI FÜR FINN**, then save select.
 

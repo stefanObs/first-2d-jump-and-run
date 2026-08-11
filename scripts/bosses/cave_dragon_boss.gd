@@ -85,6 +85,11 @@ func _ready() -> void:
 		_lasso.set_lasso_active(false)
 		_lasso.lassoed.connect(_on_dragon_lassoed)
 	if _hurt != null:
+		_hurt.monitoring = true
+		_hurt.monitorable = false
+		_hurt.collision_layer = 0
+		_hurt.collision_mask = 0
+		_hurt.set_collision_mask_value(2, true)
 		_hurt.body_entered.connect(_on_hurt_body)
 	combat_started.connect(_on_combat_started)
 
@@ -124,6 +129,7 @@ func get_heart_drop_position() -> Vector2:
 func _physics_process(delta: float) -> void:
 	if _won or _dragon == null or not combat_ready:
 		return
+	_resolve_dragon_contact()
 	match _state:
 		State.FLY:
 			_update_fly(delta)
@@ -354,16 +360,26 @@ func _on_flame_hurt(_player: Player) -> void:
 	fail_soft()
 
 
-func _on_hurt_body(body: Node2D) -> void:
-	if _won or not combat_ready:
+func _resolve_dragon_contact() -> void:
+	if _hurt == null or player == null:
 		return
-	if body is Player and _state == State.LAND:
-		# Side bump while landed hurts; stomp is ignored (nonviolent lasso focus).
-		var p := body as Player
-		if p.global_position.y < _dragon.global_position.y - 40.0 and p.velocity.y > 80.0:
-			p.velocity.y = -420.0
+	for body in _hurt.get_overlapping_bodies():
+		if body is Player:
+			_hurt_from_contact(body as Player)
 			return
-		fail_soft()
+
+
+func _on_hurt_body(body: Node2D) -> void:
+	if body is Player:
+		_hurt_from_contact(body as Player)
+
+
+func _hurt_from_contact(hit: Player) -> void:
+	if _won or not combat_ready or _state == State.WIN:
+		return
+	if hit == null or hit.is_invulnerable():
+		return
+	fail_soft()
 
 
 func _on_dragon_lassoed() -> void:

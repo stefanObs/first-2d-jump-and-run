@@ -13,7 +13,7 @@ size = Vector2(1600, 64)
 size = Vector2(184, 138)
 
 [sub_resource type="RectangleShape2D" id="DragonHurt"]
-size = Vector2(161, 126)
+size = Vector2(200, 156)
 
 [sub_resource type="RectangleShape2D" id="DragonLasso"]
 size = Vector2(115, 115)
