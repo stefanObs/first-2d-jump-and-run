@@ -54,6 +54,11 @@ const MOUNTED_BANNED_TYPES: PackedStringArray = [
 ## Cave trails have no ranch gates — belts, ladders and crystal ledges carry the routes.
 const CAVE_BANNED_TYPES: PackedStringArray = ["timed_door"]
 const LADDER_HEIGHT_CELLS := 3
+## Isolated 1–2 column dirt towers cannot host a gentle dune. Ease them down
+## to this many cells above the lower neighbor so the theme never paints a
+## steep earth volcano. Wider plateaus keep their height.
+const NARROW_DIRT_ISLAND_COLUMNS := 2
+const NARROW_DIRT_MAX_STEP_CELLS := 2
 const PLANK_STAMP_TYPES: PackedStringArray = ["platform", "ladder_ledge"]
 const WALKING_ENEMY_TYPES: PackedStringArray = [
 	"bandit", "bounty_bandit", "bull", "ninja", "rattlesnake", "scorpion",
@@ -138,6 +143,84 @@ static func lift_camps_to_dirt_top(objects: Array, trail: int) -> void:
 		if str(object.get("type", "")) != "checkpoint":
 			continue
 		object["y"] = standing_row_on_dirt(objects, int(object.get("x", 0)), trail)
+
+
+static func relax_narrow_dirt_stacks(objects: Array, trail: int) -> void:
+	## Sky-high dirt in one or two columns next to trail height becomes a steep
+	## earth face. Ease those spikes down so auto-dunes stay walkable and pretty.
+	for _pass in range(trail + 2):
+		var tops := _column_dirt_tops(objects, trail)
+		if tops.is_empty():
+			return
+		var changed := false
+		var xs: Array = tops.keys()
+		xs.sort()
+		for x in xs:
+			var col_x: int = int(x)
+			if _dirt_island_width(tops, col_x) > NARROW_DIRT_ISLAND_COLUMNS:
+				continue
+			var low_y := -1
+			if tops.has(col_x - 1):
+				low_y = maxi(low_y, int(tops[col_x - 1]))
+			if tops.has(col_x + 1):
+				low_y = maxi(low_y, int(tops[col_x + 1]))
+			if low_y < 0:
+				continue
+			var limit_y := maxi(low_y - NARROW_DIRT_MAX_STEP_CELLS, 0)
+			if int(tops[col_x]) >= limit_y:
+				continue
+			_clamp_column_dirt_top(objects, col_x, limit_y, trail)
+			changed = true
+		if not changed:
+			return
+
+
+static func _column_dirt_tops(objects: Array, trail: int) -> Dictionary:
+	var tops: Dictionary = {}
+	for value in objects:
+		if not (value is Dictionary):
+			continue
+		var object := value as Dictionary
+		if str(object.get("type", "")) != "ground":
+			continue
+		var gy := int(object.get("y", trail))
+		if gy > trail:
+			continue
+		var gx := int(object.get("x", 0))
+		if not tops.has(gx) or gy < int(tops[gx]):
+			tops[gx] = gy
+	return tops
+
+
+static func _dirt_island_width(tops: Dictionary, x: int) -> int:
+	if not tops.has(x):
+		return 0
+	var top := int(tops[x])
+	var width := 1
+	var cursor := x - 1
+	while tops.has(cursor) and absi(int(tops[cursor]) - top) <= 1:
+		width += 1
+		cursor -= 1
+	cursor = x + 1
+	while tops.has(cursor) and absi(int(tops[cursor]) - top) <= 1:
+		width += 1
+		cursor += 1
+	return width
+
+
+static func _clamp_column_dirt_top(objects: Array, x: int, limit_y: int, trail: int) -> void:
+	for i in range(objects.size() - 1, -1, -1):
+		var object := objects[i] as Dictionary
+		if str(object.get("type", "")) != "ground":
+			continue
+		if int(object.get("x", -1)) != x:
+			continue
+		var gy := int(object.get("y", trail))
+		if gy < limit_y:
+			objects.remove_at(i)
+	for gy in range(limit_y, trail + 1):
+		if not _has_ground_at(objects, x, gy):
+			objects.append({"type": "ground", "x": x, "y": gy})
 
 
 static func placement_row(
@@ -1577,6 +1660,7 @@ static func sanitize(source: Dictionary, slot_index: int) -> Dictionary:
 				if objects.size() >= 900:
 					break
 		realign_ladder_ledges(objects, trail)
+		relax_narrow_dirt_stacks(objects, trail)
 		lift_camps_to_dirt_top(objects, trail)
 		_strip_ground_standing_off_gaps(objects, trail, int(result["width"]))
 		_strip_overlapping_stamps(objects, trail, int(result["width"]))

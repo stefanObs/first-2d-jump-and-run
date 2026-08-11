@@ -362,6 +362,8 @@ static func _canyon_runs(data: Dictionary, trail: int) -> Array[Dictionary]:
 
 ## Merge vertically stacked dirt cells into one tall bank so steps look handpainted.
 static func _add_ground_columns(level: Node, data: Dictionary, grid: float, trail: int) -> void:
+	var objects: Array = data.get("objects", [])
+	CustomLevelStore.relax_narrow_dirt_stacks(objects, trail)
 	var columns: Dictionary = {}
 	# Pit columns stay as dirt banks so the trail crust runs unbroken behind the
 	# pit mouth (no sky/air pocket); only the mouth columns lose collision so the

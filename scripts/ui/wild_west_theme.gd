@@ -844,38 +844,66 @@ static func _slope_span(left_strip: Dictionary, right_strip: Dictionary) -> Dict
 		return {}
 	if _is_canyon_between(left_strip, right_strip):
 		return {}
-	# Kid-walkable dune: keep peak grade under ~floor_max_angle (45°).
+	# Kid-walkable dune: preferred run keeps peak grade under ~45°.
 	# Smoothstep peaks at ~1.5× average grade, so run ≈ 6.5× rise (and ≥160px).
-	var min_run := clampf(maxf(step * 6.5, step / tan(0.55)), 160.0, 420.0)
+	# Do not cap the run — a tall stack over a short trail looks like a dirt
+	# volcano. If the banks are too short, skip the dune (packed-earth bank).
+	var min_run := maxf(step * 6.5, 160.0)
 	# Stay inside these two banks only — never spill into a neighboring canyon.
 	var bank_left := float(left_strip["left"]) + 4.0
 	var bank_right := float(right_strip["right"]) - 4.0
-	var avail := maxf(bank_right - bank_left, 40.0)
-	var run := minf(min_run, avail)
 	const BANK_OVERLAP := 20.0
+	## Keep most of the dune on the higher mesa; only nibble a short lip of the
+	## lower trail so a 1-column tower cannot melt across the whole approach.
+	const LOW_LIP := 96.0
 	var rising_right := left_top > right_top
-	var x_start: float
-	var x_end: float
 	var y_start := left_top
 	var y_end := right_top
+	var high_left := float(right_strip["left"]) if rising_right else float(left_strip["left"])
+	var high_right := float(right_strip["right"]) if rising_right else float(left_strip["right"])
+	var low_left := float(left_strip["left"]) if rising_right else float(right_strip["left"])
+	var low_right := float(left_strip["right"]) if rising_right else float(right_strip["right"])
+	var high_w := maxf(high_right - high_left, 8.0)
+	var low_w := maxf(low_right - low_left, 8.0)
+	var avail := clampf(
+		high_w + minf(LOW_LIP, low_w) - 8.0,
+		40.0,
+		maxf(bank_right - bank_left, 40.0)
+	)
+	var run := minf(min_run, avail)
+	var x_start: float
+	var x_end: float
 	if rising_right:
 		# Climb onto the higher right bank; prefer ending on the high lip.
-		x_end = clampf(float(right_strip["left"]) + BANK_OVERLAP, bank_left + 20.0, bank_right)
-		x_start = clampf(x_end - run, bank_left, x_end - 40.0)
+		var min_start := maxf(bank_left, low_right - LOW_LIP)
+		x_end = clampf(high_left + BANK_OVERLAP, bank_left + 20.0, bank_right)
+		x_start = clampf(x_end - run, min_start, x_end - 40.0)
 		x_end = minf(x_start + run, bank_right)
 	else:
 		# Descend from the higher left bank.
-		x_start = clampf(float(left_strip["right"]) - BANK_OVERLAP, bank_left, bank_right - 20.0)
-		x_end = clampf(x_start + run, x_start + 40.0, bank_right)
+		var max_end := minf(bank_right, low_left + LOW_LIP)
+		x_start = clampf(high_right - BANK_OVERLAP, bank_left, bank_right - 20.0)
+		x_end = clampf(x_start + run, x_start + 40.0, max_end)
 		x_start = maxf(x_end - run, bank_left)
-	# Final guard: keep the dune strictly between these banks.
+	# Final guard: keep the dune strictly between these banks, and do not eat
+	# more of the lower trail than LOW_LIP.
 	x_start = clampf(x_start, bank_left, bank_right - 40.0)
 	x_end = clampf(x_end, x_start + 40.0, bank_right)
+	if rising_right:
+		x_start = maxf(x_start, low_right - LOW_LIP)
+	else:
+		x_end = minf(x_end, low_left + LOW_LIP)
 	if x_end - x_start < 40.0:
 		return {}
+	var actual_run := x_end - x_start
 	# When the banks are too short for a full smoothstep dune, use a linear
 	# collision grade (lower peak angle) so kids can still walk it.
-	var curved := (x_end - x_start) >= min_run * 0.85
+	var curved := actual_run >= min_run * 0.85
+	var avg_grade := step / actual_run
+	var peak_grade := avg_grade * (1.5 if curved else 1.0)
+	# Stretched dunes look like cliffs of earth — keep a packed mesa instead.
+	if peak_grade > tan(deg_to_rad(50.0)) or avg_grade > tan(deg_to_rad(40.0)):
+		return {}
 	return {
 		"x_start": x_start,
 		"y_start": y_start,

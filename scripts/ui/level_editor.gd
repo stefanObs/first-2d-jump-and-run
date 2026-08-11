@@ -972,6 +972,7 @@ func _on_canyon_adjust(start_x: int, end_x: int, side: String, grow: bool) -> vo
 		objects, _trail_y(), width, start_x, end_x, side, grow
 	):
 		return
+	CustomLevelStore.relax_narrow_dirt_stacks(objects, _trail_y())
 	CustomLevelStore.lift_camps_to_dirt_top(objects, _trail_y())
 	_data["objects"] = objects
 	_mark_dirty()
@@ -1014,6 +1015,7 @@ func _remove_at(x: int, y: int) -> void:
 			break
 	if not removed:
 		return
+	CustomLevelStore.relax_narrow_dirt_stacks(objects, trail)
 	CustomLevelStore.lift_camps_to_dirt_top(objects, trail)
 	if objects == before:
 		return
@@ -1233,6 +1235,7 @@ func _place(x: int, y: int) -> void:
 				if str(objects[i].get("type", "")) == "goal":
 					objects.remove_at(i)
 		objects.append(incoming)
+	CustomLevelStore.relax_narrow_dirt_stacks(objects, trail)
 	CustomLevelStore.lift_camps_to_dirt_top(objects, trail)
 	if objects == before:
 		return

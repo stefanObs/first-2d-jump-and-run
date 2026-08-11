@@ -226,6 +226,7 @@ func _ready() -> void:
 	failures += await _run("Workshop default trail width matches built-ins", _test_workshop_default_width)
 	failures += await _run("Workshop trail length add and remove", _test_workshop_trail_length_resize)
 	failures += await _run("Trail workshop uses one trail row and stacked dirt", _test_trail_row_model)
+	failures += await _run("Narrow dirt spikes stay gentle dunes", _test_narrow_dirt_spike_stays_gentle)
 	failures += await _run("Workshop ground props stamp one row above dirt", _test_workshop_ground_prop_offset)
 	failures += await _run("Camps sit on top of stacked dirt", _test_camps_sit_on_stacked_dirt)
 	failures += await _run(
@@ -7948,6 +7949,75 @@ func _test_trail_row_model() -> Variant:
 		level2_controller.queue_free()
 		return "Desert slopes must not use flat Polygon2D fills."
 	level2_controller.queue_free()
+	return null
+
+
+func _test_narrow_dirt_spike_stays_gentle() -> Variant:
+	## Edited Dusty Trail stacked dirt to the sky in one column; that used to
+	## paint a steep earth volcano across the neighboring trail.
+	var trail := CustomLevelStore.trail_row(10)
+	var objects: Array = []
+	for x in range(16, 33):
+		objects.append({"type": "ground", "x": x, "y": trail})
+	for y in [6, 4, 2, 1, 0]:
+		objects.append({"type": "ground", "x": 28, "y": y})
+	CustomLevelStore.relax_narrow_dirt_stacks(objects, trail)
+	var spike_top := CustomLevelStore.highest_dirt_row(objects, 28, trail)
+	if spike_top != trail - CustomLevelStore.NARROW_DIRT_MAX_STEP_CELLS:
+		return "A 1-column sky spike should ease to a 2-cell bank (top y=%d, expected %d)." % [
+			spike_top, trail - CustomLevelStore.NARROW_DIRT_MAX_STEP_CELLS
+		]
+	# Wide plateaus keep their height so kids can still build tall hills.
+	var plateau: Array = []
+	for x in range(10, 20):
+		plateau.append({"type": "ground", "x": x, "y": trail})
+	for x in range(12, 18):
+		plateau.append({"type": "ground", "x": x, "y": trail - 4})
+	CustomLevelStore.relax_narrow_dirt_stacks(plateau, trail)
+	var plateau_top := CustomLevelStore.highest_dirt_row(plateau, 15, trail)
+	if plateau_top != trail - 4:
+		return "A wide raised dirt plateau should keep its height (top y=%d)." % plateau_top
+	# Theme must not stretch a dune from trail up to the sky over a 1-column tower.
+	var steep := WildWestTheme._slope_span(
+		{"left": 0.0, "right": 480.0, "top": 360.0, "bottom": 400.0},
+		{"left": 480.0, "right": 520.0, "top": 0.0, "bottom": 400.0}
+	)
+	if not steep.is_empty():
+		return "A sky-high 1-column stack must not paint a steep dirt volcano."
+	var gentle := WildWestTheme._slope_span(
+		{"left": 0.0, "right": 40.0, "top": 320.0, "bottom": 400.0},
+		{"left": 40.0, "right": 80.0, "top": 280.0, "bottom": 400.0}
+	)
+	if gentle.is_empty():
+		return "A 1-cell height step on adjacent dirt should still paint a dune."
+	var data := CustomLevelStore.default_level(0)
+	data["height"] = 10
+	data["width"] = 36
+	data["objects"] = objects.duplicate(true)
+	data["objects"].append({"type": "goal", "x": 34, "y": trail - 1})
+	var cleaned := CustomLevelStore.sanitize(data, 0)
+	var level := LevelController.new()
+	CustomLevelBuilder.build(level, cleaned)
+	WildWestTheme.apply_to_level(level)
+	var merged := WildWestTheme._merge_segments(WildWestTheme._collect_ground_segments(level))
+	for i in range(merged.size() - 1):
+		if WildWestTheme._is_canyon_between(merged[i], merged[i + 1]):
+			continue
+		var span := WildWestTheme._slope_span(merged[i], merged[i + 1])
+		if span.is_empty():
+			continue
+		var run := float(span["x_end"]) - float(span["x_start"])
+		var drop := absf(float(span["y_end"]) - float(span["y_start"]))
+		if run < 40.0:
+			level.free()
+			return "Walkable dunes need a gentle run."
+		var peak := drop / run
+		if bool(span.get("curved", true)):
+			peak *= 1.5
+		if peak > tan(deg_to_rad(55.0)):
+			level.free()
+			return "Relaxed dirt spikes must not leave a dune steeper than 55°."
+	level.free()
 	return null
 
 
