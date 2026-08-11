@@ -35,6 +35,8 @@ const RUN_SPEED_ENTER := 34.0
 const RUN_SPEED_EXIT := 14.0
 const JUMP_ANIM_AIR_TIME := 0.07
 const CLIMB_SPEED := 160.0
+## Near climb_top, Space is a jump so the cowboy can hop onto a nearby ledge or mover.
+const LADDER_TOP_JUMP_SLACK := 22.0
 
 var input_enabled: bool = true
 var stars_collected: int = 0
@@ -69,6 +71,8 @@ var _nearby_ladders: Array[Ladder] = []
 var _active_ladder: Ladder = null
 var _climbing: bool = false
 var _climb_anim_phase: float = 0.0
+## Jump was used to climb; ignore that hold until Space is released (no re-grab / auto-jump).
+var _climb_up_latched: bool = false
 
 
 func _ready() -> void:
@@ -112,6 +116,8 @@ func _physics_process(delta: float) -> void:
 	_jump_assist.notify_grounded(on_floor)
 	_jump_assist.tick(delta)
 
+	if input_enabled and not Input.is_action_pressed(&"jump"):
+		_climb_up_latched = false
 	if input_enabled and Input.is_action_just_pressed(&"jump"):
 		_jump_assist.notify_jump_pressed()
 	if input_enabled and Input.is_action_just_pressed(&"lasso"):
@@ -198,9 +204,21 @@ func _try_begin_climb() -> bool:
 			return true
 		return false
 	if want_up:
+		if _climb_up_latched:
+			return false
+		## At the top, Space jumps onto a nearby object instead of grabbing the rungs again.
+		if _is_at_ladder_top(ladder) and not want_down:
+			return false
 		_start_climb(ladder)
+		_climb_up_latched = true
 		return true
 	return false
+
+
+func _is_at_ladder_top(ladder: Ladder) -> bool:
+	if ladder == null or not is_instance_valid(ladder):
+		return false
+	return global_position.y <= ladder.climb_top_y() + LADDER_TOP_JUMP_SLACK
 
 
 func _start_climb(ladder: Ladder) -> void:
@@ -236,11 +254,20 @@ func _apply_climb(delta: float) -> void:
 	var climb_dir := 0.0
 	if Input.is_action_pressed(&"jump"):
 		climb_dir -= 1.0
+		_climb_up_latched = true
 	if Input.is_action_pressed(&"move_down"):
 		climb_dir += 1.0
 
-	# Left/right while climbing detaches (drop or step off).
+	var top := _active_ladder.climb_top_y()
+	var bottom := _active_ladder.climb_bottom_y()
+	var at_top := global_position.y <= top + LADDER_TOP_JUMP_SLACK
 	var side := Input.get_axis(&"move_left", &"move_right")
+	# Fresh Space at the top hops off the rungs onto a nearby ledge, mover, or badge.
+	if at_top and Input.is_action_just_pressed(&"jump"):
+		_jump_from_ladder(side)
+		return
+
+	# Left/right while climbing detaches (drop or step off).
 	if absf(side) > 0.55 and absf(climb_dir) < 0.1:
 		_end_climb()
 		velocity.x = side * move_speed * 0.45
@@ -251,14 +278,14 @@ func _apply_climb(delta: float) -> void:
 	velocity.x = 0.0
 	velocity.y = climb_dir * CLIMB_SPEED
 
-	var top := _active_ladder.climb_top_y()
-	var bottom := _active_ladder.climb_bottom_y()
 	if global_position.y <= top and climb_dir < 0.0:
 		# Feet origin; land above the 24px one-way plank centered on climb_top.
 		global_position.y = top - 14.0
 		velocity.y = 0.0
 		_end_climb()
 		velocity.y = -80.0
+		_climb_up_latched = true
+		_jump_assist.notify_grounded(true)
 		return
 	if global_position.y >= bottom and climb_dir > 0.0:
 		global_position.y = bottom
@@ -270,6 +297,22 @@ func _apply_climb(delta: float) -> void:
 		_climb_anim_phase += delta * 8.0
 	_jump_assist.reset()
 	_jump_cut_applied = true
+
+
+func _jump_from_ladder(side: float) -> void:
+	_ensure_jump_assist()
+	_ensure_modes()
+	_end_climb()
+	_climb_up_latched = true
+	if absf(side) > 0.2:
+		velocity.x = signf(side) * get_run_speed()
+	else:
+		velocity.x = 0.0
+	velocity.y = jump_velocity * _modes.jump_multiplier()
+	_jump_cut_applied = false
+	_showing_jump = true
+	_jump_assist.consume_jump()
+	AudioManager.play_sfx(&"jump")
 
 
 
@@ -376,6 +419,7 @@ func respawn_at(world_position: Vector2) -> void:
 	_showing_run = false
 	_showing_jump = false
 	_end_climb()
+	_climb_up_latched = false
 	_nearby_ladders.clear()
 	_invulnerable_remaining = respawn_invulnerability_time
 	respawned.emit(world_position)

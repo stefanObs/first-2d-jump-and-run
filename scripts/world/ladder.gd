@@ -2,6 +2,7 @@ class_name Ladder
 extends Area2D
 
 ## Vertical climb zone. Space / W / Up climbs up; S / Down climbs down.
+## At the top, Space jumps so the cowboy can hop onto a nearby object.
 
 const LADDER_TEX := preload("res://assets/world/ladder.png")
 const GRID := 40.0

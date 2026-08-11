@@ -208,6 +208,7 @@ func _ready() -> void:
 	failures += await _run("Canyon rafts are one-way jump-through platforms", _test_one_way_moving_platforms)
 	failures += await _run("Custom level store and builder work", _test_custom_level_builder)
 	failures += await _run("Ladder branches land on the upper ledge", _test_ladder_branch_upper_ledge)
+	failures += await _run("Cowboy can jump from the top of a ladder", _test_jump_from_ladder_top)
 	failures += await _run("Cave levels place belts fences and ladders", _test_cave_levels_belts_fences_ladders)
 	failures += await _run("Workshop default trail width matches built-ins", _test_workshop_default_width)
 	failures += await _run("Workshop trail length add and remove", _test_workshop_trail_length_resize)
@@ -6910,6 +6911,67 @@ func _test_ladder_branch_upper_ledge() -> Variant:
 	if not default_errors.is_empty():
 		return "Default workshop trail: %s" % default_errors[0]
 	return null
+
+
+func _test_jump_from_ladder_top() -> Variant:
+	Input.action_release(&"jump")
+	Input.action_release(&"move_down")
+	Input.action_release(&"move_left")
+	Input.action_release(&"move_right")
+	var ladder := Ladder.new()
+	ladder.height_cells = CustomLevelStore.LADDER_HEIGHT_CELLS
+	ladder.position = Vector2(400, 400)
+	add_child(ladder)
+	var player := Player.new()
+	add_child(player)
+	await get_tree().process_frame
+	player.set_physics_process(false)
+	player.register_ladder(ladder)
+	var top := ladder.climb_top_y()
+	player.global_position = Vector2(ladder.center_x(), top - 14.0)
+	player._climb_up_latched = false
+	Input.action_press(&"jump")
+	var error: Variant = null
+	if player._try_begin_climb():
+		error = "Jump at the ladder top should not grab the rungs."
+	else:
+		player._jump_assist.notify_jump_pressed()
+		player._try_jump(true)
+		if player._climbing:
+			error = "Jump at the ladder top must leave the cowboy off the rungs."
+		elif player.velocity.y > player.jump_velocity * 0.9:
+			error = "Jump at the ladder top should use a full jump (got %.1f)." % player.velocity.y
+	if error == null:
+		player.velocity = Vector2.ZERO
+		player._start_climb(ladder)
+		player.global_position = Vector2(ladder.center_x(), top + 2.0)
+		player._jump_from_ladder(1.0)
+		if player._climbing:
+			error = "Hopping off the ladder top should end the climb."
+		elif player.velocity.y > player.jump_velocity * 0.9:
+			error = "Hopping off the ladder top should use a full jump (got %.1f)." % player.velocity.y
+		elif player.velocity.x <= 0.0:
+			error = "Hopping toward a nearby object should keep sideways speed."
+	if error == null:
+		player.velocity = Vector2.ZERO
+		player._start_climb(ladder)
+		player._climb_up_latched = true
+		player.global_position = Vector2(ladder.center_x(), top + 70.0)
+		player._apply_climb(0.016)
+		if not player._climbing:
+			error = "Holding jump mid-ladder should keep climbing."
+		elif player.velocity.y >= 0.0:
+			error = "Holding jump mid-ladder should move up the rungs."
+	if error == null:
+		player._end_climb()
+		player.global_position = Vector2(ladder.center_x(), top - 14.0)
+		player._climb_up_latched = true
+		if player._try_begin_climb():
+			error = "A held climb jump must not re-grab the rungs at the top."
+	Input.action_release(&"jump")
+	player.queue_free()
+	ladder.queue_free()
+	return error
 
 
 func _test_cave_levels_belts_fences_ladders() -> Variant:
