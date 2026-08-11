@@ -8791,15 +8791,20 @@ func _test_workshop_back_navigation() -> Variant:
 	if editor_back == null:
 		editor.queue_free()
 		return "Trail editor should expose a top back button."
+	if editor.find_child("BackButton", true, false) != null:
+		editor.queue_free()
+		return "Trail editor should not keep a second Back button under the grid."
 	if not editor_back.pressed.is_connected(editor._return_to_hub):
 		editor.queue_free()
 		return "Trail editor back button should return to the campaign workshop."
+	if editor_back.icon == null:
+		editor.queue_free()
+		return "Trail editor Back button should show a kid-readable icon."
 	var save_btn := editor.find_child("SaveButton", true, false) as Button
 	var play_btn := editor.find_child("PlayTestButton", true, false) as Button
 	var length_plus := editor.find_child("LengthPlusButton", true, false) as Button
 	if (
-		editor_back.icon == null
-		or save_btn == null
+		save_btn == null
 		or save_btn.icon == null
 		or play_btn == null
 		or play_btn.icon == null
@@ -8808,6 +8813,17 @@ func _test_workshop_back_navigation() -> Variant:
 	):
 		editor.queue_free()
 		return "Trail editor chrome buttons should show kid-readable icons."
+	var chrome := editor.find_child("ActionChrome", true, false) as HBoxContainer
+	if chrome == null:
+		editor.queue_free()
+		return "Trail editor should keep Back with Save and Play in one top action row."
+	var chrome_names: Array[String] = []
+	for child in chrome.get_children():
+		if child is Button:
+			chrome_names.append(String(child.name))
+	if ",".join(chrome_names) != "BackButtonTop,SaveButton,ResetButton,ExportTrailButton,ImportTrailButton,PlayTestButton":
+		editor.queue_free()
+		return "Trail editor action row should be Back, Save, Reset, Export, Import, Play Test."
 	editor.queue_free()
 	return null
 

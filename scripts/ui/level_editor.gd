@@ -134,42 +134,37 @@ func _build_ui() -> void:
 	add_child(root)
 
 	var heading := HBoxContainer.new()
+	heading.name = "ActionChrome"
+	heading.add_theme_constant_override(&"separation", 6)
 	root.add_child(heading)
-	_add_action(
+	var back := _add_action(
 		heading,
-		tr("Back to Campaign Workshop"),
+		tr("Back"),
 		_return_to_hub,
 		"BackButtonTop",
 		"res://assets/ui/menu_icon_back.png"
 	)
-	var title := Label.new()
-	title.text = (
-		tr("Edit Campaign Level")
-		if str(_data.get("kind", "")) == "override"
-		else tr("Add Campaign Level")
+	back.tooltip_text = tr("Back to Campaign Workshop")
+	back.custom_minimum_size = Vector2(108, 40)
+	MenuChrome.apply_button_icon(back, "res://assets/ui/menu_icon_back.png", 36)
+	_save_button = _add_action(
+		heading, tr("Save Trail"), _save, "SaveButton", "res://assets/ui/menu_icon_save.png"
 	)
-	title.add_theme_font_size_override(&"font_size", 18)
-	title.add_theme_color_override(&"font_color", Color(0.35, 0.16, 0.05))
-	title.custom_minimum_size.x = 220
-	heading.add_child(title)
-	_title_edit = LineEdit.new()
-	_title_edit.text = str(_data.get("title", "Family Trail"))
-	_title_edit.placeholder_text = tr("Trail name")
-	_title_edit.custom_minimum_size = Vector2(240, 30)
-	_title_edit.text_changed.connect(_on_title_changed)
-	heading.add_child(_title_edit)
-	_level_style_dropdown = OptionButton.new()
-	_level_style_dropdown.name = "LevelStyle"
-	_level_style_dropdown.custom_minimum_size = Vector2(128, 30)
-	_level_style_dropdown.add_theme_font_size_override(&"font_size", 12)
-	_level_style_dropdown.add_item(tr("Desert"), 0)
-	_level_style_dropdown.add_item(tr("Cave"), 1)
-	_level_style_dropdown.add_item(tr("Horse"), 2)
-	_level_style_dropdown.select(_theme_index_from_data())
-	_level_style_dropdown.item_selected.connect(_on_style_selected)
-	heading.add_child(_level_style_dropdown)
-	_style_dropdown(_level_style_dropdown)
-	_apply_style_dropdown_icons()
+	_reset_button = _add_action(
+		heading, tr("Reset Changes"), _request_reset, "ResetButton", "res://assets/ui/menu_icon_restore.png"
+	)
+	_add_action(
+		heading, tr("Export Trail"), _open_export_dialog, "ExportTrailButton", "res://assets/ui/menu_icon_export.png"
+	)
+	_add_action(
+		heading, tr("Import Trail"), _open_import_dialog, "ImportTrailButton", "res://assets/ui/menu_icon_import.png"
+	)
+	_add_action(
+		heading, tr("Play Test"), _play_test, "PlayTestButton", "res://assets/ui/menu_icon_play.png"
+	)
+	var chrome_spacer := Control.new()
+	chrome_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	heading.add_child(chrome_spacer)
 	var length_box := HBoxContainer.new()
 	length_box.add_theme_constant_override(&"separation", 4)
 	heading.add_child(length_box)
@@ -192,6 +187,39 @@ func _build_ui() -> void:
 	_length_plus.pressed.connect(func() -> void: _change_length(CustomLevelStore.WIDTH_STEP))
 	length_box.add_child(_length_plus)
 	_update_length_buttons()
+
+	var identity := HBoxContainer.new()
+	identity.name = "TrailIdentity"
+	identity.add_theme_constant_override(&"separation", 8)
+	root.add_child(identity)
+	var title := Label.new()
+	title.text = (
+		tr("Edit Campaign Level")
+		if str(_data.get("kind", "")) == "override"
+		else tr("Add Campaign Level")
+	)
+	title.add_theme_font_size_override(&"font_size", 18)
+	title.add_theme_color_override(&"font_color", Color(0.35, 0.16, 0.05))
+	title.custom_minimum_size.x = 220
+	identity.add_child(title)
+	_title_edit = LineEdit.new()
+	_title_edit.text = str(_data.get("title", "Family Trail"))
+	_title_edit.placeholder_text = tr("Trail name")
+	_title_edit.custom_minimum_size = Vector2(240, 30)
+	_title_edit.text_changed.connect(_on_title_changed)
+	identity.add_child(_title_edit)
+	_level_style_dropdown = OptionButton.new()
+	_level_style_dropdown.name = "LevelStyle"
+	_level_style_dropdown.custom_minimum_size = Vector2(128, 30)
+	_level_style_dropdown.add_theme_font_size_override(&"font_size", 12)
+	_level_style_dropdown.add_item(tr("Desert"), 0)
+	_level_style_dropdown.add_item(tr("Cave"), 1)
+	_level_style_dropdown.add_item(tr("Horse"), 2)
+	_level_style_dropdown.select(_theme_index_from_data())
+	_level_style_dropdown.item_selected.connect(_on_style_selected)
+	identity.add_child(_level_style_dropdown)
+	_style_dropdown(_level_style_dropdown)
+	_apply_style_dropdown_icons()
 
 	var instructions := Label.new()
 	instructions.text = tr("1. Pick a stamp   2. Pick a square   3. Save or Play Test")
@@ -344,33 +372,6 @@ func _build_ui() -> void:
 	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_status.add_theme_font_size_override(&"font_size", 13)
 	root.add_child(_status)
-
-	var actions := HBoxContainer.new()
-	actions.alignment = BoxContainer.ALIGNMENT_CENTER
-	actions.add_theme_constant_override(&"separation", 8)
-	root.add_child(actions)
-	_save_button = _add_action(
-		actions, tr("Save Trail"), _save, "SaveButton", "res://assets/ui/menu_icon_save.png"
-	)
-	_reset_button = _add_action(
-		actions, tr("Reset Changes"), _request_reset, "ResetButton", "res://assets/ui/menu_icon_restore.png"
-	)
-	_add_action(
-		actions, tr("Export Trail"), _open_export_dialog, "ExportTrailButton", "res://assets/ui/menu_icon_export.png"
-	)
-	_add_action(
-		actions, tr("Import Trail"), _open_import_dialog, "ImportTrailButton", "res://assets/ui/menu_icon_import.png"
-	)
-	_add_action(
-		actions, tr("Play Test"), _play_test, "PlayTestButton", "res://assets/ui/menu_icon_play.png"
-	)
-	_add_action(
-		actions,
-		tr("Back to Campaign Workshop"),
-		_return_to_hub,
-		"BackButton",
-		"res://assets/ui/menu_icon_back.png"
-	)
 
 	var preview_label := Label.new()
 	preview_label.text = tr("Live preview — full height, edge scroll to pan")
