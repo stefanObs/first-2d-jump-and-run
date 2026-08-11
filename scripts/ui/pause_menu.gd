@@ -175,10 +175,8 @@ func _style_panel() -> void:
             var hover := MenuChrome.wood_style(MenuChrome.WOOD_HOVER, 8)
             hover.content_margin_top = 6
             hover.content_margin_bottom = 6
-            button.add_theme_stylebox_override(&"normal", normal)
-            button.add_theme_stylebox_override(&"hover", hover)
-            button.add_theme_stylebox_override(&"pressed", hover)
-            button.add_theme_stylebox_override(&"focus", hover)
+            MenuChrome.apply_button_styleboxes(button, normal, hover)
+    MenuChrome.bind_menu_buttons(self)
 
 
 func _fit_panel_to_viewport() -> void:

@@ -163,6 +163,7 @@ func _build_ui() -> void:
         var first := rows.get_child(0)
         if first is Control:
             (first as Control).grab_focus()
+    MenuChrome.bind_menu_buttons(self)
 
 
 func _add_campaign_row(parent: VBoxContainer, entry: Dictionary, campaign_index: int) -> void:
@@ -299,10 +300,7 @@ func _make_circle_chrome_button(
     button.custom_minimum_size = Vector2(108, 88)
     button.tooltip_text = tooltip
     var empty := StyleBoxEmpty.new()
-    button.add_theme_stylebox_override(&"normal", empty)
-    button.add_theme_stylebox_override(&"hover", empty)
-    button.add_theme_stylebox_override(&"pressed", empty)
-    button.add_theme_stylebox_override(&"focus", empty)
+    MenuChrome.apply_button_styleboxes(button, empty, empty)
 
     var plate := TextureRect.new()
     plate.name = "Plate"
@@ -360,10 +358,7 @@ func _make_icon_button(
     hover.content_margin_right = 12
     hover.content_margin_top = 6
     hover.content_margin_bottom = 6
-    button.add_theme_stylebox_override(&"normal", normal)
-    button.add_theme_stylebox_override(&"hover", hover)
-    button.add_theme_stylebox_override(&"pressed", hover)
-    button.add_theme_stylebox_override(&"focus", hover)
+    MenuChrome.apply_button_styleboxes(button, normal, hover)
     button.pressed.connect(action)
     return button
 

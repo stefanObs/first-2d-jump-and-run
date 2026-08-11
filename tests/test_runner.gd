@@ -15,6 +15,7 @@ func _ready() -> void:
 	failures += await _run("GameManager save slots persist", _test_save_slots)
 	failures += await _run("Portable saves fall back when exe folder is read-only", _test_save_paths_writable_fallback)
 	failures += await _run("Save select scene loads", _test_save_select_scene)
+	failures += await _run("Menu buttons have hover and click feedback", _test_menu_button_hover_and_click)
 	failures += await _run("Save select offers Advanced Mode in Settings", _test_settings_trail_mode_dropdown)
 	failures += await _run("Settings dropdown popups stay readable", _test_settings_dropdown_popup_contrast)
 	failures += await _run("Settings trail mode selection applies to slots", _test_settings_trail_mode_selection)
@@ -1278,6 +1279,87 @@ func _test_save_select_scene() -> Variant:
 	return error
 
 
+func _test_menu_button_hover_and_click() -> Variant:
+	var button := Button.new()
+	button.custom_minimum_size = Vector2(160, 44)
+	MenuChrome.style_wood_button(button)
+	var hover := button.get_theme_stylebox("hover")
+	var pressed := button.get_theme_stylebox("pressed")
+	if not (hover is StyleBoxFlat) or not (pressed is StyleBoxFlat):
+		button.free()
+		return "Wood buttons need hover and pressed styleboxes."
+	var hover_fill := (hover as StyleBoxFlat).bg_color
+	var pressed_fill := (pressed as StyleBoxFlat).bg_color
+	if hover_fill.is_equal_approx(pressed_fill):
+		button.free()
+		return "Pressed wood should be darker than the hover fill."
+	if pressed_fill.r >= hover_fill.r:
+		button.free()
+		return "Click should darken the wood button."
+	if not bool(button.get_meta("_menu_btn_feedback", false)):
+		button.free()
+		return "Menu buttons should bind hover and click motion."
+	button.mouse_entered.emit()
+	var hover_target: Vector2 = button.get_meta("_menu_feedback_target", Vector2.ONE)
+	if hover_target.x <= 1.001:
+		button.free()
+		return "Hover should pop the button larger."
+	button.button_down.emit()
+	var press_target: Vector2 = button.get_meta("_menu_feedback_target", Vector2.ONE)
+	if press_target.x >= 0.999:
+		button.free()
+		return "Click should squash the button."
+	button.free()
+
+	var packed: PackedScene = load("res://scenes/ui/save_select.tscn")
+	if packed == null:
+		return "Missing save select scene."
+	var scene := packed.instantiate()
+	add_child(scene)
+	await get_tree().process_frame
+	var error: Variant = null
+	for path in ["BuildTrailButton", "SettingsButton", "HeartsButton", "Slots/Slot1"]:
+		var chrome := scene.get_node_or_null(path) as Button
+		if chrome == null or not bool(chrome.get_meta("_menu_btn_feedback", false)):
+			error = "Start-screen button %s needs hover/click feedback." % path
+			break
+	var pause_packed: PackedScene = load("res://scenes/ui/pause_menu.tscn")
+	if error == null and pause_packed == null:
+		error = "Missing pause menu scene."
+	var pause: PauseMenu = null
+	if error == null:
+		pause = pause_packed.instantiate() as PauseMenu
+		add_child(pause)
+		await get_tree().process_frame
+		var continue_btn := pause.get_node_or_null("Panel/Margin/VBox/ContinueButton") as Button
+		if continue_btn == null or not bool(continue_btn.get_meta("_menu_btn_feedback", false)):
+			error = "Pause menu buttons need hover/click feedback."
+		else:
+			var pause_hover := continue_btn.get_theme_stylebox("hover")
+			var pause_pressed := continue_btn.get_theme_stylebox("pressed")
+			if (
+				pause_hover is StyleBoxFlat
+				and pause_pressed is StyleBoxFlat
+				and (pause_hover as StyleBoxFlat).bg_color.is_equal_approx(
+					(pause_pressed as StyleBoxFlat).bg_color
+				)
+			):
+				error = "Pause buttons need a distinct pressed look."
+	var grid := Control.new()
+	grid.name = "StampGrid"
+	var cell := Button.new()
+	grid.add_child(cell)
+	add_child(grid)
+	MenuChrome.bind_menu_buttons(grid)
+	if error == null and bool(cell.get_meta("_menu_btn_feedback", false)):
+		error = "Stamp grid cells should not use menu hover/click motion."
+	grid.queue_free()
+	if pause != null:
+		pause.queue_free()
+	scene.queue_free()
+	return error
+
+
 func _test_settings_trail_mode_dropdown() -> Variant:
 	var packed: PackedScene = load("res://scenes/ui/save_select.tscn")
 	if packed == null:
@@ -1893,6 +1975,9 @@ func _test_handmade_progress_and_sfx() -> Variant:
 	var effect := AudioManager._make_effect(&"collect")
 	if effect == null or effect.data.is_empty():
 		return "Collect effect should produce playable sound data."
+	var click := AudioManager._make_effect(&"ui_click")
+	if click == null or click.data.is_empty():
+		return "Menu click effect should produce playable sound data."
 	for dragon_sfx in [
 		&"dragon_roar",
 		&"dragon_spit",

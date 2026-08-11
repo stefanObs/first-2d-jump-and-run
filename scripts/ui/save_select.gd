@@ -125,6 +125,7 @@ func _ready() -> void:
 	_sync_play_settings_from_focused_slot()
 	_bob_title()
 	_breathe_mascots()
+	MenuChrome.bind_menu_buttons(self)
 
 
 func _exit_tree() -> void:
@@ -279,12 +280,13 @@ func _refresh_character_pickers() -> void:
 func _style_character_picker(button: Button, selected: bool, display_name: String = "") -> void:
 	if button == null:
 		return
-	button.pivot_offset = button.custom_minimum_size * 0.5
-	button.scale = Vector2(1.12, 1.12) if selected else Vector2(0.86, 0.86)
 	button.modulate = Color(1, 1, 1, 1) if selected else Color(0.55, 0.52, 0.48, 0.75)
 	## No painted border/fill — selection is scale + ChosenMark (same look as first boot).
 	var empty := StyleBoxEmpty.new()
 	_apply_button_styles(button, empty, empty)
+	MenuChrome.set_button_rest_scale(
+		button, Vector2(1.12, 1.12) if selected else Vector2(0.86, 0.86)
+	)
 	var mark := button.get_node_or_null("ChosenMark") as CanvasItem
 	if mark != null:
 		mark.visible = selected
@@ -560,17 +562,14 @@ func _style_action_button(button: Button) -> void:
 func _apply_cream_button_fonts(button: Button) -> void:
 	button.add_theme_color_override(&"font_color", TITLE_CREAM)
 	button.add_theme_color_override(&"font_hover_color", TITLE_CREAM_HOVER)
-	button.add_theme_color_override(&"font_pressed_color", TITLE_CREAM)
+	button.add_theme_color_override(&"font_pressed_color", MenuChrome.TITLE_CREAM_PRESSED)
 	button.add_theme_color_override(&"font_focus_color", TITLE_CREAM)
 	button.add_theme_color_override(&"font_outline_color", Color(0.22, 0.08, 0.03, 0.85))
 	button.add_theme_constant_override(&"outline_size", 3)
 
 
 func _apply_button_styles(button: Button, normal: StyleBox, hover: StyleBox) -> void:
-	button.add_theme_stylebox_override(&"normal", normal)
-	button.add_theme_stylebox_override(&"hover", hover)
-	button.add_theme_stylebox_override(&"pressed", hover)
-	button.add_theme_stylebox_override(&"focus", hover)
+	MenuChrome.apply_button_styleboxes(button, normal, hover)
 
 
 func _wood_style(fill: Color, radius: int, _pad_v: int) -> StyleBoxFlat:
@@ -803,7 +802,9 @@ func _flash_status(message: String) -> void:
 func _highlight() -> void:
 	for i in range(_cards.size()):
 		var selected := i == _index
-		_cards[i].scale = Vector2(1.04, 1.04) if selected else Vector2.ONE
+		MenuChrome.set_button_rest_scale(
+			_cards[i], Vector2(1.04, 1.04) if selected else Vector2.ONE
+		)
 		var ring := _cards[i].get_node_or_null("SelectRing") as CanvasItem
 		if ring != null:
 			ring.visible = selected

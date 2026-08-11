@@ -111,15 +111,13 @@ func _style_readable() -> void:
         var back_hover := MenuChrome.wood_style(MenuChrome.WOOD_HOVER, 8)
         back_hover.content_margin_top = 8
         back_hover.content_margin_bottom = 8
-        back.add_theme_stylebox_override(&"normal", back_normal)
-        back.add_theme_stylebox_override(&"hover", back_hover)
-        back.add_theme_stylebox_override(&"pressed", back_hover)
-        back.add_theme_stylebox_override(&"focus", back_hover)
+        MenuChrome.apply_button_styleboxes(back, back_normal, back_hover)
     _style_slider(_music)
     _style_slider(_sfx)
     _style_language_dropdown()
     _style_option_dropdown(_character)
     _style_option_dropdown(_trail_mode)
+    MenuChrome.bind_menu_buttons(self)
 
 
 func _compact_layout() -> void:
@@ -190,10 +188,7 @@ func _style_option_dropdown(dropdown: OptionButton) -> void:
     var hover := MenuChrome.wood_style(MenuChrome.WOOD_HOVER, 8)
     hover.content_margin_top = 6
     hover.content_margin_bottom = 6
-    dropdown.add_theme_stylebox_override(&"normal", normal)
-    dropdown.add_theme_stylebox_override(&"hover", hover)
-    dropdown.add_theme_stylebox_override(&"pressed", hover)
-    dropdown.add_theme_stylebox_override(&"focus", hover)
+    MenuChrome.apply_button_styleboxes(dropdown, normal, hover)
     var popup := dropdown.get_popup()
     popup.add_theme_font_size_override(&"font_size", 18)
     popup.add_theme_color_override(&"font_color", ink)

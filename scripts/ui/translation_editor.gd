@@ -20,6 +20,7 @@ func _ready() -> void:
 	(get_node("Page/Buttons/BackButton") as Button).pressed.connect(_go_back)
 	(get_node("Page/Buttons/SaveButton") as Button).pressed.connect(_save_export)
 	_style_buttons()
+	MenuChrome.bind_menu_buttons(self)
 	_load_rows()
 	_search.grab_focus()
 
@@ -219,14 +220,4 @@ func _style_buttons() -> void:
 		get_node("Page/Buttons/BackButton") as Button,
 		get_node("Page/Buttons/SaveButton") as Button,
 	]:
-		var normal := StyleBoxFlat.new()
-		normal.bg_color = Color(0.95, 0.72, 0.32, 1.0)
-		normal.border_color = Color(0.45, 0.24, 0.08, 1.0)
-		normal.set_border_width_all(3)
-		normal.set_corner_radius_all(10)
-		button.add_theme_stylebox_override(&"normal", normal)
-		var focus := normal.duplicate() as StyleBoxFlat
-		focus.bg_color = Color(1.0, 0.86, 0.48, 1.0)
-		button.add_theme_stylebox_override(&"hover", focus)
-		button.add_theme_stylebox_override(&"focus", focus)
-		button.add_theme_stylebox_override(&"pressed", focus)
+		MenuChrome.style_wood_button(button, 18)

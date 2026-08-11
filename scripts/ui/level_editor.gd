@@ -421,6 +421,12 @@ func _build_ui() -> void:
 	_reset_dialog.cancel_button_text = tr("Keep editing")
 	_reset_dialog.confirmed.connect(_reset)
 	add_child(_reset_dialog)
+	var reset_ok := _reset_dialog.get_ok_button()
+	var reset_cancel := _reset_dialog.get_cancel_button()
+	if reset_ok != null:
+		MenuChrome.style_wood_button(reset_ok, 16)
+	if reset_cancel != null:
+		MenuChrome.style_wood_button(reset_cancel, 16)
 
 	_export_dialog = FileDialog.new()
 	_export_dialog.file_mode = FileDialog.FILE_MODE_SAVE_FILE
@@ -437,6 +443,7 @@ func _build_ui() -> void:
 	_import_dialog.title = tr("Import Trail")
 	_import_dialog.file_selected.connect(_on_import_selected)
 	add_child(_import_dialog)
+	MenuChrome.bind_menu_buttons(self)
 
 
 func _style_dropdown(dropdown: OptionButton) -> void:
@@ -451,10 +458,7 @@ func _style_dropdown(dropdown: OptionButton) -> void:
 	normal.content_margin_bottom = 2
 	var hover := normal.duplicate() as StyleBoxFlat
 	hover.bg_color = _DROPDOWN_PANEL_HOVER
-	dropdown.add_theme_stylebox_override(&"normal", normal)
-	dropdown.add_theme_stylebox_override(&"hover", hover)
-	dropdown.add_theme_stylebox_override(&"pressed", hover)
-	dropdown.add_theme_stylebox_override(&"focus", hover)
+	MenuChrome.apply_button_styleboxes(dropdown, normal, hover)
 	dropdown.add_theme_color_override(&"font_color", _DROPDOWN_INK)
 	dropdown.add_theme_color_override(&"font_hover_color", _DROPDOWN_INK_HOVER)
 	dropdown.add_theme_color_override(&"font_pressed_color", _DROPDOWN_INK)
@@ -526,6 +530,7 @@ func _build_trail_tool_bar() -> void:
 				button.text = ""
 			else:
 				button.text = tr(label_key)
+			MenuChrome.bind_button_feedback(button)
 			button.pressed.connect(func() -> void: _select_tool(type_id))
 			_trail_tool_bar.add_child(button)
 			_trail_tool_buttons[type_id] = button
@@ -831,8 +836,10 @@ func _update_length_buttons() -> void:
 	var width := int(_data.get("width", CustomLevelStore.DEFAULT_WIDTH))
 	if _length_minus != null:
 		_length_minus.disabled = width <= CustomLevelStore.MIN_WIDTH
+		MenuChrome.refresh_button_feedback(_length_minus)
 	if _length_plus != null:
 		_length_plus.disabled = width >= CustomLevelStore.MAX_WIDTH
+		MenuChrome.refresh_button_feedback(_length_plus)
 
 
 func _make_scroll_arrow(parent: Control, icon_path: String, tooltip: String, action: Callable) -> Button:

@@ -188,6 +188,11 @@ func _make_effect(effect: StringName) -> AudioStreamWAV:
 			frequency = 520.0
 			end_frequency = 1040.0
 			duration = 0.55
+		&"ui_click":
+			frequency = 240.0
+			end_frequency = 110.0
+			duration = 0.07
+			noise_amount = 0.16
 		&"dragon_roar":
 			frequency = 110.0
 			end_frequency = 55.0

@@ -9,16 +9,26 @@ const SLOT_BOARD_PATH := "res://assets/ui/saloon_slot_board.png"
 
 const TITLE_CREAM := Color(0.96, 0.86, 0.48, 1.0)
 const TITLE_CREAM_HOVER := Color(1.0, 0.92, 0.62, 1.0)
+const TITLE_CREAM_PRESSED := Color(0.90, 0.78, 0.38, 1.0)
 const INK := Color(0.28, 0.12, 0.04, 1.0)
 const INK_SOFT := Color(0.42, 0.22, 0.08, 1.0)
 const WOOD := Color(0.78, 0.48, 0.22, 0.96)
 const WOOD_HOVER := Color(0.90, 0.62, 0.30, 1.0)
+const WOOD_PRESSED := Color(0.62, 0.34, 0.14, 1.0)
 const WOOD_PANEL := Color(0.82, 0.52, 0.26, 0.94)
 const BANDANA := Color(0.58, 0.18, 0.10, 1.0)
 const VEIL := Color(0.45, 0.18, 0.06, 0.22)
 const DIM := Color(0.22, 0.10, 0.04, 0.45)
 const PANEL_CREAM := Color(1.0, 0.93, 0.78, 1.0)
 const PANEL_HOVER := Color(1.0, 0.86, 0.5, 1.0)
+const HOVER_SCALE := 1.07
+const PRESS_SCALE := 0.92
+const _META_BOUND := &"_menu_btn_feedback"
+const _META_REST_SCALE := &"_menu_rest_scale"
+const _META_TWEEN := &"_menu_fb_tween"
+const _META_PRESSED := &"_menu_fb_pressed"
+const _META_HOVERED := &"_menu_fb_hovered"
+const _META_TARGET := &"_menu_feedback_target"
 
 
 static func add_desert_backdrop(parent: Control, with_veil: bool = true) -> void:
@@ -127,7 +137,7 @@ static func style_wood_button(button: Button, font_size: int = 0) -> void:
         button.add_theme_font_size_override(&"font_size", font_size)
     button.add_theme_color_override(&"font_color", TITLE_CREAM)
     button.add_theme_color_override(&"font_hover_color", TITLE_CREAM_HOVER)
-    button.add_theme_color_override(&"font_pressed_color", TITLE_CREAM)
+    button.add_theme_color_override(&"font_pressed_color", TITLE_CREAM_PRESSED)
     button.add_theme_color_override(&"font_focus_color", TITLE_CREAM)
     button.add_theme_color_override(&"font_disabled_color", Color(0.75, 0.62, 0.42, 0.75))
     button.add_theme_color_override(&"font_outline_color", Color(0.22, 0.08, 0.03, 0.85))
@@ -136,10 +146,7 @@ static func style_wood_button(button: Button, font_size: int = 0) -> void:
     var hover := wood_style(WOOD_HOVER, 10)
     var disabled := wood_style(Color(0.62, 0.42, 0.24, 0.9), 10)
     disabled.border_color = Color(0.45, 0.28, 0.14, 1.0)
-    button.add_theme_stylebox_override(&"normal", normal)
-    button.add_theme_stylebox_override(&"hover", hover)
-    button.add_theme_stylebox_override(&"pressed", hover)
-    button.add_theme_stylebox_override(&"focus", hover)
+    apply_button_styleboxes(button, normal, hover)
     button.add_theme_stylebox_override(&"disabled", disabled)
 
 
@@ -150,6 +157,7 @@ static func style_check_button(button: CheckButton) -> void:
     button.add_theme_color_override(&"font_outline_color", Color(1.0, 0.92, 0.72, 0.55))
     button.add_theme_constant_override(&"outline_size", 2)
     button.add_theme_font_size_override(&"font_size", 22)
+    bind_button_feedback(button)
 
 
 static func apply_button_icon(button: Button, icon_path: String, max_width: int = 36) -> void:
@@ -182,8 +190,182 @@ static func style_compact_icon_button(button: Button, font_size: int = 13) -> vo
     disabled.content_margin_right = 8
     disabled.content_margin_top = 4
     disabled.content_margin_bottom = 4
+    apply_button_styleboxes(button, normal, hover)
+    button.add_theme_stylebox_override(&"disabled", disabled)
+
+
+static func pressed_from(hover: StyleBox) -> StyleBox:
+    if hover == null or not (hover is StyleBoxFlat):
+        return hover
+    var src := hover as StyleBoxFlat
+    var pressed := src.duplicate() as StyleBoxFlat
+    if _looks_like_wood(src.bg_color):
+        pressed.bg_color = Color(WOOD_PRESSED.r, WOOD_PRESSED.g, WOOD_PRESSED.b, 1.0)
+        pressed.border_color = Color(0.42, 0.12, 0.06, 1.0)
+    else:
+        pressed.bg_color = src.bg_color.darkened(0.14)
+        pressed.border_color = src.border_color.darkened(0.12)
+    pressed.content_margin_top = src.content_margin_top + 3.0
+    pressed.content_margin_bottom = maxf(src.content_margin_bottom - 2.0, 2.0)
+    pressed.shadow_size = 2
+    pressed.shadow_offset = Vector2(0, 1)
+    return pressed
+
+
+static func apply_button_styleboxes(
+    button: BaseButton, normal: StyleBox, hover: StyleBox, pressed: StyleBox = null
+) -> void:
+    if button == null:
+        return
+    if pressed == null:
+        pressed = pressed_from(hover)
     button.add_theme_stylebox_override(&"normal", normal)
     button.add_theme_stylebox_override(&"hover", hover)
-    button.add_theme_stylebox_override(&"pressed", hover)
+    button.add_theme_stylebox_override(&"pressed", pressed)
+    button.add_theme_stylebox_override(&"hover_pressed", pressed)
     button.add_theme_stylebox_override(&"focus", hover)
-    button.add_theme_stylebox_override(&"disabled", disabled)
+    bind_button_feedback(button)
+
+
+static func bind_menu_buttons(root: Node) -> void:
+    if root == null:
+        return
+    for child in root.find_children("*", "BaseButton", true, false):
+        var button := child as BaseButton
+        if button == null or _skip_menu_feedback(button):
+            continue
+        bind_button_feedback(button)
+
+
+static func bind_button_feedback(button: BaseButton) -> void:
+    if button == null or bool(button.get_meta(_META_BOUND, false)):
+        return
+    button.set_meta(_META_BOUND, true)
+    button.set_meta(_META_REST_SCALE, button.scale)
+    button.set_meta(_META_PRESSED, false)
+    button.set_meta(_META_HOVERED, false)
+    button.set_meta(_META_TARGET, button.scale)
+    _center_button_pivot(button)
+    button.resized.connect(func() -> void: _center_button_pivot(button))
+    button.mouse_entered.connect(func() -> void:
+        if button.disabled:
+            return
+        button.set_meta(_META_HOVERED, true)
+        refresh_button_feedback(button)
+    )
+    button.mouse_exited.connect(func() -> void:
+        button.set_meta(_META_HOVERED, false)
+        refresh_button_feedback(button)
+    )
+    button.button_down.connect(func() -> void:
+        if button.disabled:
+            return
+        button.set_meta(_META_PRESSED, true)
+        refresh_button_feedback(button)
+        AudioManager.play_sfx(&"ui_click")
+    )
+    button.button_up.connect(func() -> void:
+        button.set_meta(_META_PRESSED, false)
+        refresh_button_feedback(button)
+    )
+    button.pressed.connect(func() -> void:
+        if bool(button.get_meta(_META_PRESSED, false)) or button.disabled:
+            return
+        AudioManager.play_sfx(&"ui_click")
+        _pulse_button_press(button)
+    )
+
+
+static func set_button_rest_scale(button: BaseButton, rest: Vector2) -> void:
+    if button == null:
+        return
+    if not bool(button.get_meta(_META_BOUND, false)):
+        bind_button_feedback(button)
+    button.set_meta(_META_REST_SCALE, rest)
+    refresh_button_feedback(button, true)
+
+
+static func refresh_button_feedback(button: BaseButton, snap: bool = false) -> void:
+    if button == null or not is_instance_valid(button):
+        return
+    if not bool(button.get_meta(_META_BOUND, false)):
+        return
+    _center_button_pivot(button)
+    var rest: Vector2 = button.get_meta(_META_REST_SCALE, Vector2.ONE)
+    var target := rest
+    if not button.disabled:
+        if bool(button.get_meta(_META_PRESSED, false)):
+            target = rest * PRESS_SCALE
+        elif bool(button.get_meta(_META_HOVERED, false)):
+            target = rest * HOVER_SCALE
+    button.set_meta(_META_TARGET, target)
+    var duration := 0.08 if target.x >= rest.x else 0.06
+    if snap:
+        duration = 0.0
+    _tween_button_scale(button, target, duration)
+
+
+static func _pulse_button_press(button: BaseButton) -> void:
+    var rest: Vector2 = button.get_meta(_META_REST_SCALE, Vector2.ONE)
+    var squashed := rest * PRESS_SCALE
+    button.set_meta(_META_TARGET, squashed)
+    _tween_button_scale(button, squashed, 0.05)
+    var tween := _feedback_tween(button)
+    if tween != null:
+        tween.tween_callback(func() -> void:
+            if is_instance_valid(button):
+                refresh_button_feedback(button)
+        )
+
+
+static func _feedback_tween(button: BaseButton) -> Tween:
+    if button == null or not button.has_meta(_META_TWEEN):
+        return null
+    var prev: Variant = button.get_meta(_META_TWEEN)
+    return prev as Tween if prev is Tween and is_instance_valid(prev) else null
+
+
+static func _tween_button_scale(button: BaseButton, target: Vector2, duration: float) -> void:
+    var prev := _feedback_tween(button)
+    if prev != null:
+        prev.kill()
+    if button.scale.is_equal_approx(target):
+        if button.has_meta(_META_TWEEN):
+            button.remove_meta(_META_TWEEN)
+        return
+    if not button.is_inside_tree() or duration <= 0.0:
+        button.scale = target
+        if button.has_meta(_META_TWEEN):
+            button.remove_meta(_META_TWEEN)
+        return
+    var tween := button.create_tween()
+    tween.set_pause_mode(Tween.TWEEN_PAUSE_BOUND)
+    tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+    tween.tween_property(button, "scale", target, duration)
+    button.set_meta(_META_TWEEN, tween)
+
+
+static func _center_button_pivot(button: Control) -> void:
+    if button == null:
+        return
+    var sz := button.size
+    if sz.x < 1.0 or sz.y < 1.0:
+        sz = button.custom_minimum_size
+    if sz.x >= 1.0 and sz.y >= 1.0:
+        button.pivot_offset = sz * 0.5
+
+
+static func _looks_like_wood(color: Color) -> bool:
+    return color.r > 0.55 and color.g > 0.25 and color.g < 0.75 and color.b < 0.45
+
+
+static func _skip_menu_feedback(button: BaseButton) -> bool:
+    var parent := button.get_parent()
+    if parent != null and parent.name == "StampGrid":
+        return true
+    var node: Node = button
+    while node != null:
+        if node is FileDialog or node is PopupMenu:
+            return true
+        node = node.get_parent()
+    return false
