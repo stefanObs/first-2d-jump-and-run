@@ -213,6 +213,10 @@ func _rebuild_world() -> void:
 	for node in level.find_children("*", "AnimatableBody2D", true, false):
 		node.set_physics_process(false)
 		node.set_process(false)
+	for node in level.find_children("*", "Area2D", true, false):
+		node.set_process(false)
+		if node is Goal:
+			(node as Goal).monitoring = false
 	var player := level.get_node_or_null("Player") as Player
 	if player != null:
 		player.set_input_enabled(false)

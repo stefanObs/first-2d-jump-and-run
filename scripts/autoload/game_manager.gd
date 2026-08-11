@@ -27,6 +27,8 @@ var active_slot_index: int = -1
 var active_custom_slot: int = 0
 var custom_level_draft: Dictionary = {}
 var custom_return_to_editor: bool = true
+## True while a Campaign Workshop Play Test (or its Restart Level) is running.
+var custom_playtest_active: bool = false
 ## Campaign Workshop: stamp grid collapsed for the current game session.
 var workshop_grid_collapsed: bool = false
 var active_campaign_position: int = 1
@@ -386,6 +388,7 @@ func complete_level(level_number: int, stars_found: int) -> void:
 
 func load_level(level_number: int) -> void:
 	flush_save_to_disk()
+	custom_playtest_active = false
 	var entries := campaign_entries()
 	var index := clampi(level_number, 1, entries.size()) - 1
 	var entry := entries[index]
@@ -396,16 +399,17 @@ func load_level(level_number: int) -> void:
 		active_custom_slot = int(entry.get("custom_slot", 0))
 		custom_return_to_editor = false
 		campaign_custom_active = true
-		get_tree().change_scene_to_file("res://scenes/levels/custom_level_runtime.tscn")
+		_goto_game_scene("res://scenes/levels/custom_level_runtime.tscn")
 		return
 	campaign_custom_active = false
-	get_tree().change_scene_to_file(str(entry.get("scene", LEVEL_SCENES[0])))
+	_goto_game_scene(str(entry.get("scene", LEVEL_SCENES[0])))
 
 
 func return_to_save_select() -> void:
 	flush_save_to_disk()
 	active_slot_index = -1
-	get_tree().change_scene_to_file("res://scenes/ui/save_select.tscn")
+	custom_playtest_active = false
+	_goto_game_scene("res://scenes/ui/save_select.tscn")
 
 
 func consume_campaign_context() -> Dictionary:
@@ -583,26 +587,34 @@ func clear_run_state() -> void:
 func edit_custom_level(slot_index: int) -> void:
 	active_custom_slot = clampi(slot_index, 0, CUSTOM_LEVEL_STORE.SLOT_COUNT - 1)
 	custom_level_draft = {}
-	get_tree().change_scene_to_file("res://scenes/ui/level_editor.tscn")
+	custom_playtest_active = false
+	_goto_game_scene("res://scenes/ui/level_editor.tscn")
 
 
 func edit_new_custom_level(slot_index: int, draft: Dictionary) -> void:
 	active_custom_slot = clampi(slot_index, 0, CUSTOM_LEVEL_STORE.SLOT_COUNT - 1)
 	custom_level_draft = draft.duplicate(true)
 	custom_level_draft["slot"] = active_custom_slot
-	get_tree().change_scene_to_file("res://scenes/ui/level_editor.tscn")
+	custom_playtest_active = false
+	_goto_game_scene("res://scenes/ui/level_editor.tscn")
+
+
+func begin_custom_playtest(slot_index: int, return_to_editor: bool = true) -> void:
+	active_custom_slot = clampi(slot_index, 0, CUSTOM_LEVEL_STORE.SLOT_COUNT - 1)
+	custom_return_to_editor = return_to_editor
+	custom_playtest_active = true
+	_campaign_load_pending = false
+	campaign_custom_active = false
 
 
 func play_custom_level(slot_index: int, return_to_editor: bool = true) -> void:
-	active_custom_slot = clampi(slot_index, 0, CUSTOM_LEVEL_STORE.SLOT_COUNT - 1)
-	custom_return_to_editor = return_to_editor
-	_campaign_load_pending = false
-	campaign_custom_active = false
-	get_tree().change_scene_to_file("res://scenes/levels/custom_level_runtime.tscn")
+	begin_custom_playtest(slot_index, return_to_editor)
+	_goto_game_scene("res://scenes/levels/custom_level_runtime.tscn")
 
 
 func open_custom_level_hub() -> void:
-	get_tree().change_scene_to_file("res://scenes/ui/custom_level_hub.tscn")
+	custom_playtest_active = false
+	_goto_game_scene("res://scenes/ui/custom_level_hub.tscn")
 
 
 func return_from_custom_level() -> void:
@@ -610,6 +622,31 @@ func return_from_custom_level() -> void:
 		edit_custom_level(active_custom_slot)
 	else:
 		open_custom_level_hub()
+
+
+func _goto_game_scene(path: String) -> void:
+	var tree := get_tree()
+	if tree == null or path.is_empty():
+		return
+	tree.paused = false
+	call_deferred("_apply_game_scene", path)
+
+
+func scene_change_is_reload(current_path: String, target_path: String) -> bool:
+	return not target_path.is_empty() and current_path == target_path
+
+
+func _apply_game_scene(path: String) -> void:
+	var tree := get_tree()
+	if tree == null or path.is_empty():
+		return
+	tree.paused = false
+	var current := tree.current_scene
+	var current_path := str(current.scene_file_path) if current != null else ""
+	if scene_change_is_reload(current_path, path):
+		if tree.reload_current_scene() == OK:
+			return
+	tree.change_scene_to_file(path)
 
 
 func get_settings() -> Dictionary:

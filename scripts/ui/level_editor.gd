@@ -1571,6 +1571,7 @@ func _play_test() -> void:
 	if not has_goal or not has_ground:
 		_status.text = tr("Add Dirt and a Saloon before play-testing.")
 		return
+	get_tree().paused = false
 	GameManager.play_custom_level(GameManager.active_custom_slot, true)
 
 

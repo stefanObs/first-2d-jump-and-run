@@ -217,6 +217,7 @@ func _ready() -> void:
 	)
 	failures += await _run("Canyon rafts are one-way jump-through platforms", _test_one_way_moving_platforms)
 	failures += await _run("Custom level store and builder work", _test_custom_level_builder)
+	failures += await _run("Workshop playtest can run the same trail twice", _test_workshop_playtest_can_run_twice)
 	failures += await _run("Ladder branches land on the upper ledge", _test_ladder_branch_upper_ledge)
 	failures += await _run("Cowboy can jump from the top of a ladder", _test_jump_from_ladder_top)
 	failures += await _run("Cave levels place belts fences and ladders", _test_cave_levels_belts_fences_ladders)
@@ -7314,6 +7315,45 @@ func _test_ladder_branch_upper_ledge() -> Variant:
 	default_level.queue_free()
 	if not default_errors.is_empty():
 		return "Default workshop trail: %s" % default_errors[0]
+	return null
+
+
+func _test_workshop_playtest_can_run_twice() -> Variant:
+	GameManager._campaign_load_pending = true
+	GameManager.campaign_custom_active = true
+	GameManager.custom_playtest_active = false
+	GameManager.begin_custom_playtest(2, true)
+	if not GameManager.custom_playtest_active:
+		return "Play Test should mark the workshop playtest as active."
+	if GameManager._campaign_load_pending:
+		return "Play Test should drop leftover campaign load context."
+	if GameManager.campaign_custom_active:
+		return "Play Test should not run as a campaign custom trail."
+	if GameManager.active_custom_slot != 2 or not GameManager.custom_return_to_editor:
+		return "Play Test should keep the open trail slot and return to the editor."
+	GameManager.begin_custom_playtest(2, true)
+	if not GameManager.custom_playtest_active or GameManager.active_custom_slot != 2:
+		return "Play Test should be able to start the same trail again."
+	var runtime := "res://scenes/levels/custom_level_runtime.tscn"
+	if not GameManager.scene_change_is_reload(runtime, runtime):
+		return "Restarting a playtest should reload the same runtime scene."
+	var preview_level := LevelController.new()
+	preview_level.skip_auto_setup = true
+	add_child(preview_level)
+	var preview_player := Player.new()
+	preview_level.add_child(preview_player)
+	var probe := Node2D.new()
+	preview_level.add_child(probe)
+	await get_tree().process_frame
+	preview_player.global_position = Vector2(800.0, 0.0)
+	probe.global_position = Vector2.ZERO
+	var saw_preview := PlayerLookup.any_past_x(probe, 100.0)
+	preview_level.queue_free()
+	GameManager.custom_playtest_active = false
+	GameManager._campaign_load_pending = false
+	GameManager.campaign_custom_active = false
+	if saw_preview:
+		return "Workshop preview cowboys must not count as crossing the saloon."
 	return null
 
 

@@ -776,6 +776,8 @@ func _count_restored_badges() -> int:
 func _on_celebration_finished() -> void:
 	if transition != null:
 		transition.hide_overlay()
+	get_tree().paused = false
+	_paused = false
 	if is_custom_level:
 		GameManager.return_from_custom_level()
 		return
