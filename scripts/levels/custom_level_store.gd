@@ -360,6 +360,83 @@ static func stamp_cells_for_object(
 	)
 
 
+## Foreground stamp on this cell, else dirt. Empty if the square is vacant.
+static func object_occupying_cell(
+	objects: Array, x: int, y: int, trail: int, width: int = MAX_WIDTH
+) -> Dictionary:
+	var ground := {}
+	var foreground := {}
+	for value in objects:
+		if not (value is Dictionary):
+			continue
+		var object := value as Dictionary
+		var type_name := str(object.get("type", ""))
+		for cell in stamp_cells_for_object(object, trail, width):
+			if cell.x != x or cell.y != y:
+				continue
+			if type_name == "ground":
+				ground = object
+			else:
+				foreground = object
+			break
+	if not foreground.is_empty():
+		return foreground
+	return ground
+
+
+## Cells to outline for the stamp under the cursor (merged canyon runs count as one).
+static func occupying_stamp_cells(
+	objects: Array, x: int, y: int, trail: int, width: int = MAX_WIDTH
+) -> Array[Vector2i]:
+	var object := object_occupying_cell(objects, x, y, trail, width)
+	if object.is_empty():
+		return []
+	if str(object.get("type", "")) == "canyon" and y == trail:
+		for run in canyon_column_runs(objects, trail):
+			var start_x := int(run.get("start_x", -1))
+			var end_x := int(run.get("end_x", -1))
+			if x < start_x or x > end_x:
+				continue
+			var cells: Array[Vector2i] = []
+			for col in range(start_x, end_x + 1):
+				cells.append(Vector2i(col, trail))
+			return cells
+	return stamp_cells_for_object(object, trail, width)
+
+
+## Final in-game rect for a stored stamp (uses the left/anchor column, no hover recenter).
+static func stamp_visual_world_rect_for_object(
+	object: Dictionary,
+	trail: int,
+	width: int = MAX_WIDTH,
+	grid: float = GRID_SIZE,
+	style: String = STYLE_DESERT
+) -> Rect2:
+	var type_name := str(object.get("type", ""))
+	if type_name.is_empty():
+		return Rect2()
+	var ox := int(object.get("x", 0))
+	var oy := int(object.get("y", 0))
+	if type_name == "ground" or type_name == "canyon":
+		return Rect2(float(ox) * grid, float(oy) * grid, grid, grid)
+	var size := stamp_world_size(type_name, style)
+	if type_name == "pit":
+		var center := pit_world_position(object, grid, trail)
+		return Rect2(center - size * 0.5, size)
+	if type_name == "platform" or type_name == "ladder_ledge":
+		return Rect2(float(ox) * grid, float(oy) * grid - size.y * 0.5, size.x, size.y)
+	var anchor := object_world_position(object, grid, trail)
+	if is_ceiling_hanging(type_name):
+		return Rect2(anchor.x - size.x * 0.5, anchor.y, size.x, size.y)
+	if type_name == "ladder":
+		return Rect2(anchor.x - size.x * 0.5, anchor.y - size.y, size.x, size.y)
+	if is_ground_standing(type_name):
+		return Rect2(anchor.x - size.x * 0.5, anchor.y - size.y, size.x, size.y)
+	if type_name == "carrion" or type_name == "bat":
+		return Rect2(anchor.x - size.x * 0.5, anchor.y - size.y * 0.5, size.x, size.y)
+	return Rect2(anchor.x - size.x * 0.5, anchor.y - size.y, size.x, size.y)
+
+
 static func stamps_overlap(
 	a: Dictionary, b: Dictionary, trail: int, width: int = MAX_WIDTH
 ) -> bool:

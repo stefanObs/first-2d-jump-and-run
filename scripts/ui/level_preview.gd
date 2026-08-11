@@ -15,6 +15,8 @@ const SKY_PADDING_CELLS := 0.75
 const GROUND_PADDING_CELLS := 0.65
 ## Match WildWestTheme.configure_player_camera so stamp scale matches play mode.
 const GAMEPLAY_CAMERA_ZOOM := 0.84
+const _GHOST_OUTLINE := Color(1.0, 0.82, 0.12, 0.95)
+const _PLACED_OUTLINE := Color(1.0, 0.94, 0.72, 1.0)
 const CANYON_HANDLE_SIZE := 36.0
 const CANYON_WARNING_SIZE := 40.0
 const _ICON_SCROLL_LEFT := "res://assets/ui/menu_icon_scroll_left.png"
@@ -357,8 +359,49 @@ func _mouse_to_cell(local: Vector2) -> Vector2i:
 		clampi(int(floor(world.y / grid)), 0, height - 1)
 	)
 
+func occupying_stamp() -> Dictionary:
+	if _hover_column < 0 or _hover_row < 0 or _data.is_empty():
+		return {}
+	var metrics := _view_metrics()
+	return CustomLevelStore.object_occupying_cell(
+		_data.get("objects", []) as Array,
+		_hover_column,
+		_hover_row,
+		int(metrics["trail"]),
+		int(metrics["width"])
+	)
+
+
+func occupying_stamp_cells() -> Array[Vector2i]:
+	if _hover_column < 0 or _hover_row < 0 or _data.is_empty():
+		return []
+	var metrics := _view_metrics()
+	return CustomLevelStore.occupying_stamp_cells(
+		_data.get("objects", []) as Array,
+		_hover_column,
+		_hover_row,
+		int(metrics["trail"]),
+		int(metrics["width"])
+	)
+
+
 func _ghost_rect_screen() -> Rect2:
 	return _world_rect_to_screen(_aligned_ghost_world_rect())
+
+
+func _placed_stamp_rect_screen() -> Rect2:
+	return _world_rect_to_screen(_aligned_placed_world_rect())
+
+
+func _placed_cell_rects_screen() -> Array[Rect2]:
+	var rects: Array[Rect2] = []
+	var metrics := _view_metrics()
+	var grid: float = metrics["grid"]
+	for cell in occupying_stamp_cells():
+		rects.append(
+			_world_rect_to_screen(Rect2(float(cell.x) * grid, float(cell.y) * grid, grid, grid))
+		)
+	return rects
 
 func _ghost_cell_rects_screen() -> Array[Rect2]:
 	var rects: Array[Rect2] = []
@@ -421,6 +464,50 @@ func _aligned_ghost_world_rect() -> Rect2:
 		rect.position.y = floor_y - rect.size.y
 	return rect
 
+
+func _aligned_placed_world_rect() -> Rect2:
+	var object := occupying_stamp()
+	if object.is_empty():
+		return Rect2()
+	var metrics := _view_metrics()
+	var grid: float = metrics["grid"]
+	var trail: int = metrics["trail"]
+	var width: int = metrics["width"]
+	var style := str(_data.get("style", CustomLevelStore.STYLE_DESERT))
+	var type_name := str(object.get("type", ""))
+	if type_name == "canyon":
+		var cells := occupying_stamp_cells()
+		if cells.is_empty():
+			return Rect2()
+		var left := cells[0].x
+		var right := cells[0].x
+		for cell in cells:
+			left = mini(left, cell.x)
+			right = maxi(right, cell.x)
+		return Rect2(
+			float(left) * grid,
+			float(trail) * grid,
+			float(right - left + 1) * grid,
+			grid
+		)
+	var rect := CustomLevelStore.stamp_visual_world_rect_for_object(
+		object, trail, width, grid, style
+	)
+	if rect.size.x <= 0.0:
+		return Rect2()
+	if _world == null or not is_instance_valid(_world):
+		return rect
+	if type_name == "ground" or type_name == "pit":
+		return rect
+	var center_x := rect.position.x + rect.size.x * 0.5
+	var surface := WildWestTheme.walk_surface_at(_world, center_x)
+	var floor_y := float(surface["y"])
+	if CustomLevelStore.is_ground_standing(type_name):
+		rect.position.y = floor_y + WildWestTheme.CACTUS_DESERT_SINK - rect.size.y
+	elif type_name == "star":
+		rect.position.y = floor_y - rect.size.y
+	return rect
+
 func _request_preview_redraw() -> void:
 	if _viewport == null:
 		return
@@ -436,16 +523,24 @@ func _clear_ghost_root() -> void:
 func _update_ghost_world() -> void:
 	if _world == null or not is_instance_valid(_world):
 		_clear_ghost_root()
+		tooltip_text = ""
 		return
 	var world_rect := _aligned_ghost_world_rect()
-	var next_key := "%d:%d:%s:%.1f:%.1f:%.1f:%.1f" % [
+	var placed_rect := _aligned_placed_world_rect()
+	var occupying := occupying_stamp()
+	var next_key := "%d:%d:%s:%s:%.1f:%.1f:%.1f:%.1f:%.1f:%.1f:%.1f:%.1f" % [
 		_hover_column,
 		_hover_row,
 		_selected_type,
+		str(occupying.get("type", "")),
 		world_rect.position.x,
 		world_rect.position.y,
 		world_rect.size.x,
 		world_rect.size.y,
+		placed_rect.position.x,
+		placed_rect.position.y,
+		placed_rect.size.x,
+		placed_rect.size.y,
 	]
 	if next_key == _ghost_key and _ghost_root != null and is_instance_valid(_ghost_root):
 		return
@@ -455,7 +550,9 @@ func _update_ghost_world() -> void:
 	if _ghost_overlay != null:
 		for child in _ghost_overlay.get_children():
 			child.queue_free()
-	if world_rect.size.x <= 0.0:
+	var removable := not occupying.is_empty() and str(occupying.get("type", "")) != "ground"
+	tooltip_text = tr("Right-click to remove") if removable else ""
+	if world_rect.size.x <= 0.0 and placed_rect.size.x <= 0.0:
 		return
 
 	_ghost_root = Node2D.new()
@@ -464,9 +561,48 @@ func _update_ghost_world() -> void:
 	_world.add_child(_ghost_root)
 	_request_preview_redraw()
 
+	if placed_rect.size.x > 0.0:
+		_add_world_fill(placed_rect, Color(1.0, 0.94, 0.72, 0.12))
+		_ghost_root.add_child(_make_world_outline(placed_rect, _PLACED_OUTLINE, 3.0))
+		var metrics := _view_metrics()
+		var grid: float = metrics["grid"]
+		for cell in occupying_stamp_cells():
+			var cell_rect := Rect2(float(cell.x) * grid, float(cell.y) * grid, grid, grid)
+			_ghost_root.add_child(_make_world_outline(cell_rect, _PLACED_OUTLINE, 2.0))
+
+	if world_rect.size.x > 0.0:
+		_add_world_fill(world_rect, Color(1.0, 0.92, 0.45, 0.18))
+		var style := CustomLevelStore.normalize_style(_data.get("style", "desert")) if not _data.is_empty() else "desert"
+		var icon_path := LevelStyle.stamp_icon_path(_selected_type, style)
+		if not icon_path.is_empty() and ResourceLoader.exists(icon_path):
+			var texture := load(icon_path) as Texture2D
+			if texture != null:
+				var sprite := Sprite2D.new()
+				sprite.name = "GhostIcon"
+				sprite.texture = texture
+				sprite.centered = false
+				sprite.modulate = Color(1, 1, 1, 0.55)
+				var tex_size := texture.get_size()
+				if tex_size.x > 0.0 and tex_size.y > 0.0:
+					sprite.scale = world_rect.size / tex_size
+				sprite.position = world_rect.position
+				_ghost_root.add_child(sprite)
+		var metrics := _view_metrics()
+		var grid: float = metrics["grid"]
+		var trail: int = metrics["trail"]
+		var width: int = metrics["width"]
+		for cell in CustomLevelStore.stamp_hover_cells(
+			_selected_type, _hover_column, _hover_row, trail, width
+		):
+			var cell_rect := Rect2(float(cell.x) * grid, float(cell.y) * grid, grid, grid)
+			_ghost_root.add_child(_make_world_outline(cell_rect, _GHOST_OUTLINE, 2.0))
+
+
+func _add_world_fill(world_rect: Rect2, color: Color) -> void:
+	if _ghost_root == null:
+		return
 	var fill := Polygon2D.new()
-	fill.name = "GhostFill"
-	fill.color = Color(1.0, 0.92, 0.45, 0.18)
+	fill.color = color
 	fill.polygon = PackedVector2Array([
 		world_rect.position,
 		world_rect.position + Vector2(world_rect.size.x, 0.0),
@@ -475,39 +611,16 @@ func _update_ghost_world() -> void:
 	])
 	_ghost_root.add_child(fill)
 
-	var style := CustomLevelStore.normalize_style(_data.get("style", "desert")) if not _data.is_empty() else "desert"
-	var icon_path := LevelStyle.stamp_icon_path(_selected_type, style)
-	if not icon_path.is_empty() and ResourceLoader.exists(icon_path):
-		var texture := load(icon_path) as Texture2D
-		if texture != null:
-			var sprite := Sprite2D.new()
-			sprite.name = "GhostIcon"
-			sprite.texture = texture
-			sprite.centered = false
-			sprite.modulate = Color(1, 1, 1, 0.55)
-			var tex_size := texture.get_size()
-			if tex_size.x > 0.0 and tex_size.y > 0.0:
-				sprite.scale = world_rect.size / tex_size
-			sprite.position = world_rect.position
-			_ghost_root.add_child(sprite)
 
-	var metrics := _view_metrics()
-	var grid: float = metrics["grid"]
-	var trail: int = metrics["trail"]
-	var width: int = metrics["width"]
-	for cell in CustomLevelStore.stamp_hover_cells(
-		_selected_type, _hover_column, _hover_row, trail, width
-	):
-		var cell_rect := Rect2(float(cell.x) * grid, float(cell.y) * grid, grid, grid)
-		_ghost_root.add_child(_make_world_outline(cell_rect))
-
-func _make_world_outline(world_rect: Rect2) -> Node2D:
+func _make_world_outline(
+	world_rect: Rect2,
+	color: Color = _GHOST_OUTLINE,
+	line_width: float = 2.0
+) -> Node2D:
 	var root := Node2D.new()
 	root.position = world_rect.position
 	var w := world_rect.size.x
 	var h := world_rect.size.y
-	var width := 2.0
-	var color := Color(1.0, 0.82, 0.12, 0.95)
 	for points in [
 		[Vector2(0, 0), Vector2(w, 0)],
 		[Vector2(0, h), Vector2(w, h)],
@@ -515,7 +628,7 @@ func _make_world_outline(world_rect: Rect2) -> Node2D:
 		[Vector2(w, 0), Vector2(w, h)],
 	]:
 		var line := Line2D.new()
-		line.width = width
+		line.width = line_width
 		line.default_color = color
 		line.points = PackedVector2Array(points)
 		root.add_child(line)

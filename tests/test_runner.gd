@@ -223,6 +223,7 @@ func _ready() -> void:
 	failures += await _run("Workshop preview click requests stamp placement", _test_workshop_preview_stamp)
 	failures += await _run("Workshop preview hover ghost tracks cursor", _test_workshop_preview_ghost)
 	failures += await _run("Workshop preview ghost matches stamp size", _test_workshop_preview_ghost_size)
+	failures += await _run("Workshop hover outlines placed stamps", _test_workshop_hover_outlines_placed_stamp)
 	failures += await _run("Workshop stamp grid can collapse", _test_workshop_grid_collapse)
 	failures += await _run("Workshop right click removes stamp", _test_workshop_right_click_remove)
 	failures += await _run("Workshop preview click places stamp", _test_workshop_preview_places_stamp)
@@ -7634,6 +7635,99 @@ func _test_workshop_preview_ghost_size() -> Variant:
 		preview.queue_free()
 		return "Grid cell outlines should match stamp grid size in screen space."
 	preview.queue_free()
+	return null
+
+
+func _test_workshop_hover_outlines_placed_stamp() -> Variant:
+	var trail := CustomLevelStore.trail_row(8)
+	var objects: Array = [
+		{"type": "ground", "x": 10, "y": trail},
+		{"type": "ground", "x": 11, "y": trail},
+		{"type": "ground", "x": 12, "y": trail},
+		{"type": "ground", "x": 13, "y": trail},
+		{"type": "cactus", "x": 10, "y": trail - 1},
+		{"type": "platform", "x": 10, "y": trail - 2},
+	]
+	var cactus := CustomLevelStore.object_occupying_cell(objects, 10, trail - 1, trail)
+	if str(cactus.get("type", "")) != "cactus":
+		return "Hovering a cactus cell should find the cactus stamp."
+	var plank := CustomLevelStore.object_occupying_cell(objects, 12, trail - 2, trail)
+	if str(plank.get("type", "")) != "platform":
+		return "Hovering a plank's inner cell should still find the plank."
+	var plank_cells := CustomLevelStore.occupying_stamp_cells(objects, 12, trail - 2, trail)
+	if plank_cells.size() != 4:
+		return "Plank hover should outline all four footprint cells (got %d)." % plank_cells.size()
+	var preview := LevelPreview.new()
+	add_child(preview)
+	preview.size = Vector2(480, 300)
+	var data := CustomLevelStore.default_level(0)
+	data["objects"] = objects.duplicate(true)
+	data["width"] = 24
+	preview.show_level(data)
+	preview.set_selected_type("erase")
+	preview.set_view_center_column(11)
+	for _wait in range(20):
+		await get_tree().process_frame
+		if preview._world != null:
+			break
+	preview.set_hover_cell(10, trail - 1)
+	await get_tree().process_frame
+	var cactus_rect := preview._placed_stamp_rect_screen()
+	if cactus_rect.size.x <= 1.0 or cactus_rect.size.y <= 1.0:
+		preview.queue_free()
+		return "Hovering a placed cactus should show a removal border."
+	if preview.tooltip_text != tr("Right-click to remove"):
+		preview.queue_free()
+		return "Placed-stamp hover should hint that right-click removes it."
+	preview.set_hover_cell(12, trail - 2)
+	await get_tree().process_frame
+	var plank_rects := preview._placed_cell_rects_screen()
+	if plank_rects.size() != 4:
+		preview.queue_free()
+		return "Hovering a plank should outline its four-cell footprint (got %d)." % plank_rects.size()
+	var plank_world := preview._placed_stamp_rect_screen()
+	var expected := CustomLevelStore.stamp_visual_world_rect_for_object(
+		{"type": "platform", "x": 10, "y": trail - 2},
+		trail,
+		24,
+		float(preview._view_metrics()["grid"])
+	)
+	var zoom := float(preview._view_metrics()["zoom"])
+	if absf(plank_world.size.x - expected.size.x * zoom) > 2.0:
+		preview.queue_free()
+		return "Placed plank border should match the in-game plank size."
+	preview.queue_free()
+
+	var editor_packed: PackedScene = load("res://scenes/ui/level_editor.tscn")
+	if editor_packed == null:
+		return "Missing level editor scene."
+	var editor := editor_packed.instantiate()
+	add_child(editor)
+	for _wait in range(20):
+		await get_tree().process_frame
+		if editor.get("_preview") != null:
+			break
+	var editor_trail: int = editor._trail_y()
+	editor._data["objects"] = [
+		{"type": "ground", "x": 8, "y": editor_trail},
+		{"type": "ground", "x": 9, "y": editor_trail},
+		{"type": "ground", "x": 10, "y": editor_trail},
+		{"type": "ground", "x": 11, "y": editor_trail},
+		{"type": "platform", "x": 8, "y": editor_trail - 2},
+		{"type": "goal", "x": 20, "y": editor_trail - 1},
+	]
+	editor._mark_type_cache_dirty()
+	editor._set_hover_cell(10, editor_trail - 2)
+	await get_tree().process_frame
+	var width := int(editor._data.get("width", CustomLevelStore.DEFAULT_WIDTH))
+	var bordered := 0
+	for dx in range(4):
+		var cell: Button = editor._cells[(editor_trail - 2) * width + 8 + dx]
+		if cell.has_theme_stylebox_override(&"normal"):
+			bordered += 1
+	editor.queue_free()
+	if bordered != 4:
+		return "Stamp grid should border every cell of the hovered plank (got %d)." % bordered
 	return null
 
 

@@ -175,7 +175,7 @@ New trail reset to its starting layout.,New trail reset to its starting layout.,
 Edit Campaign Level,Edit Campaign Level,Kampagnen-Level bearbeiten
 Add Campaign Level,Add Campaign Level,Kampagnen-Level hinzufügen
 "1. Pick a stamp   2. Pick a square   3. Save or Play Test","1. Pick a stamp   2. Pick a square   3. Save or Play Test","1. Stempel wählen   2. Feld wählen   3. Speichern oder Test spielen"
-Bottom row is dirt/canyon. Ground props stamp one row above dirt so they stand on the trail. Canyon arrows grow or shrink a gap.,Bottom row is dirt/canyon. Ground props stamp one row above dirt so they stand on the trail. Canyon arrows grow or shrink a gap.,Die unterste Zeile ist Erde/Canyon. Boden-Stempel kommen eine Zeile über die Erde damit sie auf dem Pfad stehen. Canyon-Pfeile verbreitern oder verengen eine Lücke.
+Bottom row is dirt/canyon. Ground props stamp one row above dirt so they stand on the trail. Hover a stamp to see its border; right-click removes it. Canyon arrows grow or shrink a gap.,Bottom row is dirt/canyon. Ground props stamp one row above dirt so they stand on the trail. Hover a stamp to see its border; right-click removes it. Canyon arrows grow or shrink a gap.,Die unterste Zeile ist Erde/Canyon. Boden-Stempel kommen eine Zeile über die Erde damit sie auf dem Pfad stehen. Zeige mit der Maus auf einen Stempel um seinen Rahmen zu sehen; Rechtsklick entfernt ihn. Canyon-Pfeile verbreitern oder verengen eine Lücke.
 Stamp,Stamp,Stempel
 Stamp category,Stamp category,Stempel-Kategorie
 Stamp tool,Stamp tool,Stempel-Werkzeug
@@ -285,3 +285,4 @@ Narrow canyon from the left,Narrow canyon from the left,Canyon von links verenge
 Widen canyon right,Widen canyon right,Canyon nach rechts verbreitern
 Narrow canyon from the right,Narrow canyon from the right,Canyon von rechts verengen
 This canyon is too wide to jump,This canyon is too wide to jump,Dieser Canyon ist zu breit zum Springen
+Right-click to remove,Right-click to remove,Rechtsklick zum Entfernen

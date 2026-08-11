@@ -54,6 +54,8 @@ var _syncing_scroll := false
 var _type_at_cache: Dictionary = {}
 var _type_cache_dirty := true
 var _last_highlight_key := ""
+var _occupy_style: StyleBoxFlat
+var _occupy_style_hover: StyleBoxFlat
 var _export_dialog: FileDialog
 var _import_dialog: FileDialog
 const _EDGE_SCROLL_ZONE := 28.0
@@ -199,7 +201,7 @@ func _build_ui() -> void:
 
 	var trail_help := Label.new()
 	trail_help.text = tr(
-		"Bottom row is dirt/canyon. Ground props stamp one row above dirt so they stand on the trail. Canyon arrows grow or shrink a gap."
+		"Bottom row is dirt/canyon. Ground props stamp one row above dirt so they stand on the trail. Hover a stamp to see its border; right-click removes it. Canyon arrows grow or shrink a gap."
 	)
 	trail_help.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	trail_help.add_theme_font_size_override(&"font_size", 12)
@@ -1251,16 +1253,26 @@ func _refresh_grid_highlights() -> void:
 		ghost_cells = CustomLevelStore.stamp_hover_cells(
 			_selected_type, _hover_column, _hover_row, trail, width
 		)
-	var highlight_key := "%d:%d:%s:%d" % [
-		_hover_column, _hover_row, _selected_type, ghost_cells.size()
+	var occupy_cells: Array[Vector2i] = []
+	if _hover_column >= 0 and _hover_row >= 0:
+		occupy_cells = CustomLevelStore.occupying_stamp_cells(
+			_data.get("objects", []) as Array, _hover_column, _hover_row, trail, width
+		)
+	var occupy_type := _display_type_at(_hover_column, _hover_row) if _hover_column >= 0 else ""
+	var highlight_key := "%d:%d:%s:%d:%s:%d" % [
+		_hover_column, _hover_row, _selected_type, ghost_cells.size(), occupy_type, occupy_cells.size()
 	]
 	if highlight_key == _last_highlight_key and not _type_cache_dirty:
 		return
 	_last_highlight_key = highlight_key
+	_ensure_occupy_styles()
 	_ensure_type_cache()
 	var ghost_lookup := {}
 	for cell in ghost_cells:
 		ghost_lookup["%d,%d" % [cell.x, cell.y]] = true
+	var occupy_lookup := {}
+	for cell in occupy_cells:
+		occupy_lookup["%d,%d" % [cell.x, cell.y]] = true
 	for y in range(height):
 		for x in range(width):
 			var cell := _cells[y * width + x]
@@ -1268,15 +1280,41 @@ func _refresh_grid_highlights() -> void:
 			cell.text = _short_label(type_name)
 			if y == trail and type_name.is_empty():
 				cell.text = "···"
+			var occupy_here: bool = occupy_lookup.has("%d,%d" % [x, y])
+			if occupy_here:
+				cell.add_theme_stylebox_override(&"normal", _occupy_style)
+				cell.add_theme_stylebox_override(&"hover", _occupy_style_hover)
+				cell.add_theme_stylebox_override(&"pressed", _occupy_style_hover)
+				cell.tooltip_text = tr("Right-click to remove") if type_name != "ground" else ""
+			else:
+				cell.remove_theme_stylebox_override(&"normal")
+				cell.remove_theme_stylebox_override(&"hover")
+				cell.remove_theme_stylebox_override(&"pressed")
+				cell.tooltip_text = ""
 			if x == _hover_column:
 				cell.self_modulate = Color(1.15, 1.1, 0.85)
 			else:
 				cell.self_modulate = Color.WHITE
+			if occupy_here:
+				cell.self_modulate = Color(1.22, 1.14, 0.78)
 			if ghost_lookup.has("%d,%d" % [x, y]):
 				cell.self_modulate = Color(1.25, 1.18, 0.65)
 				var ghost_label := _short_label(_selected_type)
 				if not ghost_label.is_empty():
 					cell.text = ghost_label
+
+
+func _ensure_occupy_styles() -> void:
+	if _occupy_style != null:
+		return
+	_occupy_style = StyleBoxFlat.new()
+	_occupy_style.bg_color = Color(1.0, 0.9, 0.45, 0.22)
+	_occupy_style.set_border_width_all(3)
+	_occupy_style.border_color = Color(0.96, 0.82, 0.28)
+	_occupy_style.set_corner_radius_all(4)
+	_occupy_style_hover = _occupy_style.duplicate() as StyleBoxFlat
+	_occupy_style_hover.bg_color = Color(1.0, 0.92, 0.5, 0.34)
+	_occupy_style_hover.border_color = Color(1.0, 0.9, 0.4)
 
 
 func _mark_type_cache_dirty() -> void:
@@ -1288,15 +1326,18 @@ func _ensure_type_cache() -> void:
 	if not _type_cache_dirty:
 		return
 	_type_at_cache.clear()
+	var trail := _trail_y()
+	var width := int(_data.get("width", CustomLevelStore.DEFAULT_WIDTH))
 	for value in _data.get("objects", []):
 		var object := value as Dictionary
-		var key := "%d,%d" % [int(object.get("x", -1)), int(object.get("y", -1))]
 		var type_name := str(object.get("type", ""))
 		if type_name == "ground":
+			var key := "%d,%d" % [int(object.get("x", -1)), int(object.get("y", -1))]
 			if not _type_at_cache.has(key):
 				_type_at_cache[key] = "ground"
 			continue
-		_type_at_cache[key] = type_name
+		for cell in CustomLevelStore.stamp_cells_for_object(object, trail, width):
+			_type_at_cache["%d,%d" % [cell.x, cell.y]] = type_name
 	_type_cache_dirty = false
 
 
