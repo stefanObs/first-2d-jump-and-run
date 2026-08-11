@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """Build western trail-mode icons for the start-screen hearts switch.
 
-Star sits in the disc center; hearts form a low crown / side accents that
-stay inside the wooden plate rim.
+Star and hearts fill the wooden plate so the badge number stays readable.
 """
 
 from __future__ import annotations
@@ -19,7 +18,8 @@ STAR = Image.open(ROOT / "assets" / "world" / "star_badge.png").convert("RGBA")
 SIZE = 96
 CX = SIZE // 2
 CY = SIZE // 2
-SAFE_RADIUS = 33
+## Clip just inside the square so KEEP_ASPECT still fills the round plate.
+SAFE_RADIUS = 46
 
 
 def _paste(dst: Image.Image, src: Image.Image, xy: tuple[float, float]) -> None:
@@ -69,26 +69,24 @@ def _apply_circle_clip(img: Image.Image) -> Image.Image:
 
 
 def _paste_hearts_around_star(canvas: Image.Image, count: int, star_cy: float) -> None:
-    """Hearts on a ring around the star — uses the wide middle of the disc."""
+    """Hearts crown the star and stay inside the plate disc."""
     if count >= 5:
-        # Five hearts: shallow crown above the star, clear of the rim.
-        scale = 0.132
+        scale = 0.28
         heart = _heart_chip(scale)
         hw, hh = heart.size
-        # Degrees from upward axis; keep outer hearts inside SAFE_RADIUS.
-        angles = (-48.0, -24.0, 0.0, 24.0, 48.0)
-        radius = 22.0
-        origin_y = star_cy + 1.0
+        angles = (-52.0, -26.0, 0.0, 26.0, 52.0)
+        radius = 30.0
+        origin_y = star_cy - 4.0
     elif count == 3:
-        scale = 0.145
+        scale = 0.32
         heart = _heart_chip(scale)
         hw, hh = heart.size
-        angles = (-34.0, 0.0, 34.0)
-        radius = 21.5
-        origin_y = star_cy + 0.5
+        angles = (-38.0, 0.0, 38.0)
+        radius = 29.0
+        origin_y = star_cy - 3.0
     else:
-        heart = _heart_chip(0.2)
-        _paste(canvas, heart, (CX - heart.width * 0.5, star_cy - 28))
+        heart = _heart_chip(0.4)
+        _paste(canvas, heart, (CX - heart.width * 0.5, star_cy - 40))
         return
 
     for deg in angles:
@@ -100,19 +98,19 @@ def _paste_hearts_around_star(canvas: Image.Image, count: int, star_cy: float) -
 
 def build_classic() -> Image.Image:
     img = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
-    heart = _heart_chip(0.34)
-    _paste(img, heart, ((SIZE - heart.width) // 2, (SIZE - heart.height) // 2 - 1))
+    heart = _heart_chip(0.88)
+    _paste(img, heart, ((SIZE - heart.width) // 2, (SIZE - heart.height) // 2))
     r, g, b, a = img.split()
-    a = a.point(lambda v: int(v * 0.55))
+    a = a.point(lambda v: int(v * 0.7))
     return _apply_circle_clip(Image.merge("RGBA", (r, g, b, a)))
 
 
 def build_advanced(badges: int, hearts: int) -> Image.Image:
     img = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
 
-    star = STAR.resize((38, 38), Image.Resampling.LANCZOS)
+    star = STAR.resize((72, 72), Image.Resampling.LANCZOS)
     star_x = (SIZE - star.width) // 2
-    # Drop the star so hearts-above + star balance in the disc (not top-heavy).
+    ## Leave a crown band above the star for hearts.
     star_y = CY - star.height // 2 + 10
     star_cy = star_y + star.height * 0.5
 
@@ -125,7 +123,16 @@ def build_advanced(badges: int, hearts: int) -> Image.Image:
     _paste(img, star, (star_x, star_y))
 
     draw = ImageDraw.Draw(img)
-    _draw_number(draw, str(badges), CX, int(star_cy) + 1, 16 if badges < 10 else 13)
+    ## Cover the tiny inner 5-point star so the badge number can fill the medallion.
+    disc_r = 23 if badges < 10 else 24
+    disc_cy = int(star_cy) + 2
+    draw.ellipse(
+        (CX - disc_r, disc_cy - disc_r, CX + disc_r, disc_cy + disc_r),
+        fill=(201, 148, 44, 255),
+        outline=(92, 48, 12, 255),
+        width=2,
+    )
+    _draw_number(draw, str(badges), CX, disc_cy, 36 if badges < 10 else 24)
 
     glow = img.filter(ImageFilter.GaussianBlur(0.35))
     out = Image.new("RGBA", img.size, (0, 0, 0, 0))

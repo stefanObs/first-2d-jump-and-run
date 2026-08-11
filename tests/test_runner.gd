@@ -15,6 +15,7 @@ func _ready() -> void:
 	failures += await _run("GameManager save slots persist", _test_save_slots)
 	failures += await _run("Portable saves fall back when exe folder is read-only", _test_save_paths_writable_fallback)
 	failures += await _run("Save select scene loads", _test_save_select_scene)
+	failures += await _run("Trail-mode button art fills the plate", _test_trail_mode_button_art_fills_plate)
 	failures += await _run("Menu buttons have hover and click feedback", _test_menu_button_hover_and_click)
 	failures += await _run("Save select offers Advanced Mode in Settings", _test_settings_trail_mode_dropdown)
 	failures += await _run("Settings dropdown popups stay readable", _test_settings_dropdown_popup_contrast)
@@ -1297,6 +1298,40 @@ func _test_save_select_scene() -> Variant:
 		GameManager.set_setting("player_character", previous_character)
 	scene.queue_free()
 	GameManager.erase_slot(0)
+	return error
+
+
+func _test_trail_mode_button_art_fills_plate() -> Variant:
+	var packed: PackedScene = load("res://scenes/ui/save_select.tscn")
+	if packed == null:
+		return "Missing save select scene."
+	var previous := GameManager.get_badges_per_life_setting()
+	GameManager.set_badges_per_life_setting(5)
+	var scene := packed.instantiate()
+	add_child(scene)
+	await get_tree().process_frame
+	var error: Variant = null
+	var hearts := scene.get_node_or_null("HeartsButton") as Button
+	var art := scene.get_node_or_null("HeartsButton/ModeArt") as TextureRect
+	if hearts == null or art == null:
+		error = "Hearts button needs ModeArt for the trail-mode icon."
+	elif art.offset_left > 8.0 or art.offset_top > 6.0:
+		error = "Trail-mode art should fill the wooden plate, not sit in a padded inset."
+	elif art.size.x < hearts.size.x - 16.0 or art.size.y < hearts.size.y - 14.0:
+		error = "Trail-mode art should cover the hearts button."
+	else:
+		for badges in [0, 5, 10, 15, 30]:
+			var path := GameManager.trail_mode_icon_path(badges)
+			var image := Image.load_from_file(path)
+			if image == null or image.is_empty():
+				error = "Missing trail-mode icon %s." % path
+				break
+			var used := image.get_used_rect()
+			if used.size.x < 64 or used.size.y < 64:
+				error = "Trail-mode icon %s is too small inside its canvas." % path
+				break
+	scene.queue_free()
+	GameManager.set_badges_per_life_setting(previous)
 	return error
 
 
