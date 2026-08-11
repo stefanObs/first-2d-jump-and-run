@@ -10,6 +10,7 @@ Consult `README.md` (Core gameplay, Campaign Workshop, Floor height, UI / art st
 ## Campaign Workshop
 
 - Stamp hover ghosts and preview icons must show **final in-game stamp size** via `CustomLevelStore.stamp_visual_world_rect`.
+- **Saloon / Crystal Gate** (`goal`) stamps only on the **trail floor** (one row above dirt). Do not allow mid-air or plank placement.
 - **Planks / crystal ledges** (`platform`, `ladder_ledge`) are **160×32** (4 grid cells) — same as campaign `Block` planks. Do not regress to the old half-width **80×24** / 2-cell stamp.
 - Multi-cell stamps store the **left** footprint column; `object_world_position` centers on the full footprint.
 - **Right-click** removes a stamp on the grid or live preview.

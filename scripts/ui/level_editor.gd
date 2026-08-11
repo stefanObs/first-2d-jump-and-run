@@ -1142,6 +1142,8 @@ func _place(x: int, y: int) -> void:
 			for cell in hover_cells:
 				store_x = mini(store_x, cell.x)
 			store_y = place_y
+		if CustomLevelStore.is_floor_only(_selected_type):
+			store_y = CustomLevelStore.placement_row(_selected_type, y, trail)
 		if CustomLevelStore.is_ground_standing(_selected_type) and not CustomLevelStore.ground_stamp_allowed(
 			objects, _selected_type, store_x, trail, width
 		):

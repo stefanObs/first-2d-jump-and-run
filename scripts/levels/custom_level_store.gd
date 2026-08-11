@@ -58,6 +58,10 @@ const LADDER_HEIGHT_CELLS := 3
 static func is_ground_standing(type_name: String) -> bool:
 	return type_name in GROUND_STANDING_TYPES
 
+static func is_floor_only(type_name: String) -> bool:
+	## Saloon / Crystal Gate must stand on the trail floor, never on planks or in the air.
+	return type_name == "goal"
+
 static func is_ceiling_hanging(type_name: String) -> bool:
 	return type_name in CEILING_HANGING_TYPES
 
@@ -74,6 +78,9 @@ static func placement_row(type_name: String, click_y: int, trail: int) -> int:
 	if is_ceiling_hanging(type_name):
 		## Tropfen / Stalaktiten always hang from the cave ceiling row.
 		return 0
+	if is_floor_only(type_name):
+		## Saloon / Crystal Gate always sit on the trail floor.
+		return maxi(trail - 1, 0)
 	if is_ground_standing(type_name) and click_y >= trail - 1:
 		return maxi(trail - 1, 0)
 	return clampi(click_y, 0, trail)
@@ -1212,7 +1219,9 @@ static func sanitize(source: Dictionary, slot_index: int) -> Dictionary:
 				var object := (value as Dictionary).duplicate(true)
 				object["y"] = clampi(int(object.get("y", 0)), 0, trail)
 				var type_name := str(object.get("type", ""))
-				if is_ground_standing(type_name) and int(object.get("y", 0)) == trail:
+				if is_floor_only(type_name) or (
+					is_ground_standing(type_name) and int(object.get("y", 0)) == trail
+				):
 					object["y"] = maxi(trail - 1, 0)
 				if is_ceiling_hanging(type_name):
 					object["y"] = 0

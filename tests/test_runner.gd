@@ -91,6 +91,10 @@ func _ready() -> void:
 		_test_ground_stamps_avoid_gaps
 	)
 	failures += await _run(
+		"Trail editor saloon stamps only on the floor",
+		_test_saloon_stamp_only_on_floor
+	)
+	failures += await _run(
 		"Workshop stamps cannot overlap footprints",
 		_test_workshop_stamps_no_overlap
 	)
@@ -3122,6 +3126,69 @@ func _test_ground_stamps_avoid_gaps() -> Variant:
 			continue
 		if int(object.get("x", -1)) in [11, 20]:
 			return "Sanitize left %s on a canyon/pit column." % type_name
+	return null
+
+
+func _test_saloon_stamp_only_on_floor() -> Variant:
+	var trail := CustomLevelStore.trail_row(8)
+	if CustomLevelStore.placement_row("goal", 1, trail) != trail - 1:
+		return "Saloon placement should snap mid-air clicks onto the trail floor."
+	if CustomLevelStore.placement_row("goal", trail, trail) != trail - 1:
+		return "Saloon placement should snap dirt-row clicks onto the standing floor row."
+	if CustomLevelStore.placement_row("cactus", 1, trail) == trail - 1:
+		return "Other ground stamps may still be clicked into the air."
+	var objects: Array = []
+	for x in range(24):
+		objects.append({"type": "ground", "x": x, "y": trail})
+	objects.append({"type": "platform", "x": 8, "y": 2})
+	objects.append({"type": "goal", "x": 8, "y": 2})
+	var cleaned := CustomLevelStore.sanitize(
+		{"objects": objects, "height": 8, "width": 24, "title": "Saloon Floor"},
+		CustomLevelStore.EXTRA_SLOT_START
+	)
+	var goals: Array[Dictionary] = []
+	for value in cleaned.get("objects", []):
+		var object := value as Dictionary
+		if str(object.get("type", "")) == "goal":
+			goals.append(object)
+	if goals.size() != 1:
+		return "Sanitize should keep the saloon (got %d)." % goals.size()
+	if int(goals[0].get("y", -1)) != trail - 1:
+		return "Sanitized saloon must sit on the trail floor (y=%d)." % int(goals[0].get("y", -1))
+	if int(goals[0].get("x", -1)) != 8:
+		return "Sanitized saloon should stay on its column (x=%d)." % int(goals[0].get("x", -1))
+
+	var editor := load("res://scenes/ui/level_editor.tscn")
+	if editor == null:
+		return "Missing level editor scene."
+	var node := (editor as PackedScene).instantiate()
+	if not (node is Control):
+		node.queue_free()
+		return "Level editor root should be a Control."
+	add_child(node)
+	for _wait in range(20):
+		await get_tree().process_frame
+		if node.get("_preview") != null:
+			break
+	if node.get("_preview") == null:
+		node.queue_free()
+		return "Level editor preview should finish building."
+	var editor_trail: int = node._trail_y()
+	node._selected_type = "goal"
+	node._on_preview_stamp(12, 1)
+	await get_tree().process_frame
+	var stored_y := -1
+	var stored_x := -1
+	for value in node._data.get("objects", []):
+		var object := value as Dictionary
+		if str(object.get("type", "")) == "goal":
+			stored_x = int(object.get("x", -1))
+			stored_y = int(object.get("y", -1))
+	node.queue_free()
+	if stored_y != editor_trail - 1:
+		return "Editor saloon stamp must land on the floor (got y=%d, trail=%d)." % [stored_y, editor_trail]
+	if stored_x < 0:
+		return "Editor should place a saloon when clicking above the floor."
 	return null
 
 
