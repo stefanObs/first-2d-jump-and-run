@@ -46,6 +46,10 @@ static func open_storage_key(chest_name: String) -> String:
 	return "ChestOpen_%s" % chest_name
 
 
+static func is_open_storage_key(key: String) -> bool:
+	return key.begins_with("ChestOpen_")
+
+
 static func badge_storage_key(chest_name: String) -> String:
 	return "ChestBadge_%s" % chest_name
 

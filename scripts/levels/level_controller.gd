@@ -31,6 +31,7 @@ var _paused: bool = false
 var _progress_milestones: Dictionary = {}
 var _collected_badge_names: Array[String] = []
 var _stored_badge_names: Array[String] = []
+var _stored_stars: int = 0
 var _tied_opponent_names: Array[String] = []
 var _stored_tied_opponent_names: Array[String] = []
 var _stored_mode: ModeController.Mode = ModeController.Mode.NONE
@@ -365,6 +366,7 @@ func _clear_hostile_projectiles() -> void:
 func _store_badges_at_camp() -> void:
 	_stored_badge_names = _collected_badge_names.duplicate()
 	_stored_tied_opponent_names = _tied_opponent_names.duplicate()
+	_stored_stars = player.stars_collected if player != null else _count_restored_badges()
 	if player != null:
 		var modes := player.get_modes()
 		_stored_mode = modes.active_mode
@@ -389,7 +391,7 @@ func _reset_unstored_badges() -> void:
 			else:
 				chest.restore_for_respawn()
 	_collected_badge_names = _stored_badge_names.duplicate()
-	player.stars_collected = _count_restored_badges()
+	player.stars_collected = _stored_stars
 	if hud != null:
 		hud.set_stars(player.stars_collected)
 
@@ -607,7 +609,7 @@ func _save_run_state(show_feedback: bool = true) -> bool:
 		level_number,
 		checkpoint_name,
 		_stored_badge_names,
-		_stored_badge_names.size(),
+		_stored_stars,
 		_play_time,
 		_stored_tied_opponent_names,
 		int(_stored_mode),
@@ -661,7 +663,8 @@ func _restore_run_state() -> void:
 	_stored_mode_remaining = maxf(float(state.get("mode_remaining", 0.0)), 0.0)
 	if _stored_mode != ModeController.Mode.NONE:
 		player.restore_mode(_stored_mode, _stored_mode_remaining, 20.0)
-	player.stars_collected = maxi(int(state.get("stars_found", 0)), _count_restored_badges())
+	_stored_stars = _count_restored_badges()
+	player.stars_collected = _stored_stars
 	var checkpoint_name := str(state.get("checkpoint_name", ""))
 	if not checkpoint_name.is_empty():
 		var checkpoint := find_child(checkpoint_name, true, false) as Checkpoint
@@ -770,7 +773,11 @@ func _chest_is_stored_open(chest: TreasureChest) -> bool:
 
 
 func _count_restored_badges() -> int:
-	return _collected_badge_names.size()
+	var total := 0
+	for key in _collected_badge_names:
+		if not TreasureChestLoot.is_open_storage_key(str(key)):
+			total += 1
+	return total
 
 
 func _on_celebration_finished() -> void:

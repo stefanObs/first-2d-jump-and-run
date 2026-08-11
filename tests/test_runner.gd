@@ -49,6 +49,7 @@ func _ready() -> void:
 	failures += await _run("Level catalog has sixteen scenes", _test_sixteen_levels_exist)
 	failures += await _run("LevelController respawns at checkpoint", _test_respawn_uses_checkpoint)
 	failures += await _run("Camp restores tied bandits and active bonuses", _test_camp_restores_state)
+	failures += await _run("Camp respawn restores the badge count from activation", _test_camp_resets_badge_count)
 	failures += await _run("Goal completion disables player input", _test_goal_disables_input)
 	failures += await _run("Flying over the saloon still finishes the trail", _test_goal_triggers_when_flying_over)
 	failures += await _run("Bubble shield blocks opponent damage flag", _test_shield_blocks_damage_flag)
@@ -2256,6 +2257,69 @@ func _test_camp_restores_state() -> Variant:
 	elif is_instance_valid(bullet) or is_instance_valid(star):
 		error = "Bullets and shuriken must be cleared on camp respawn."
 	_free_level(controller)
+	return error
+
+
+func _test_camp_resets_badge_count() -> Variant:
+	var player_packed: PackedScene = load("res://scenes/player/player.tscn")
+	var star_packed: PackedScene = load("res://scenes/world/star.tscn")
+	var chest_packed: PackedScene = load("res://scenes/world/treasure_chest.tscn")
+	var camp_packed: PackedScene = load("res://scenes/world/checkpoint.tscn")
+	if player_packed == null or star_packed == null or chest_packed == null or camp_packed == null:
+		return "Missing player, badge, chest, or camp scene."
+	var controller := LevelController.new()
+	controller.is_custom_level = true
+	add_child(controller)
+	var player := player_packed.instantiate() as Player
+	var star_a := star_packed.instantiate() as Star
+	var star_b := star_packed.instantiate() as Star
+	var chest := chest_packed.instantiate() as TreasureChest
+	var checkpoint := camp_packed.instantiate() as Checkpoint
+	controller.add_child(player)
+	controller.add_child(star_a)
+	controller.add_child(star_b)
+	controller.add_child(chest)
+	controller.add_child(checkpoint)
+	controller.player = player
+	star_a.name = "CampStarA"
+	star_b.name = "CampStarB"
+	chest.name = "CampChest0"
+	player.position = Vector2.ZERO
+	star_a.position = Vector2(80, 0)
+	star_b.position = Vector2(160, 0)
+	chest.position = Vector2(240, 0)
+	## Keep the camp far from the cowboy so REACH_X does not auto-activate it at 0 badges.
+	checkpoint.position = Vector2(800, 0)
+	controller._wire_world_objects()
+	await get_tree().process_frame
+
+	TreasureChest.test_loot_override = TreasureChestLoot.POOL.find(TreasureChestLoot.Type.SPEED_STAR)
+	chest.body_entered.emit(player)
+	star_a.body_entered.emit(player)
+	await get_tree().create_timer(0.3).timeout
+	TreasureChest.test_loot_override = -1
+	if player.stars_collected != 1:
+		controller.queue_free()
+		return "Opening a power-up chest should not count as a sheriff badge."
+	checkpoint.activate()
+	var camp_badges := player.stars_collected
+	star_b.body_entered.emit(player)
+	await get_tree().create_timer(0.3).timeout
+	if player.stars_collected != camp_badges + 1:
+		controller.queue_free()
+		return "A badge collected after camp should raise the count until respawn."
+	controller.respawn_player()
+	await get_tree().process_frame
+	var error: Variant = null
+	if player.stars_collected != camp_badges:
+		error = "Respawn should restore the badge count from the moment the camp was activated."
+	elif star_a.visible:
+		error = "Badges already banked at camp should stay collected."
+	elif not star_b.visible:
+		error = "Badges collected after camp should return on respawn."
+	elif not chest.is_opened():
+		error = "A chest already open at camp should stay open after respawn."
+	controller.queue_free()
 	return error
 
 
