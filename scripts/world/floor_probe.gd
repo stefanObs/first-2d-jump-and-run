@@ -3,6 +3,12 @@ extends RefCounted
 
 ## Shared downward ray probes for hazards and ground enemies.
 
+## How far ahead walkers look before taking a step.
+const FLOOR_AHEAD := 24.0
+## Floor this far below the boots still counts as the same bank/plank.
+## Deeper dirt or canyon floor must not count, or walkers step off ledges.
+const SAME_BANK_DROP := 36.0
+
 
 static func hit_y(
 	host: Node2D,
@@ -45,17 +51,18 @@ static func _is_flight_ceiling(node: Node) -> bool:
 
 
 static func has_floor_ahead(body: CollisionObject2D, direction: float) -> bool:
-	var world := body.get_world_2d()
-	if world == null:
+	## True when the same bank or plank continues under the next step.
+	## Starts well above the boots so one-way ledges are hit from outside,
+	## and ignores crusts deeper than SAME_BANK_DROP so walkers do not
+	## treat dirt under a plank as a reason to walk off the lip.
+	var dir := signf(direction)
+	if is_zero_approx(dir):
 		return true
-	var ahead := body.global_position + Vector2(direction * 24.0, -4.0)
-	var query := PhysicsRayQueryParameters2D.create(
-		ahead,
-		ahead + Vector2(0.0, 72.0),
-		1
-	)
-	query.exclude = [body.get_rid()]
-	return not world.direct_space_state.intersect_ray(query).is_empty()
+	if body.get_world_2d() == null:
+		return true
+	var ahead := body.global_position + Vector2(dir * FLOOR_AHEAD, 0.0)
+	var floor_y := nearest_floor_y(body, ahead, 48.0, 80.0, SAME_BANK_DROP)
+	return not is_nan(floor_y)
 
 
 static func nearest_floor_y(

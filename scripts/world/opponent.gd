@@ -250,7 +250,7 @@ func _physics_process(delta: float) -> void:
 	if (
 		not vertical_patrol
 		and absf(travel_x) > 0.5
-		and not FloorProbe.has_floor_ahead(self, signf(travel_x))
+		and not _has_floor_ahead(signf(travel_x))
 	):
 		_going_to_b = not _going_to_b
 		_apply_facing(1.0 if _going_to_b else -1.0)
@@ -270,6 +270,11 @@ func _physics_process(delta: float) -> void:
 	if next.distance_to(target) < 2.0:
 		_going_to_b = not _going_to_b
 		_apply_facing(1.0 if _going_to_b else -1.0)
+
+
+func _has_floor_ahead(direction: float) -> bool:
+	## Same-height crust or one-way plank; do not walk off a lip.
+	return FloorProbe.has_floor_ahead(self, direction)
 
 
 func _apply_facing(direction: float) -> void:

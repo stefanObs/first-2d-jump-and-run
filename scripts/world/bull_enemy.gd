@@ -34,7 +34,6 @@ const GROUND_PROBE_DOWN := 64.0
 const FALL_DEATH_DEPTH := 1400.0
 ## About 5 cm on a typical play window — keep charging past a jump-over before turning.
 const JUMP_OVER_TURN_PX := 190.0
-const EDGE_LOOKAHEAD_PX := 32.0
 const RUN_FPS := 10.0
 
 var _origin: Vector2
@@ -239,14 +238,12 @@ func _same_bank_as(player: Player) -> bool:
 
 
 func _edge_ahead(direction: float) -> bool:
-	## True at a pit or canyon lip in the given facing.
+	## True at a pit, canyon, or plank lip in the given facing.
+	## Same-bank probe so dirt under a plank is not a reason to charge off.
 	var dir := signf(direction)
 	if is_zero_approx(dir):
 		return false
-	if not FloorProbe.has_floor_ahead(self, dir):
-		return true
-	var probe := global_position + Vector2(dir * EDGE_LOOKAHEAD_PX, 0.0)
-	return is_nan(_probe_floor_y_at(probe, GROUND_PROBE_DOWN))
+	return not FloorProbe.has_floor_ahead(self, dir)
 
 
 func _probe_floor_y_at(

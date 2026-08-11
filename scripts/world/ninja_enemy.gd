@@ -333,18 +333,17 @@ func _gap_is_imminent(direction: float) -> bool:
 	return is_inf(_floor_hit_y(stride_x, global_position.y))
 
 
-func _floor_hit_y(world_x: float, from_y: float) -> float:
-	var world := get_world_2d()
-	if world == null:
-		return INF
-	var from := Vector2(world_x, from_y - 4.0)
-	var to := Vector2(world_x, from_y + 96.0)
-	var query := PhysicsRayQueryParameters2D.create(from, to, 1)
-	query.exclude = [get_rid()]
-	var hit := world.direct_space_state.intersect_ray(query)
-	if hit.is_empty():
-		return INF
-	return float(hit["position"].y)
+func _floor_hit_y(world_x: float, from_y: float, max_drop: float = FloorProbe.SAME_BANK_DROP) -> float:
+	## Default drop stays on the current plank/bank. Pass a larger max_drop when
+	## scanning for a jump landing on a lower ledge or far canyon bank.
+	var hit := FloorProbe.nearest_floor_y(
+		self,
+		Vector2(world_x, from_y),
+		48.0,
+		maxf(96.0, max_drop + 8.0),
+		max_drop
+	)
+	return INF if is_nan(hit) else hit
 
 
 func _find_gap_landing(direction: float) -> Dictionary:
@@ -358,7 +357,7 @@ func _find_gap_landing(direction: float) -> Dictionary:
 	var x := start_x + dir * JUMP_PROBE_STEP
 	var end_x := start_x + dir * JUMP_MAX_GAP
 	while (dir > 0.0 and x <= end_x) or (dir < 0.0 and x >= end_x):
-		var hit_y := _floor_hit_y(x, start_y)
+		var hit_y := _floor_hit_y(x, start_y, _jump_reach)
 		if is_inf(hit_y):
 			found_gap = true
 		elif found_gap:
@@ -413,7 +412,7 @@ func _find_drop_landing(direction: float) -> Dictionary:
 	var x := global_position.x + dir * JUMP_PROBE_STEP
 	var end_x := global_position.x + dir * JUMP_MAX_GAP
 	while (dir > 0.0 and x <= end_x) or (dir < 0.0 and x >= end_x):
-		var hit_y := _floor_hit_y(x, start_y)
+		var hit_y := _floor_hit_y(x, start_y, _jump_reach)
 		if not is_inf(hit_y) and hit_y - start_y >= LEDGE_STEP_MIN:
 			return {"x": x, "y": hit_y}
 		x += dir * JUMP_PROBE_STEP

@@ -1268,6 +1268,12 @@ static func _align_ground_foes(level: Node) -> void:
 			continue
 		var surface := walk_surface_at(level, bandit.global_position.x)
 		var floor_y := float(surface["y"])
+		var plank_y := FloorProbe.nearest_floor_y(
+			bandit, bandit.global_position, 48.0, 80.0, FloorProbe.SAME_BANK_DROP
+		)
+		## Leave walkers on a plank/ledge above the desert crust.
+		if not is_nan(plank_y) and plank_y < floor_y - 20.0:
+			continue
 		## Only correct burial or small drift — leave intentional aerial stamps to fall.
 		if bandit.global_position.y > floor_y + 6.0 or absf(bandit.global_position.y - floor_y) <= 24.0:
 			bandit.snap_feet_to_surface(floor_y)

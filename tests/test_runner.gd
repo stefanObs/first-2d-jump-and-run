@@ -129,6 +129,10 @@ func _ready() -> void:
 		_test_standing_above_hurts
 	)
 	failures += await _run("Bandits turn around at plank edges", _test_bandit_respects_plank_edges)
+	failures += await _run(
+		"Walking enemies patrol planks without falling off",
+		_test_walkers_patrol_planks
+	)
 	failures += await _run("Controller bindings match every gamepad device", _test_controller_all_devices)
 	failures += await _run("Flying levels guard the very top of the screen", _test_flying_levels_top_guarded)
 	failures += await _run("Timed door shows a clear open/closed barrier", _test_timed_door_states)
@@ -4273,16 +4277,22 @@ func _test_standing_above_hurts() -> Variant:
 	return error
 
 
-func _test_bandit_respects_plank_edges() -> Variant:
+func _make_one_way_plank(center: Vector2, size: Vector2) -> StaticBody2D:
 	var plank := StaticBody2D.new()
-	plank.position = Vector2(200, 410)
+	plank.position = center
 	plank.collision_layer = 1
 	var collision := CollisionShape2D.new()
 	var shape := RectangleShape2D.new()
-	shape.size = Vector2(120, 20)
+	shape.size = size
 	collision.shape = shape
+	collision.one_way_collision = true
 	plank.add_child(collision)
 	add_child(plank)
+	return plank
+
+
+func _test_bandit_respects_plank_edges() -> Variant:
+	var plank := _make_one_way_plank(Vector2(200, 410), Vector2(120, 20))
 	var packed: PackedScene = load("res://scenes/world/opponent.tscn")
 	var bandit := packed.instantiate() as Opponent
 	bandit.position = Vector2(238, 400)
@@ -4297,6 +4307,142 @@ func _test_bandit_respects_plank_edges() -> Variant:
 	bandit.queue_free()
 	plank.queue_free()
 	return error
+
+
+func _test_walkers_patrol_planks() -> Variant:
+	## One-way workshop planks over empty air and over dirt: walkers must move
+	## on the ledge and turn at the lips instead of freezing or falling.
+	var cases: Array[Dictionary] = [
+		{"dirt": false},
+		{"dirt": true},
+	]
+	for case in cases:
+		var error: Variant = await _assert_walkers_on_plank(bool(case["dirt"]))
+		if error != null:
+			return error
+	return null
+
+
+func _assert_walkers_on_plank(with_dirt_below: bool) -> Variant:
+	for node in get_tree().get_nodes_in_group("player"):
+		if is_instance_valid(node):
+			node.free()
+	var plank_top := 200.0
+	var plank := _make_one_way_plank(Vector2(400, plank_top + 16.0), Vector2(160, 32))
+	var dirt: StaticBody2D = null
+	if with_dirt_below:
+		dirt = StaticBody2D.new()
+		dirt.collision_layer = 1
+		dirt.position = Vector2(400, plank_top + 96.0)
+		var dirt_shape := CollisionShape2D.new()
+		var dirt_rect := RectangleShape2D.new()
+		dirt_rect.size = Vector2(480, 40)
+		dirt_shape.shape = dirt_rect
+		dirt.add_child(dirt_shape)
+		add_child(dirt)
+	var suffix := " with dirt below" if with_dirt_below else ""
+	var plank_left := 320.0
+	var plank_right := 480.0
+
+	var bandit_packed: PackedScene = load("res://scenes/world/opponent.tscn")
+	var bandit := bandit_packed.instantiate() as Opponent
+	bandit.position = Vector2(400, plank_top)
+	bandit._shot_timer = 999.0
+	add_child(bandit)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	var bandit_start := bandit.global_position
+	for _i in range(40):
+		await get_tree().physics_frame
+	if absf(bandit.global_position.y - plank_top) > 12.0:
+		var msg := "Bandit should stay on the plank%s (y=%.1f)." % [suffix, bandit.global_position.y]
+		_free_plank_walker_fixture(bandit, null, null, plank, dirt, null)
+		return msg
+	if absf(bandit.global_position.x - bandit_start.x) < 6.0:
+		var msg := "Bandit should patrol along the plank%s." % suffix
+		_free_plank_walker_fixture(bandit, null, null, plank, dirt, null)
+		return msg
+	if bandit.global_position.x < plank_left - 8.0 or bandit.global_position.x > plank_right + 8.0:
+		var msg := "Bandit must not walk off the plank%s (x=%.1f)." % [suffix, bandit.global_position.x]
+		_free_plank_walker_fixture(bandit, null, null, plank, dirt, null)
+		return msg
+
+	var bull_packed: PackedScene = load("res://scenes/world/bull_enemy.tscn")
+	var bull := bull_packed.instantiate() as BullEnemy
+	bull.position = Vector2(400, plank_top)
+	add_child(bull)
+	await get_tree().physics_frame
+	bull._was_grounded = true
+	var player := Player.new()
+	player.name = "Player"
+	player.position = Vector2(470, plank_top)
+	player.process_mode = Node.PROCESS_MODE_DISABLED
+	if not player.is_in_group("player"):
+		player.add_to_group("player")
+	add_child(player)
+	await get_tree().physics_frame
+	var bull_start := bull.global_position
+	var saw_bull_move := false
+	for _i in range(50):
+		await get_tree().physics_frame
+		player.global_position = Vector2(470, plank_top)
+		if absf(bull.global_position.x - bull_start.x) > 6.0:
+			saw_bull_move = true
+		if bull.global_position.x < plank_left - 8.0 or bull.global_position.x > plank_right + 8.0:
+			var msg := "Bull must not charge off the plank%s (x=%.1f)." % [suffix, bull.global_position.x]
+			_free_plank_walker_fixture(bandit, bull, null, plank, dirt, player)
+			return msg
+	if absf(bull.global_position.y - plank_top) > 12.0 or bull._fallen:
+		var msg := "Bull should stay on the plank%s." % suffix
+		_free_plank_walker_fixture(bandit, bull, null, plank, dirt, player)
+		return msg
+	if not saw_bull_move:
+		var msg := "Bull should charge along the plank%s." % suffix
+		_free_plank_walker_fixture(bandit, bull, null, plank, dirt, player)
+		return msg
+
+	var ninja_packed: PackedScene = load("res://scenes/world/ninja_enemy.tscn")
+	var ninja := ninja_packed.instantiate() as NinjaEnemy
+	ninja.position = Vector2(360, plank_top)
+	add_child(ninja)
+	ninja._state = NinjaEnemy.State.CHASE
+	ninja._set_dormant(false)
+	ninja._activated = true
+	player.global_position = Vector2(450, plank_top)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	var ninja_start := ninja.global_position
+	for _i in range(40):
+		await get_tree().physics_frame
+		player.global_position = Vector2(450, plank_top)
+	if absf(ninja.global_position.y - plank_top) > 12.0:
+		var msg := "Ninja should stay on the plank%s (y=%.1f)." % [suffix, ninja.global_position.y]
+		_free_plank_walker_fixture(bandit, bull, ninja, plank, dirt, player)
+		return msg
+	if absf(ninja.global_position.x - ninja_start.x) < 6.0:
+		var msg := "Ninja should chase along the plank%s." % suffix
+		_free_plank_walker_fixture(bandit, bull, ninja, plank, dirt, player)
+		return msg
+	if ninja.global_position.x < plank_left - 8.0 or ninja.global_position.x > plank_right + 8.0:
+		var msg := "Ninja must not walk off the plank%s (x=%.1f)." % [suffix, ninja.global_position.x]
+		_free_plank_walker_fixture(bandit, bull, ninja, plank, dirt, player)
+		return msg
+
+	_free_plank_walker_fixture(bandit, bull, ninja, plank, dirt, player)
+	return null
+
+
+func _free_plank_walker_fixture(
+	bandit: Node,
+	bull: Node,
+	ninja: Node,
+	plank: Node,
+	dirt: Node,
+	player: Node
+) -> void:
+	for node in [bandit, bull, ninja, plank, dirt, player]:
+		if node != null and is_instance_valid(node):
+			node.queue_free()
 
 
 func _test_controller_all_devices() -> Variant:
