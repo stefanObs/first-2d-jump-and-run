@@ -8714,6 +8714,13 @@ func _test_workshop_canyon_resize_handles() -> Variant:
 	if too_wide == null:
 		preview.queue_free()
 		return "A 6-cell canyon should show the too-wide jump warning icon."
+	var shrink_right := group.get_node_or_null("ShrinkRight") as Button
+	if shrink_right == null:
+		preview.queue_free()
+		return "Canyon lips should expose a right shrink arrow."
+	if absf(grow_right.position.y - shrink_right.position.y) > 1.5:
+		preview.queue_free()
+		return "Grow and shrink arrows on the same lip should stay on one row."
 	var requested: Array = []
 	preview.canyon_adjust_requested.connect(
 		func(start_x: int, end_x: int, side: String, grow: bool) -> void:
@@ -8721,6 +8728,57 @@ func _test_workshop_canyon_resize_handles() -> Variant:
 	)
 	grow_right.pressed.emit()
 	preview.queue_free()
+	var narrow := LevelPreview.new()
+	add_child(narrow)
+	narrow.size = Vector2(520, 300)
+	var narrow_data := CustomLevelStore.default_level(0)
+	var narrow_trail := CustomLevelStore.trail_row(int(narrow_data.get("height", 8)))
+	narrow_data["objects"] = [
+		{"type": "ground", "x": 11, "y": narrow_trail},
+		{"type": "canyon", "x": 12, "y": narrow_trail},
+		{"type": "ground", "x": 13, "y": narrow_trail},
+		{"type": "goal", "x": 16, "y": narrow_trail - 1},
+	]
+	narrow.show_level(narrow_data)
+	narrow.set_view_center_column(12)
+	for _wait in range(24):
+		await get_tree().process_frame
+		var overlay_narrow := narrow.get_node_or_null("CanyonHandleOverlay")
+		if overlay_narrow != null and overlay_narrow.get_child_count() > 0:
+			break
+	var narrow_overlay := narrow.get_node_or_null("CanyonHandleOverlay") as Control
+	if narrow_overlay == null or narrow_overlay.get_child_count() < 1:
+		narrow.queue_free()
+		return "A one-column canyon should still show resize arrows."
+	var narrow_group := narrow_overlay.get_child(0) as Control
+	var n_grow_left := narrow_group.get_node_or_null("GrowLeft") as Button
+	var n_shrink_left := narrow_group.get_node_or_null("ShrinkLeft") as Button
+	var n_grow_right := narrow_group.get_node_or_null("GrowRight") as Button
+	var n_shrink_right := narrow_group.get_node_or_null("ShrinkRight") as Button
+	if (
+		n_grow_left == null
+		or n_shrink_left == null
+		or n_grow_right == null
+		or n_shrink_right == null
+	):
+		narrow.queue_free()
+		return "A small canyon should keep grow and shrink arrows on both lips."
+	if absf(n_grow_left.position.y - n_shrink_left.position.y) > 1.5:
+		narrow.queue_free()
+		return "Small-canyon left grow/shrink arrows should sit on the same row."
+	if absf(n_grow_right.position.y - n_shrink_right.position.y) > 1.5:
+		narrow.queue_free()
+		return "Small-canyon right grow/shrink arrows should sit on the same row."
+	var left_gap := absf(n_shrink_left.position.x - n_grow_left.position.x)
+	var right_gap := absf(n_grow_right.position.x - n_shrink_right.position.x)
+	var expected_gap := LevelPreview.CANYON_HANDLE_SIZE + LevelPreview.CANYON_HANDLE_GAP
+	if absf(left_gap - expected_gap) > 2.0 or n_shrink_left.position.x <= n_grow_left.position.x:
+		narrow.queue_free()
+		return "Small-canyon left arrows should sit next to each other outside the lip."
+	if absf(right_gap - expected_gap) > 2.0 or n_grow_right.position.x <= n_shrink_right.position.x:
+		narrow.queue_free()
+		return "Small-canyon right arrows should sit next to each other outside the lip."
+	narrow.queue_free()
 	if requested.is_empty() or not bool(requested[0][3]) or str(requested[0][2]) != "right":
 		return "Clicking a canyon grow arrow should request a lip resize."
 	var editor := load("res://scenes/ui/level_editor.tscn")

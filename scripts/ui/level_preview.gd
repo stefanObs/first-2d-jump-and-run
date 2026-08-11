@@ -18,6 +18,7 @@ const GAMEPLAY_CAMERA_ZOOM := 0.84
 const _GHOST_OUTLINE := Color(1.0, 0.82, 0.12, 0.95)
 const _PLACED_OUTLINE := Color(1.0, 0.94, 0.72, 1.0)
 const CANYON_HANDLE_SIZE := 36.0
+const CANYON_HANDLE_GAP := 2.0
 const CANYON_WARNING_SIZE := 40.0
 const _ICON_SCROLL_LEFT := "res://assets/ui/menu_icon_scroll_left.png"
 const _ICON_SCROLL_RIGHT := "res://assets/ui/menu_icon_scroll_right.png"
@@ -839,6 +840,8 @@ func _layout_canyon_handles() -> void:
 	var metrics := _view_metrics()
 	var grid: float = metrics["grid"]
 	var trail: int = metrics["trail"]
+	var handle := CANYON_HANDLE_SIZE
+	var pad := CANYON_HANDLE_GAP
 	for group_node in _canyon_overlay.get_children():
 		var group := group_node as Control
 		if group == null:
@@ -855,64 +858,117 @@ func _layout_canyon_handles() -> void:
 				grid
 			)
 		)
-		var hit := display.grow(CANYON_HANDLE_SIZE)
+		var hit := display.grow(handle * 2.0 + pad)
 		var visible := gap.size.x > 0.0 and hit.intersects(gap)
 		group.visible = visible
 		if not visible:
 			continue
-		var mid_y := gap.position.y + gap.size.y * 0.5 - CANYON_HANDLE_SIZE * 0.5
-		var shrink_y := mid_y
-		if gap.size.x < CANYON_HANDLE_SIZE * 2.0 + 8.0:
-			shrink_y = gap.position.y - CANYON_HANDLE_SIZE - 2.0
-		_place_canyon_handle(
+		var mid_y := gap.position.y + gap.size.y * 0.5 - handle * 0.5
+		## A narrow gap cannot fit both shrink arrows inside, so park each
+		## grow/shrink pair outside the lip — still adjacent, same row.
+		var compact := gap.size.x < handle * 2.0 + pad * 3.0
+		var grow_left_pos: Vector2
+		var shrink_left_pos: Vector2
+		var shrink_right_pos: Vector2
+		var grow_right_pos: Vector2
+		if compact:
+			shrink_left_pos = Vector2(gap.position.x - handle - pad, mid_y)
+			grow_left_pos = Vector2(shrink_left_pos.x - handle - pad, mid_y)
+			shrink_right_pos = Vector2(gap.end.x + pad, mid_y)
+			grow_right_pos = Vector2(shrink_right_pos.x + handle + pad, mid_y)
+		else:
+			grow_left_pos = Vector2(gap.position.x - handle - pad, mid_y)
+			shrink_left_pos = Vector2(gap.position.x + pad, mid_y)
+			shrink_right_pos = Vector2(gap.end.x - handle - pad, mid_y)
+			grow_right_pos = Vector2(gap.end.x + pad, mid_y)
+		_place_canyon_pair(
 			group.get_node_or_null("GrowLeft") as Control,
-			Vector2(gap.position.x - CANYON_HANDLE_SIZE - 2.0, mid_y),
-			display
-		)
-		_place_canyon_handle(
 			group.get_node_or_null("ShrinkLeft") as Control,
-			Vector2(gap.position.x + 2.0, shrink_y),
+			grow_left_pos,
+			shrink_left_pos,
 			display
 		)
-		_place_canyon_handle(
+		_place_canyon_pair(
 			group.get_node_or_null("ShrinkRight") as Control,
-			Vector2(gap.end.x - CANYON_HANDLE_SIZE - 2.0, shrink_y),
-			display
-		)
-		_place_canyon_handle(
 			group.get_node_or_null("GrowRight") as Control,
-			Vector2(gap.end.x + 2.0, mid_y),
+			shrink_right_pos,
+			grow_right_pos,
 			display
 		)
 		var warn := group.get_node_or_null("TooWide") as Control
 		if warn != null:
-			var warn_y := minf(shrink_y, gap.position.y) - CANYON_WARNING_SIZE - 4.0
+			var arrow_y := mid_y
+			var grow_left := group.get_node_or_null("GrowLeft") as Control
+			if grow_left != null:
+				arrow_y = grow_left.position.y
 			_place_canyon_handle(
 				warn,
 				Vector2(
 					gap.position.x + gap.size.x * 0.5 - CANYON_WARNING_SIZE * 0.5,
-					warn_y
+					arrow_y - CANYON_WARNING_SIZE - pad * 2.0
 				),
 				display
 			)
 
 
-func _place_canyon_handle(handle: Control, desired: Vector2, display: Rect2) -> void:
+func _handle_size(handle: Control) -> Vector2:
 	if handle == null:
-		return
+		return Vector2(CANYON_HANDLE_SIZE, CANYON_HANDLE_SIZE)
 	var size := handle.size
 	if size.x < 1.0 or size.y < 1.0:
 		size = handle.custom_minimum_size
+	if size.x < 1.0 or size.y < 1.0:
+		size = Vector2(CANYON_HANDLE_SIZE, CANYON_HANDLE_SIZE)
+	return size
+
+
+func _shift_rect_into(bounds: Rect2, display: Rect2) -> Vector2:
+	var shift := Vector2.ZERO
+	if bounds.size.x <= display.size.x:
+		if bounds.position.x < display.position.x:
+			shift.x = display.position.x - bounds.position.x
+		elif bounds.end.x > display.end.x:
+			shift.x = display.end.x - bounds.end.x
+	if bounds.size.y <= display.size.y:
+		if bounds.position.y < display.position.y:
+			shift.y = display.position.y - bounds.position.y
+		elif bounds.end.y > display.end.y:
+			shift.y = display.end.y - bounds.end.y
+	return shift
+
+
+func _place_canyon_pair(
+	first: Control,
+	second: Control,
+	first_pos: Vector2,
+	second_pos: Vector2,
+	display: Rect2
+) -> void:
+	var first_size := _handle_size(first)
+	var second_size := _handle_size(second)
+	var min_x := minf(first_pos.x, second_pos.x)
+	var min_y := minf(first_pos.y, second_pos.y)
+	var max_x := maxf(first_pos.x + first_size.x, second_pos.x + second_size.x)
+	var max_y := maxf(first_pos.y + first_size.y, second_pos.y + second_size.y)
+	var shift := _shift_rect_into(Rect2(min_x, min_y, max_x - min_x, max_y - min_y), display)
+	_finish_canyon_handle(first, first_pos + shift, first_size)
+	_finish_canyon_handle(second, second_pos + shift, second_size)
+
+
+func _finish_canyon_handle(handle: Control, pos: Vector2, size: Vector2) -> void:
+	if handle == null:
+		return
 	handle.size = size
-	var max_pos := Vector2(
-		display.end.x - size.x,
-		display.end.y - size.y
-	)
-	handle.position = Vector2(
-		clampf(desired.x, display.position.x, maxf(max_pos.x, display.position.x)),
-		clampf(desired.y, display.position.y, maxf(max_pos.y, display.position.y))
-	)
+	handle.position = pos
 	handle.pivot_offset = size * 0.5
+
+
+func _place_canyon_handle(handle: Control, desired: Vector2, display: Rect2) -> void:
+	if handle == null:
+		return
+	var size := _handle_size(handle)
+	var shift := _shift_rect_into(Rect2(desired, size), display)
+	_finish_canyon_handle(handle, desired + shift, size)
 
 
 func _point_hits_canyon_handle(local: Vector2) -> bool:
