@@ -54,6 +54,7 @@ func _ready() -> void:
 	failures += await _run("Flying over the saloon still finishes the trail", _test_goal_triggers_when_flying_over)
 	failures += await _run("Bubble shield blocks opponent damage flag", _test_shield_blocks_damage_flag)
 	failures += await _run("Bubble shield does not block canyon falls", _test_canyon_ignores_bubble_shield)
+	failures += await _run("Canyon fall waits for the lower bank lip", _test_canyon_fall_waits_for_lower_rim)
 	failures += await _run("InputManager device prompts", _test_input_manager_prompts)
 	failures += await _run("Star reachability heuristics", _test_star_reachability)
 	failures += await _run(
@@ -2422,6 +2423,37 @@ func _test_canyon_ignores_bubble_shield() -> Variant:
 	if not hit:
 		return "Canyon should hurt the player even with a Bubble Shield."
 	return null
+
+
+func _test_canyon_fall_waits_for_lower_rim() -> Variant:
+	var packed: PackedScene = load("res://scenes/world/hazard.tscn")
+	if packed == null:
+		return "Missing hazard scene."
+	var hazard := packed.instantiate() as Hazard
+	hazard.scale = Vector2(2.0, 2.0)
+	add_child(hazard)
+	hazard.align_canyon_to_gap(200.0, 0.0, 240.0, 200.0, 280.0)
+	if absf(hazard.canyon_lower_rim_y() - 280.0) > 0.5:
+		hazard.queue_free()
+		return "Canyon fall line should be the lower of the two bank lips."
+	var player := Player.new()
+	add_child(player)
+	var hits := {"n": 0}
+	hazard.hurt.connect(func(_p: Player) -> void: hits["n"] += 1)
+	player.global_position = Vector2(120.0, 230.0)
+	hazard._on_body_entered(player)
+	if hits["n"] != 0:
+		player.queue_free()
+		hazard.queue_free()
+		return "Canyon should not start the fall while the cowboy is still above the lower lip."
+	player.global_position = Vector2(120.0, 288.0)
+	hazard._on_body_entered(player)
+	var error: Variant = null
+	if hits["n"] != 1:
+		error = "Canyon should start the fall once the cowboy is below the lower bank lip."
+	player.queue_free()
+	hazard.queue_free()
+	return error
 
 
 func _test_input_manager_prompts() -> Variant:

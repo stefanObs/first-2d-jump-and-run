@@ -18,6 +18,8 @@ const FUNGUS_FRAME_PATHS: PackedStringArray = [
 
 var _level_style: String = LevelStyle.DESERT
 var _fungus_anim: AnimatedSprite2D
+## World Y the cowboy must pass (feet below the lower bank lip) before a canyon fall.
+var _fall_below_y: float = -INF
 
 
 func apply_level_style(style: String) -> void:
@@ -42,6 +44,10 @@ func is_cactus() -> bool:
 
 func is_fatal_fall() -> bool:
 	return is_canyon() or is_pit()
+
+
+func canyon_lower_rim_y() -> float:
+	return _fall_below_y
 
 
 func ground_contact_y() -> float:
@@ -82,6 +88,7 @@ func align_to_walk_surface(
 
 
 func _ready() -> void:
+	set_physics_process(false)
 	body_entered.connect(_on_body_entered)
 	_configure_visual()
 
@@ -260,6 +267,11 @@ func align_canyon_to_gap(
 
 	var gap_w := maxf(gap_right - gap_left, 40.0)
 	var opening_center_x := (gap_left + gap_right) * 0.5
+	var left_top := floor_top_y if is_nan(left_floor_top_y) else left_floor_top_y
+	var right_top := floor_top_y if is_nan(right_floor_top_y) else right_floor_top_y
+	## Fall only once the cowboy is below the lower of the two bank lips.
+	_fall_below_y = maxf(left_top, right_top)
+	set_physics_process(true)
 	var canyon_art := get_node_or_null("CanyonMouth") as ScalableCanyonArt
 	if canyon_art == null:
 		canyon_art = get_node_or_null("PitMouth") as ScalableCanyonArt
@@ -278,15 +290,18 @@ func align_canyon_to_gap(
 		_level_style
 	)
 
-	# Widen the hurt box to cover the fall gap.
+	# Cover the mouth from the higher lip downward so a drop past the lower rim
+	# stays overlapping; the Y gate decides when the fall actually starts.
+	var higher_edge := minf(left_top, right_top)
+	var fall_height := 240.0
 	var shape := get_node_or_null("CollisionShape2D") as CollisionShape2D
 	if shape != null and shape.shape is RectangleShape2D:
 		var rect := (shape.shape as RectangleShape2D).duplicate() as RectangleShape2D
-		rect.size = Vector2(gap_w / parent_sx, maxf(rect.size.y, 56.0))
+		rect.size = Vector2(gap_w / parent_sx, fall_height / parent_sy)
 		shape.shape = rect
 		shape.position = Vector2(
 			(opening_center_x - global_position.x) / parent_sx,
-			(floor_top_y - global_position.y) / parent_sy + 28.0
+			(higher_edge - global_position.y) / parent_sy + (fall_height / parent_sy) * 0.5
 		)
 
 	var label := get_node_or_null("PitLabel") as Label
@@ -294,11 +309,23 @@ func align_canyon_to_gap(
 		label.visible = false
 
 
+func _physics_process(_delta: float) -> void:
+	if not is_canyon():
+		set_physics_process(false)
+		return
+	for body in get_overlapping_bodies():
+		if body is Player:
+			_try_canyon_fall(body as Player)
+
+
 func _on_body_entered(body: Node2D) -> void:
 	if body is Player:
 		var player := body as Player
 		if is_fatal_fall():
-			# Bubble Shield does not save a canyon/pit fall — only skip if already falling.
+			if is_canyon():
+				_try_canyon_fall(player)
+				return
+			# Bubble Shield does not save a pit fall — only skip if already falling.
 			if player.is_canyon_falling():
 				return
 			hurt.emit(player)
@@ -306,3 +333,12 @@ func _on_body_entered(body: Node2D) -> void:
 		if player.is_invulnerable():
 			return
 		hurt.emit(player)
+
+
+func _try_canyon_fall(player: Player) -> void:
+	if player.is_canyon_falling():
+		return
+	## Still above the lower bank lip — keep falling/flying through the mouth.
+	if player.global_position.y <= _fall_below_y:
+		return
+	hurt.emit(player)
