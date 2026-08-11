@@ -109,6 +109,7 @@ func _ready() -> void:
 	failures += await _run("Ninja ambushes in front of the player", _test_ninja_ambush_spawn)
 	failures += await _run("Ninja sword attack hurts the cowboy", _test_ninja_sword_hurts)
 	failures += await _run("Lasso ties ninjas", _test_lasso_ties_ninja)
+	failures += await _run("Tied ninjas sit on dirt or a plank", _test_tied_ninja_sits_on_support)
 	failures += await _run("Jumping on a ninja head ties him", _test_stomp_ties_ninja)
 	failures += await _run("Ninja throws shuriken at flying player", _test_ninja_shuriken_vs_wings)
 	failures += await _run("Ninja jumps pits and canyons", _test_ninja_jumps_gaps)
@@ -3604,6 +3605,69 @@ func _test_lasso_ties_ninja() -> Variant:
 	elif sprite != null and sprite.offset != NinjaEnemy.STAND_FOOT_OFFSET:
 		error = "Tied ninjas must sit on the floor with the standing foot offset."
 	ninja.queue_free()
+	return error
+
+
+func _test_tied_ninja_sits_on_support() -> Variant:
+	var packed: PackedScene = load("res://scenes/world/ninja_enemy.tscn")
+	if packed == null:
+		return "Missing ninja enemy scene."
+
+	var dirt_top := 420.0
+	var dirt := StaticBody2D.new()
+	dirt.collision_layer = 1
+	dirt.position = Vector2(400, dirt_top + 20.0)
+	var dirt_shape := CollisionShape2D.new()
+	var dirt_rect := RectangleShape2D.new()
+	dirt_rect.size = Vector2(800, 40)
+	dirt_shape.shape = dirt_rect
+	dirt.add_child(dirt_shape)
+	add_child(dirt)
+
+	var plank_top := 300.0
+	var plank := StaticBody2D.new()
+	plank.collision_layer = 1
+	plank.position = Vector2(560, plank_top + 12.0)
+	var plank_shape := CollisionShape2D.new()
+	var plank_rect := RectangleShape2D.new()
+	plank_rect.size = Vector2(160, 24)
+	plank_shape.shape = plank_rect
+	plank.add_child(plank_shape)
+	add_child(plank)
+
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+
+	var error: Variant = null
+	var floor_ninja := packed.instantiate() as NinjaEnemy
+	floor_ninja.position = Vector2(220, dirt_top - 90.0)
+	add_child(floor_ninja)
+	floor_ninja._state = NinjaEnemy.State.JUMP
+	floor_ninja._set_dormant(false)
+	await get_tree().physics_frame
+	floor_ninja.tie_up()
+	if absf(floor_ninja.global_position.y - dirt_top) > 4.0:
+		error = "A tied ninja must drop onto the dirt (y=%.1f, dirt %.1f)." % [
+			floor_ninja.global_position.y, dirt_top
+		]
+	floor_ninja.queue_free()
+
+	if error == null:
+		var plank_ninja := packed.instantiate() as NinjaEnemy
+		plank_ninja.position = Vector2(560, plank_top - 70.0)
+		add_child(plank_ninja)
+		plank_ninja._state = NinjaEnemy.State.JUMP
+		plank_ninja._set_dormant(false)
+		await get_tree().physics_frame
+		plank_ninja.tie_up()
+		if absf(plank_ninja.global_position.y - plank_top) > 4.0:
+			error = "A tied ninja must sit on the plank, not the dirt below (y=%.1f, plank %.1f)." % [
+				plank_ninja.global_position.y, plank_top
+			]
+		plank_ninja.queue_free()
+
+	dirt.queue_free()
+	plank.queue_free()
 	return error
 
 

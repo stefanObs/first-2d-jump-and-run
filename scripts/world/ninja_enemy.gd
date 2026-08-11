@@ -602,6 +602,8 @@ func tie_up(_award_bounty: bool = true) -> void:
 	_throw_token += 1
 	_jump_token += 1
 	_kill_jump_tween()
+	_kill_appear_tween()
+	_seat_on_support()
 	collision_layer = 0
 	var body_shape := get_node_or_null("CollisionShape2D") as CollisionShape2D
 	if body_shape != null:
@@ -621,6 +623,23 @@ func tie_up(_award_bounty: bool = true) -> void:
 		_label.position.y = -78.0
 	_play_tying_flourish()
 	captured.emit(self)
+
+
+func _seat_on_support() -> void:
+	## Lasso/stomp used to freeze a jump in mid-air. Drop onto the plank or dirt
+	## under the seat so the bound pose sits on a walkable surface.
+	var hit := FloorProbe.nearest_floor_y(
+		self, global_position, 48.0, 80.0, FloorProbe.SAME_BANK_DROP
+	)
+	if is_nan(hit):
+		var drop := maxf(_jump_reach, 96.0)
+		hit = FloorProbe.nearest_floor_y(self, global_position, 8.0, drop + 32.0, drop)
+	if not is_nan(hit):
+		global_position.y = hit
+		return
+	var theme_y := _walk_surface_y(global_position.x, global_position.y)
+	if absf(theme_y - global_position.y) <= maxf(_jump_reach, 96.0):
+		global_position.y = theme_y
 
 
 func _show_tied_pose() -> void:
