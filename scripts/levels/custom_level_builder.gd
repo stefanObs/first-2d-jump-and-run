@@ -48,7 +48,7 @@ static func build(level: LevelController, data: Dictionary, preview: bool = fals
 
 	_add_ground_columns(level, data, grid, trail)
 
-	var canyon_runs := _canyon_runs(data, trail)
+	var canyon_runs := CustomLevelStore.canyon_column_runs(data, trail)
 	var counters: Dictionary = {}
 	var has_goal := false
 	for value in data.get("objects", []):
@@ -354,29 +354,7 @@ static func _add_styled(
 
 ## Merge horizontally adjacent canyon stamps into one wider gap run.
 static func _canyon_runs(data: Dictionary, trail: int) -> Array[Dictionary]:
-	var xs: Array[int] = []
-	for value in data.get("objects", []):
-		if not (value is Dictionary):
-			continue
-		var object := value as Dictionary
-		var type_name := str(object.get("type", ""))
-		if type_name not in ["canyon"]:
-			continue
-		if int(object.get("y", -1)) != trail:
-			continue
-		xs.append(int(object.get("x", 0)))
-	xs.sort()
-	var runs: Array[Dictionary] = []
-	var index := 0
-	while index < xs.size():
-		var start_x := xs[index]
-		var end_x := start_x
-		while index + 1 < xs.size() and xs[index + 1] == end_x + 1:
-			index += 1
-			end_x = xs[index]
-		runs.append({"start_x": start_x, "end_x": end_x})
-		index += 1
-	return runs
+	return CustomLevelStore.canyon_column_runs(data, trail)
 
 
 ## Merge vertically stacked dirt cells into one tall bank so steps look handpainted.

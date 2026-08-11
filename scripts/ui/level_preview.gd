@@ -7,6 +7,7 @@ signal hover_column_changed(column: int)
 signal hover_cell_changed(column: int, row: int)
 signal stamp_requested(column: int, row: int)
 signal remove_requested(column: int, row: int)
+signal canyon_adjust_requested(start_x: int, end_x: int, side: String, grow: bool)
 
 const FRAME_CONTENT_MARGIN := 6.0
 const MIN_PREVIEW_SIZE := Vector2(160, 120)
@@ -14,6 +15,11 @@ const SKY_PADDING_CELLS := 0.75
 const GROUND_PADDING_CELLS := 0.65
 ## Match WildWestTheme.configure_player_camera so stamp scale matches play mode.
 const GAMEPLAY_CAMERA_ZOOM := 0.84
+const CANYON_HANDLE_SIZE := 36.0
+const CANYON_WARNING_SIZE := 40.0
+const _ICON_SCROLL_LEFT := "res://assets/ui/menu_icon_scroll_left.png"
+const _ICON_SCROLL_RIGHT := "res://assets/ui/menu_icon_scroll_right.png"
+const _ICON_CANYON_TOO_WIDE := "res://assets/ui/menu_icon_canyon_too_wide.png"
 
 var _data: Dictionary = {}
 var _hover_column: int = -1
@@ -27,10 +33,12 @@ var _world: LevelController
 var _camera: Camera2D
 var _cursor_marker: Node2D
 var _ghost_overlay: Control
+var _canyon_overlay: Control
 var _ghost_root: Node2D
 var _rebuild_pending := false
 var _last_built_hash := ""
 var _ghost_key := ""
+var _canyon_handle_key := ""
 
 func _ready() -> void:
 	custom_minimum_size = MIN_PREVIEW_SIZE
@@ -39,6 +47,7 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_build_viewport()
 	_build_ghost_overlay()
+	_build_canyon_overlay()
 	call_deferred("_fit_preview_to_pane")
 	if not _data.is_empty():
 		_queue_rebuild()
@@ -47,6 +56,7 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
 		_fit_preview_to_pane()
 		_update_ghost_world()
+		_sync_canyon_handles()
 
 func show_level(data: Dictionary) -> void:
 	_data = data.duplicate(true)
@@ -140,6 +150,14 @@ func _build_ghost_overlay() -> void:
 	_ghost_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_ghost_overlay)
 
+
+func _build_canyon_overlay() -> void:
+	_canyon_overlay = Control.new()
+	_canyon_overlay.name = "CanyonHandleOverlay"
+	_canyon_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_canyon_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_canyon_overlay)
+
 func _queue_rebuild() -> void:
 	if _rebuild_pending:
 		return
@@ -154,6 +172,7 @@ func _rebuild_world() -> void:
 	if digest == _last_built_hash and _world != null and is_instance_valid(_world):
 		_update_camera()
 		_update_ghost_world()
+		_sync_canyon_handles()
 		return
 	_last_built_hash = digest
 	var preserved_center := _view_center_x
@@ -191,10 +210,10 @@ func _rebuild_world() -> void:
 	_camera = Camera2D.new()
 	_camera.name = "PreviewCamera"
 	_camera.enabled = true
-	_camera.position_smoothing_enabled = true
-	_camera.position_smoothing_speed = 8.0
+	## Editor rebuilds replace the camera; smoothing from origin makes the view
+	## slide after every stamp or dirt-height change.
+	_camera.position_smoothing_enabled = false
 	level.add_child(_camera)
-	_camera.make_current()
 
 	_cursor_marker = Node2D.new()
 	_cursor_marker.name = "EditorCursor"
@@ -217,8 +236,14 @@ func _rebuild_world() -> void:
 		_view_center_x = clampf(preserved_center, min_x, max_x)
 	else:
 		_view_center_x = -1.0
+	_ensure_view_center()
+	var snap := _view_metrics()
+	_camera.zoom = Vector2(snap["zoom"], snap["zoom"])
+	_camera.position = Vector2(_view_center_x, snap["center_y"])
+	_camera.make_current()
 	_update_camera()
 	_update_ghost_world()
+	_sync_canyon_handles()
 	_request_preview_redraw()
 
 func _ensure_view_center() -> void:
@@ -241,6 +266,7 @@ func _update_camera() -> void:
 	_camera.position = Vector2(_view_center_x, metrics["center_y"])
 	_request_preview_redraw()
 	_update_cursor_marker()
+	_sync_canyon_handles()
 
 func _update_cursor_marker() -> void:
 	if _cursor_marker == null or not is_instance_valid(_cursor_marker) or _data.is_empty():
@@ -514,9 +540,253 @@ func _world_rect_to_screen(world_rect: Rect2) -> Rect2:
 	)
 	return Rect2(top_left, screen_size)
 
+
+func _sync_canyon_handles() -> void:
+	if _canyon_overlay == null:
+		return
+	if _data.is_empty() or _camera == null or _viewport == null:
+		_clear_canyon_handles()
+		return
+	var trail := CustomLevelStore.trail_row(int(_data.get("height", 8)))
+	var runs := CustomLevelStore.canyon_column_runs(_data, trail)
+	var mounted := (
+		bool(_data.get("start_mounted", false)) or int(_data.get("source_level", 0)) == 1
+	)
+	var width := maxi(int(_data.get("width", 24)), 1)
+	var parts: PackedStringArray = ["%d:%d" % [int(mounted), width]]
+	for run in runs:
+		parts.append("%d-%d" % [int(run["start_x"]), int(run["end_x"])])
+	var next_key := "|".join(parts)
+	if next_key != _canyon_handle_key:
+		_rebuild_canyon_handle_nodes(runs, width, mounted)
+		_canyon_handle_key = next_key
+	_layout_canyon_handles()
+
+
+func _clear_canyon_handles() -> void:
+	_canyon_handle_key = ""
+	_free_canyon_overlay_children()
+
+
+func _free_canyon_overlay_children() -> void:
+	if _canyon_overlay == null:
+		return
+	for child in _canyon_overlay.get_children():
+		_canyon_overlay.remove_child(child)
+		child.free()
+
+
+func _rebuild_canyon_handle_nodes(runs: Array[Dictionary], width: int, mounted: bool) -> void:
+	_free_canyon_overlay_children()
+	for run in runs:
+		var start_x := int(run["start_x"])
+		var end_x := int(run["end_x"])
+		var group := Control.new()
+		group.name = "CanyonRun_%d_%d" % [start_x, end_x]
+		group.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		group.set_meta("start_x", start_x)
+		group.set_meta("end_x", end_x)
+		_canyon_overlay.add_child(group)
+		group.add_child(
+			_make_canyon_arrow(
+				"GrowLeft",
+				_ICON_SCROLL_LEFT,
+				"Widen canyon left",
+				start_x,
+				end_x,
+				"left",
+				true,
+				start_x <= 0
+			)
+		)
+		group.add_child(
+			_make_canyon_arrow(
+				"ShrinkLeft",
+				_ICON_SCROLL_RIGHT,
+				"Narrow canyon from the left",
+				start_x,
+				end_x,
+				"left",
+				false,
+				false
+			)
+		)
+		group.add_child(
+			_make_canyon_arrow(
+				"ShrinkRight",
+				_ICON_SCROLL_LEFT,
+				"Narrow canyon from the right",
+				start_x,
+				end_x,
+				"right",
+				false,
+				false
+			)
+		)
+		group.add_child(
+			_make_canyon_arrow(
+				"GrowRight",
+				_ICON_SCROLL_RIGHT,
+				"Widen canyon right",
+				start_x,
+				end_x,
+				"right",
+				true,
+				end_x >= width - 1
+			)
+		)
+		if LevelLayoutRules.canyon_too_wide_for_unassisted_jump(
+			CustomLevelStore.canyon_gap_px(start_x, end_x, float(_data.get("grid", 40))),
+			mounted
+		):
+			var warn := TextureRect.new()
+			warn.name = "TooWide"
+			warn.texture = load(_ICON_CANYON_TOO_WIDE) as Texture2D
+			warn.custom_minimum_size = Vector2(CANYON_WARNING_SIZE, CANYON_WARNING_SIZE)
+			warn.size = Vector2(CANYON_WARNING_SIZE, CANYON_WARNING_SIZE)
+			warn.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			warn.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			warn.mouse_filter = Control.MOUSE_FILTER_STOP
+			warn.tooltip_text = tr("This canyon is too wide to jump")
+			warn.mouse_default_cursor_shape = Control.CURSOR_ARROW
+			group.add_child(warn)
+
+
+func _make_canyon_arrow(
+	name_text: String,
+	icon_path: String,
+	tooltip_key: String,
+	start_x: int,
+	end_x: int,
+	side: String,
+	grow: bool,
+	disabled: bool
+) -> Button:
+	var button := Button.new()
+	button.name = name_text
+	button.custom_minimum_size = Vector2(CANYON_HANDLE_SIZE, CANYON_HANDLE_SIZE)
+	button.size = Vector2(CANYON_HANDLE_SIZE, CANYON_HANDLE_SIZE)
+	button.icon = load(icon_path) as Texture2D
+	button.expand_icon = true
+	button.text = ""
+	button.tooltip_text = tr(tooltip_key)
+	button.focus_mode = Control.FOCUS_NONE
+	button.mouse_filter = Control.MOUSE_FILTER_STOP
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	button.disabled = disabled
+	MenuChrome.style_compact_icon_button(button, 10)
+	button.pressed.connect(
+		func() -> void: canyon_adjust_requested.emit(start_x, end_x, side, grow)
+	)
+	return button
+
+
+func _layout_canyon_handles() -> void:
+	if _canyon_overlay == null:
+		return
+	var display := _preview_display_rect()
+	var metrics := _view_metrics()
+	var grid: float = metrics["grid"]
+	var trail: int = metrics["trail"]
+	for group_node in _canyon_overlay.get_children():
+		var group := group_node as Control
+		if group == null:
+			continue
+		var start_x := int(group.get_meta("start_x", -1))
+		var end_x := int(group.get_meta("end_x", -1))
+		if start_x < 0:
+			continue
+		var gap := _world_rect_to_screen(
+			Rect2(
+				float(start_x) * grid,
+				float(trail) * grid,
+				float(end_x - start_x + 1) * grid,
+				grid
+			)
+		)
+		var hit := display.grow(CANYON_HANDLE_SIZE)
+		var visible := gap.size.x > 0.0 and hit.intersects(gap)
+		group.visible = visible
+		if not visible:
+			continue
+		var mid_y := gap.position.y + gap.size.y * 0.5 - CANYON_HANDLE_SIZE * 0.5
+		var shrink_y := mid_y
+		if gap.size.x < CANYON_HANDLE_SIZE * 2.0 + 8.0:
+			shrink_y = gap.position.y - CANYON_HANDLE_SIZE - 2.0
+		_place_canyon_handle(
+			group.get_node_or_null("GrowLeft") as Control,
+			Vector2(gap.position.x - CANYON_HANDLE_SIZE - 2.0, mid_y),
+			display
+		)
+		_place_canyon_handle(
+			group.get_node_or_null("ShrinkLeft") as Control,
+			Vector2(gap.position.x + 2.0, shrink_y),
+			display
+		)
+		_place_canyon_handle(
+			group.get_node_or_null("ShrinkRight") as Control,
+			Vector2(gap.end.x - CANYON_HANDLE_SIZE - 2.0, shrink_y),
+			display
+		)
+		_place_canyon_handle(
+			group.get_node_or_null("GrowRight") as Control,
+			Vector2(gap.end.x + 2.0, mid_y),
+			display
+		)
+		var warn := group.get_node_or_null("TooWide") as Control
+		if warn != null:
+			var warn_y := minf(shrink_y, gap.position.y) - CANYON_WARNING_SIZE - 4.0
+			_place_canyon_handle(
+				warn,
+				Vector2(
+					gap.position.x + gap.size.x * 0.5 - CANYON_WARNING_SIZE * 0.5,
+					warn_y
+				),
+				display
+			)
+
+
+func _place_canyon_handle(handle: Control, desired: Vector2, display: Rect2) -> void:
+	if handle == null:
+		return
+	var size := handle.size
+	if size.x < 1.0 or size.y < 1.0:
+		size = handle.custom_minimum_size
+	handle.size = size
+	var max_pos := Vector2(
+		display.end.x - size.x,
+		display.end.y - size.y
+	)
+	handle.position = Vector2(
+		clampf(desired.x, display.position.x, maxf(max_pos.x, display.position.x)),
+		clampf(desired.y, display.position.y, maxf(max_pos.y, display.position.y))
+	)
+	handle.pivot_offset = size * 0.5
+
+
+func _point_hits_canyon_handle(local: Vector2) -> bool:
+	if _canyon_overlay == null:
+		return false
+	var global := global_position + local
+	for group_node in _canyon_overlay.get_children():
+		if not (group_node is Control) or not (group_node as Control).visible:
+			continue
+		for child in group_node.get_children():
+			var handle := child as Control
+			if handle == null or not handle.visible:
+				continue
+			if handle.mouse_filter == Control.MOUSE_FILTER_IGNORE:
+				continue
+			if handle.get_global_rect().has_point(global):
+				return true
+	return false
+
+
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion or event is InputEventMouseButton:
 		var local := (event as InputEventMouse).position
+		if _point_hits_canyon_handle(local):
+			return
 		var preview_rect := _preview_display_rect()
 		if preview_rect.size.x <= 1.0 or not preview_rect.has_point(local):
 			return

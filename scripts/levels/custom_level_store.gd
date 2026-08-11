@@ -419,6 +419,108 @@ static func remove_ground_standing_at_columns(
 				break
 
 
+## Merge horizontally adjacent trail-row canyon stamps into one wider gap run.
+static func canyon_column_runs(source: Variant, trail: int) -> Array[Dictionary]:
+	var objects := _objects_array(source)
+	var xs: Array[int] = []
+	for value in objects:
+		if not (value is Dictionary):
+			continue
+		var object := value as Dictionary
+		if str(object.get("type", "")) != "canyon":
+			continue
+		if int(object.get("y", -1)) != trail:
+			continue
+		xs.append(int(object.get("x", 0)))
+	xs.sort()
+	var runs: Array[Dictionary] = []
+	var index := 0
+	while index < xs.size():
+		var start_x := xs[index]
+		var end_x := start_x
+		while index + 1 < xs.size() and xs[index + 1] == end_x + 1:
+			index += 1
+			end_x = xs[index]
+		runs.append({"start_x": start_x, "end_x": end_x})
+		index += 1
+	return runs
+
+
+static func canyon_gap_px(start_x: int, end_x: int, grid: float = GRID_SIZE) -> float:
+	return float(maxi(end_x - start_x + 1, 0)) * grid
+
+
+static func set_trail_canyon_column(objects: Array, x: int, trail: int) -> void:
+	_clear_trail_cell(objects, x, trail)
+	objects.append({"type": "canyon", "x": x, "y": trail})
+	remove_ground_standing_at_columns(objects, [x], trail)
+
+
+static func set_trail_ground_column(objects: Array, x: int, trail: int) -> void:
+	_clear_trail_cell(objects, x, trail)
+	objects.append({"type": "ground", "x": x, "y": trail})
+
+
+## Grow or shrink one lip of a merged canyon run. `side` is "left" or "right".
+static func adjust_canyon_run(
+	objects: Array,
+	trail: int,
+	width: int,
+	start_x: int,
+	end_x: int,
+	side: String,
+	grow: bool
+) -> bool:
+	if start_x > end_x:
+		return false
+	var target := start_x if side == "left" else end_x
+	if grow:
+		target = start_x - 1 if side == "left" else end_x + 1
+		if target < 0 or target >= width:
+			return false
+		if _has_type_at(objects, target, trail, "canyon"):
+			return false
+		if pit_hole_columns({"objects": objects}, trail).has(target):
+			return false
+		set_trail_canyon_column(objects, target, trail)
+		return true
+	if not _has_type_at(objects, target, trail, "canyon"):
+		return false
+	set_trail_ground_column(objects, target, trail)
+	return true
+
+
+static func _clear_trail_cell(objects: Array, x: int, trail: int) -> void:
+	for i in range(objects.size() - 1, -1, -1):
+		var object := objects[i] as Dictionary
+		if int(object.get("x", -1)) != x or int(object.get("y", -1)) != trail:
+			continue
+		if str(object.get("type", "")) in ["ground", "canyon", "pit"]:
+			objects.remove_at(i)
+
+
+static func _has_type_at(objects: Array, x: int, y: int, type_name: String) -> bool:
+	for value in objects:
+		if not (value is Dictionary):
+			continue
+		var object := value as Dictionary
+		if (
+			int(object.get("x", -1)) == x
+			and int(object.get("y", -1)) == y
+			and str(object.get("type", "")) == type_name
+		):
+			return true
+	return false
+
+
+static func _objects_array(source: Variant) -> Array:
+	if source is Dictionary:
+		return (source as Dictionary).get("objects", []) as Array
+	if source is Array:
+		return source
+	return []
+
+
 ## Trail columns whose crust the cowboy actually drops through — the ones whose
 ## cell centre sits inside the painted pit mouth. The dirt bank stays solid on
 ## the shoulders so the hole reads as dug into the trail, not floating in air.

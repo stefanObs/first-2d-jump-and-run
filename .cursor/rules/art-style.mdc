@@ -104,5 +104,6 @@ walk surface (bottom-aligned feet).
 
 Workshop / trail-editor kid icons live in `assets/ui/menu_icon_*.png` (back, edit,
 add, remove, restore, export, import, add_trail, save, play, scroll_left/right,
-plus shared hat/heart/hammer/gear). Rebuild with `python tools/build_workshop_icons.py`.
+canyon_too_wide, plus shared hat/heart/hammer/gear). Rebuild with
+`python tools/build_workshop_icons.py`.
 Keep the simple western silhouette style so kids can read buttons without text.

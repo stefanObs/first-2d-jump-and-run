@@ -8,6 +8,8 @@ const ASSISTED_JUMP_HEIGHT := 190.0
 const SPRING_JUMP_HEIGHT := 250.0
 const BASE_HORIZONTAL_GAP := 230.0
 const ASSISTED_HORIZONTAL_GAP := 340.0
+## Matches Player.HORSE_JUMP_DISTANCE_MULTIPLIER — mounted air travel after jump clamp.
+const HORSE_JUMP_DISTANCE_MULTIPLIER := 1.2
 const CACTUS_CANYON_CLEAR_PX := 120.0  ## Past thin hand-painted rim face (RIM_SIZE.x + margin).
 ## Timed doors stay clear of the gap and the rim band (tall gates must not sit above mouths).
 const TIMED_DOOR_CANYON_CLEAR_PX := 140.0
@@ -886,6 +888,17 @@ static func _ground_surface_spans(level: Node) -> Array[Dictionary]:
 		spans.append(surface)
 	spans.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["left"]) < float(b["left"]))
 	return spans
+
+
+static func unassisted_canyon_jump_limit_px(mounted: bool = false) -> float:
+	var limit := BASE_HORIZONTAL_GAP
+	if mounted:
+		limit *= HORSE_JUMP_DISTANCE_MULTIPLIER
+	return limit
+
+
+static func canyon_too_wide_for_unassisted_jump(gap_px: float, mounted: bool = false) -> bool:
+	return gap_px > unassisted_canyon_jump_limit_px(mounted) + 0.01
 
 
 static func _ground_canyon_gaps(level: Node) -> Array[Dictionary]:

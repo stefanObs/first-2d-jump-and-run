@@ -199,7 +199,7 @@ func _build_ui() -> void:
 
 	var trail_help := Label.new()
 	trail_help.text = tr(
-		"Bottom row is dirt/canyon. Ground props stamp one row above dirt so they stand on the trail."
+		"Bottom row is dirt/canyon. Ground props stamp one row above dirt so they stand on the trail. Canyon arrows grow or shrink a gap."
 	)
 	trail_help.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	trail_help.add_theme_font_size_override(&"font_size", 12)
@@ -406,6 +406,7 @@ func _build_ui() -> void:
 	_preview.hover_cell_changed.connect(_on_preview_hover_cell)
 	_preview.stamp_requested.connect(_on_preview_stamp)
 	_preview.remove_requested.connect(_on_preview_remove)
+	_preview.canyon_adjust_requested.connect(_on_canyon_adjust)
 	root.add_child(_preview)
 	_preview.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_preview.size_flags_stretch_ratio = _PREVIEW_EXPANDED_STRETCH
@@ -898,21 +899,6 @@ func _scroll_column_into_view(column: int) -> void:
 		_apply_horizontal_scroll(target + _CELL_WIDTH - _grid_scroll.size.x + margin)
 
 
-func _sync_preview_to_hover() -> void:
-	if _preview == null or _hover_column < 0:
-		return
-	_preview.set_view_center_column(_hover_column)
-	var max_scroll := _horizontal_scroll_max()
-	if max_scroll > 0.0 and _grid_scroll != null:
-		var grid := float(_data.get("grid", 40))
-		var width := maxi(int(_data.get("width", 24)), 1)
-		var target_scroll := (
-			(float(_hover_column) + 0.5) * _CELL_WIDTH
-			- _grid_scroll.size.x * 0.5
-		)
-		_apply_horizontal_scroll(target_scroll)
-
-
 func _set_hover_cell(column: int, row: int) -> void:
 	_hover_column = column
 	_hover_row = row
@@ -921,7 +907,6 @@ func _set_hover_cell(column: int, row: int) -> void:
 	_refresh_grid_highlights()
 	if _grid_scroll != null and _grid_scroll.get_global_rect().has_point(get_global_mouse_position()):
 		_scroll_column_into_view(column)
-		_sync_preview_to_hover()
 
 
 
@@ -942,6 +927,18 @@ func _on_preview_stamp(column: int, row: int) -> void:
 
 func _on_preview_remove(column: int, row: int) -> void:
 	_remove_at(column, row)
+
+
+func _on_canyon_adjust(start_x: int, end_x: int, side: String, grow: bool) -> void:
+	var objects := _objects()
+	var width := int(_data.get("width", CustomLevelStore.DEFAULT_WIDTH))
+	if not CustomLevelStore.adjust_canyon_run(
+		objects, _trail_y(), width, start_x, end_x, side, grow
+	):
+		return
+	_data["objects"] = objects
+	_mark_dirty()
+	_refresh_grid()
 
 
 func _wire_grid_cell(cell: Button, cell_x: int, cell_y: int) -> void:
@@ -1050,8 +1047,6 @@ func _process(delta: float) -> void:
 		delta_x = _edge_scroll_delta(_grid_scroll.get_local_mouse_position().x, _grid_scroll.size.x, delta)
 		if absf(delta_x) > 0.01:
 			_apply_horizontal_scroll(_grid_scroll.scroll_horizontal + delta_x)
-			if _hover_column >= 0:
-				_sync_preview_to_hover()
 		return
 	if _preview == null:
 		return
@@ -1104,9 +1099,7 @@ func _place(x: int, y: int) -> void:
 	if _selected_type == "erase":
 		_erase_at(objects, x, place_y)
 	elif _selected_type == "canyon":
-		_erase_at(objects, x, trail, true)
-		objects.append({"type": "canyon", "x": x, "y": trail})
-		CustomLevelStore.remove_ground_standing_at_columns(objects, [x], trail)
+		CustomLevelStore.set_trail_canyon_column(objects, x, trail)
 	elif _selected_type == "pit":
 		if y != trail or not CustomLevelStore.pit_fits_on_dirt(objects, x, trail):
 			return
@@ -1142,8 +1135,6 @@ func _place(x: int, y: int) -> void:
 			for cell in hover_cells:
 				store_x = mini(store_x, cell.x)
 			store_y = place_y
-		if CustomLevelStore.is_floor_only(_selected_type):
-			store_y = CustomLevelStore.placement_row(_selected_type, y, trail)
 		if CustomLevelStore.is_ground_standing(_selected_type) and not CustomLevelStore.ground_stamp_allowed(
 			objects, _selected_type, store_x, trail, width
 		):

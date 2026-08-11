@@ -146,6 +146,24 @@ def icon_scroll_left() -> Image.Image:
     return img
 
 
+def icon_canyon_too_wide() -> Image.Image:
+    img, d = _canvas()
+    # Dirt banks with a sky gap — the canyon is too far to hop.
+    left = [(4, 34), (30, 34), (30, 90), (4, 90)]
+    right = [(66, 34), (92, 34), (92, 90), (66, 90)]
+    _outline_poly(d, left, WOOD)
+    _outline_poly(d, right, WOOD)
+    d.rectangle((30, 34, 66, 90), fill=SKY)
+    d.line((30, 34, 30, 90), fill=INK, width=3)
+    d.line((66, 34, 66, 90), fill=INK, width=3)
+    # Kid-readable warning triangle + bang.
+    triangle = [(48, 6), (82, 64), (14, 64)]
+    _outline_poly(d, triangle, (255, 214, 72, 255))
+    d.rectangle((44, 22, 52, 44), fill=INK)
+    d.ellipse((43, 48, 53, 58), fill=INK)
+    return img
+
+
 def icon_scroll_right() -> Image.Image:
     img = icon_scroll_left().transpose(Image.Transpose.FLIP_LEFT_RIGHT)
     return img
@@ -166,6 +184,7 @@ def main() -> None:
         "menu_icon_play.png": icon_play,
         "menu_icon_scroll_left.png": icon_scroll_left,
         "menu_icon_scroll_right.png": icon_scroll_right,
+        "menu_icon_canyon_too_wide.png": icon_canyon_too_wide,
     }
     for name, builder in mapping.items():
         builder().save(OUT / name)

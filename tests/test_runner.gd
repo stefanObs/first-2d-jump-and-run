@@ -226,6 +226,8 @@ func _ready() -> void:
 	failures += await _run("Workshop stamp grid can collapse", _test_workshop_grid_collapse)
 	failures += await _run("Workshop right click removes stamp", _test_workshop_right_click_remove)
 	failures += await _run("Workshop preview click places stamp", _test_workshop_preview_places_stamp)
+	failures += await _run("Workshop preview keeps pan after trail edits", _test_workshop_preview_keeps_pan)
+	failures += await _run("Workshop canyon arrows grow shrink and warn", _test_workshop_canyon_resize_handles)
 	failures += await _run("Airborne bandits fall to walkable ground", _test_airborne_bandit_falls)
 	failures += await _run("Buried bandits lift onto the floor", _test_buried_bandit_lifts)
 	failures += await _run("Level 10 bandits stand on the walk surface", _test_level_10_bandits_on_floor)
@@ -7743,6 +7745,158 @@ func _test_workshop_preview_places_stamp() -> Variant:
 		return "Preview stamp request should append a cactus to the trail data."
 	if stored_y != trail - 1:
 		return "Preview-placed ground props should store one row above dirt (got y=%d)." % stored_y
+	return null
+
+
+func _test_workshop_preview_keeps_pan() -> Variant:
+	var preview := LevelPreview.new()
+	add_child(preview)
+	preview.size = Vector2(480, 280)
+	var data := CustomLevelStore.default_level(0)
+	var trail := CustomLevelStore.trail_row(int(data.get("height", 8)))
+	preview.show_level(data)
+	preview.set_view_center_column(40)
+	for _wait in range(20):
+		await get_tree().process_frame
+		if preview._camera != null:
+			break
+	if preview._camera == null:
+		preview.queue_free()
+		return "Preview camera should exist after the first rebuild."
+	if preview._camera.position_smoothing_enabled:
+		preview.queue_free()
+		return "Preview camera must not smooth after trail rebuilds."
+	var center_before: float = preview._view_center_x
+	var cam_before: float = preview._camera.position.x
+	CustomLevelStore.set_trail_canyon_column(data["objects"], 38, trail)
+	CustomLevelStore.set_trail_canyon_column(data["objects"], 39, trail)
+	data["objects"].append({"type": "ground", "x": 42, "y": trail - 1})
+	preview.show_level(data)
+	for _wait in range(20):
+		await get_tree().process_frame
+		if preview._camera != null and not preview._rebuild_pending:
+			break
+	if preview._camera == null:
+		preview.queue_free()
+		return "Preview camera should exist after a canyon/height rebuild."
+	if preview._camera.position_smoothing_enabled:
+		preview.queue_free()
+		return "Rebuilt preview camera must stay unsmoothed."
+	if absf(preview._view_center_x - center_before) > 0.5:
+		preview.queue_free()
+		return "Trail edits should keep the preview pan (center %.1f vs %.1f)." % [
+			center_before, preview._view_center_x
+		]
+	if absf(preview._camera.position.x - cam_before) > 0.5:
+		preview.queue_free()
+		return "Preview camera X should snap in place after rebuild (%.1f vs %.1f)." % [
+			cam_before, preview._camera.position.x
+		]
+	preview.queue_free()
+	return null
+
+
+func _test_workshop_canyon_resize_handles() -> Variant:
+	var objects: Array = [
+		{"type": "ground", "x": 4, "y": 7},
+		{"type": "canyon", "x": 5, "y": 7},
+		{"type": "canyon", "x": 6, "y": 7},
+		{"type": "ground", "x": 7, "y": 7},
+	]
+	var runs := CustomLevelStore.canyon_column_runs(objects, 7)
+	if runs.size() != 1 or int(runs[0]["start_x"]) != 5 or int(runs[0]["end_x"]) != 6:
+		return "Adjacent canyon stamps should merge into one run."
+	if not CustomLevelStore.adjust_canyon_run(objects, 7, 24, 5, 6, "right", true):
+		return "Growing the right lip should add a canyon column."
+	runs = CustomLevelStore.canyon_column_runs(objects, 7)
+	if runs.size() != 1 or int(runs[0]["end_x"]) != 7:
+		return "Growing right should widen the merged canyon to column 7."
+	if not CustomLevelStore.adjust_canyon_run(objects, 7, 24, 5, 7, "left", false):
+		return "Shrinking the left lip should fill the leftmost canyon column."
+	runs = CustomLevelStore.canyon_column_runs(objects, 7)
+	if runs.size() != 1 or int(runs[0]["start_x"]) != 6:
+		return "Shrinking left should move the canyon start to column 6."
+	var five_px := CustomLevelStore.canyon_gap_px(0, 4)
+	var six_px := CustomLevelStore.canyon_gap_px(0, 5)
+	if LevelLayoutRules.canyon_too_wide_for_unassisted_jump(five_px, false):
+		return "A 5-cell canyon should stay within a normal jump."
+	if not LevelLayoutRules.canyon_too_wide_for_unassisted_jump(six_px, false):
+		return "A 6-cell canyon should warn that it is too wide to jump."
+	if LevelLayoutRules.canyon_too_wide_for_unassisted_jump(six_px, true):
+		return "Horse-theme mounted jump should still clear a 6-cell canyon."
+	if not ResourceLoader.exists("res://assets/ui/menu_icon_canyon_too_wide.png"):
+		return "Missing canyon too-wide warning icon."
+	var preview := LevelPreview.new()
+	add_child(preview)
+	preview.size = Vector2(520, 300)
+	var data := CustomLevelStore.default_level(0)
+	var trail := CustomLevelStore.trail_row(int(data.get("height", 8)))
+	data["objects"] = [
+		{"type": "ground", "x": 8, "y": trail},
+		{"type": "canyon", "x": 9, "y": trail},
+		{"type": "canyon", "x": 10, "y": trail},
+		{"type": "canyon", "x": 11, "y": trail},
+		{"type": "canyon", "x": 12, "y": trail},
+		{"type": "canyon", "x": 13, "y": trail},
+		{"type": "canyon", "x": 14, "y": trail},
+		{"type": "ground", "x": 15, "y": trail},
+		{"type": "goal", "x": 16, "y": trail - 1},
+	]
+	preview.show_level(data)
+	preview.set_view_center_column(12)
+	for _wait in range(24):
+		await get_tree().process_frame
+		var overlay_wait := preview.get_node_or_null("CanyonHandleOverlay")
+		if overlay_wait != null and overlay_wait.get_child_count() > 0:
+			break
+	var overlay := preview.get_node_or_null("CanyonHandleOverlay") as Control
+	if overlay == null or overlay.get_child_count() < 1:
+		preview.queue_free()
+		return "Live preview should show canyon resize handles."
+	var group := overlay.get_child(0) as Control
+	var grow_right := group.get_node_or_null("GrowRight") as Button
+	var shrink_left := group.get_node_or_null("ShrinkLeft") as Button
+	var too_wide := group.get_node_or_null("TooWide") as TextureRect
+	if grow_right == null or shrink_left == null:
+		preview.queue_free()
+		return "Canyon lips should expose grow and shrink arrows."
+	if not grow_right.has_meta(&"_menu_btn_feedback") or not shrink_left.has_meta(&"_menu_btn_feedback"):
+		preview.queue_free()
+		return "Canyon arrows should use the same hover/click juice as menu buttons."
+	if too_wide == null:
+		preview.queue_free()
+		return "A 6-cell canyon should show the too-wide jump warning icon."
+	var requested: Array = []
+	preview.canyon_adjust_requested.connect(
+		func(start_x: int, end_x: int, side: String, grow: bool) -> void:
+			requested.append([start_x, end_x, side, grow])
+	)
+	grow_right.pressed.emit()
+	preview.queue_free()
+	if requested.is_empty() or not bool(requested[0][3]) or str(requested[0][2]) != "right":
+		return "Clicking a canyon grow arrow should request a lip resize."
+	var editor := load("res://scenes/ui/level_editor.tscn")
+	if editor == null:
+		return "Missing level editor scene."
+	var node := (editor as PackedScene).instantiate()
+	add_child(node)
+	for _wait in range(20):
+		await get_tree().process_frame
+		if node.get("_preview") != null:
+			break
+	var editor_trail: int = node._trail_y()
+	CustomLevelStore.set_trail_canyon_column(node._data["objects"], 20, editor_trail)
+	CustomLevelStore.set_trail_canyon_column(node._data["objects"], 21, editor_trail)
+	node._on_canyon_adjust(20, 21, "right", true)
+	var widened := CustomLevelStore.canyon_column_runs(node._data, editor_trail)
+	var grown_end := -1
+	for run in widened:
+		if int(run.get("start_x", -1)) == 20:
+			grown_end = int(run.get("end_x", -1))
+			break
+	node.queue_free()
+	if grown_end != 22:
+		return "Trail editor canyon arrows should grow the canyon in the draft."
 	return null
 
 
