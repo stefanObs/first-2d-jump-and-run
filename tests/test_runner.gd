@@ -8210,20 +8210,33 @@ func _test_workshop_grid_collapse() -> Variant:
 	var grid_scroll := editor.find_child("GridScroll", true, false) as ScrollContainer
 	var h_scroll := editor.find_child("TrailScrollBar", true, false) as HScrollBar
 	var preview := editor.find_child("LevelPreview", true, false) as LevelPreview
+	var preview_scroll := editor.find_child("PreviewScrollRow", true, false) as HBoxContainer
+	var editor_pane := editor.find_child("EditorPane", true, false) as VBoxContainer
+	var grid_scroll_row := editor.find_child("GridScrollRow", true, false) as HBoxContainer
 	if toggle == null or grid_scroll == null or h_scroll == null or preview == null:
 		editor.queue_free()
 		return "Editor should expose grid collapse controls."
+	editor.size = Vector2(1280.0, 720.0)
+	await get_tree().process_frame
+	await get_tree().process_frame
 	if not grid_scroll.visible or not h_scroll.visible:
 		editor.queue_free()
 		return "Stamp grid should start expanded."
 	if toggle.text != "▼":
 		editor.queue_free()
 		return "Expanded stamp grid should show a down chevron toggle."
+	var expanded_chrome_y := (
+		preview_scroll.global_position.y if preview_scroll != null else 0.0
+	)
 	editor._toggle_grid_collapsed()
+	await get_tree().process_frame
 	await get_tree().process_frame
 	if grid_scroll.visible or h_scroll.visible:
 		editor.queue_free()
 		return "Collapsing the stamp grid should hide the grid and slide bar."
+	if grid_scroll_row != null and grid_scroll_row.visible:
+		editor.queue_free()
+		return "Collapsing the stamp grid should hide the grid slide-bar row."
 	if toggle.text != "▶":
 		editor.queue_free()
 		return "Collapsed stamp grid should show a right chevron toggle."
@@ -8233,6 +8246,16 @@ func _test_workshop_grid_collapse() -> Variant:
 	if preview.size_flags_stretch_ratio < 2.0:
 		editor.queue_free()
 		return "Collapsing the grid should give the live preview more vertical space."
+	if editor_pane != null and editor_pane.size.y > 48.0:
+		editor.queue_free()
+		return "Collapsed stamp grid should not leave a tall empty pane (got %.0f)." % editor_pane.size.y
+	if (
+		preview_scroll != null
+		and expanded_chrome_y > 0.0
+		and preview_scroll.global_position.y > expanded_chrome_y - 40.0
+	):
+		editor.queue_free()
+		return "Collapsing the stamp grid should raise the preview pan buttons."
 	editor._toggle_grid_collapsed()
 	await get_tree().process_frame
 	if not grid_scroll.visible or not h_scroll.visible:

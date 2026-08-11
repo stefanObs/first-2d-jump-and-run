@@ -31,6 +31,7 @@ var _grid_scroll: ScrollContainer
 var _editor_pane: VBoxContainer
 var _grid_header: HBoxContainer
 var _grid_collapse_toggle: Button
+var _grid_scroll_row: HBoxContainer
 var _h_scroll: HScrollBar
 var _grid_scroll_left: Button
 var _grid_scroll_right: Button
@@ -343,12 +344,12 @@ func _build_ui() -> void:
 			_grid.add_child(cell)
 			_cells.append(cell)
 
-	var grid_scroll_row := HBoxContainer.new()
-	grid_scroll_row.name = "GridScrollRow"
-	grid_scroll_row.add_theme_constant_override(&"separation", 4)
-	_editor_pane.add_child(grid_scroll_row)
+	_grid_scroll_row = HBoxContainer.new()
+	_grid_scroll_row.name = "GridScrollRow"
+	_grid_scroll_row.add_theme_constant_override(&"separation", 4)
+	_editor_pane.add_child(_grid_scroll_row)
 	_grid_scroll_left = _make_scroll_arrow(
-		grid_scroll_row,
+		_grid_scroll_row,
 		"res://assets/ui/menu_icon_scroll_left.png",
 		tr("Scroll left"),
 		func() -> void: _nudge_horizontal_scroll(-_CELL_WIDTH * 2.0)
@@ -358,9 +359,9 @@ func _build_ui() -> void:
 	_h_scroll.custom_minimum_size = Vector2(0, 16)
 	_h_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_h_scroll.value_changed.connect(_on_h_scroll_changed)
-	grid_scroll_row.add_child(_h_scroll)
+	_grid_scroll_row.add_child(_h_scroll)
 	_grid_scroll_right = _make_scroll_arrow(
-		grid_scroll_row,
+		_grid_scroll_row,
 		"res://assets/ui/menu_icon_scroll_right.png",
 		tr("Scroll right"),
 		func() -> void: _nudge_horizontal_scroll(_CELL_WIDTH * 2.0)
@@ -757,6 +758,8 @@ func _apply_grid_collapsed_state() -> void:
 		)
 	if _grid_scroll != null:
 		_grid_scroll.visible = not collapsed
+	if _grid_scroll_row != null:
+		_grid_scroll_row.visible = not collapsed
 	if _h_scroll != null:
 		_h_scroll.visible = not collapsed
 	if _grid_scroll_left != null:
@@ -767,6 +770,13 @@ func _apply_grid_collapsed_state() -> void:
 		_preview.size_flags_stretch_ratio = (
 			_PREVIEW_COLLAPSED_STRETCH if collapsed else _PREVIEW_EXPANDED_STRETCH
 		)
+	if _editor_pane != null:
+		## Collapsed: shrink to the chevron row so status, pan buttons, and
+		## preview rise instead of sitting under an empty grid hole.
+		_editor_pane.size_flags_vertical = (
+			Control.SIZE_SHRINK_BEGIN if collapsed else Control.SIZE_EXPAND_FILL
+		)
+		_editor_pane.size_flags_stretch_ratio = 0.0 if collapsed else 0.85
 	if collapsed:
 		if _grid_scroll != null:
 			_grid_scroll.custom_minimum_size.y = 0.0
@@ -782,6 +792,8 @@ func _fit_grid_layout() -> void:
 	if GameManager.workshop_grid_collapsed:
 		if _editor_pane != null:
 			_editor_pane.custom_minimum_size.y = _COLLAPSED_GRID_HEADER_HEIGHT
+			_editor_pane.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+			_editor_pane.size_flags_stretch_ratio = 0.0
 		return
 	var height := maxi(int(_data.get("height", 8)), 1)
 	var separation := float(_grid.get_theme_constant(&"v_separation", "GridContainer"))
