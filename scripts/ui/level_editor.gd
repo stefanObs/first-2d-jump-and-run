@@ -135,9 +135,10 @@ func _build_ui() -> void:
 	root.add_theme_constant_override(&"separation", 4)
 	add_child(root)
 
-	var heading := HBoxContainer.new()
+	var heading := HFlowContainer.new()
 	heading.name = "ActionChrome"
-	heading.add_theme_constant_override(&"separation", 6)
+	heading.add_theme_constant_override(&"h_separation", 6)
+	heading.add_theme_constant_override(&"v_separation", 4)
 	root.add_child(heading)
 	var back := _add_action(
 		heading,
@@ -164,28 +165,28 @@ func _build_ui() -> void:
 	_add_action(
 		heading, tr("Play Test"), _play_test, "PlayTestButton", "res://assets/ui/menu_icon_play.png"
 	)
-	var chrome_spacer := Control.new()
-	chrome_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	heading.add_child(chrome_spacer)
 	var length_box := HBoxContainer.new()
+	length_box.name = "TrailLengthButtons"
 	length_box.add_theme_constant_override(&"separation", 4)
 	heading.add_child(length_box)
 	_length_minus = Button.new()
 	_length_minus.name = "LengthMinusButton"
 	_length_minus.text = tr("− Length")
 	_length_minus.tooltip_text = tr("− Length")
-	_length_minus.custom_minimum_size = Vector2(110, 34)
+	_length_minus.custom_minimum_size = Vector2(110, _CHROME_BUTTON_HEIGHT)
 	MenuChrome.apply_button_icon(_length_minus, "res://assets/ui/menu_icon_remove.png", 28)
 	MenuChrome.style_compact_icon_button(_length_minus, 12)
+	_clip_chrome_button(_length_minus)
 	_length_minus.pressed.connect(func() -> void: _change_length(-CustomLevelStore.WIDTH_STEP))
 	length_box.add_child(_length_minus)
 	_length_plus = Button.new()
 	_length_plus.name = "LengthPlusButton"
 	_length_plus.text = tr("+ Length")
 	_length_plus.tooltip_text = tr("+ Length")
-	_length_plus.custom_minimum_size = Vector2(110, 34)
+	_length_plus.custom_minimum_size = Vector2(110, _CHROME_BUTTON_HEIGHT)
 	MenuChrome.apply_button_icon(_length_plus, "res://assets/ui/menu_icon_add.png", 28)
 	MenuChrome.style_compact_icon_button(_length_plus, 12)
+	_clip_chrome_button(_length_plus)
 	_length_plus.pressed.connect(func() -> void: _change_length(CustomLevelStore.WIDTH_STEP))
 	length_box.add_child(_length_plus)
 	_update_length_buttons()
@@ -837,9 +838,17 @@ func _add_action(
 	button.custom_minimum_size = Vector2(158, _CHROME_BUTTON_HEIGHT)
 	MenuChrome.apply_button_icon(button, icon_path, int(_PALETTE_ICON_SIZE))
 	MenuChrome.style_compact_icon_button(button, _DROPDOWN_FONT_SIZE)
+	_clip_chrome_button(button)
 	button.pressed.connect(action)
 	parent.add_child(button)
 	return button
+
+
+func _clip_chrome_button(button: Button) -> void:
+	if button == null:
+		return
+	button.clip_text = true
+	button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 
 
 func _trail_y() -> int:

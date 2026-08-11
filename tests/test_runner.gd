@@ -9418,10 +9418,10 @@ func _test_workshop_back_navigation() -> Variant:
 	):
 		editor.queue_free()
 		return "Trail editor chrome buttons should show kid-readable icons."
-	var chrome := editor.find_child("ActionChrome", true, false) as HBoxContainer
+	var chrome := editor.find_child("ActionChrome", true, false) as Container
 	if chrome == null:
 		editor.queue_free()
-		return "Trail editor should keep Back with Save and Play in one top action row."
+		return "Trail editor should keep Back with Save and Play in the top action chrome."
 	var chrome_names: Array[String] = []
 	for child in chrome.get_children():
 		if child is Button:
@@ -9429,6 +9429,18 @@ func _test_workshop_back_navigation() -> Variant:
 	if ",".join(chrome_names) != "BackButtonTop,SaveButton,ResetButton,ExportTrailButton,ImportTrailButton,PlayTestButton":
 		editor.queue_free()
 		return "Trail editor action row should be Back, Save, Reset, Export, Import, Play Test."
+	var length_minus := editor.find_child("LengthMinusButton", true, false) as Button
+	var length_box := editor.find_child("TrailLengthButtons", true, false) as HBoxContainer
+	if length_minus == null or length_box == null:
+		editor.queue_free()
+		return "Trail editor should keep +/− Length as a pair in the top chrome."
+	await get_tree().process_frame
+	var bounds := editor.get_global_rect().grow(1.0)
+	for button in [length_minus, length_plus]:
+		var rect := (button as Button).get_global_rect()
+		if rect.size.x < 24.0 or rect.size.y < 24.0 or not bounds.encloses(rect):
+			editor.queue_free()
+			return "Trail length buttons should stay fully visible on a 720p screen."
 	editor.queue_free()
 	return null
 
