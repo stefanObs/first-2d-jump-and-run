@@ -13,6 +13,7 @@ Consult `README.md` (Core gameplay, Campaign Workshop, Floor height, UI / art st
 - **Saloon / Crystal Gate** (`goal`) stamps only on the **trail floor** (one row above dirt). Do not allow mid-air or plank placement.
 - **Planks / crystal ledges** (`platform`, `ladder_ledge`) are **160×32** (4 grid cells) — same as campaign `Block` planks. Do not regress to the old half-width **80×24** / 2-cell stamp.
 - Multi-cell stamps store the **left** footprint column; `object_world_position` centers on the full footprint.
+- **Ladders** may share climb-shaft cells with an upper plank/ledge and stamps on that ledge. Do not treat the 3-cell climb as an exclusive footprint that wipes neighboring ladders or the exit plank.
 - **Right-click** removes a stamp on the grid or live preview. Hovering a placed stamp outlines its **final in-game footprint** so kids can see what they will remove.
 - Stamp grid collapse uses a **▼ / ▶ chevron** (session state: `GameManager.workshop_grid_collapsed`). Do not regress to text-only hide/show labels.
 - Do not regress placement ghosts to grid-cell size instead of final stamp size.

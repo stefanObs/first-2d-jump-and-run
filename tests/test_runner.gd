@@ -98,6 +98,10 @@ func _ready() -> void:
 		"Workshop stamps cannot overlap footprints",
 		_test_workshop_stamps_no_overlap
 	)
+	failures += await _run(
+		"Workshop ladders keep ledges and neighbors",
+		_test_workshop_ladders_share_climb
+	)
 	failures += await _run("Lasso ties trail bulls", _test_lasso_ties_bull)
 	failures += await _run("Jumping on a bull head ties it", _test_stomp_ties_bull)
 	failures += await _run("Side contact with a bull sends the cowboy to camp", _test_bull_side_contact_hurts)
@@ -3228,6 +3232,126 @@ func _test_workshop_stamps_no_overlap() -> Variant:
 		]
 	if conveyor_count != 0 or fence_count != 1:
 		return "Overlapping conveyor/fence footprints should keep only the later stamp."
+	# Ladder climb shafts share cells with the upper ledge — both must survive.
+	var upper := trail - CustomLevelStore.LADDER_HEIGHT_CELLS
+	objects = []
+	for x in range(24):
+		objects.append({"type": "ground", "x": x, "y": trail})
+	objects.append({"type": "ladder", "x": 8, "y": trail - 1})
+	objects.append({"type": "platform", "x": 8, "y": upper})
+	objects.append({"type": "ladder", "x": 9, "y": trail - 1})
+	objects.append({"type": "star", "x": 8, "y": maxi(upper - 1, 0)})
+	cleaned = CustomLevelStore.sanitize(
+		{"objects": objects, "height": 8, "width": 24, "title": "Ladders"},
+		CustomLevelStore.EXTRA_SLOT_START
+	)
+	var ladder_count := 0
+	var plank_count := 0
+	var star_count := 0
+	for value in cleaned.get("objects", []):
+		match str((value as Dictionary).get("type", "")):
+			"ladder":
+				ladder_count += 1
+			"platform":
+				plank_count += 1
+			"star":
+				star_count += 1
+	if ladder_count != 2:
+		return "Sanitize should keep multiple ladders beside a shared upper plank (got %d)." % ladder_count
+	if plank_count != 1 or star_count != 1:
+		return "A plank and star above a ladder must not erase the climb (plank=%d star=%d)." % [
+			plank_count, star_count
+		]
+	if CustomLevelStore.stamps_overlap(
+		{"type": "ladder", "x": 8, "y": trail - 1},
+		{"type": "platform", "x": 8, "y": upper},
+		trail
+	):
+		return "Ladder climb cells must not count as overlapping the upper ledge."
+	if CustomLevelStore.placement_row("ladder", upper, trail) != trail - 1:
+		return "Clicking above dirt with the ladder tool should still plant on the standing row."
+	return null
+
+
+func _test_workshop_ladders_share_climb() -> Variant:
+	var editor_packed: PackedScene = load("res://scenes/ui/level_editor.tscn")
+	if editor_packed == null:
+		return "Missing level editor scene."
+	var slot := CustomLevelStore.EXTRA_SLOT_START
+	var draft := CustomLevelStore.default_level(slot)
+	var trail := CustomLevelStore.trail_row(int(draft.get("height", CustomLevelStore.DEFAULT_HEIGHT)))
+	var objects: Array = []
+	for x in range(int(draft.get("width", CustomLevelStore.DEFAULT_WIDTH))):
+		objects.append({"type": "ground", "x": x, "y": trail})
+	draft["objects"] = objects
+	draft["kind"] = "extra"
+	var previous_slot := GameManager.active_custom_slot
+	GameManager.active_custom_slot = slot
+	GameManager.custom_level_draft = draft
+	var editor := editor_packed.instantiate()
+	add_child(editor)
+	for _wait in range(20):
+		await get_tree().process_frame
+		if editor.get("_preview") != null:
+			break
+	if editor.get("_preview") == null:
+		editor.queue_free()
+		GameManager.custom_level_draft = {}
+		GameManager.active_custom_slot = previous_slot
+		return "Level editor preview should finish building."
+	trail = editor._trail_y()
+	var upper := trail - CustomLevelStore.LADDER_HEIGHT_CELLS
+	editor._select_tool("ladder")
+	editor._place(14, trail)
+	editor._place(15, upper)
+	editor._select_tool("platform")
+	editor._place(14, upper)
+	editor._select_tool("star")
+	editor._place(14, maxi(upper - 1, 0))
+	var ladder_xs: Array[int] = []
+	var has_plank := false
+	var has_star := false
+	for value in editor._data.get("objects", []):
+		var object := value as Dictionary
+		match str(object.get("type", "")):
+			"ladder":
+				ladder_xs.append(int(object.get("x", -1)))
+			"platform":
+				has_plank = true
+			"star":
+				if int(object.get("x", -1)) == 14:
+					has_star = true
+	if 14 not in ladder_xs or 15 not in ladder_xs:
+		editor.queue_free()
+		GameManager.custom_level_draft = {}
+		GameManager.active_custom_slot = previous_slot
+		return "Placing a second ladder must keep both climbs (got %s)." % str(ladder_xs)
+	if not has_plank:
+		editor.queue_free()
+		GameManager.custom_level_draft = {}
+		GameManager.active_custom_slot = previous_slot
+		return "Placing a plank on the climb-top row must not erase the ladder."
+	if not has_star:
+		editor.queue_free()
+		GameManager.custom_level_draft = {}
+		GameManager.active_custom_slot = previous_slot
+		return "Placing a badge above a ladder must keep the badge."
+	editor._remove_at(14, upper)
+	var ladder_after_ledge_remove := false
+	var plank_after := false
+	for value in editor._data.get("objects", []):
+		var object := value as Dictionary
+		if str(object.get("type", "")) == "ladder" and int(object.get("x", -1)) == 14:
+			ladder_after_ledge_remove = true
+		if str(object.get("type", "")) == "platform":
+			plank_after = true
+	editor.queue_free()
+	GameManager.custom_level_draft = {}
+	GameManager.active_custom_slot = previous_slot
+	if plank_after:
+		return "Right-click on the upper ledge should remove the plank."
+	if not ladder_after_ledge_remove:
+		return "Right-click on the upper ledge must not remove the ladder under it."
 	return null
 
 
@@ -6730,12 +6854,16 @@ func _test_ladder_branch_upper_ledge() -> Variant:
 		return "Climb exit (%.1f) must land at or above plank top (%.1f)." % [exit_y, plank_top]
 
 	# Legacy packs: one-cell-too-high ledges realign on sanitize.
-	var legacy: Array = [
-		{"type": "ground", "x": 0, "y": trail},
-		{"type": "ladder", "x": 10, "y": trail - 1},
-		{"type": "ladder_ledge", "x": 10, "y": trail - 1 - CustomLevelStore.LADDER_HEIGHT_CELLS},
-		{"type": "goal", "x": 20, "y": trail - 1},
-	]
+	var legacy: Array = []
+	for x in range(24):
+		legacy.append({"type": "ground", "x": x, "y": trail})
+	legacy.append({"type": "ladder", "x": 10, "y": trail - 1})
+	legacy.append({
+		"type": "ladder_ledge",
+		"x": 10,
+		"y": trail - 1 - CustomLevelStore.LADDER_HEIGHT_CELLS,
+	})
+	legacy.append({"type": "goal", "x": 20, "y": trail - 1})
 	var pack := {
 		"version": CustomLevelStore.VERSION,
 		"height": trail + 1,
@@ -6751,6 +6879,13 @@ func _test_ladder_branch_upper_ledge() -> Variant:
 			fixed_y = int(object.get("y", -1))
 	if fixed_y != expected_upper:
 		return "Sanitize should realign legacy ladder ledges to row %d (got %d)." % [expected_upper, fixed_y]
+	var kept_ladder := false
+	for value in cleaned.get("objects", []):
+		var object := value as Dictionary
+		if str(object.get("type", "")) == "ladder" and int(object.get("x", -1)) == 10:
+			kept_ladder = true
+	if not kept_ladder:
+		return "Sanitize must keep the ladder when its ledge shares the climb-top cell."
 
 	# Cave campaign levels and default trails must pass ladder-top layout rules.
 	for level_number in [11, 12, 13, 14, 15]:

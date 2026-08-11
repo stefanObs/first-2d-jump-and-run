@@ -81,6 +81,10 @@ static func placement_row(type_name: String, click_y: int, trail: int) -> int:
 	if is_floor_only(type_name):
 		## Saloon / Crystal Gate always sit on the trail floor.
 		return maxi(trail - 1, 0)
+	if type_name == "ladder":
+		## Climb always starts on the trail standing row so a second ladder or a
+		## ledge click still plants the ladder on dirt, not in mid-air.
+		return maxi(trail - 1, 0)
 	if is_ground_standing(type_name) and click_y >= trail - 1:
 		return maxi(trail - 1, 0)
 	return clampi(click_y, 0, trail)
@@ -361,10 +365,13 @@ static func stamp_cells_for_object(
 
 
 ## Foreground stamp on this cell, else dirt. Empty if the square is vacant.
+## Ledges / props on a climb win over the ladder so hover and right-click hit
+## the thing sitting above the rungs.
 static func object_occupying_cell(
 	objects: Array, x: int, y: int, trail: int, width: int = MAX_WIDTH
 ) -> Dictionary:
 	var ground := {}
+	var ladder := {}
 	var foreground := {}
 	for value in objects:
 		if not (value is Dictionary):
@@ -376,11 +383,15 @@ static func object_occupying_cell(
 				continue
 			if type_name == "ground":
 				ground = object
+			elif type_name == "ladder":
+				ladder = object
 			else:
 				foreground = object
 			break
 	if not foreground.is_empty():
 		return foreground
+	if not ladder.is_empty():
+		return ladder
 	return ground
 
 
@@ -437,6 +448,17 @@ static func stamp_visual_world_rect_for_object(
 	return Rect2(anchor.x - size.x * 0.5, anchor.y - size.y, size.x, size.y)
 
 
+## Cells that block another stamp. Ladder climb shafts stay shareable so a
+## ledge, star, or second ladder can sit on the rungs; only the standing cell
+## is exclusive.
+static func stamp_overlap_cells(
+	object: Dictionary, trail: int, width: int = MAX_WIDTH
+) -> Array[Vector2i]:
+	if str(object.get("type", "")) == "ladder":
+		return [Vector2i(int(object.get("x", 0)), int(object.get("y", 0)))]
+	return stamp_cells_for_object(object, trail, width)
+
+
 static func stamps_overlap(
 	a: Dictionary, b: Dictionary, trail: int, width: int = MAX_WIDTH
 ) -> bool:
@@ -444,11 +466,10 @@ static func stamps_overlap(
 	var b_type := str(b.get("type", ""))
 	if a_type == "ground" or b_type == "ground":
 		return false
-	var a_cells := stamp_cells_for_object(a, trail, width)
 	var lookup := {}
-	for cell in a_cells:
+	for cell in stamp_overlap_cells(a, trail, width):
 		lookup["%d,%d" % [cell.x, cell.y]] = true
-	for cell in stamp_cells_for_object(b, trail, width):
+	for cell in stamp_overlap_cells(b, trail, width):
 		if lookup.has("%d,%d" % [cell.x, cell.y]):
 			return true
 	return false

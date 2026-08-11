@@ -955,37 +955,28 @@ func _wire_grid_cell(cell: Button, cell_x: int, cell_y: int) -> void:
 	)
 
 
-func _object_occupies_cell(object: Dictionary, x: int, y: int, trail: int) -> bool:
-	var width := int(_data.get("width", CustomLevelStore.DEFAULT_WIDTH))
-	for cell in CustomLevelStore.stamp_cells_for_object(object, trail, width):
-		if cell.x == x and cell.y == y:
-			return true
-	return false
-
-
 func _remove_at(x: int, y: int) -> void:
 	var objects := _objects()
 	var before := objects.duplicate(true)
 	var trail := _trail_y()
+	var width := int(_data.get("width", CustomLevelStore.DEFAULT_WIDTH))
+	var target := CustomLevelStore.object_occupying_cell(objects, x, y, trail, width)
+	if target.is_empty():
+		return
 	var removed := false
+	var target_type := str(target.get("type", ""))
+	var target_x := int(target.get("x", -1))
+	var target_y := int(target.get("y", -1))
 	for i in range(objects.size() - 1, -1, -1):
 		var object := objects[i] as Dictionary
-		if str(object.get("type", "")) == "ground":
-			continue
-		if _object_occupies_cell(object, x, y, trail):
+		if (
+			str(object.get("type", "")) == target_type
+			and int(object.get("x", -1)) == target_x
+			and int(object.get("y", -1)) == target_y
+		):
 			objects.remove_at(i)
 			removed = true
-	if not removed:
-		for i in range(objects.size() - 1, -1, -1):
-			var object := objects[i] as Dictionary
-			if (
-				str(object.get("type", "")) == "ground"
-				and int(object.get("x", -1)) == x
-				and int(object.get("y", -1)) == y
-			):
-				objects.remove_at(i)
-				removed = true
-				break
+			break
 	if not removed or objects == before:
 		return
 	_data["objects"] = objects
