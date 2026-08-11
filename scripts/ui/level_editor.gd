@@ -1139,8 +1139,10 @@ func _place(x: int, y: int) -> void:
 	else:
 		var width := int(_data.get("width", CustomLevelStore.DEFAULT_WIDTH))
 		var hover_cells := CustomLevelStore.stamp_hover_cells(
-			_selected_type, x, y, trail, width
+			_selected_type, x, y, trail, width, objects
 		)
+		if CustomLevelStore.is_floor_only(_selected_type) and hover_cells.is_empty():
+			return
 		var store_x := x
 		var store_y := place_y
 		if not hover_cells.is_empty():
@@ -1262,7 +1264,12 @@ func _refresh_grid_highlights() -> void:
 	var ghost_cells: Array[Vector2i] = []
 	if _hover_column >= 0 and _hover_row >= 0 and _selected_type not in ["erase", "ground", "canyon"]:
 		ghost_cells = CustomLevelStore.stamp_hover_cells(
-			_selected_type, _hover_column, _hover_row, trail, width
+			_selected_type,
+			_hover_column,
+			_hover_row,
+			trail,
+			width,
+			_data.get("objects", []) as Array
 		)
 	var occupy_cells: Array[Vector2i] = []
 	if _hover_column >= 0 and _hover_row >= 0:

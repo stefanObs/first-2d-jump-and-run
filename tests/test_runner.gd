@@ -3148,15 +3148,27 @@ func _test_ground_stamps_avoid_gaps() -> Variant:
 func _test_saloon_stamp_only_on_floor() -> Variant:
 	var trail := CustomLevelStore.trail_row(8)
 	if CustomLevelStore.placement_row("goal", 1, trail) != trail - 1:
-		return "Saloon placement should snap mid-air clicks onto the trail floor."
+		return "Saloon sanitize/placement row should still be the trail floor."
 	if CustomLevelStore.placement_row("goal", trail, trail) != trail - 1:
-		return "Saloon placement should snap dirt-row clicks onto the standing floor row."
+		return "Saloon dirt-row clicks should store on the standing floor row."
 	if CustomLevelStore.placement_row("cactus", 1, trail) == trail - 1:
 		return "Other ground stamps may still be clicked into the air."
 	var objects: Array = []
 	for x in range(24):
 		objects.append({"type": "ground", "x": x, "y": trail})
 	objects.append({"type": "platform", "x": 8, "y": 2})
+	if not CustomLevelStore.stamp_hover_cells("goal", 10, 1, trail, 24, objects).is_empty():
+		return "Saloon ghost should not appear in mid-air."
+	if CustomLevelStore.stamp_hover_cells("goal", 10, trail - 1, trail, 24, objects).is_empty():
+		return "Saloon ghost should appear on the trail floor."
+	if not CustomLevelStore.stamp_hover_cells("goal", 8, 2, trail, 24, objects).is_empty():
+		return "Saloon ghost should not appear on a plank."
+	if CustomLevelStore.floor_stamp_click_allowed(objects, "goal", 10, 1, trail):
+		return "Saloon clicks in mid-air should be rejected."
+	if not CustomLevelStore.floor_stamp_click_allowed(objects, "goal", 10, trail - 1, trail):
+		return "Saloon clicks on the standing floor should be allowed."
+	if CustomLevelStore.floor_stamp_click_allowed(objects, "goal", 8, 2, trail):
+		return "Saloon clicks on a plank should be rejected."
 	objects.append({"type": "goal", "x": 8, "y": 2})
 	var cleaned := CustomLevelStore.sanitize(
 		{"objects": objects, "height": 8, "width": 24, "title": "Saloon Floor"},
@@ -3193,6 +3205,20 @@ func _test_saloon_stamp_only_on_floor() -> Variant:
 	node._selected_type = "goal"
 	node._on_preview_stamp(12, 1)
 	await get_tree().process_frame
+	for value in node._data.get("objects", []):
+		var object := value as Dictionary
+		if str(object.get("type", "")) == "goal" and int(object.get("x", -1)) == 12:
+			node.queue_free()
+			return "Editor must not place a saloon in mid-air."
+	node._place(4, 2)
+	await get_tree().process_frame
+	for value in node._data.get("objects", []):
+		var object := value as Dictionary
+		if str(object.get("type", "")) == "goal" and int(object.get("x", -1)) == 4:
+			node.queue_free()
+			return "Editor must not place a saloon on a raised row / plank."
+	node._place(12, editor_trail - 1)
+	await get_tree().process_frame
 	var stored_y := -1
 	var stored_x := -1
 	for value in node._data.get("objects", []):
@@ -3201,10 +3227,10 @@ func _test_saloon_stamp_only_on_floor() -> Variant:
 			stored_x = int(object.get("x", -1))
 			stored_y = int(object.get("y", -1))
 	node.queue_free()
-	if stored_y != editor_trail - 1:
-		return "Editor saloon stamp must land on the floor (got y=%d, trail=%d)." % [stored_y, editor_trail]
-	if stored_x < 0:
-		return "Editor should place a saloon when clicking above the floor."
+	if stored_x != 12 or stored_y != editor_trail - 1:
+		return "Editor saloon stamp must land on the floor (got x=%d y=%d, trail=%d)." % [
+			stored_x, stored_y, editor_trail
+		]
 	return null
 
 

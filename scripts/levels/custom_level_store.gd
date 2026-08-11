@@ -72,6 +72,29 @@ static func is_floor_only(type_name: String) -> bool:
 	## Saloon / Crystal Gate must stand on the trail floor, never on planks or in the air.
 	return type_name == "goal"
 
+
+static func floor_stamp_row_allowed(click_y: int, trail: int) -> bool:
+	## Dirt row or the standing row above it — not mid-air and not a raised ledge.
+	return click_y == trail or click_y == maxi(trail - 1, 0)
+
+
+static func floor_stamp_click_allowed(
+	objects: Array,
+	type_name: String,
+	click_x: int,
+	click_y: int,
+	trail: int,
+	width: int = MAX_WIDTH
+) -> bool:
+	if not is_floor_only(type_name):
+		return true
+	if not floor_stamp_row_allowed(click_y, trail):
+		return false
+	## A plank / crystal ledge on the standing cell is not the trail floor.
+	if not is_nan(plank_surface_y_at(objects, click_x, maxi(trail - 1, 0), trail, GRID_SIZE, width)):
+		return false
+	return true
+
 static func is_ceiling_hanging(type_name: String) -> bool:
 	return type_name in CEILING_HANGING_TYPES
 
@@ -186,7 +209,12 @@ static func _bull_stamp_world_size(style: String = STYLE_DESERT) -> Vector2:
 	return tex_size * scale
 
 static func stamp_hover_cells(
-	type_name: String, hover_col: int, hover_row: int, trail: int, width: int
+	type_name: String,
+	hover_col: int,
+	hover_row: int,
+	trail: int,
+	width: int,
+	objects: Array = []
 ) -> Array[Vector2i]:
 	var cells: Array[Vector2i] = []
 	if type_name in ["erase", "ground", "canyon"] or hover_col < 0 or hover_row < 0:
@@ -197,6 +225,10 @@ static func stamp_hover_cells(
 		var span := pit_column_span({"type": "pit", "x": hover_col, "y": trail})
 		for col in range(span.x, span.y + 1):
 			cells.append(Vector2i(col, trail))
+		return cells
+	if is_floor_only(type_name) and not floor_stamp_click_allowed(
+		objects, type_name, hover_col, hover_row, trail, width
+	):
 		return cells
 	var place_row := placement_row(type_name, hover_row, trail)
 	var footprint := stamp_footprint(type_name)
@@ -227,6 +259,10 @@ static func stamp_visual_world_rect(
 ) -> Rect2:
 	if type_name in ["erase", "ground", "canyon"] or hover_col < 0 or hover_row < 0:
 		return Rect2()
+	if is_floor_only(type_name) and not floor_stamp_click_allowed(
+		objects, type_name, hover_col, hover_row, trail, width
+	):
+		return Rect2()
 	var size := stamp_world_size(type_name, style)
 	if type_name == "pit":
 		if hover_row != trail:
@@ -234,7 +270,7 @@ static func stamp_visual_world_rect(
 		var center := pit_world_position({"type": "pit", "x": hover_col, "y": trail}, grid, trail)
 		return Rect2(center - size * 0.5, size)
 	if type_name == "platform" or type_name == "ladder_ledge":
-		var cells := stamp_hover_cells(type_name, hover_col, hover_row, trail, width)
+		var cells := stamp_hover_cells(type_name, hover_col, hover_row, trail, width, objects)
 		if cells.is_empty():
 			return Rect2()
 		var left_col := cells[0].x

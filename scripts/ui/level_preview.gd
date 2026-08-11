@@ -410,7 +410,12 @@ func _ghost_cell_rects_screen() -> Array[Rect2]:
 	var trail: int = metrics["trail"]
 	var width: int = metrics["width"]
 	for cell in CustomLevelStore.stamp_hover_cells(
-		_selected_type, _hover_column, _hover_row, trail, width
+		_selected_type,
+		_hover_column,
+		_hover_row,
+		trail,
+		width,
+		_data.get("objects", []) as Array
 	):
 		rects.append(
 			_world_rect_to_screen(Rect2(float(cell.x) * grid, float(cell.y) * grid, grid, grid))
@@ -423,14 +428,16 @@ func _ghost_placement_object() -> Dictionary:
 	var metrics := _view_metrics()
 	var trail: int = metrics["trail"]
 	var width: int = metrics["width"]
-	var place_row := CustomLevelStore.placement_row(_selected_type, _hover_row, trail)
-	var col := _hover_column
+	var objects := _data.get("objects", []) as Array
 	var cells := CustomLevelStore.stamp_hover_cells(
-		_selected_type, _hover_column, _hover_row, trail, width
+		_selected_type, _hover_column, _hover_row, trail, width, objects
 	)
-	if not cells.is_empty():
-		col = cells[0].x
-		place_row = cells[0].y
+	if cells.is_empty():
+		return {}
+	var col := cells[0].x
+	var place_row := cells[0].y
+	for cell in cells:
+		col = mini(col, cell.x)
 	return {"type": _selected_type, "x": col, "y": place_row}
 
 func _aligned_ghost_world_rect() -> Rect2:
@@ -602,7 +609,12 @@ func _update_ghost_world() -> void:
 		var trail: int = metrics["trail"]
 		var width: int = metrics["width"]
 		for cell in CustomLevelStore.stamp_hover_cells(
-			_selected_type, _hover_column, _hover_row, trail, width
+			_selected_type,
+			_hover_column,
+			_hover_row,
+			trail,
+			width,
+			_data.get("objects", []) as Array
 		):
 			var cell_rect := Rect2(float(cell.x) * grid, float(cell.y) * grid, grid, grid)
 			_ghost_root.add_child(_make_world_outline(cell_rect, _GHOST_OUTLINE, 2.0))
