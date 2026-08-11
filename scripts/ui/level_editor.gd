@@ -60,9 +60,10 @@ var _export_dialog: FileDialog
 var _import_dialog: FileDialog
 const _EDGE_SCROLL_ZONE := 28.0
 const _EDGE_SCROLL_SPEED := 320.0
-const _DROPDOWN_FONT_SIZE := 10
-const _DROPDOWN_HEIGHT := 18.0
-const _PALETTE_ICON_SIZE := 16.0
+const _CHROME_BUTTON_HEIGHT := 40.0
+const _DROPDOWN_FONT_SIZE := 13
+const _DROPDOWN_HEIGHT := _CHROME_BUTTON_HEIGHT
+const _PALETTE_ICON_SIZE := 32.0
 const _DROPDOWN_INK := Color(0.28, 0.12, 0.04, 1.0)
 const _DROPDOWN_INK_HOVER := Color(0.45, 0.2, 0.06, 1.0)
 const _DROPDOWN_INK_DISABLED := Color(0.45, 0.35, 0.28, 1.0)
@@ -145,7 +146,7 @@ func _build_ui() -> void:
 		"res://assets/ui/menu_icon_back.png"
 	)
 	back.tooltip_text = tr("Back to Campaign Workshop")
-	back.custom_minimum_size = Vector2(108, 40)
+	back.custom_minimum_size = Vector2(108, _CHROME_BUTTON_HEIGHT)
 	MenuChrome.apply_button_icon(back, "res://assets/ui/menu_icon_back.png", 36)
 	_save_button = _add_action(
 		heading, tr("Save Trail"), _save, "SaveButton", "res://assets/ui/menu_icon_save.png"
@@ -218,7 +219,7 @@ func _build_ui() -> void:
 	_level_style_dropdown.select(_theme_index_from_data())
 	_level_style_dropdown.item_selected.connect(_on_style_selected)
 	identity.add_child(_level_style_dropdown)
-	_style_dropdown(_level_style_dropdown)
+	_style_dropdown(_level_style_dropdown, 12, 22)
 	_apply_style_dropdown_icons()
 
 	var instructions := Label.new()
@@ -239,7 +240,7 @@ func _build_ui() -> void:
 	var palette := HBoxContainer.new()
 	palette.name = "Palette"
 	palette.alignment = BoxContainer.ALIGNMENT_CENTER
-	palette.add_theme_constant_override(&"separation", 4)
+	palette.add_theme_constant_override(&"separation", 6)
 	root.add_child(palette)
 	var category_label := Label.new()
 	category_label.text = tr("Stamp category")
@@ -254,7 +255,7 @@ func _build_ui() -> void:
 	palette.add_child(_category_example)
 	_category_dropdown = OptionButton.new()
 	_category_dropdown.name = "StampCategory"
-	_category_dropdown.custom_minimum_size = Vector2(132, _DROPDOWN_HEIGHT)
+	_category_dropdown.custom_minimum_size = Vector2(200, _DROPDOWN_HEIGHT)
 	_category_dropdown.add_theme_font_size_override(&"font_size", _DROPDOWN_FONT_SIZE)
 	_category_dropdown.item_selected.connect(_on_category_selected)
 	palette.add_child(_category_dropdown)
@@ -267,13 +268,13 @@ func _build_ui() -> void:
 	_tool_label = tool_label
 	_tool_dropdown = OptionButton.new()
 	_tool_dropdown.name = "StampTool"
-	_tool_dropdown.custom_minimum_size = Vector2(148, _DROPDOWN_HEIGHT)
+	_tool_dropdown.custom_minimum_size = Vector2(220, _DROPDOWN_HEIGHT)
 	_tool_dropdown.add_theme_font_size_override(&"font_size", _DROPDOWN_FONT_SIZE)
 	_tool_dropdown.item_selected.connect(_on_tool_selected)
 	palette.add_child(_tool_dropdown)
 	_trail_tool_bar = HBoxContainer.new()
 	_trail_tool_bar.name = "TrailPathTools"
-	_trail_tool_bar.add_theme_constant_override(&"separation", 4)
+	_trail_tool_bar.add_theme_constant_override(&"separation", 6)
 	_trail_tool_bar.visible = false
 	palette.add_child(_trail_tool_bar)
 	_build_trail_tool_bar()
@@ -450,16 +451,21 @@ func _build_ui() -> void:
 	MenuChrome.bind_menu_buttons(self)
 
 
-func _style_dropdown(dropdown: OptionButton) -> void:
+func _style_dropdown(
+	dropdown: OptionButton,
+	font_size: int = _DROPDOWN_FONT_SIZE,
+	icon_size: float = _PALETTE_ICON_SIZE
+) -> void:
+	var tall := icon_size >= 28.0
 	var normal := StyleBoxFlat.new()
 	normal.bg_color = _DROPDOWN_PANEL
 	normal.set_border_width_all(1)
 	normal.border_color = _DROPDOWN_BORDER
-	normal.set_corner_radius_all(4)
-	normal.content_margin_left = 6
-	normal.content_margin_top = 2
-	normal.content_margin_right = 6
-	normal.content_margin_bottom = 2
+	normal.set_corner_radius_all(8 if tall else 4)
+	normal.content_margin_left = 8 if tall else 6
+	normal.content_margin_top = 6 if tall else 2
+	normal.content_margin_right = 8 if tall else 6
+	normal.content_margin_bottom = 6 if tall else 2
 	var hover := normal.duplicate() as StyleBoxFlat
 	hover.bg_color = _DROPDOWN_PANEL_HOVER
 	MenuChrome.apply_button_styleboxes(dropdown, normal, hover)
@@ -468,11 +474,11 @@ func _style_dropdown(dropdown: OptionButton) -> void:
 	dropdown.add_theme_color_override(&"font_pressed_color", _DROPDOWN_INK)
 	dropdown.add_theme_color_override(&"font_focus_color", _DROPDOWN_INK)
 	dropdown.add_theme_color_override(&"font_disabled_color", _DROPDOWN_INK_DISABLED)
-	dropdown.add_theme_constant_override(&"icon_max_width", int(_PALETTE_ICON_SIZE))
+	dropdown.add_theme_constant_override(&"icon_max_width", int(icon_size))
 	var popup := dropdown.get_popup()
-	popup.add_theme_font_size_override(&"font_size", _DROPDOWN_FONT_SIZE)
-	popup.add_theme_constant_override(&"icon_max_width", int(_PALETTE_ICON_SIZE))
-	popup.add_theme_constant_override(&"v_separation", 2)
+	popup.add_theme_font_size_override(&"font_size", font_size)
+	popup.add_theme_constant_override(&"icon_max_width", int(icon_size))
+	popup.add_theme_constant_override(&"v_separation", 6 if tall else 2)
 	popup.add_theme_color_override(&"font_color", _DROPDOWN_INK)
 	popup.add_theme_color_override(&"font_hover_color", _DROPDOWN_INK_HOVER)
 	popup.add_theme_color_override(&"font_disabled_color", _DROPDOWN_INK_DISABLED)
@@ -526,15 +532,16 @@ func _build_trail_tool_bar() -> void:
 			var button := Button.new()
 			button.name = "TrailTool_%s" % type_id
 			button.tooltip_text = tr(label_key)
-			button.custom_minimum_size = Vector2(22, _DROPDOWN_HEIGHT)
+			button.custom_minimum_size = Vector2(_CHROME_BUTTON_HEIGHT, _CHROME_BUTTON_HEIGHT)
 			button.focus_mode = Control.FOCUS_NONE
 			if not texture_path.is_empty() and ResourceLoader.exists(texture_path):
 				button.icon = load(texture_path) as Texture2D
 				button.expand_icon = true
+				button.add_theme_constant_override(&"icon_max_width", int(_PALETTE_ICON_SIZE))
 				button.text = ""
 			else:
 				button.text = tr(label_key)
-			MenuChrome.bind_button_feedback(button)
+			MenuChrome.style_compact_icon_button(button, _DROPDOWN_FONT_SIZE)
 			button.pressed.connect(func() -> void: _select_tool(type_id))
 			_trail_tool_bar.add_child(button)
 			_trail_tool_buttons[type_id] = button
@@ -808,9 +815,9 @@ func _add_action(
 	button.name = node_name
 	button.text = text
 	button.tooltip_text = text
-	button.custom_minimum_size = Vector2(158, 40)
-	MenuChrome.apply_button_icon(button, icon_path, 32)
-	MenuChrome.style_compact_icon_button(button, 13)
+	button.custom_minimum_size = Vector2(158, _CHROME_BUTTON_HEIGHT)
+	MenuChrome.apply_button_icon(button, icon_path, int(_PALETTE_ICON_SIZE))
+	MenuChrome.style_compact_icon_button(button, _DROPDOWN_FONT_SIZE)
 	button.pressed.connect(action)
 	parent.add_child(button)
 	return button

@@ -8606,12 +8606,17 @@ func _test_campaign_workshop() -> Variant:
 			error = "The editor pane should keep the stamp grid from collapsing."
 		elif editor._cells.is_empty() or editor._cells[0].custom_minimum_size.y < 10.0:
 			error = "Stamp grid cells should stay tall enough to tap."
-		elif category_example == null or category_example.custom_minimum_size.y < 14.0:
+		elif category_example == null or category_example.custom_minimum_size.y < 28.0:
 			error = "Each stamp category should show an example thumbnail."
-		elif category_example.custom_minimum_size.y > 18.0:
-			error = "Stamp palette icons should stay compact enough for the grid and preview."
-		elif category_dropdown.custom_minimum_size.y > 20.0 or tool_dropdown.custom_minimum_size.y > 20.0:
-			error = "Stamp dropdowns should stay compact to leave room for the grid and preview."
+		elif category_example.custom_minimum_size.y > 44.0:
+			error = "Stamp palette icons should match the action-button height."
+		elif (
+			category_dropdown.custom_minimum_size.y < 36.0
+			or tool_dropdown.custom_minimum_size.y < 36.0
+			or category_dropdown.custom_minimum_size.y > 44.0
+			or tool_dropdown.custom_minimum_size.y > 44.0
+		):
+			error = "Stamp dropdowns should match the action button height."
 		elif grid_scroll.horizontal_scroll_mode == ScrollContainer.SCROLL_MODE_SHOW_ALWAYS:
 			error = "The stamp grid should hide its built-in horizontal scrollbar."
 		else:
@@ -8634,6 +8639,11 @@ func _test_campaign_workshop() -> Variant:
 					error = "The trail category should show direct path stamp buttons."
 				elif tool_dropdown.visible:
 					error = "The trail category should hide the tool dropdown."
+				elif (
+					trail_tools.get_child_count() == 0
+					or (trail_tools.get_child(0) as Button).custom_minimum_size.y < 36.0
+				):
+					error = "Path stamp buttons should match the action button height."
 				else:
 					embedded_preview.show_level(imported)
 					var metrics := embedded_preview._view_metrics()
