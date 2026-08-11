@@ -20,6 +20,7 @@ func _ready() -> void:
 	failures += await _run("Save select offers Advanced Mode in Settings", _test_settings_trail_mode_dropdown)
 	failures += await _run("Settings dropdown popups stay readable", _test_settings_dropdown_popup_contrast)
 	failures += await _run("Settings trail mode selection applies to slots", _test_settings_trail_mode_selection)
+	failures += await _run("Classic trail mode is the title-screen default", _test_classic_trail_mode_is_default)
 	failures += await _run("Settings trail mode persists through refresh", _test_settings_trail_mode_refresh)
 	failures += await _run("Advanced Mode lives and badge milestones", _test_advanced_mode_lives)
 	failures += await _run("Advanced Mode lives hearts show in HUD", _test_advanced_mode_lives_hud)
@@ -1503,7 +1504,6 @@ func _test_settings_dropdown_popup_contrast() -> Variant:
 func _test_settings_trail_mode_selection() -> Variant:
 	GameManager.erase_slot(0)
 	var previous := bool(GameManager.get_settings().get("advanced_mode", false))
-	GameManager.set_setting("advanced_mode", true)
 	var packed: PackedScene = load("res://scenes/ui/save_select.tscn")
 	if packed == null:
 		GameManager.set_setting("advanced_mode", previous)
@@ -1512,6 +1512,12 @@ func _test_settings_trail_mode_selection() -> Variant:
 	var scene := packed.instantiate()
 	add_child(scene)
 	await get_tree().process_frame
+	if GameManager.is_advanced_mode_setting():
+		scene.queue_free()
+		GameManager.set_setting("advanced_mode", previous)
+		GameManager.erase_slot(0)
+		return "Title screen should open on Classic until hearts are chosen."
+	GameManager.set_setting("advanced_mode", true)
 	if not GameManager.is_advanced_mode_setting():
 		scene.queue_free()
 		GameManager.set_setting("advanced_mode", previous)
@@ -1545,6 +1551,48 @@ func _test_settings_trail_mode_selection() -> Variant:
 		return "Trail mode dropdown should include Advanced ★5 after Classic."
 	scene.queue_free()
 	GameManager.set_setting("advanced_mode", previous)
+	GameManager.erase_slot(0)
+	return null
+
+
+func _test_classic_trail_mode_is_default() -> Variant:
+	GameManager.erase_slot(0)
+	var previous := GameManager.get_badges_per_life_setting()
+	GameManager.set_badges_per_life_setting(30)
+	var slot := GameManager.get_slot(0)
+	slot["empty"] = false
+	slot["advanced_mode"] = true
+	slot["badges_per_life"] = 30
+	slot["current_level"] = 2
+	GameManager.debug_set_slot(0, slot)
+	var packed: PackedScene = load("res://scenes/ui/save_select.tscn")
+	if packed == null:
+		GameManager.set_badges_per_life_setting(previous)
+		GameManager.erase_slot(0)
+		return "Missing save select scene."
+	var scene := packed.instantiate()
+	add_child(scene)
+	await get_tree().process_frame
+	if GameManager.is_advanced_mode_setting() or GameManager.get_badges_per_life_setting() != 0:
+		scene.queue_free()
+		GameManager.set_badges_per_life_setting(previous)
+		GameManager.erase_slot(0)
+		return "Start screen must default to Classic, even if hearts were on last time."
+	scene._index = 0
+	scene._sync_play_settings_from_focused_slot()
+	if GameManager.is_advanced_mode_setting():
+		scene.queue_free()
+		GameManager.set_badges_per_life_setting(previous)
+		GameManager.erase_slot(0)
+		return "Focusing an Advanced save must not turn hearts on by itself."
+	scene._toggle_trail_mode()
+	if GameManager.get_badges_per_life_setting() != 5:
+		scene.queue_free()
+		GameManager.set_badges_per_life_setting(previous)
+		GameManager.erase_slot(0)
+		return "Hearts mode should turn on only after the player picks it."
+	scene.queue_free()
+	GameManager.set_badges_per_life_setting(previous)
 	GameManager.erase_slot(0)
 	return null
 
@@ -5771,12 +5819,12 @@ func _test_slot_remembers_character_and_trail_mode() -> Variant:
 		GameManager.erase_slot(0)
 		GameManager.erase_slot(1)
 		return "Focusing a filled save should restore its rider into Settings."
-	if not GameManager.is_advanced_mode_setting():
+	if GameManager.is_advanced_mode_setting():
 		GameManager.set_setting("player_character", previous_character)
 		GameManager.set_setting("advanced_mode", previous_advanced)
 		GameManager.erase_slot(0)
 		GameManager.erase_slot(1)
-		return "Focusing a filled save should restore its trail mode into Settings."
+		return "Focusing a filled save should not turn on hearts — Classic stays until picked."
 	var packed: PackedScene = load("res://scenes/ui/save_select.tscn")
 	if packed == null:
 		GameManager.set_setting("player_character", previous_character)

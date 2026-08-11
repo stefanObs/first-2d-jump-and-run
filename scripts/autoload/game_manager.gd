@@ -191,6 +191,13 @@ func set_badges_per_life_setting(value: int) -> void:
 	settings_changed.emit()
 
 
+func reset_trail_mode_to_classic() -> void:
+	## Title screen always offers Simple/Classic first. Hearts stay off until picked.
+	if get_badges_per_life_setting() == 0:
+		return
+	set_badges_per_life_setting(0)
+
+
 func get_lives() -> int:
 	if not is_advanced_mode() or active_slot_index < 0:
 		return 0
@@ -226,25 +233,18 @@ func prepare_slot_for_start(slot_index: int) -> void:
 
 
 func apply_play_settings_from_slot(slot_index: int) -> void:
-	## Title-screen focus: filled doors restore their rider and trail mode into Settings.
+	## Title-screen focus: filled doors restore their rider. Trail mode stays
+	## Classic unless the player picks hearts on the title screen or in Settings.
 	_validate_slot(slot_index)
 	_ensure_data()
 	var slot: Dictionary = get_slot(slot_index)
 	if bool(slot.get("empty", true)):
 		return
 	var character := normalize_player_character(slot.get("player_character", PLAYER_COWBOY))
-	var badges_per_life := slot_badges_per_life(slot_index)
 	var settings: Dictionary = _data["settings"]
-	var dirty := false
-	if normalize_player_character(settings.get("player_character", PLAYER_COWBOY)) != character:
-		settings["player_character"] = character
-		dirty = true
-	if get_badges_per_life_setting() != badges_per_life:
-		settings["badges_per_life"] = badges_per_life
-		settings["advanced_mode"] = badges_per_life > 0
-		dirty = true
-	if not dirty:
+	if normalize_player_character(settings.get("player_character", PLAYER_COWBOY)) == character:
 		return
+	settings["player_character"] = character
 	_data["settings"] = settings
 	save_to_disk()
 	settings_changed.emit()

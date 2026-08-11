@@ -119,6 +119,7 @@ func _ready() -> void:
 	GameManager.saves_changed.connect(_refresh)
 	GameManager.settings_changed.connect(_on_settings_changed)
 	InputManager.device_changed.connect(_on_input_device_changed)
+	GameManager.reset_trail_mode_to_classic()
 	_refresh()
 	_refresh_hearts_button()
 	_refresh_character_pickers()
@@ -743,7 +744,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _select_slot(slot_index: int) -> void:
 	AudioManager.ensure_gameplay_music()
 	_index = slot_index
-	## Commit the title-screen rider / trail-mode picks onto this save, then run.
+	## Commit the title-screen rider / trail-mode picks (Classic unless hearts were chosen).
 	GameManager.prepare_slot_for_start(slot_index)
 	GameManager.start_or_continue_slot(slot_index)
 
