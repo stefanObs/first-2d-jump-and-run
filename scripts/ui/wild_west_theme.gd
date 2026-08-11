@@ -38,6 +38,7 @@ static func apply_to_level(level: Node) -> void:
 	_retuck_cave_sky_to_floor(level, style)
 	_align_cacti(level)
 	_align_chests(level)
+	_align_camps(level)
 	_align_ground_foes(level)
 	_apply_actor_styles(level, style)
 	# After actor styles: Hazard.apply_level_style would otherwise overwrite
@@ -1240,6 +1241,18 @@ static func _align_cacti(level: Node) -> void:
 			CACTUS_TILT_BLEND,
 			CACTUS_MAX_TILT
 		)
+
+
+static func _align_camps(level: Node) -> void:
+	## Stacked dirt used to bury the camp stamp; keep respawn on the crust.
+	for node in level.find_children("*", "Area2D", true, false):
+		if not (node is Checkpoint):
+			continue
+		var camp := node as Checkpoint
+		var surface := walk_surface_at(level, camp.global_position.x)
+		var floor_y := float(surface["y"])
+		if camp.global_position.y > floor_y + 2.0 or absf(camp.global_position.y - floor_y) <= 48.0:
+			camp.global_position.y = floor_y
 
 
 static func _align_chests(level: Node) -> void:

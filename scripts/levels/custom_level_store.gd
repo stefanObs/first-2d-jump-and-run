@@ -107,13 +107,50 @@ static func is_cave_banned(type_name: String) -> bool:
 static func normalize_style(value: Variant) -> String:
 	return LevelStyle.normalize(value)
 
-static func placement_row(type_name: String, click_y: int, trail: int) -> int:
+static func highest_dirt_row(objects: Array, x: int, trail: int) -> int:
+	## Smallest grid y (highest on screen) with a dirt cell in this column.
+	var top := trail + 1
+	for value in objects:
+		if not (value is Dictionary):
+			continue
+		var object := value as Dictionary
+		if str(object.get("type", "")) != "ground":
+			continue
+		if int(object.get("x", -1)) != x:
+			continue
+		var gy := int(object.get("y", trail))
+		if gy <= trail:
+			top = mini(top, gy)
+	return trail if top > trail else top
+
+
+static func standing_row_on_dirt(objects: Array, x: int, trail: int) -> int:
+	## One row above the tallest dirt bank so feet sit on the crust.
+	return maxi(highest_dirt_row(objects, x, trail) - 1, 0)
+
+
+static func lift_camps_to_dirt_top(objects: Array, trail: int) -> void:
+	## Raising dirt over a camp used to bury the cowboy's respawn in the floor.
+	for value in objects:
+		if not (value is Dictionary):
+			continue
+		var object := value as Dictionary
+		if str(object.get("type", "")) != "checkpoint":
+			continue
+		object["y"] = standing_row_on_dirt(objects, int(object.get("x", 0)), trail)
+
+
+static func placement_row(
+	type_name: String, click_y: int, trail: int, objects: Array = [], click_x: int = 0
+) -> int:
 	if is_ceiling_hanging(type_name):
 		## Tropfen / Stalaktiten always hang from the cave ceiling row.
 		return 0
 	if is_floor_only(type_name):
 		## Saloon / Crystal Gate always sit on the trail floor.
 		return maxi(trail - 1, 0)
+	if type_name == "checkpoint":
+		return standing_row_on_dirt(objects, click_x, trail)
 	if type_name == "ladder":
 		## Climb always starts on the trail standing row so a second ladder or a
 		## ledge click still plants the ladder on dirt, not in mid-air.
@@ -230,7 +267,7 @@ static func stamp_hover_cells(
 		objects, type_name, hover_col, hover_row, trail, width
 	):
 		return cells
-	var place_row := placement_row(type_name, hover_row, trail)
+	var place_row := placement_row(type_name, hover_row, trail, objects, hover_col)
 	var footprint := stamp_footprint(type_name)
 	var start_col := hover_col
 	if footprint.x > 1.0:
@@ -276,10 +313,10 @@ static func stamp_visual_world_rect(
 		var left_col := cells[0].x
 		for cell in cells:
 			left_col = mini(left_col, cell.x)
-		var plank_row := placement_row(type_name, hover_row, trail)
+		var plank_row := placement_row(type_name, hover_row, trail, objects, hover_col)
 		var center_y := float(plank_row) * grid
 		return Rect2(float(left_col) * grid, center_y - size.y * 0.5, size.x, size.y)
-	var place_row := placement_row(type_name, hover_row, trail)
+	var place_row := placement_row(type_name, hover_row, trail, objects, hover_col)
 	var object := {"type": type_name, "x": hover_col, "y": place_row}
 	var anchor := object_world_position(object, grid, trail, objects)
 	if is_ceiling_hanging(type_name):
@@ -1540,6 +1577,7 @@ static func sanitize(source: Dictionary, slot_index: int) -> Dictionary:
 				if objects.size() >= 900:
 					break
 		realign_ladder_ledges(objects, trail)
+		lift_camps_to_dirt_top(objects, trail)
 		_strip_ground_standing_off_gaps(objects, trail, int(result["width"]))
 		_strip_overlapping_stamps(objects, trail, int(result["width"]))
 		if bool(result["start_mounted"]):

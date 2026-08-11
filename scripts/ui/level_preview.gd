@@ -464,7 +464,9 @@ func _aligned_ghost_world_rect() -> Rect2:
 		return Rect2()
 	if _world == null or not is_instance_valid(_world):
 		return rect
-	var place_row := CustomLevelStore.placement_row(_selected_type, _hover_row, trail)
+	var place_row := CustomLevelStore.placement_row(
+		_selected_type, _hover_row, trail, objects, _hover_column
+	)
 	if CustomLevelStore.keeps_plank_surface(_selected_type, objects, _hover_column, place_row, trail, grid):
 		return rect
 	var center_x := rect.position.x + rect.size.x * 0.5

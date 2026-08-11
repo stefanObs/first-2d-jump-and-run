@@ -224,6 +224,7 @@ func _ready() -> void:
 	failures += await _run("Workshop trail length add and remove", _test_workshop_trail_length_resize)
 	failures += await _run("Trail workshop uses one trail row and stacked dirt", _test_trail_row_model)
 	failures += await _run("Workshop ground props stamp one row above dirt", _test_workshop_ground_prop_offset)
+	failures += await _run("Camps sit on top of stacked dirt", _test_camps_sit_on_stacked_dirt)
 	failures += await _run(
 		"Workshop stamp catalog matches campaign and separates threats",
 		_test_workshop_stamp_catalog
@@ -7842,6 +7843,74 @@ func _test_workshop_ground_prop_offset() -> Variant:
 			bandit.global_position.y, expected_floor
 		]
 	level.free()
+	return null
+
+
+func _test_camps_sit_on_stacked_dirt() -> Variant:
+	var trail := CustomLevelStore.trail_row(8)
+	var objects: Array = []
+	for x in range(24):
+		objects.append({"type": "ground", "x": x, "y": trail})
+	objects.append({"type": "checkpoint", "x": 6, "y": trail - 1})
+	objects.append({"type": "ground", "x": 6, "y": trail - 1})
+	objects.append({"type": "ground", "x": 6, "y": trail - 2})
+	if CustomLevelStore.placement_row("checkpoint", trail - 1, trail, objects, 6) != trail - 3:
+		return "Camp placement should sit one row above the tallest dirt (got %d)." % CustomLevelStore.placement_row(
+			"checkpoint", trail - 1, trail, objects, 6
+		)
+	CustomLevelStore.lift_camps_to_dirt_top(objects, trail)
+	var camp_y := -1
+	for value in objects:
+		var object := value as Dictionary
+		if str(object.get("type", "")) == "checkpoint" and int(object.get("x", -1)) == 6:
+			camp_y = int(object.get("y", -1))
+	if camp_y != trail - 3:
+		return "Raising dirt over a camp should lift the camp to y=%d (got %d)." % [trail - 3, camp_y]
+	var data := CustomLevelStore.default_level(0)
+	data["width"] = 24
+	data["objects"] = [
+		{"type": "ground", "x": 6, "y": trail},
+		{"type": "ground", "x": 6, "y": trail - 1},
+		{"type": "ground", "x": 6, "y": trail - 2},
+		{"type": "checkpoint", "x": 6, "y": trail - 1},
+		{"type": "goal", "x": 20, "y": trail - 1},
+	]
+	for x in range(24):
+		if x == 6:
+			continue
+		(data["objects"] as Array).append({"type": "ground", "x": x, "y": trail})
+	var cleaned := CustomLevelStore.sanitize(data, 0)
+	var sanitized_y := -1
+	for value in cleaned.get("objects", []):
+		var object := value as Dictionary
+		if str(object.get("type", "")) == "checkpoint" and int(object.get("x", -1)) == 6:
+			sanitized_y = int(object.get("y", -1))
+	if sanitized_y != trail - 3:
+		return "Sanitize should lift buried camps onto stacked dirt (got y=%d)." % sanitized_y
+	var level := LevelController.new()
+	CustomLevelBuilder.build(level, cleaned)
+	var camp := level.find_child("Checkpoint", true, false) as Checkpoint
+	if camp == null:
+		level.free()
+		return "Builder should spawn the lifted camp."
+	var dirt_top := float(trail - 2) * 40.0
+	var buried_y := float(trail) * 40.0
+	if absf(camp.position.y - dirt_top) > 2.5:
+		level.free()
+		return "Camp feet should sit on the raised dirt top (y=%.1f, dirt %.1f)." % [
+			camp.position.y, dirt_top
+		]
+	add_child(level)
+	await get_tree().process_frame
+	WildWestTheme.apply_to_level(level)
+	await get_tree().process_frame
+	var respawn := camp.get_respawn_position()
+	if respawn.y >= buried_y - 8.0:
+		level.queue_free()
+		return "Camp respawn must not stay inside the dirt bank (y=%.1f, old buried %.1f)." % [
+			respawn.y, buried_y
+		]
+	level.queue_free()
 	return null
 
 

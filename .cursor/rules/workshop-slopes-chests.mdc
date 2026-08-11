@@ -11,6 +11,7 @@ Consult `README.md` (Core gameplay, Campaign Workshop, Floor height, UI / art st
 
 - Stamp hover ghosts and preview icons must show **final in-game stamp size** via `CustomLevelStore.stamp_visual_world_rect`.
 - **Saloon / Crystal Gate** (`goal`) stamps only on the **trail floor** (one row above dirt). Do not allow mid-air or plank placement.
+- **Camps** sit on the **top of stacked dirt** in their column (`lift_camps_to_dirt_top`). Raising a bank must lift the camp so respawn is never inside the floor.
 - **Planks / crystal ledges** (`platform`, `ladder_ledge`) are **160×32** (4 grid cells) — same as campaign `Block` planks. Do not regress to the old half-width **80×24** / 2-cell stamp.
 - Multi-cell stamps store the **left** footprint column; `object_world_position` centers on the full footprint.
 - **Ladders** may share climb-shaft cells with an upper plank/ledge and stamps on that ledge. Do not treat the 3-cell climb as an exclusive footprint that wipes neighboring ladders or the exit plank.

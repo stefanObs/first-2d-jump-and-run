@@ -958,6 +958,7 @@ func _on_canyon_adjust(start_x: int, end_x: int, side: String, grow: bool) -> vo
 		objects, _trail_y(), width, start_x, end_x, side, grow
 	):
 		return
+	CustomLevelStore.lift_camps_to_dirt_top(objects, _trail_y())
 	_data["objects"] = objects
 	_mark_dirty()
 	_refresh_grid()
@@ -997,7 +998,10 @@ func _remove_at(x: int, y: int) -> void:
 			objects.remove_at(i)
 			removed = true
 			break
-	if not removed or objects == before:
+	if not removed:
+		return
+	CustomLevelStore.lift_camps_to_dirt_top(objects, trail)
+	if objects == before:
 		return
 	_data["objects"] = objects
 	_mark_dirty()
@@ -1098,7 +1102,7 @@ func _place(x: int, y: int) -> void:
 	var objects := _objects()
 	var before := objects.duplicate(true)
 	var trail := _trail_y()
-	var place_y := CustomLevelStore.placement_row(_selected_type, y, trail)
+	var place_y := CustomLevelStore.placement_row(_selected_type, y, trail, objects, x)
 	if (
 		bool(_data.get("start_mounted", false))
 		and CustomLevelStore.is_mounted_banned(_selected_type)
@@ -1161,6 +1165,7 @@ func _place(x: int, y: int) -> void:
 				if str(objects[i].get("type", "")) == "goal":
 					objects.remove_at(i)
 		objects.append(incoming)
+	CustomLevelStore.lift_camps_to_dirt_top(objects, trail)
 	if objects == before:
 		return
 	_data["objects"] = objects
