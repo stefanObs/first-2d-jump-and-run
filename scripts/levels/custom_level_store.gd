@@ -54,9 +54,19 @@ const MOUNTED_BANNED_TYPES: PackedStringArray = [
 ## Cave trails have no ranch gates — belts, ladders and crystal ledges carry the routes.
 const CAVE_BANNED_TYPES: PackedStringArray = ["timed_door"]
 const LADDER_HEIGHT_CELLS := 3
+const PLANK_STAMP_TYPES: PackedStringArray = ["platform", "ladder_ledge"]
+const WALKING_ENEMY_TYPES: PackedStringArray = [
+	"bandit", "bounty_bandit", "bull", "ninja", "rattlesnake", "scorpion",
+]
 
 static func is_ground_standing(type_name: String) -> bool:
 	return type_name in GROUND_STANDING_TYPES
+
+static func is_plank_stamp(type_name: String) -> bool:
+	return type_name in PLANK_STAMP_TYPES
+
+static func is_walking_enemy(type_name: String) -> bool:
+	return type_name in WALKING_ENEMY_TYPES
 
 static func is_floor_only(type_name: String) -> bool:
 	## Saloon / Crystal Gate must stand on the trail floor, never on planks or in the air.
@@ -212,7 +222,8 @@ static func stamp_visual_world_rect(
 	trail: int,
 	width: int,
 	grid: float = GRID_SIZE,
-	style: String = STYLE_DESERT
+	style: String = STYLE_DESERT,
+	objects: Array = []
 ) -> Rect2:
 	if type_name in ["erase", "ground", "canyon"] or hover_col < 0 or hover_row < 0:
 		return Rect2()
@@ -234,7 +245,7 @@ static func stamp_visual_world_rect(
 		return Rect2(float(left_col) * grid, center_y - size.y * 0.5, size.x, size.y)
 	var place_row := placement_row(type_name, hover_row, trail)
 	var object := {"type": type_name, "x": hover_col, "y": place_row}
-	var anchor := object_world_position(object, grid, trail)
+	var anchor := object_world_position(object, grid, trail, objects)
 	if is_ceiling_hanging(type_name):
 		return Rect2(anchor.x - size.x * 0.5, anchor.y, size.x, size.y)
 	if type_name == "ladder":
@@ -306,11 +317,20 @@ static func bull_stamp_allowed(objects: Array, x: int, trail: int) -> bool:
 
 
 static func ground_stamp_allowed(
-	objects: Array, type_name: String, anchor_x: int, trail: int, width: int = MAX_WIDTH
+	objects: Array,
+	type_name: String,
+	anchor_x: int,
+	trail: int,
+	width: int = MAX_WIDTH,
+	stamp_y: int = -1
 ) -> bool:
 	## Ground-standing stamps need solid dirt under every trail column they cover.
+	## Walking enemies may instead stand on a plank / crystal ledge at stamp_y.
 	if not is_ground_standing(type_name):
 		return true
+	if is_walking_enemy(type_name) and stamp_y >= 0:
+		if not is_nan(plank_surface_y_at(objects, anchor_x, stamp_y, trail, GRID_SIZE, width)):
+			return true
 	var cells := stamp_cells_for_anchor(type_name, anchor_x, maxi(trail - 1, 0), trail, width)
 	if cells.is_empty():
 		return trail_column_is_solid_dirt(objects, anchor_x, trail)
@@ -366,12 +386,14 @@ static func stamp_cells_for_object(
 
 ## Foreground stamp on this cell, else dirt. Empty if the square is vacant.
 ## Ledges / props on a climb win over the ladder so hover and right-click hit
-## the thing sitting above the rungs.
+## the thing sitting above the rungs. Walkers on a plank win over the plank.
 static func object_occupying_cell(
 	objects: Array, x: int, y: int, trail: int, width: int = MAX_WIDTH
 ) -> Dictionary:
 	var ground := {}
 	var ladder := {}
+	var plank := {}
+	var walker := {}
 	var foreground := {}
 	for value in objects:
 		if not (value is Dictionary):
@@ -385,11 +407,19 @@ static func object_occupying_cell(
 				ground = object
 			elif type_name == "ladder":
 				ladder = object
+			elif is_plank_stamp(type_name):
+				plank = object
+			elif is_walking_enemy(type_name):
+				walker = object
 			else:
 				foreground = object
 			break
 	if not foreground.is_empty():
 		return foreground
+	if not walker.is_empty():
+		return walker
+	if not plank.is_empty():
+		return plank
 	if not ladder.is_empty():
 		return ladder
 	return ground
@@ -421,7 +451,8 @@ static func stamp_visual_world_rect_for_object(
 	trail: int,
 	width: int = MAX_WIDTH,
 	grid: float = GRID_SIZE,
-	style: String = STYLE_DESERT
+	style: String = STYLE_DESERT,
+	objects: Array = []
 ) -> Rect2:
 	var type_name := str(object.get("type", ""))
 	if type_name.is_empty():
@@ -436,7 +467,7 @@ static func stamp_visual_world_rect_for_object(
 		return Rect2(center - size * 0.5, size)
 	if type_name == "platform" or type_name == "ladder_ledge":
 		return Rect2(float(ox) * grid, float(oy) * grid - size.y * 0.5, size.x, size.y)
-	var anchor := object_world_position(object, grid, trail)
+	var anchor := object_world_position(object, grid, trail, objects)
 	if is_ceiling_hanging(type_name):
 		return Rect2(anchor.x - size.x * 0.5, anchor.y, size.x, size.y)
 	if type_name == "ladder":
@@ -465,6 +496,12 @@ static func stamps_overlap(
 	var a_type := str(a.get("type", ""))
 	var b_type := str(b.get("type", ""))
 	if a_type == "ground" or b_type == "ground":
+		return false
+	## Walkers may stand on a plank / crystal ledge without wiping it.
+	if (
+		(is_plank_stamp(a_type) and is_walking_enemy(b_type))
+		or (is_plank_stamp(b_type) and is_walking_enemy(a_type))
+	):
 		return false
 	var lookup := {}
 	for cell in stamp_overlap_cells(a, trail, width):
@@ -642,7 +679,9 @@ static func pit_hole_columns(data: Dictionary, trail: int, grid: float = GRID_SI
 				hole[col] = true
 	return hole
 
-static func object_world_position(object: Dictionary, grid: float, trail: int) -> Vector2:
+static func object_world_position(
+	object: Dictionary, grid: float, trail: int, objects: Array = []
+) -> Vector2:
 	var type_name := str(object.get("type", ""))
 	var cell_x := float(object.get("x", 0))
 	var cell_y := float(object.get("y", 0))
@@ -652,10 +691,46 @@ static func object_world_position(object: Dictionary, grid: float, trail: int) -
 	if is_ceiling_hanging(type_name):
 		return Vector2((cell_x + 0.5) * grid, cell_y * grid + 8.0)
 	if is_ground_standing(type_name):
-		return Vector2((cell_x + 0.5) * grid, (cell_y + 1.0) * grid)
+		var feet := Vector2((cell_x + 0.5) * grid, (cell_y + 1.0) * grid)
+		if is_walking_enemy(type_name) and not objects.is_empty():
+			var plank_y := plank_surface_y_at(
+				objects, int(object.get("x", 0)), int(object.get("y", 0)), trail, grid
+			)
+			if not is_nan(plank_y):
+				feet.y = plank_y
+		return feet
 	if type_name == "carrion" or type_name == "bat":
 		return Vector2((cell_x + 0.5) * grid, (cell_y + 0.5) * grid)
 	return Vector2(world_x, cell_y * grid)
+
+
+## Top of a plank / crystal ledge covering this cell, or NAN if the square has none.
+static func plank_surface_y_at(
+	objects: Array, x: int, y: int, trail: int, grid: float = GRID_SIZE, width: int = MAX_WIDTH
+) -> float:
+	for value in objects:
+		if not (value is Dictionary):
+			continue
+		var object := value as Dictionary
+		var type_name := str(object.get("type", ""))
+		if not is_plank_stamp(type_name):
+			continue
+		for cell in stamp_cells_for_object(object, trail, width):
+			if cell.x != x or cell.y != y:
+				continue
+			var size := stamp_world_size(type_name)
+			var center := object_world_position(object, grid, trail)
+			return center.y - size.y * 0.5
+	return NAN
+
+
+static func keeps_plank_surface(
+	type_name: String, objects: Array, x: int, y: int, trail: int, grid: float = GRID_SIZE
+) -> bool:
+	## Walkers stamped on a plank keep that ledge Y instead of snapping to dirt.
+	if not is_walking_enemy(type_name):
+		return false
+	return not is_nan(plank_surface_y_at(objects, x, y, trail, grid))
 
 static func default_level(slot_index: int) -> Dictionary:
 	var height := DEFAULT_HEIGHT
@@ -1472,7 +1547,9 @@ static func _strip_ground_standing_off_gaps(
 		var type_name := str(object.get("type", ""))
 		if not is_ground_standing(type_name):
 			continue
-		if not ground_stamp_allowed(objects, type_name, int(object.get("x", 0)), trail, width):
+		if not ground_stamp_allowed(
+			objects, type_name, int(object.get("x", 0)), trail, width, int(object.get("y", 0))
+		):
 			objects.remove_at(i)
 
 

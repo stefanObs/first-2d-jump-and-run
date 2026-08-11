@@ -117,6 +117,10 @@ func _ready() -> void:
 	failures += await _run("Three chasing ninjas stay cheap per frame", _test_ninja_chase_performance)
 	failures += await _run("Ninja resets to dormancy on respawn", _test_ninja_respawn_restore)
 	failures += await _run("Workshop preview shows stamped ninjas", _test_workshop_preview_shows_ninja)
+	failures += await _run(
+		"Workshop preview shows walking enemies on planks",
+		_test_workshop_walkers_on_planks
+	)
 	failures += await _run("Shuriken sprite is handcrafted art", _test_shuriken_art)
 	failures += await _run("Side contact with a bandit sends the cowboy to camp", _test_side_contact_hurts)
 	failures += await _run("Upward contact with a bandit sends the cowboy to camp", _test_upward_contact_hurts)
@@ -3271,6 +3275,13 @@ func _test_workshop_stamps_no_overlap() -> Variant:
 		return "Ladder climb cells must not count as overlapping the upper ledge."
 	if CustomLevelStore.placement_row("ladder", upper, trail) != trail - 1:
 		return "Clicking above dirt with the ladder tool should still plant on the standing row."
+	for walker in ["bandit", "bounty_bandit", "bull", "ninja", "rattlesnake", "scorpion"]:
+		if CustomLevelStore.stamps_overlap(
+			{"type": walker, "x": 8, "y": upper},
+			{"type": "platform", "x": 8, "y": upper},
+			trail
+		):
+			return "%s stamps must be allowed to stand on a plank." % walker
 	return null
 
 
@@ -4061,6 +4072,119 @@ func _test_workshop_preview_shows_ninja() -> Variant:
 		error = "Play ninjas should stay hidden until ambush (a=%.2f)." % play_ninja.modulate.a
 	play_level.queue_free()
 	return error
+
+
+func _test_workshop_walkers_on_planks() -> Variant:
+	var trail := CustomLevelStore.trail_row(8)
+	var upper := trail - CustomLevelStore.LADDER_HEIGHT_CELLS
+	var objects: Array = []
+	for x in range(24):
+		objects.append({"type": "ground", "x": x, "y": trail})
+	objects.append({"type": "platform", "x": 8, "y": upper})
+	objects.append({"type": "bandit", "x": 8, "y": upper})
+	objects.append({"type": "bull", "x": 9, "y": upper})
+	objects.append({"type": "ninja", "x": 10, "y": upper})
+	objects.append({"type": "rattlesnake", "x": 11, "y": upper})
+	objects.append({"type": "platform", "x": 16, "y": upper})
+	objects.append({"type": "bounty_bandit", "x": 16, "y": upper})
+	objects.append({"type": "scorpion", "x": 17, "y": upper})
+	var data := {
+		"objects": objects,
+		"height": 8,
+		"width": 24,
+		"title": "Plank Patrol",
+		"style": CustomLevelStore.STYLE_DESERT,
+	}
+	var cleaned := CustomLevelStore.sanitize(data, CustomLevelStore.EXTRA_SLOT_START)
+	var counts := {
+		"platform": 0,
+		"bandit": 0,
+		"bull": 0,
+		"ninja": 0,
+		"rattlesnake": 0,
+		"bounty_bandit": 0,
+		"scorpion": 0,
+	}
+	for value in cleaned.get("objects", []):
+		var type_name := str((value as Dictionary).get("type", ""))
+		if counts.has(type_name):
+			counts[type_name] = int(counts[type_name]) + 1
+	if int(counts["platform"]) != 2:
+		return "Sanitize should keep planks under walking enemies (got %d)." % int(counts["platform"])
+	for walker in ["bandit", "bull", "ninja", "rattlesnake", "bounty_bandit", "scorpion"]:
+		if int(counts[walker]) != 1:
+			return "Sanitize should keep a %s standing on a plank." % walker
+	var occupy := CustomLevelStore.object_occupying_cell(
+		cleaned.get("objects", []) as Array, 8, upper, trail, 24
+	)
+	if str(occupy.get("type", "")) != "bandit":
+		return "Hovering a bandit on a plank should target the bandit, not the ledge."
+	var preview := LevelPreview.new()
+	add_child(preview)
+	preview.show_level(cleaned)
+	for _wait in range(24):
+		await get_tree().process_frame
+		if preview._world != null:
+			break
+	if preview._world == null:
+		preview.queue_free()
+		return "Preview should build a plank-walker trail."
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	var grid := CustomLevelStore.GRID_SIZE
+	var plank_top := CustomLevelStore.plank_surface_y_at(
+		cleaned.get("objects", []) as Array, 8, upper, trail, grid, 24
+	)
+	if is_nan(plank_top):
+		preview.queue_free()
+		return "Plank surface helper should find the upper ledge."
+	var found := {
+		"bandit": false,
+		"bull": false,
+		"ninja": false,
+		"rattlesnake": false,
+		"bounty": false,
+		"scorpion": false,
+	}
+	var error: Variant = null
+	for node in preview._world.get_children():
+		if node is Opponent:
+			var bandit := node as Opponent
+			var key := "bounty" if bandit.bounty_bandit else "bandit"
+			found[key] = true
+			if absf(bandit.global_position.y - plank_top) > 10.0:
+				error = "Preview %s should stand on the plank (y=%.1f, plank=%.1f)." % [
+					key, bandit.global_position.y, plank_top
+				]
+				break
+		elif node is BullEnemy:
+			found["bull"] = true
+			if absf((node as BullEnemy).global_position.y - plank_top) > 10.0:
+				error = "Preview bull should stand on the plank."
+				break
+		elif node is NinjaEnemy:
+			var ninja := node as NinjaEnemy
+			found["ninja"] = true
+			if not ninja.editor_marker or ninja.modulate.a < 0.9:
+				error = "Preview ninja on a plank should stay visible at the stamp."
+				break
+			if absf(ninja.global_position.y - plank_top) > 10.0:
+				error = "Preview ninja should stand on the plank."
+				break
+		elif node is Rattlesnake:
+			var snake := node as Rattlesnake
+			var key := "scorpion" if snake.as_scorpion else "rattlesnake"
+			found[key] = true
+			if absf(snake.global_position.y - plank_top) > 10.0:
+				error = "Preview %s should stand on the plank." % key
+				break
+	preview.queue_free()
+	if error != null:
+		return error
+	for key in found.keys():
+		if not bool(found[key]):
+			return "Preview should spawn a %s on the plank." % str(key)
+	return null
 
 
 func _test_shuriken_art() -> Variant:

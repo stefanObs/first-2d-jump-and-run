@@ -442,6 +442,7 @@ func _aligned_ghost_world_rect() -> Rect2:
 	var grid: float = metrics["grid"]
 	var trail: int = metrics["trail"]
 	var width: int = metrics["width"]
+	var objects := _data.get("objects", []) as Array
 	var rect := CustomLevelStore.stamp_visual_world_rect(
 		_selected_type,
 		_hover_column,
@@ -449,11 +450,15 @@ func _aligned_ghost_world_rect() -> Rect2:
 		trail,
 		width,
 		grid,
-		str(_data.get("style", CustomLevelStore.STYLE_DESERT))
+		str(_data.get("style", CustomLevelStore.STYLE_DESERT)),
+		objects
 	)
 	if rect.size.x <= 0.0:
 		return Rect2()
 	if _world == null or not is_instance_valid(_world):
+		return rect
+	var place_row := CustomLevelStore.placement_row(_selected_type, _hover_row, trail)
+	if CustomLevelStore.keeps_plank_surface(_selected_type, objects, _hover_column, place_row, trail, grid):
 		return rect
 	var center_x := rect.position.x + rect.size.x * 0.5
 	var surface := WildWestTheme.walk_surface_at(_world, center_x)
@@ -490,14 +495,19 @@ func _aligned_placed_world_rect() -> Rect2:
 			float(right - left + 1) * grid,
 			grid
 		)
+	var objects := _data.get("objects", []) as Array
 	var rect := CustomLevelStore.stamp_visual_world_rect_for_object(
-		object, trail, width, grid, style
+		object, trail, width, grid, style, objects
 	)
 	if rect.size.x <= 0.0:
 		return Rect2()
 	if _world == null or not is_instance_valid(_world):
 		return rect
 	if type_name == "ground" or type_name == "pit":
+		return rect
+	if CustomLevelStore.keeps_plank_surface(
+		type_name, objects, int(object.get("x", 0)), int(object.get("y", 0)), trail, grid
+	):
 		return rect
 	var center_x := rect.position.x + rect.size.x * 0.5
 	var surface := WildWestTheme.walk_surface_at(_world, center_x)

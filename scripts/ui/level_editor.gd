@@ -1129,7 +1129,7 @@ func _place(x: int, y: int) -> void:
 				store_x = mini(store_x, cell.x)
 			store_y = place_y
 		if CustomLevelStore.is_ground_standing(_selected_type) and not CustomLevelStore.ground_stamp_allowed(
-			objects, _selected_type, store_x, trail, width
+			objects, _selected_type, store_x, trail, width, store_y
 		):
 			return
 		var incoming := {"type": _selected_type, "x": store_x, "y": store_y}

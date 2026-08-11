@@ -71,13 +71,16 @@ static func build(level: LevelController, data: Dictionary, preview: bool = fals
 				type_name,
 				int(object.get("x", 0)),
 				trail,
-				width
+				width,
+				int(object.get("y", 0))
 			)
 		):
 			continue
 		var index := int(counters.get(type_name, 0))
 		counters[type_name] = index + 1
-		var position := CustomLevelStore.object_world_position(object, grid, trail)
+		var position := CustomLevelStore.object_world_position(
+			object, grid, trail, data.get("objects", []) as Array
+		)
 		if _spawn_object(level, type_name, index, position, object, grid, trail, style, preview):
 			has_goal = true
 
