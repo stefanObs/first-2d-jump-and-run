@@ -670,6 +670,22 @@ texture = ExtResource("10")
 expand_mode = 1
 stretch_mode = 5
 
+[node name="ExitGameButton" type="Button" parent="."]
+custom_minimum_size = Vector2(240, 56)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -268.0
+offset_top = 60.0
+offset_right = -28.0
+offset_bottom = 116.0
+focus_mode = 2
+theme_override_constants/icon_max_width = 40
+theme_override_font_sizes/font_size = 18
+text = "Exit Game"
+expand_icon = true
+
 [node name="StatusHint" type="Label" parent="."]
 layout_mode = 1
 anchors_preset = 7

@@ -139,6 +139,18 @@ def icon_play() -> Image.Image:
     return img
 
 
+def icon_exit() -> Image.Image:
+    img, d = _canvas()
+    # Saloon door with an arrow heading out — leave the trail.
+    d.rounded_rectangle((12, 10, 56, 86), radius=6, fill=WOOD, outline=INK, width=4)
+    d.rectangle((20, 20, 48, 78), fill=CREAM, outline=INK, width=2)
+    d.line((34, 20, 34, 78), fill=INK, width=3)
+    d.ellipse((38, 44, 48, 54), fill=BANDANA, outline=INK, width=2)
+    arrow = [(50, 34), (84, 48), (50, 62), (50, 54), (42, 54), (42, 42), (50, 42)]
+    _outline_poly(d, arrow, CREAM)
+    return img
+
+
 def icon_scroll_left() -> Image.Image:
     img, d = _canvas()
     tip = [(66, 20), (26, 48), (66, 76), (66, 60), (46, 48), (66, 36)]
@@ -182,6 +194,7 @@ def main() -> None:
         "menu_icon_add_trail.png": icon_add_trail,
         "menu_icon_save.png": icon_save,
         "menu_icon_play.png": icon_play,
+        "menu_icon_exit.png": icon_exit,
         "menu_icon_scroll_left.png": icon_scroll_left,
         "menu_icon_scroll_right.png": icon_scroll_right,
         "menu_icon_canyon_too_wide.png": icon_canyon_too_wide,

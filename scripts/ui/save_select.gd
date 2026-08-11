@@ -37,6 +37,7 @@ var _sheet_pan_last: Vector2 = Vector2.ZERO
 var _hearts_button: Button
 var _settings_button: Button
 var _workshop_button: Button
+var _exit_button: Button
 var _cowboy_button: Button
 var _cowgirl_button: Button
 var _character_hint: Label
@@ -54,6 +55,7 @@ func _ready() -> void:
 	_hearts_button = get_node_or_null("HeartsButton") as Button
 	_settings_button = get_node_or_null("SettingsButton") as Button
 	_workshop_button = get_node_or_null("BuildTrailButton") as Button
+	_exit_button = get_node_or_null("ExitGameButton") as Button
 	_cowboy_button = get_node_or_null("Mascots/Cowboy") as Button
 	_cowgirl_button = get_node_or_null("Mascots/Cowgirl") as Button
 	_character_hint = get_node_or_null("CharacterHint") as Label
@@ -167,6 +169,9 @@ func _localize_static_labels() -> void:
 		_workshop_button.tooltip_text = tr("Campaign Workshop")
 	if _hearts_button != null:
 		_hearts_button.tooltip_text = tr("Trail mode")
+	if _exit_button != null:
+		_exit_button.text = tr("Exit Game")
+		_exit_button.tooltip_text = tr("Exit Game")
 	if _translation_editor_button != null:
 		_translation_editor_button.text = tr("Translation Editor")
 	if _element_ref_button != null:
@@ -208,6 +213,9 @@ func _setup_chrome_buttons() -> void:
 	if _hearts_button != null:
 		_style_circle_chrome(_hearts_button)
 		_hearts_button.pressed.connect(_toggle_trail_mode)
+	if _exit_button != null:
+		_style_exit_button(_exit_button)
+		_exit_button.pressed.connect(_exit_game)
 	if _translation_editor_button != null:
 		_style_action_button(_translation_editor_button)
 		_translation_editor_button.pressed.connect(func() -> void:
@@ -542,6 +550,29 @@ func _style_door_button(button: Button, _radius: int = 18, _pad: int = 12) -> vo
 	button.pivot_offset = button.custom_minimum_size * 0.5
 	var empty := StyleBoxEmpty.new()
 	_apply_button_styles(button, empty, empty)
+
+
+func _style_exit_button(button: Button) -> void:
+	MenuChrome.style_wood_button(button, 18)
+	MenuChrome.apply_button_icon(button, "res://assets/ui/menu_icon_exit.png", 40)
+	var normal := MenuChrome.wood_style(MenuChrome.WOOD, 10)
+	normal.content_margin_left = 10
+	normal.content_margin_right = 14
+	normal.content_margin_top = 8
+	normal.content_margin_bottom = 8
+	var hover := MenuChrome.wood_style(MenuChrome.WOOD_HOVER, 10)
+	hover.content_margin_left = 10
+	hover.content_margin_right = 14
+	hover.content_margin_top = 8
+	hover.content_margin_bottom = 8
+	MenuChrome.apply_button_styleboxes(button, normal, hover)
+
+
+func _exit_game() -> void:
+	if _settings_open() or _element_reference_open():
+		return
+	GameManager.flush_save_to_disk()
+	get_tree().quit()
 
 
 func _style_circle_chrome(button: Button) -> void:

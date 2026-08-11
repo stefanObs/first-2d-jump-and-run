@@ -1205,6 +1205,13 @@ func _test_save_select_scene() -> Variant:
 		error = "Save select needs Settings access via SettingsButton + SettingsPanel."
 	if error == null and scene.get_node_or_null("BuildTrailButton") == null:
 		error = "Save select needs Campaign Workshop access."
+	var exit_button := scene.get_node_or_null("ExitGameButton") as Button
+	if error == null and exit_button == null:
+		error = "Save select needs an Exit Game button."
+	elif error == null and exit_button.text not in ["Exit Game", "Spiel beenden"]:
+		error = "Exit Game button should use Exit Game / Spiel beenden."
+	elif error == null and exit_button.icon == null:
+		error = "Exit Game button needs a kid-readable door-and-arrow icon."
 	if error == null and scene.get_node_or_null("DebugStrip/TranslationEditorButton") == null:
 		error = "Save select needs a Translation Editor button (debug-gated)."
 	var delete_dialog := scene.get_node_or_null("DeleteConfirmation") as ConfirmationDialog
@@ -1374,7 +1381,7 @@ func _test_menu_button_hover_and_click() -> Variant:
 	add_child(scene)
 	await get_tree().process_frame
 	var error: Variant = null
-	for path in ["BuildTrailButton", "SettingsButton", "HeartsButton", "Slots/Slot1"]:
+	for path in ["BuildTrailButton", "SettingsButton", "HeartsButton", "ExitGameButton", "Slots/Slot1"]:
 		var chrome := scene.get_node_or_null(path) as Button
 		if chrome == null or not bool(chrome.get_meta("_menu_btn_feedback", false)):
 			error = "Start-screen button %s needs hover/click feedback." % path
