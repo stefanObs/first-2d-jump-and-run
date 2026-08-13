@@ -204,6 +204,18 @@ Safe stars, forward-only solvability, reachable platforms/stars, visible themed 
 
 ---
 
+## License
+
+**Cowboy Trail** source, assets, and builds in this repository are licensed under the **[PolyForm Noncommercial License 1.0.0](LICENSE)** (SPDX: `PolyForm-Noncommercial-1.0.0`).
+
+- **Allowed:** personal play, learning, hobby forks, school/charity/noncommercial use, and noncommercial sharing of originals or modified copies (with the license and Required Notice kept intact).
+- **Not allowed:** commercial use of this source or of changed/derived source — selling the game, shipping it in a commercial product, paywalled redistribution, or other commercial exploitation — unless you get separate written permission from the copyright holder.
+- **Third-party:** Godot and listed CC0 music keep their own terms — see [`NOTICE.md`](NOTICE.md) and [`assets/audio/CREDITS.md`](assets/audio/CREDITS.md).
+
+A license does not stop every bad actor by itself; it sets the legal terms. Report misuse to the copyright holder.
+
+---
+
 ## Agent / contributor rules
 
 **MUST follow** before changing gameplay, levels, art, i18n, or audio:
