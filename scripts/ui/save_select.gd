@@ -41,6 +41,7 @@ var _exit_button: Button
 var _cowboy_button: Button
 var _cowgirl_button: Button
 var _character_hint: Label
+var _creation_credit: Label
 
 
 func _ready() -> void:
@@ -59,6 +60,7 @@ func _ready() -> void:
 	_cowboy_button = get_node_or_null("Mascots/Cowboy") as Button
 	_cowgirl_button = get_node_or_null("Mascots/Cowgirl") as Button
 	_character_hint = get_node_or_null("CharacterHint") as Label
+	_creation_credit = get_node_or_null("CreationCredit") as Label
 	_localize_static_labels()
 	_style_screen()
 	_setup_element_reference()
@@ -154,6 +156,8 @@ func _localize_static_labels() -> void:
 	if _character_hint != null:
 		# Concrete chosen rider is filled by _refresh_character_pickers().
 		_character_hint.text = tr("Pick Cowboy or Cowgirl")
+	if _creation_credit != null:
+		_creation_credit.text = tr("Created with AI assistance from human instructions.")
 	if _cowboy_button != null:
 		_cowboy_button.tooltip_text = tr("Cowboy")
 		var cowboy_name := _cowboy_button.get_node_or_null("Name") as Label

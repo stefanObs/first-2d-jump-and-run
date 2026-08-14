@@ -1205,6 +1205,19 @@ func _test_save_select_scene() -> Variant:
 		error = "Save select needs a character-pick hint above the mascots."
 	if error == null and scene.get_node_or_null("HeartsButton") == null:
 		error = "Save select needs a hearts trail-mode toggle."
+	var creation_credit := scene.get_node_or_null("CreationCredit") as Label
+	if error == null and creation_credit == null:
+		error = "Save select needs a creation credit on the start screen."
+	elif error == null:
+		var credit := creation_credit.text
+		if (
+			"AI" not in credit
+			and "KI" not in credit
+			and "ai" not in credit.to_lower()
+		):
+			error = "Creation credit should mention AI assistance."
+		elif "human" not in credit.to_lower() and "menschlich" not in credit.to_lower():
+			error = "Creation credit should mention human instructions/direction."
 	if error == null and scene.get_node_or_null("DebugStrip") == null:
 		error = "Save select needs a debug strip for F1 tools."
 	var settings_button := scene.get_node_or_null("SettingsButton") as Button

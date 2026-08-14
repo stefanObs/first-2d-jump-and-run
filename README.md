@@ -206,7 +206,7 @@ Safe stars, forward-only solvability, reachable platforms/stars, visible themed 
 
 ## License
 
-**Cowboy Trail** source, assets, and builds in this repository are licensed under the **[PolyForm Noncommercial License 1.0.0](LICENSE)** (SPDX: `PolyForm-Noncommercial-1.0.0`).
+**Cowboy Trail** source, assets, and builds in this repository are licensed under the **[PolyForm Noncommercial License 1.0.0](LICENSE)** (SPDX: `PolyForm-Noncommercial-1.0.0`). The start screen credits the game as **created with AI assistance from human instructions**.
 
 - **Allowed:** personal play, learning, hobby forks, school/charity/noncommercial use, and noncommercial sharing of originals or modified copies (with the license and Required Notice kept intact).
 - **Not allowed:** commercial use of this source or of changed/derived source — selling the game, shipping it in a commercial product, paywalled redistribution, or other commercial exploitation — unless you get separate written permission from the copyright holder.
