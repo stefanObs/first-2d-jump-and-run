@@ -122,15 +122,22 @@ def _is_blank_frame(path: Path) -> bool:
     if path.stat().st_size < 20_000:
         return True
     im = Image.open(path).convert("RGB")
-    flat = im.get_flattened_data()
-    step = max(1, len(flat) // (3 * 4000)) * 3
-    sample = [flat[i : i + 3] for i in range(0, len(flat) - 2, step)]
+    sample = list(im.get_flattened_data())[:: max(1, im.width * im.height // 4000)]
     if not sample:
         return True
     mean = sum(sum(px) for px in sample) / (3 * len(sample))
     # Cleared viewports land near black or near mid-gray flat fills.
     spread = max(sum(px) for px in sample) - min(sum(px) for px in sample)
     return mean < 8 or spread < 12
+
+
+def _looks_mostly_black(path: Path) -> bool:
+    im = Image.open(path).convert("RGB")
+    pixels = list(im.get_flattened_data())
+    if not pixels:
+        return True
+    dark = sum(1 for px in pixels if sum(px) < 40)
+    return dark / len(pixels) > 0.92
 
 
 def gif_from_prefix(prefix: str, out_name: str, *, duration_ms: int = 90, max_frames: int = 24) -> None:
@@ -179,22 +186,18 @@ def main() -> int:
 
     # Reject near-black captures (headless/dummy renderer).
     for name in required:
-        im = Image.open(OUT / name).convert("RGB")
-        pixels = list(im.get_flattened_data())
-        n = max(1, len(pixels) // 3)
-        dark = sum(1 for i in range(n) if pixels[i * 3] + pixels[i * 3 + 1] + pixels[i * 3 + 2] < 40)
-        if dark / n > 0.92:
+        if _looks_mostly_black(OUT / name):
             raise SystemExit(
                 f"{name} looks blank/black — re-run capture on a real display (not --headless)."
             )
 
     caption(OUT / "title_card.png", "Title screen", "In-game screenshot — save slots & cowboy/cowgirl settings.")
-    caption(OUT / "desert_trail.png", "Desert trail", "In-game screenshot — Dusty Trail gameplay.")
+    caption(OUT / "desert_trail.png", "Desert trail", "In-game screenshot — Dusty Trail, mid-run on horseback.")
     if (OUT / "desert_canyon.png").is_file():
-        caption(OUT / "desert_canyon.png", "Canyon ferry", "In-game screenshot — clouds and canyon hops.")
-    caption(OUT / "cave_trail.png", "Cave arc", "In-game screenshot — Crystal Mouth.")
+        caption(OUT / "desert_canyon.png", "Canyon ferry", "In-game screenshot — mid-trail clouds and canyon hops.")
+    caption(OUT / "cave_trail.png", "Cave arc", "In-game screenshot — Crystal Mouth, mid-trail.")
     if (OUT / "cave_bats.png").is_file():
-        caption(OUT / "cave_bats.png", "Bat Gallery", "In-game screenshot — cave bats and ceiling.")
+        caption(OUT / "cave_bats.png", "Bat Gallery", "In-game screenshot — mid-cave bats and ceiling.")
 
     build_bosses_strip()
     gif_from_prefix("run", "gameplay_run.gif", duration_ms=100)

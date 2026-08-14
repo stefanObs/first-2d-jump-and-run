@@ -10,7 +10,7 @@ This README is the **binding source of truth** for gameplay, level design, art, 
 
 ## See the game
 
-Stills and loops below are **screenshots from the running game** (Godot viewport capture → `docs/showcase/`). Refresh with:
+Stills and loops below are **screenshots from the running game** (Godot viewport capture → `docs/showcase/`). Trail shots place the cowboy **mid-level**, not at the spawn. Refresh with:
 
 ```bash
 python3 tools/build_readme_showcase.py
