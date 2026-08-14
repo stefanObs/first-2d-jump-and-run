@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
 from PIL import Image, ImageChops, ImageDraw, ImageEnhance, ImageFilter, ImageFont
@@ -36,8 +37,9 @@ def _split_door(door: Image.Image) -> tuple[Image.Image, Image.Image]:
             r, g, b, a = pix[x, y]
             if a < 20:
                 continue
-            # Flat porthole fill — not part of the swinging leaf art.
+            # Pale porthole glass rides with the leaf.
             if r > 200 and g > 170 and b > 130 and abs(r - g) < 50:
+                wp[x, y] = 255
                 continue
             if r > 70 and r > g + 15 and r > b + 25 and g > 35 and b < 120:
                 wp[x, y] = 255
@@ -59,8 +61,6 @@ def _split_door(door: Image.Image) -> tuple[Image.Image, Image.Image]:
                 continue
             if wl[x, y] > 80:
                 lp[x, y] = (r, g, b, a)
-                continue
-            if r > 200 and g > 170 and b > 130 and abs(r - g) < 50:
                 continue
             sfp[x, y] = (r, g, b, a)
     return stone_frame, leaf.filter(ImageFilter.GaussianBlur(0.35))
@@ -93,11 +93,14 @@ def _make_ajar(
     leaf: Image.Image,
     peek: Image.Image,
     *,
-    open_px: int = 48,
+    open_deg: float = 30.0,
 ) -> Image.Image:
+    """Left-hinged wood leaf, ajar at a normal open angle; peek on the free (right) side."""
     w, h = stone_frame.size
-    canvas = Image.new("RGBA", (w + 30, h + 10), (0, 0, 0, 0))
+    canvas = Image.new("RGBA", (w + 40, h + 16), (0, 0, 0, 0))
+    origin = (16, 8)
 
+    # Dark room behind the arch.
     interior = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     idr = ImageDraw.Draw(interior)
     idr.pieslice((40, 52, w - 40, h * 2 - 90), 180, 360, fill=(18, 10, 6, 255))
@@ -113,36 +116,105 @@ def _make_ajar(
     ox = (w - peek.width) // 2
     oy = 70
     peek_layer.paste(peek_rgba, (ox, oy))
-    alpha = ImageChops.multiply(peek_layer.split()[-1], arch)
-    peek_layer.putalpha(alpha)
+    peek_layer.putalpha(ImageChops.multiply(peek_layer.split()[-1], arch))
 
-    # Warm light in the crack (not bandana red).
+    # True door swing around the LEFT hinge (knob = free right edge).
+    # Frontal projected width ≈ W·cos(θ); free edge recedes into the room.
+    hinge_x = 38.0
+    top_y, bot_y = 48.0, 375.0
+    right_x = 242.0
+    theta = math.radians(open_deg)
+    cos_t = math.cos(theta)
+    sin_t = math.sin(theta)
+    leaf_w = right_x - hinge_x
+    new_right = hinge_x + leaf_w * cos_t
+    # Free edge is farther away → mild vertical foreshortening.
+    shrink = 1.0 - 0.07 * sin_t
+    mid = (top_y + bot_y) * 0.5
+    half = (bot_y - top_y) * 0.5
+    new_top = mid - half * shrink
+    new_bot = mid + half * shrink
+
+    # Warm light in the revealed gap (right of the swung free edge).
+    gap_left = int(new_right) + 2
     shade = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     sd = ImageDraw.Draw(shade)
-    sd.rectangle((44, 56, 44 + open_px + 10, h - 62), fill=(255, 214, 150, 48))
-    sd.rectangle((44, 56, 52, h - 62), fill=(0, 0, 0, 70))
+    sd.rectangle((gap_left, 56, w - 44, h - 62), fill=(255, 214, 150, 48))
+    sd.rectangle((w - 52, 56, w - 44, h - 62), fill=(0, 0, 0, 55))
 
-    canvas.paste(interior, (10, 5), interior)
-    canvas.paste(peek_layer, (10, 5), peek_layer)
-    canvas.paste(shade, (10, 5), shade)
+    canvas.paste(interior, origin, interior)
+    canvas.paste(peek_layer, origin, peek_layer)
+    canvas.paste(shade, origin, shade)
 
-    leaf_pad = Image.new("RGBA", (w + 80, h + 40), (0, 0, 0, 0))
-    leaf_pad.paste(leaf, (40, 20), leaf)
-    pivoted = leaf_pad.rotate(
-        -15,
+    # Closed leaf corners → ajar corners (left posts fixed).
+    closed = [
+        (hinge_x, top_y),
+        (right_x, top_y),
+        (right_x, bot_y),
+        (hinge_x, bot_y),
+    ]
+    ajar = [
+        (hinge_x, top_y),
+        (new_right, new_top),
+        (new_right, new_bot),
+        (hinge_x, bot_y),
+    ]
+    matrix = _perspective_coeffs(ajar, closed)
+    swung = leaf.transform(
+        (w, h),
+        Image.Transform.PERSPECTIVE,
+        matrix,
         resample=Image.Resampling.BICUBIC,
-        expand=True,
-        center=(40 + 38, 20 + h // 2),
     )
-    shadow_a = pivoted.split()[-1].point(lambda a: int(a * 0.32))
-    shadow_a = shadow_a.filter(ImageFilter.GaussianBlur(7))
-    shadow = Image.new("RGBA", pivoted.size, (0, 0, 0, 0))
+
+    # Thin dark strip on the free edge = door thickness cue.
+    edge = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    ed = ImageDraw.Draw(edge)
+    thickness = max(3, int(8 * sin_t))
+    ed.line(
+        [(new_right, new_top), (new_right, new_bot)],
+        fill=(42, 22, 12, 200),
+        width=thickness,
+    )
+
+    shadow_a = swung.split()[-1].point(lambda a: int(a * 0.28))
+    shadow_a = shadow_a.filter(ImageFilter.GaussianBlur(5))
+    shadow = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     shadow.putalpha(shadow_a)
-    canvas.paste(shadow, (4, 12), shadow)
-    canvas.paste(pivoted, (-2, 0), pivoted)
-    canvas.paste(stone_frame, (10, 5), stone_frame)
+    canvas.paste(shadow, (origin[0] + 4, origin[1] + 6), shadow)
+    canvas.paste(swung, origin, swung)
+    canvas.paste(edge, origin, edge)
+    canvas.paste(stone_frame, origin, stone_frame)
     return canvas
 
+
+def _perspective_coeffs(
+    output_xy: list[tuple[float, float]],
+    input_uv: list[tuple[float, float]],
+) -> list[float]:
+    """PIL PERSPECTIVE coeffs mapping output (x,y) -> input (u,v). Pure Python."""
+    # Rows: a0..a7 for each of 4 point pairs (2 eqs each).
+    a: list[list[float]] = []
+    for (x, y), (u, v) in zip(output_xy, input_uv):
+        a.append([x, y, 1.0, 0.0, 0.0, 0.0, -u * x, -u * y, u])
+        a.append([0.0, 0.0, 0.0, x, y, 1.0, -v * x, -v * y, v])
+    # Gaussian elimination with partial pivoting.
+    n = 8
+    for col in range(n):
+        pivot = max(range(col, n), key=lambda r: abs(a[r][col]))
+        if abs(a[pivot][col]) < 1e-12:
+            raise ValueError("singular perspective system")
+        a[col], a[pivot] = a[pivot], a[col]
+        div = a[col][col]
+        for j in range(col, n + 1):
+            a[col][j] /= div
+        for r in range(n):
+            if r == col:
+                continue
+            factor = a[r][col]
+            for j in range(col, n + 1):
+                a[r][j] -= factor * a[col][j]
+    return [a[i][n] for i in range(n)]
 
 def _make_closed_with_ring(door: Image.Image, ring: Image.Image) -> Image.Image:
     w, h = door.size
@@ -190,7 +262,7 @@ def main() -> int:
     )
     draw.text(
         (70, 78),
-        "Hover opens the wood leaf a little so desert / cave trail art shows through the gap.",
+        "Left-hinged wood leaf opens ~30° on hover; desert / cave trail peeks through the free (right) edge.",
         fill=(230, 190, 140),
         font=font_sub,
     )
@@ -228,7 +300,7 @@ def main() -> int:
     draw.rounded_rectangle((40, 700, 1360, 760), radius=12, fill=(42, 24, 12, 210))
     draw.text(
         (70, 718),
-        "Concept only — current door art + real mid-trail screenshots. Red ring replaced by a warm ajar opening.",
+        "Concept only — hinges on the left (knob on the right). Red ring replaced by a normal ajar opening.",
         fill=(255, 220, 170),
         font=font_sub,
     )
