@@ -100,7 +100,24 @@ def _make_ajar(
     canvas = Image.new("RGBA", (w + 40, h + 16), (0, 0, 0, 0))
     origin = (16, 8)
 
-    # Dark room behind the arch.
+    # True door swing around the LEFT hinge (knob = free right edge).
+    # Open slightly toward the viewer so the free edge reads as a normal ajar door.
+    hinge_x = 38.0
+    top_y, bot_y = 48.0, 375.0
+    right_x = 242.0
+    theta = math.radians(open_deg)
+    cos_t = math.cos(theta)
+    sin_t = math.sin(theta)
+    leaf_w = right_x - hinge_x
+    new_right = hinge_x + leaf_w * cos_t
+    # Free edge nearer the camera → mild vertical grow (outward swing).
+    grow = 1.0 + 0.06 * sin_t
+    mid = (top_y + bot_y) * 0.5
+    half = (bot_y - top_y) * 0.5
+    new_top = mid - half * grow
+    new_bot = mid + half * grow
+
+    # Dark room + peek only in the revealed right gap (not under the leaf).
     interior = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     idr = ImageDraw.Draw(interior)
     idr.pieslice((40, 52, w - 40, h * 2 - 90), 180, 360, fill=(18, 10, 6, 255))
@@ -110,43 +127,28 @@ def _make_ajar(
     ad = ImageDraw.Draw(arch)
     ad.pieslice((44, 56, w - 44, h * 2 - 95), 180, 360, fill=255)
     ad.rectangle((44, h // 2 - 5, w - 44, h - 62), fill=255)
+    gap_mask = Image.new("L", (w, h), 0)
+    gd = ImageDraw.Draw(gap_mask)
+    gap_x0 = int(new_right) + 1
+    gd.rectangle((gap_x0, 52, w - 44, h - 58), fill=255)
+    gap_mask = ImageChops.multiply(gap_mask, arch)
 
     peek_layer = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     peek_rgba = peek.convert("RGBA")
     ox = (w - peek.width) // 2
     oy = 70
     peek_layer.paste(peek_rgba, (ox, oy))
-    peek_layer.putalpha(ImageChops.multiply(peek_layer.split()[-1], arch))
+    peek_layer.putalpha(ImageChops.multiply(peek_layer.split()[-1], gap_mask))
 
-    # True door swing around the LEFT hinge (knob = free right edge).
-    # Frontal projected width ≈ W·cos(θ); free edge recedes into the room.
-    hinge_x = 38.0
-    top_y, bot_y = 48.0, 375.0
-    right_x = 242.0
-    theta = math.radians(open_deg)
-    cos_t = math.cos(theta)
-    sin_t = math.sin(theta)
-    leaf_w = right_x - hinge_x
-    new_right = hinge_x + leaf_w * cos_t
-    # Free edge is farther away → mild vertical foreshortening.
-    shrink = 1.0 - 0.07 * sin_t
-    mid = (top_y + bot_y) * 0.5
-    half = (bot_y - top_y) * 0.5
-    new_top = mid - half * shrink
-    new_bot = mid + half * shrink
-
-    # Warm light in the revealed gap (right of the swung free edge).
-    gap_left = int(new_right) + 2
-    shade = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    sd = ImageDraw.Draw(shade)
-    sd.rectangle((gap_left, 56, w - 44, h - 62), fill=(255, 214, 150, 48))
-    sd.rectangle((w - 52, 56, w - 44, h - 62), fill=(0, 0, 0, 55))
+    warm = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    wd = ImageDraw.Draw(warm)
+    wd.rectangle((gap_x0, 56, w - 44, h - 62), fill=(255, 214, 150, 40))
+    warm.putalpha(ImageChops.multiply(warm.split()[-1], gap_mask))
 
     canvas.paste(interior, origin, interior)
     canvas.paste(peek_layer, origin, peek_layer)
-    canvas.paste(shade, origin, shade)
+    canvas.paste(warm, origin, warm)
 
-    # Closed leaf corners → ajar corners (left posts fixed).
     closed = [
         (hinge_x, top_y),
         (right_x, top_y),
@@ -167,14 +169,19 @@ def _make_ajar(
         resample=Image.Resampling.BICUBIC,
     )
 
-    # Thin dark strip on the free edge = door thickness cue.
+    # Free-edge thickness (door opening toward camera).
     edge = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     ed = ImageDraw.Draw(edge)
-    thickness = max(3, int(8 * sin_t))
+    thickness = max(4, int(10 * sin_t))
     ed.line(
-        [(new_right, new_top), (new_right, new_bot)],
-        fill=(42, 22, 12, 200),
+        [(new_right + thickness * 0.35, new_top), (new_right + thickness * 0.35, new_bot)],
+        fill=(55, 30, 14, 220),
         width=thickness,
+    )
+    ed.line(
+        [(new_right + 1, new_top), (new_right + 1, new_bot)],
+        fill=(30, 16, 8, 180),
+        width=2,
     )
 
     shadow_a = swung.split()[-1].point(lambda a: int(a * 0.28))
