@@ -93,15 +93,26 @@ def _make_ajar(
     leaf: Image.Image,
     peek: Image.Image,
     *,
-    open_deg: float = 30.0,
+    open_deg: float = 36.0,
 ) -> Image.Image:
     """Left-hinged wood leaf, ajar at a normal open angle; peek on the free (right) side."""
     w, h = stone_frame.size
     canvas = Image.new("RGBA", (w + 40, h + 16), (0, 0, 0, 0))
     origin = (16, 8)
 
-    # True door swing around the LEFT hinge (knob = free right edge).
-    # Open slightly toward the viewer so the free edge reads as a normal ajar door.
+    # Doorway opening mask (stone interior): semicircle top + straight jambs.
+    arch = Image.new("L", (w, h), 0)
+    ad = ImageDraw.Draw(arch)
+    arch_box = (44, 48, w - 44, 48 + (w - 88))
+    ad.pieslice(arch_box, 180, 360, fill=255)
+    spring = 48 + (w - 88) // 2
+    ad.rectangle((44, spring, w - 44, h - 58), fill=255)
+
+    # Dark room fills the stone opening; peek is only in the free-edge gap.
+    dark = Image.new("RGBA", (w, h), (18, 10, 6, 255))
+    interior = Image.composite(dark, Image.new("RGBA", (w, h), (0, 0, 0, 0)), arch)
+
+    # Left hinge; free edge (knob) swings toward the camera at a normal ajar angle.
     hinge_x = 38.0
     top_y, bot_y = 48.0, 375.0
     right_x = 242.0
@@ -117,20 +128,10 @@ def _make_ajar(
     new_top = mid - half * grow
     new_bot = mid + half * grow
 
-    # Dark room + peek only in the revealed right gap (not under the leaf).
-    interior = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    idr = ImageDraw.Draw(interior)
-    idr.pieslice((40, 52, w - 40, h * 2 - 90), 180, 360, fill=(18, 10, 6, 255))
-    idr.rectangle((40, h // 2 - 10, w - 40, h - 58), fill=(18, 10, 6, 255))
-
-    arch = Image.new("L", (w, h), 0)
-    ad = ImageDraw.Draw(arch)
-    ad.pieslice((44, 56, w - 44, h * 2 - 95), 180, 360, fill=255)
-    ad.rectangle((44, h // 2 - 5, w - 44, h - 62), fill=255)
     gap_mask = Image.new("L", (w, h), 0)
     gd = ImageDraw.Draw(gap_mask)
     gap_x0 = int(new_right) + 1
-    gd.rectangle((gap_x0, 52, w - 44, h - 58), fill=255)
+    gd.rectangle((gap_x0, 48, w - 44, h - 58), fill=255)
     gap_mask = ImageChops.multiply(gap_mask, arch)
 
     peek_layer = Image.new("RGBA", (w, h), (0, 0, 0, 0))
@@ -169,20 +170,17 @@ def _make_ajar(
         resample=Image.Resampling.BICUBIC,
     )
 
-    # Free-edge thickness (door opening toward camera).
+    # Free-edge thickness cue — thin strip on the leaf, not covering the peek gap.
     edge = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     ed = ImageDraw.Draw(edge)
-    thickness = max(4, int(10 * sin_t))
+    thickness = max(3, int(6 * sin_t))
+    x_edge = new_right - thickness * 0.25
     ed.line(
-        [(new_right + thickness * 0.35, new_top), (new_right + thickness * 0.35, new_bot)],
-        fill=(55, 30, 14, 220),
+        [(x_edge, new_top), (x_edge, new_bot)],
+        fill=(48, 26, 12, 210),
         width=thickness,
     )
-    ed.line(
-        [(new_right + 1, new_top), (new_right + 1, new_bot)],
-        fill=(30, 16, 8, 180),
-        width=2,
-    )
+    edge.putalpha(ImageChops.multiply(edge.split()[-1], swung.split()[-1]))
 
     shadow_a = swung.split()[-1].point(lambda a: int(a * 0.28))
     shadow_a = shadow_a.filter(ImageFilter.GaussianBlur(5))
@@ -269,7 +267,7 @@ def main() -> int:
     )
     draw.text(
         (70, 78),
-        "Left-hinged wood leaf opens ~30° on hover; desert / cave trail peeks through the free (right) edge.",
+        "Left-hinged wood leaf opens ~36° on hover; desert / cave trail peeks through the free (right) edge.",
         fill=(230, 190, 140),
         font=font_sub,
     )
