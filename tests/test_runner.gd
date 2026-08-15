@@ -1239,17 +1239,30 @@ func _test_save_select_scene() -> Variant:
 	if error == null and delete_dialog == null:
 		error = "Save deletion needs a confirmation dialog."
 	var first_card := scene.get_node_or_null("Slots/Slot1") as Button
-	var number := scene.get_node_or_null("Slots/Slot1/Number") as Label
-	var portrait := scene.get_node_or_null("Slots/Slot1/Portrait") as TextureRect
-	var stars := scene.get_node_or_null("Slots/Slot1/Stars") as HBoxContainer
-	var door_art := scene.get_node_or_null("Slots/Slot1/DoorArt") as TextureRect
+	var number := scene.get_node_or_null("Slots/Slot1/DoorLeaf/Number") as Label
+	if number == null:
+		number = scene.get_node_or_null("Slots/Slot1/Number") as Label
+	var portrait := scene.get_node_or_null("Slots/Slot1/DoorLeaf/Portrait") as TextureRect
+	if portrait == null:
+		portrait = scene.get_node_or_null("Slots/Slot1/Portrait") as TextureRect
+	var stars := scene.get_node_or_null("Slots/Slot1/DoorLeaf/Stars") as HBoxContainer
+	if stars == null:
+		stars = scene.get_node_or_null("Slots/Slot1/Stars") as HBoxContainer
+	var door_art := scene.get_node_or_null("Slots/Slot1/DoorLeaf/DoorArt") as TextureRect
+	if door_art == null:
+		door_art = scene.get_node_or_null("Slots/Slot1/DoorArt") as TextureRect
+	var door_leaf := scene.get_node_or_null("Slots/Slot1/DoorLeaf") as Control
+	var door_frame := scene.get_node_or_null("Slots/Slot1/DoorFrame") as TextureRect
+	var door_peek := scene.get_node_or_null("Slots/Slot1/Peek") as TextureRect
 	var select_ring := scene.get_node_or_null("Slots/Slot1/SelectRing") as TextureRect
 	if error == null and (number == null or number.text != "1"):
 		error = "Save doors should show giant slot numbers 1–3."
 	if error == null and (door_art == null or door_art.texture == null):
 		error = "Save doors need painted arched wood DoorArt."
-	if error == null and (select_ring == null or select_ring.texture == null):
-		error = "Save doors need a bandana SelectRing for focus."
+	if error == null and (door_leaf == null or door_frame == null or door_frame.texture == null):
+		error = "Save doors need a left-hinge DoorLeaf and stone DoorFrame."
+	if error == null and (door_peek == null or door_peek.texture == null):
+		error = "Save doors need a trail peek behind the wood leaf."
 	if error == null and (portrait == null or portrait.texture == null):
 		error = "Filled save doors should show the active character portrait."
 	if error == null and stars != null:
@@ -1267,8 +1280,16 @@ func _test_save_select_scene() -> Variant:
 	if error == null:
 		scene._index = 0
 		scene._highlight()
-		if select_ring != null and not select_ring.visible:
-			error = "Focused save door should show the bandana SelectRing."
+		if first_card != null:
+			scene._set_door_open(first_card, 1.0)
+		if select_ring != null and select_ring.visible:
+			error = "Focused save door should open ajar instead of a bandana SelectRing."
+		elif door_leaf == null or door_leaf.scale.x > 0.92:
+			error = "Focused save door should swing ajar from the left hinge."
+		elif portrait != null:
+			var portrait_scale := portrait.get_global_transform().get_scale()
+			if absf(portrait_scale.x - portrait_scale.y) > 0.08:
+				error = "Cowboy/cowgirl portrait should stay undistorted when the door is ajar."
 	var title_label := scene.get_node_or_null("Title") as Label
 	if error == null and title_label != null and title_label.visible:
 		var cream := title_label.get_theme_color("font_color")

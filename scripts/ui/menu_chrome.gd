@@ -29,6 +29,7 @@ const _META_TWEEN := &"_menu_fb_tween"
 const _META_PRESSED := &"_menu_fb_pressed"
 const _META_HOVERED := &"_menu_fb_hovered"
 const _META_TARGET := &"_menu_feedback_target"
+const _META_SKIP_HOVER_SCALE := &"_menu_skip_hover_scale"
 
 
 static func add_desert_backdrop(parent: Control, with_veil: bool = true) -> void:
@@ -296,7 +297,9 @@ static func refresh_button_feedback(button: BaseButton, snap: bool = false) -> v
     if not button.disabled:
         if bool(button.get_meta(_META_PRESSED, false)):
             target = rest * PRESS_SCALE
-        elif bool(button.get_meta(_META_HOVERED, false)):
+        elif bool(button.get_meta(_META_HOVERED, false)) and not bool(
+            button.get_meta(_META_SKIP_HOVER_SCALE, false)
+        ):
             target = rest * HOVER_SCALE
     button.set_meta(_META_TARGET, target)
     var duration := 0.08 if target.x >= rest.x else 0.06

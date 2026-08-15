@@ -1,7 +1,7 @@
 extends Control
 
 ## Kid-first title screen: giant numbered save doors, icon chrome, F1 debug strip.
-## Matches chibi cowboy/cowgirl art — thick outlines, warm wood, bandana-red focus.
+## Matches chibi cowboy/cowgirl art — thick outlines, warm wood, left-hinge ajar focus.
 
 const TITLE_CREAM := Color(0.96, 0.86, 0.48, 1.0)
 const TITLE_CREAM_HOVER := Color(1.0, 0.92, 0.62, 1.0)
@@ -11,11 +11,19 @@ const STAR_TEX := preload("res://assets/world/star_badge.png")
 const PORTRAIT_EMPTY := preload("res://assets/ui/menu_portrait_empty.png")
 const PORTRAIT_COWBOY := preload("res://assets/ui/menu_portrait_cowboy.png")
 const PORTRAIT_COWGIRL := preload("res://assets/ui/menu_portrait_cowgirl.png")
+const DOOR_LEAF_TEX := preload("res://assets/ui/menu_save_door_leaf.png")
+const DOOR_FRAME_TEX := preload("res://assets/ui/menu_save_door_frame.png")
+const PEEK_DESERT_TEX := preload("res://assets/ui/menu_door_peek_desert.png")
+const PEEK_CAVE_TEX := preload("res://assets/ui/menu_door_peek_cave.png")
 const ELEMENT_REFERENCE_PATH := "res://docs/element_name_reference.png"
 const SHEET_ZOOM_MIN := 1.0
 const SHEET_ZOOM_MAX := 4.0
 const SHEET_ZOOM_STEP := 0.25
 const MAX_STAR_DOTS := 3
+const DOOR_TEX_SIZE := Vector2(280, 420)
+const DOOR_HINGE_PX := 38.0
+const DOOR_OPEN_DEG := 36.0
+const DOOR_OPEN_TIME := 0.22
 
 var _cards: Array[Button] = []
 var _index: int = 0
@@ -86,6 +94,7 @@ func _ready() -> void:
 		_cards.append(card)
 		_style_door_button(card)
 		_ensure_star_dots(card)
+		_prepare_door_layers(card)
 		var captured := i
 		card.pressed.connect(func() -> void:
 			if _settings_open() or _element_reference_open():
@@ -552,9 +561,138 @@ func _apply_cream_outline(label: Label, fill: Color, outline: Color, outline_siz
 func _style_door_button(button: Button, _radius: int = 18, _pad: int = 12) -> void:
 	button.text = ""
 	button.flat = true
+	button.clip_contents = false
 	button.pivot_offset = button.custom_minimum_size * 0.5
+	button.set_meta(&"_menu_skip_hover_scale", true)
 	var empty := StyleBoxEmpty.new()
 	_apply_button_styles(button, empty, empty)
+
+
+func _door_child(card: Node, node_name: String) -> Node:
+	var nested := card.get_node_or_null("DoorLeaf/" + node_name)
+	if nested != null:
+		return nested
+	return card.get_node_or_null(node_name)
+
+
+func _prepare_door_layers(card: Button) -> void:
+	if card.get_node_or_null("DoorLeaf") != null:
+		_sync_door_hinge(card)
+		return
+	var peek := TextureRect.new()
+	peek.name = "Peek"
+	peek.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	peek.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	peek.offset_left = 32.0
+	peek.offset_top = 42.0
+	peek.offset_right = -32.0
+	peek.offset_bottom = -48.0
+	peek.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	peek.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	peek.texture = PEEK_DESERT_TEX
+	card.add_child(peek)
+	card.move_child(peek, 0)
+
+	var leaf := Control.new()
+	leaf.name = "DoorLeaf"
+	leaf.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	leaf.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	card.add_child(leaf)
+	card.move_child(leaf, 1)
+	for child_name in ["DoorArt", "Number", "Portrait", "Stars"]:
+		var child := card.get_node_or_null(child_name) as CanvasItem
+		if child == null:
+			continue
+		card.remove_child(child)
+		leaf.add_child(child)
+	var art := leaf.get_node_or_null("DoorArt") as TextureRect
+	if art != null:
+		art.texture = DOOR_LEAF_TEX
+
+	var frame := TextureRect.new()
+	frame.name = "DoorFrame"
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	frame.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	frame.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	frame.texture = DOOR_FRAME_TEX
+	card.add_child(frame)
+	var ring := card.get_node_or_null("SelectRing") as CanvasItem
+	if ring != null:
+		ring.visible = false
+		card.move_child(frame, mini(ring.get_index(), card.get_child_count() - 1))
+	if not leaf.resized.is_connected(_on_door_leaf_resized):
+		leaf.resized.connect(_on_door_leaf_resized.bind(card))
+	_sync_door_hinge(card)
+	_set_door_open(card, 0.0)
+
+
+func _on_door_leaf_resized(card: Button) -> void:
+	_sync_door_hinge(card)
+	_set_door_open(card, float(card.get_meta(&"door_open", 0.0)))
+
+
+func _sync_door_hinge(card: Button) -> void:
+	var leaf := card.get_node_or_null("DoorLeaf") as Control
+	if leaf == null:
+		return
+	var size := leaf.size
+	if size.x < 2.0 or size.y < 2.0:
+		return
+	var fit := minf(size.x / DOOR_TEX_SIZE.x, size.y / DOOR_TEX_SIZE.y)
+	var drawn := DOOR_TEX_SIZE * fit
+	var origin := (size - drawn) * 0.5
+	leaf.pivot_offset = Vector2(origin.x + DOOR_HINGE_PX * fit, size.y * 0.5)
+	for child_name in ["Portrait", "Number"]:
+		var child := leaf.get_node_or_null(child_name) as Control
+		if child != null:
+			child.pivot_offset = child.size * 0.5
+
+
+func _set_door_open(card: Button, amount: float) -> void:
+	var leaf := card.get_node_or_null("DoorLeaf") as Control
+	if leaf == null:
+		return
+	var open_amt := clampf(amount, 0.0, 1.0)
+	card.set_meta(&"door_open", open_amt)
+	# Left hinge; projected width is cos(θ). Rider/number stay circular (un-squashed).
+	var sx := lerpf(1.0, cos(deg_to_rad(DOOR_OPEN_DEG)), open_amt)
+	leaf.scale = Vector2(sx, 1.0)
+	for child_name in ["Portrait", "Number"]:
+		var child := leaf.get_node_or_null(child_name) as Control
+		if child != null:
+			child.scale = Vector2(1.0, sx)
+
+
+func _tween_door_ajar(card: Button, open: bool) -> void:
+	var target := 1.0 if open else 0.0
+	var current := float(card.get_meta(&"door_open", 0.0))
+	if card.has_meta(&"door_tween"):
+		var old_tween := card.get_meta(&"door_tween") as Tween
+		if old_tween != null and is_instance_valid(old_tween):
+			old_tween.kill()
+		card.remove_meta(&"door_tween")
+	if is_equal_approx(current, target):
+		_set_door_open(card, target)
+		return
+	var tween := create_tween()
+	card.set_meta(&"door_tween", tween)
+	tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.tween_method(
+		func(value: float) -> void: _set_door_open(card, value),
+		current,
+		target,
+		DOOR_OPEN_TIME
+	)
+
+
+func _peek_texture_for_slot(slot_index: int) -> Texture2D:
+	if GameManager.is_slot_empty(slot_index):
+		return PEEK_DESERT_TEX
+	var level := int(GameManager.get_slot(slot_index).get("current_level", 1))
+	if CaveCampaignLevels.is_cave_source(level):
+		return PEEK_CAVE_TEX
+	return PEEK_DESERT_TEX
 
 
 func _style_exit_button(button: Button) -> void:
@@ -664,7 +802,7 @@ func _breathe_mascots() -> void:
 
 
 func _ensure_star_dots(card: Button) -> void:
-	var stars := card.get_node_or_null("Stars") as HBoxContainer
+	var stars := _door_child(card, "Stars") as HBoxContainer
 	if stars == null:
 		return
 	while stars.get_child_count() < MAX_STAR_DOTS:
@@ -792,11 +930,11 @@ func _refresh() -> void:
 	for i in range(_cards.size()):
 		var card := _cards[i]
 		var slot := GameManager.get_slot(i)
-		var number := card.get_node_or_null("Number") as Label
+		var number := _door_child(card, "Number") as Label
 		if number != null:
 			number.text = str(i + 1)
-		var portrait := card.get_node_or_null("Portrait") as TextureRect
-		var stars := card.get_node_or_null("Stars") as HBoxContainer
+		var portrait := _door_child(card, "Portrait") as TextureRect
+		var stars := _door_child(card, "Stars") as HBoxContainer
 		var empty := bool(slot.get("empty", true))
 		if portrait != null:
 			if empty:
@@ -807,6 +945,9 @@ func _refresh() -> void:
 					GameManager.slot_player_character(i)
 				)
 				portrait.modulate = Color(1, 1, 1, 1)
+		var peek := card.get_node_or_null("Peek") as TextureRect
+		if peek != null:
+			peek.texture = _peek_texture_for_slot(i)
 		if stars != null:
 			var badge_dots := 0 if empty else clampi(int(slot.get("stars", 0)), 0, MAX_STAR_DOTS)
 			if not empty and badge_dots == 0 and int(slot.get("current_level", 1)) > 1:
@@ -838,13 +979,11 @@ func _flash_status(message: String) -> void:
 func _highlight() -> void:
 	for i in range(_cards.size()):
 		var selected := i == _index
-		MenuChrome.set_button_rest_scale(
-			_cards[i], Vector2(1.04, 1.04) if selected else Vector2.ONE
-		)
 		var ring := _cards[i].get_node_or_null("SelectRing") as CanvasItem
 		if ring != null:
-			ring.visible = selected
-		var number := _cards[i].get_node_or_null("Number") as Label
+			ring.visible = false
+		_tween_door_ajar(_cards[i], selected)
+		var number := _door_child(_cards[i], "Number") as Label
 		if number != null:
 			number.add_theme_color_override(
 				&"font_color",
