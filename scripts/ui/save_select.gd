@@ -583,12 +583,8 @@ func _prepare_door_layers(card: Button) -> void:
 	peek.name = "Peek"
 	peek.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	peek.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	peek.offset_left = 32.0
-	peek.offset_top = 42.0
-	peek.offset_right = -32.0
-	peek.offset_bottom = -48.0
 	peek.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	peek.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	peek.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	peek.texture = PEEK_DESERT_TEX
 	card.add_child(peek)
 	card.move_child(peek, 0)
@@ -662,6 +658,9 @@ func _set_door_open(card: Button, amount: float) -> void:
 		var child := leaf.get_node_or_null(child_name) as Control
 		if child != null:
 			child.scale = Vector2(1.0, sx)
+	var peek := card.get_node_or_null("Peek") as CanvasItem
+	if peek != null:
+		peek.visible = open_amt > 0.02
 
 
 func _tween_door_ajar(card: Button, open: bool) -> void:

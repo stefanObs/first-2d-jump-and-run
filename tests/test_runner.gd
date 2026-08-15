@@ -1277,16 +1277,25 @@ func _test_save_select_scene() -> Variant:
 		if normal != null and not (normal is StyleBoxEmpty):
 			if normal is StyleBoxFlat and (normal as StyleBoxFlat).bg_color.a > 0.2:
 				error = "Painted doors should not cover DoorArt with opaque StyleBoxFlat fills."
+	if error == null and door_peek != null:
+		if door_peek.stretch_mode != TextureRect.STRETCH_KEEP_ASPECT_CENTERED:
+			error = "Trail peek must share the door's aspect-centered size."
+		elif door_peek.texture != null and door_peek.texture.get_size() != Vector2(280, 420):
+			error = "Trail peek must match the painted door canvas so it cannot leak around the stone."
 	if error == null:
 		scene._index = 0
 		scene._highlight()
 		if first_card != null:
-			scene._set_door_open(first_card, 1.0)
-		if select_ring != null and select_ring.visible:
+			scene._set_door_open(first_card, 0.0)
+			if door_peek != null and door_peek.visible:
+				error = "Closed save doors must not show trail peek through the wood."
+			else:
+				scene._set_door_open(first_card, 1.0)
+		if error == null and select_ring != null and select_ring.visible:
 			error = "Focused save door should open ajar instead of a bandana SelectRing."
-		elif door_leaf == null or door_leaf.scale.x > 0.92:
+		elif error == null and (door_leaf == null or door_leaf.scale.x > 0.92):
 			error = "Focused save door should swing ajar from the left hinge."
-		elif portrait != null:
+		elif error == null and portrait != null:
 			var portrait_scale := portrait.get_global_transform().get_scale()
 			if absf(portrait_scale.x - portrait_scale.y) > 0.08:
 				error = "Cowboy/cowgirl portrait should stay undistorted when the door is ajar."
