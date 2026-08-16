@@ -53,7 +53,7 @@ Needs a real display (not `--headless`). Capture-only scene: `godot --path . res
   - **Windows:** `update_to_newest.bat`
   - **macOS:** double-click **`Update to Newest Version.command`**
 - Extra args are forwarded to Godot (e.g. `--headless`).
-- **Display:** base layout stays **1280×720**; on large/4K screens it scales with **linear** texture filtering (smooth, not nearest-neighbor “pixels”). Character/world size on screen is unchanged.
+- **Display:** base layout stays **1280×720** with **keep** aspect (letterbox if the monitor is a different shape); on large/4K screens it scales with **linear** texture filtering (smooth, not nearest-neighbor “pixels”). Character/world size on screen is unchanged. Do not add a window width/height override — that fights HiDPI on Windows and makes menu clicks miss the buttons.
 
 ### Tests
 

@@ -768,6 +768,14 @@ func _apply_settings() -> void:
 	_ensure_data()
 	var settings: Dictionary = _data["settings"]
 	TranslationServer.set_locale(String(settings.get("language", "de")))
+	## Wait until the window exists. Setting fullscreen during autoload boot on
+	## Windows can leave mouse hits offset from the painted buttons.
+	call_deferred("_apply_window_mode")
+
+
+func _apply_window_mode() -> void:
+	_ensure_data()
+	var settings: Dictionary = _data["settings"]
 	if bool(settings.get("fullscreen", false)):
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 	else:

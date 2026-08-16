@@ -75,6 +75,7 @@ func _ready() -> void:
 	_setup_chrome_buttons()
 	_setup_character_pickers()
 	if _delete_dialog != null:
+		_delete_dialog.visible = false
 		_delete_dialog.confirmed.connect(_confirm_delete)
 		_style_delete_dialog()
 	if _settings != null:
@@ -140,6 +141,7 @@ func _ready() -> void:
 	_bob_title()
 	_breathe_mascots()
 	MenuChrome.bind_menu_buttons(self)
+	_ignore_non_button_hits()
 
 
 func _exit_tree() -> void:
@@ -551,6 +553,22 @@ func _style_screen() -> void:
 		_apply_cream_outline(_status_hint, Color(0.96, 0.9, 0.7, 1.0), Color(0.24, 0.09, 0.04, 0.8), 2)
 
 
+func _ignore_non_button_hits() -> void:
+	## Labels and layout boxes must not steal clicks from doors or chrome.
+	for path in [
+		"Mascots",
+		"Slots",
+		"CharacterHint",
+		"CreationCredit",
+		"StatusHint",
+		"Title",
+		"TitleLogo",
+	]:
+		var node := get_node_or_null(path) as Control
+		if node != null:
+			node.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+
 func _apply_cream_outline(label: Label, fill: Color, outline: Color, outline_size: int) -> void:
 	label.add_theme_color_override(&"font_color", fill)
 	label.add_theme_color_override(&"font_outline_color", outline)
@@ -601,6 +619,8 @@ func _prepare_door_layers(card: Button) -> void:
 			continue
 		card.remove_child(child)
 		leaf.add_child(child)
+		if child is Control:
+			(child as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var art := leaf.get_node_or_null("DoorArt") as TextureRect
 	if art != null:
 		art.texture = DOOR_LEAF_TEX

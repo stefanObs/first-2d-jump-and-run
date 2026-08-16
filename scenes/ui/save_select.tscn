@@ -981,6 +981,8 @@ theme_override_font_sizes/font_size = 24
 text = "Back"
 
 [node name="DeleteConfirmation" type="ConfirmationDialog" parent="."]
+visible = false
+exclusive = true
 title = "Delete save?"
 dialog_text = "Delete the selected save? This cannot be undone."
 ok_button_text = "Delete"

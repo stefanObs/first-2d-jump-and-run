@@ -15,6 +15,7 @@ func _ready() -> void:
 	failures += await _run("GameManager save slots persist", _test_save_slots)
 	failures += await _run("Portable saves fall back when exe folder is read-only", _test_save_paths_writable_fallback)
 	failures += await _run("Save select scene loads", _test_save_select_scene)
+	failures += await _run("Start screen buttons accept mouse clicks", _test_save_select_buttons_accept_mouse)
 	failures += await _run("Trail-mode button art fills the plate", _test_trail_mode_button_art_fills_plate)
 	failures += await _run("Menu buttons have hover and click feedback", _test_menu_button_hover_and_click)
 	failures += await _run("Save select offers Advanced Mode in Settings", _test_settings_trail_mode_dropdown)
@@ -1174,6 +1175,11 @@ func _test_save_select_scene() -> Variant:
 	var packed: PackedScene = load("res://scenes/ui/save_select.tscn")
 	if packed == null:
 		return "Missing save select scene."
+	var project_text := FileAccess.get_file_as_string("res://project.godot")
+	if project_text.contains("window_width_override") or project_text.contains("window_height_override"):
+		return "Window size overrides fight HiDPI on Windows and make menu clicks miss."
+	if not project_text.contains("window/stretch/aspect=\"keep\""):
+		return "Menu clicks need keep-aspect stretch so 1280x720 maps to the window."
 	GameManager.erase_slot(0)
 	GameManager.debug_set_slot(0, {"empty": false, "current_level": 4, "stars": 2})
 	var scene := packed.instantiate()
@@ -1238,6 +1244,8 @@ func _test_save_select_scene() -> Variant:
 	var delete_dialog := scene.get_node_or_null("DeleteConfirmation") as ConfirmationDialog
 	if error == null and delete_dialog == null:
 		error = "Save deletion needs a confirmation dialog."
+	elif error == null and delete_dialog.visible:
+		error = "Delete confirmation must start hidden so it cannot steal mouse clicks."
 	var first_card := scene.get_node_or_null("Slots/Slot1") as Button
 	var number := scene.get_node_or_null("Slots/Slot1/DoorLeaf/Number") as Label
 	if number == null:
@@ -1356,6 +1364,69 @@ func _test_save_select_scene() -> Variant:
 		GameManager.set_setting("player_character", previous_character)
 	scene.queue_free()
 	GameManager.erase_slot(0)
+	return error
+
+
+func _test_save_select_buttons_accept_mouse() -> Variant:
+	var packed: PackedScene = load("res://scenes/ui/save_select.tscn")
+	if packed == null:
+		return "Missing save select scene."
+	var scene := packed.instantiate() as Control
+	add_child(scene)
+	await get_tree().process_frame
+	var error: Variant = null
+	for path in ["Mascots", "Slots", "CharacterHint", "CreationCredit", "StatusHint", "TitleLogo"]:
+		var node := scene.get_node_or_null(path) as Control
+		if node == null:
+			error = "Start screen is missing %s." % path
+			break
+		if node.mouse_filter != Control.MOUSE_FILTER_IGNORE:
+			error = "%s must ignore mouse so menu buttons stay clickable." % path
+			break
+	if error == null:
+		for path in [
+			"SettingsButton",
+			"HeartsButton",
+			"BuildTrailButton",
+			"ExitGameButton",
+			"Slots/Slot1",
+			"Mascots/Cowboy",
+		]:
+			var button := scene.get_node_or_null(path) as Button
+			if button == null:
+				error = "Start screen is missing %s." % path
+				break
+			if button.mouse_filter == Control.MOUSE_FILTER_IGNORE:
+				error = "%s must stay clickable." % path
+				break
+			if button.size.x < 40.0 or button.size.y < 40.0:
+				error = "%s hit box is too small to tap (%.0fx%.0f)." % [path, button.size.x, button.size.y]
+				break
+	if error == null:
+		for path in [
+			"Slots/Slot1/Peek",
+			"Slots/Slot1/DoorLeaf",
+			"Slots/Slot1/DoorFrame",
+			"Slots/Slot1/DoorLeaf/DoorArt",
+		]:
+			var layer := scene.get_node_or_null(path) as Control
+			if layer == null:
+				error = "Save door is missing %s." % path
+				break
+			if layer.mouse_filter != Control.MOUSE_FILTER_IGNORE:
+				error = "%s must ignore mouse so the door button stays clickable." % path
+				break
+	if error == null:
+		var dim := scene.get_node_or_null("SettingsDim") as CanvasItem
+		var overlay := scene.get_node_or_null("ElementReferenceOverlay") as CanvasItem
+		var settings := scene.get_node_or_null("SettingsPanel") as CanvasItem
+		if (
+			(dim != null and dim.visible)
+			or (overlay != null and overlay.visible)
+			or (settings != null and settings.visible)
+		):
+			error = "Start screen overlays must start hidden so they cannot steal clicks."
+	scene.queue_free()
 	return error
 
 
