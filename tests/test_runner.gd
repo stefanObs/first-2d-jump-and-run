@@ -5391,21 +5391,9 @@ func _test_slope_underfill_covers_wedge() -> Variant:
 		level.free()
 		return "Desert slopes need a solid FloorSlopeUnderfill wedge."
 	var poly := underfill.polygon
-	var upper_dirt := 0
-	for node in trail_floor.find_children("FloorSlopeDirt*", "Sprite2D", false, false):
-		var dirt_sprite := node as Sprite2D
-		var sample_x := (
-			dirt_sprite.global_position.x
-			+ dirt_sprite.texture.get_size().x * dirt_sprite.scale.x * 0.5
-		)
-		var surface_y := WildWestTheme._slope_y_at(
-			sample_x, x_start, y_start, x_end, y_end, curved
-		)
-		if dirt_sprite.global_position.y < surface_y + 40.0:
-			upper_dirt += 1
-	if upper_dirt < 3:
+	if not trail_floor.find_children("FloorSlopeDirt*", "Sprite2D", false, false).is_empty():
 		level.free()
-		return "Slope dirt tiles must pack the upper wedge under the crust (found %d)." % upper_dirt
+		return "Dune earth should be FloorSlopeUnderfill, not FloorSlopeDirt sprites."
 	for sample_t in [0.2, 0.5, 0.8]:
 		var x := lerpf(x_start, x_end, sample_t)
 		var surface_y := WildWestTheme._slope_y_at(
@@ -5519,17 +5507,16 @@ func _test_slope_underfill_earth_color() -> Variant:
 	if abyss != null and not abyss.color.is_equal_approx(expected):
 		level.free()
 		return "FloorAbyss should match warm bank earth under flat dirt."
-	# Far below the dune must stay packed with earth tiles (not a black void).
-	var deep_dirt := 0
+	# Far below the dune must stay packed earth (polygon, not a black void).
 	var merged := WildWestTheme._merge_segments(WildWestTheme._collect_ground_segments(level))
 	var span := WildWestTheme._slope_span(merged[0], merged[1])
 	var surface_y := minf(float(span.get("y_start", 0.0)), float(span.get("y_end", 0.0)))
-	for node in trail_floor.find_children("FloorSlopeDirt*", "Sprite2D", false, false):
-		if (node as Sprite2D).position.y > surface_y + 400.0:
-			deep_dirt += 1
+	var bottom_y := -INF
+	for point in underfill.polygon:
+		bottom_y = maxf(bottom_y, point.y)
 	level.free()
-	if deep_dirt < 4:
-		return "Slope dirt tiles should continue far below the dune face (got %d deep)." % deep_dirt
+	if bottom_y < surface_y + 400.0:
+		return "Slope underfill should continue far below the dune face."
 	return null
 
 

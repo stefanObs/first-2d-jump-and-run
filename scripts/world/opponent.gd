@@ -19,6 +19,7 @@ const SHOOT_Y_BAND := 150.0
 ## Cave skeletons may loft arrows this far above their boots at flying cowboys.
 const SHOOT_UP_REACH := 420.0
 const SHOOT_UP_MIN := 80.0
+const _OffscreenSleep := preload("res://scripts/world/offscreen_sleep.gd")
 
 @export var point_a: Vector2 = Vector2(-80, 0)
 @export var point_b: Vector2 = Vector2(80, 0)
@@ -45,6 +46,8 @@ var _pose_tween: Tween
 var _level_style: String = LevelStyle.DESERT
 var _falling: bool = false
 var _fall_vel: float = 0.0
+var _jump_hint := false
+static var _frames_by_key: Dictionary = {}
 
 
 func apply_level_style(style: String) -> void:
@@ -71,6 +74,9 @@ func _ready() -> void:
 	add_child(_revolver)
 	if _area != null:
 		_area.body_entered.connect(_on_body_entered)
+	if _label == null or not _label.visible:
+		set_process(false)
+	_OffscreenSleep.install(self)
 	## Mid-air stamps fall onto the next standable crust, then patrol.
 	call_deferred("_begin_airborne_fall")
 
@@ -97,6 +103,9 @@ func _setup_sprite() -> void:
 
 
 func _make_sprite_frames() -> SpriteFrames:
+	var key := "%s|%s" % [_level_style, bounty_bandit]
+	if _frames_by_key.has(key):
+		return _frames_by_key[key]
 	var frames := SpriteFrames.new()
 	var cave := LevelStyle.is_cave(_level_style)
 	var stand_path: String
@@ -150,6 +159,7 @@ func _make_sprite_frames() -> SpriteFrames:
 				frames.add_frame(&"shoot_up", tex)
 		if frames.get_frame_count(&"shoot_up") == 0 and stand_tex != null:
 			frames.add_frame(&"shoot_up", stand_tex)
+	_frames_by_key[key] = frames
 	return frames
 
 
@@ -547,17 +557,20 @@ func _shoot_at(player: Player) -> void:
 
 
 func _update_nearby_hint() -> void:
-	if _label == null:
+	if _label == null or not _label.visible:
 		return
-	var player := _find_nearby_player(160.0)
-	if player != null:
-		_label.text = "JUMP!"
+	var jump_hint := _find_nearby_player(160.0) != null
+	if jump_hint != _jump_hint:
+		_jump_hint = jump_hint
+		if jump_hint:
+			_label.text = "JUMP!"
+			_label.add_theme_font_size_override(&"font_size", 16)
+		else:
+			_label.text = "BOUNTY!" if bounty_bandit else ("SKELETON" if LevelStyle.is_cave(_level_style) else "BANDIT")
+			_label.modulate = Color(1, 1, 1, 1)
+			_label.add_theme_font_size_override(&"font_size", 13)
+	if jump_hint:
 		_label.modulate = Color(1.0, 0.85 + sin(_hint_phase) * 0.15, 0.2, 1.0)
-		_label.add_theme_font_size_override(&"font_size", 16)
-	else:
-		_label.text = "BOUNTY!" if bounty_bandit else ("SKELETON" if LevelStyle.is_cave(_level_style) else "BANDIT")
-		_label.modulate = Color(1, 1, 1, 1)
-		_label.add_theme_font_size_override(&"font_size", 13)
 
 
 func _find_nearby_player(radius: float) -> Player:

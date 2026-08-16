@@ -10,6 +10,7 @@ const IDLE_TEXTURE := preload("res://assets/world/rattlesnake_idle.png")
 const BITE_TEXTURE := preload("res://assets/world/rattlesnake_bite.png")
 const SCORPION_IDLE := preload("res://assets/world/scorpion_idle.png")
 const SCORPION_STING := preload("res://assets/world/scorpion_sting.png")
+const _OffscreenSleep := preload("res://scripts/world/offscreen_sleep.gd")
 
 ## Desert workshop/campaign can place scorpions without switching the whole trail to cave.
 @export var as_scorpion: bool = false
@@ -64,6 +65,7 @@ func _ready() -> void:
 		_label.add_theme_font_size_override(&"font_size", 16)
 		_label.add_theme_color_override(&"font_color", Color(0.75, 0.18, 0.05, 1.0))
 	body_entered.connect(_on_body_entered)
+	_OffscreenSleep.install(self)
 
 
 func _process(delta: float) -> void:
@@ -83,9 +85,13 @@ func _process(delta: float) -> void:
 	if _shadow != null:
 		_shadow.modulate.a = 0.4 if _raised else 0.28
 	if _label != null and not _biting:
-		_label.visible = _raised
-		_label.text = "STING!" if uses_scorpion_art() else "RATTLE!"
-		_label.position.y = -78.0 + sin(_phase * 10.0) * 2.0
+		if _label.visible != _raised:
+			_label.visible = _raised
+		if _raised:
+			var want := "STING!" if uses_scorpion_art() else "RATTLE!"
+			if _label.text != want:
+				_label.text = want
+			_label.position.y = -78.0 + sin(_phase * 10.0) * 2.0
 
 
 func _ensure_shadow() -> void:

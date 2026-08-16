@@ -9,6 +9,7 @@ signal captured(ninja: NinjaEnemy)
 enum State { DORMANT, APPEAR, CHASE, JUMP, ATTACK, THROW, TIED }
 
 const STAND_SCALE := 1.15
+const _OffscreenSleep := preload("res://scripts/world/offscreen_sleep.gd")
 ## Tied art is the same 64×80 frame as idle — keep standing size so he does not shrink.
 const STAND_FOOT_OFFSET := Vector2(0, -40)
 const TRIGGER_RANGE := 1040.0
@@ -77,6 +78,9 @@ func _ready() -> void:
 		set_process(false)
 		collision_layer = 0
 		collision_mask = 0
+	else:
+		## Keep dormant physics so ambush can fire from off-screen (TRIGGER_RANGE).
+		_OffscreenSleep.install(self, _OffscreenSleep.DEFAULT_MARGIN, true)
 	if _area != null:
 		_area.body_entered.connect(_on_body_entered)
 
@@ -154,7 +158,7 @@ func _set_dormant(hidden: bool) -> void:
 			_area.set_deferred("monitorable", false)
 	else:
 		modulate.a = 1.0
-		set_process(true)
+		set_process(_label != null and _label.visible)
 		if _area != null:
 			_area.set_deferred("monitoring", true)
 			_area.set_deferred("monitorable", true)
@@ -706,7 +710,7 @@ func _kill_appear_tween() -> void:
 
 
 func _update_nearby_hint() -> void:
-	if _label == null:
+	if _label == null or not _label.visible:
 		return
 	var player := _find_player()
 	var near := player != null and global_position.distance_to(player.global_position) <= 180.0

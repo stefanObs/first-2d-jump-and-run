@@ -25,8 +25,8 @@ Consult `README.md` (Core gameplay, Campaign Workshop, Floor height, UI / art st
 
 ## Dune slopes
 
-- Under curved desert banks, earth fill must stay dense in the upper wedge (no tile gaps exposing black/sky).
-- Keep the warm `FloorSlopeUnderfill` wedge; do not leave featureless voids under the crust.
+- Under curved desert banks, earth fill must stay dense in the upper wedge (no black/sky holes).
+- Keep the warm `FloorSlopeUnderfill` polygon (and textured `FloorAbyss` under flat banks); do not leave featureless voids under the crust, and do not bring back a `FloorSlopeDirt*` sprite spray.
 
 ## Treasure chests
 

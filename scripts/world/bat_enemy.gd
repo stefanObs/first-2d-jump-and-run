@@ -7,6 +7,7 @@ signal hurt_player(player: Player)
 
 const TEX_0 := preload("res://assets/world/cave_bat_0.png")
 const TEX_1 := preload("res://assets/world/cave_bat_1.png")
+const _OffscreenSleep := preload("res://scripts/world/offscreen_sleep.gd")
 
 @export var patrol_width: float = 180.0
 @export var move_speed: float = 70.0
@@ -16,6 +17,7 @@ var _origin: Vector2
 var _phase: float = 0.0
 var _sprite: AnimatedSprite2D
 var _dir: float = 1.0
+static var _shared_frames: SpriteFrames
 
 
 func _ready() -> void:
@@ -25,13 +27,7 @@ func _ready() -> void:
 	monitorable = false
 	_sprite = AnimatedSprite2D.new()
 	_sprite.name = "FlapSprite"
-	var frames := SpriteFrames.new()
-	frames.add_animation(&"flap")
-	frames.set_animation_speed(&"flap", 10.0)
-	frames.set_animation_loop(&"flap", true)
-	frames.add_frame(&"flap", TEX_0)
-	frames.add_frame(&"flap", TEX_1)
-	_sprite.sprite_frames = frames
+	_sprite.sprite_frames = _make_sprite_frames()
 	_sprite.centered = true
 	_sprite.scale = Vector2(0.85, 0.85)
 	_sprite.play(&"flap")
@@ -46,6 +42,20 @@ func _ready() -> void:
 	body_entered.connect(_on_body_entered)
 	_phase = randf() * TAU
 	set_physics_process(true)
+	_OffscreenSleep.install(self)
+
+
+func _make_sprite_frames() -> SpriteFrames:
+	if _shared_frames != null:
+		return _shared_frames
+	var frames := SpriteFrames.new()
+	frames.add_animation(&"flap")
+	frames.set_animation_speed(&"flap", 10.0)
+	frames.set_animation_loop(&"flap", true)
+	frames.add_frame(&"flap", TEX_0)
+	frames.add_frame(&"flap", TEX_1)
+	_shared_frames = frames
+	return _shared_frames
 
 
 func _physics_process(delta: float) -> void:

@@ -9,6 +9,7 @@ signal captured(bull: BullEnemy)
 const BULL_TEX := preload("res://assets/world/trail_bull.png")
 const BULL_TIED_TEX := preload("res://assets/world/boss_stampede_bull_tied_legs.png")
 const BULL_DOWN_TEX := preload("res://assets/world/boss_stampede_bull_down.png")
+const _OffscreenSleep := preload("res://scripts/world/offscreen_sleep.gd")
 const BULL_RUN_TEX: Array[Texture2D] = [
 	preload("res://assets/world/trail_bull_run_0.png"),
 	preload("res://assets/world/trail_bull_run_1.png"),
@@ -43,6 +44,7 @@ var _label: Label
 var _sprite: Sprite2D
 var _hint_phase: float = 0.0
 var _tied: bool = false
+var _jump_hint := false
 var _charge_bob: float = 0.0
 var _run_phase: float = 0.0
 var _pose_tween: Tween
@@ -111,7 +113,11 @@ func _ready() -> void:
 	if _area != null:
 		_area.body_entered.connect(_on_body_entered)
 	set_physics_process(true)
-	set_process(true)
+	if _label == null or not _label.visible:
+		set_process(false)
+	else:
+		set_process(true)
+	_OffscreenSleep.install(self)
 	# Snap hooves to the trail on the first physics tick when a floor exists.
 	call_deferred("_snap_to_floor_once")
 
@@ -492,17 +498,20 @@ func _kill_pose_tween() -> void:
 
 
 func _update_nearby_hint() -> void:
-	if _label == null:
+	if _label == null or not _label.visible:
 		return
-	var player := _find_nearby_player(180.0)
-	if player != null:
-		_label.text = "JUMP!"
+	var jump_hint := _find_nearby_player(180.0) != null
+	if jump_hint != _jump_hint:
+		_jump_hint = jump_hint
+		if jump_hint:
+			_label.text = "JUMP!"
+			_label.add_theme_font_size_override(&"font_size", 16)
+		else:
+			_label.text = "BULL"
+			_label.modulate = Color(1, 1, 1, 1)
+			_label.add_theme_font_size_override(&"font_size", 13)
+	if jump_hint:
 		_label.modulate = Color(1.0, 0.85 + sin(_hint_phase) * 0.15, 0.2, 1.0)
-		_label.add_theme_font_size_override(&"font_size", 16)
-	else:
-		_label.text = "BULL"
-		_label.modulate = Color(1, 1, 1, 1)
-		_label.add_theme_font_size_override(&"font_size", 13)
 
 
 func _find_nearby_player(radius: float) -> Player:
